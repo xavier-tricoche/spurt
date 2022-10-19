@@ -1,28 +1,26 @@
 #include "image/creaseline2d.hpp"
 
-std::vector< double > spurt::crease::crease_strength;
-std::vector< unsigned int > spurt::crease::isolated;
-std::vector< bool > spurt::crease::skipped;
-std::vector< bool > spurt::crease::singular;
-float* spurt::crease::reconstructed_image = 0;
+std::vector< double > xavier::crease::crease_strength;
+std::vector< unsigned int > xavier::crease::isolated;
+std::vector< bool > xavier::crease::skipped;
+std::vector< bool > xavier::crease::singular;
+float* xavier::crease::reconstructed_image = 0;
 
 struct PosOrder {
-    bool operator()(const spurt::vec2& p0, const spurt::vec2& p1) const {
+    bool operator()(const nvis::vec2& p0, const nvis::vec2& p1) const {
         return (p0[0] > p1[0] + 0.00001 ||
                 (fabs(p0[0] - p1[0]) < 0.00001 && p0[1] > p1[1] + 0.00001));
     }
 };
 
 void uniquify(std::map< unsigned int, std::pair< int, int > >& cell2points,
-              std::vector< spurt::vec2 >& pos)
+              std::vector< nvis::vec2 >& pos)
 {
-    using namespace spurt;
-    
     unsigned int N = pos.size();
-    std::map< vec2, unsigned int, PosOrder > ref;
-    std::map< vec2, unsigned int, PosOrder >::iterator it;
+    std::map< nvis::vec2, unsigned int, PosOrder > ref;
+    std::map< nvis::vec2, unsigned int, PosOrder >::iterator it;
     std::vector< unsigned int > old2new(pos.size());
-    std::vector< vec2 > unique;
+    std::vector< nvis::vec2 > unique;
     std::vector< double > str;
     unsigned int id = 0;
     for (unsigned int i = 0 ; i < pos.size() ; ++i) {
@@ -34,7 +32,7 @@ void uniquify(std::map< unsigned int, std::pair< int, int > >& cell2points,
             old2new[i] = id;
             ref[pos[i]] = id;
             unique.push_back(pos[i]);
-            str.push_back(spurt::crease::crease_strength[i]);
+            str.push_back(xavier::crease::crease_strength[i]);
             ++id;
         }
     }
@@ -51,7 +49,7 @@ void uniquify(std::map< unsigned int, std::pair< int, int > >& cell2points,
     }
 
     std::swap(pos, unique);
-    std::swap(spurt::crease::crease_strength, str);
+    std::swap(xavier::crease::crease_strength, str);
 
     std::cout << "after uniquification: " << pos.size() << " positions instead of "
               << N << std::endl;
@@ -161,12 +159,12 @@ void connect_segments(std::vector< std::list< unsigned int > >& creases,
     }
 }
 
-void spurt::crease::
+void xavier::crease::
 extract(const Nrrd* nrrd,
         const raster_grid<2>& grid,
         double threshold,
         bool ridge,
-        std::vector< vec2 >& intersections,
+        std::vector< nvis::vec2 >& intersections,
         std::vector< std::list< unsigned int > >& creases)
 {
     using namespace nvis;
@@ -225,7 +223,7 @@ extract(const Nrrd* nrrd,
             p[3] = grid(i, j);
             p[4] = p[0];
 
-            vec2 __p = 0.25 * (p[0] + p[1] + p[2] + p[3]);
+            nvis::vec2 __p = 0.25 * (p[0] + p[1] + p[2] + p[3]);
             // __p[0] *= (double)(grid.resolution()[0] - 1);
             // __p[1] *= (double)(grid.resolution()[1] - 1);
             double __v;
@@ -318,7 +316,7 @@ extract(const Nrrd* nrrd,
                     std::vector< double > vals(allpointsincell.size());
                     for (unsigned int k = 0 ; k < allpointsincell.size() ; k++) {
                         unsigned int pid = allpointsincell[k];
-                        vec2 p = intersections[pid];
+                        nvis::vec2 p = intersections[pid];
                         double val;
                         gH.value(p, val);
                         vals[k] = val;

@@ -4,12 +4,12 @@
 #include <math/fixed_vector.hpp>
 #include <boost/static_assert.hpp>
 
-namespace spurt
+namespace xavier
 {
 template<typename T, int N>
 struct id_set {
     typedef T                           value_type;
-    typedef fixed_vector<T, N>    vec_type;
+    typedef nvis::fixed_vector<T, N>    vec_type;
 
     id_set() : __ids(-1) {}
     id_set(const value_type ids[N]) {
@@ -52,7 +52,7 @@ struct id_set {
 struct Lt_id_set {
     template<typename T, int N>
     bool operator()(const id_set<T, N>& f0, const id_set<T, N>& f1) {
-        lexicographical_order Lt;
+        nvis::lexicographical_order Lt;
         return Lt(f0.__ids, f1.__ids);
     }
 };

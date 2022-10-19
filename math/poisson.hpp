@@ -61,7 +61,7 @@ struct c2i {
 
 }
 
-namespace spurt {
+namespace xavier {
 
 template<typename Type>
 void setup_system_tokamak_dirichlet_tokamak(const grid<Type, 3>& domain, 
@@ -249,7 +249,7 @@ void solve_poisson_tokamak(const grid<T, 3>& domain,
                            std::vector<T>& x, int maxiter = 50, 
                            T eps = 1.0e-16)
 {
-    typedef spurt::grid<T, 3>                      grid_type;
+    typedef xavier::grid<T, 3>                      grid_type;
     typedef typename grid_type::ivec_type           ivec_type;
     typedef typename grid_type::index_type          index_type;
     typedef Eigen::SparseMatrix<T>                  sparse_matrix;
@@ -306,7 +306,7 @@ void solve_poisson_interior(const grid<T, 3>& domain,
                             std::vector<T>& x, int maxiter = 50, 
                             T eps = 1.0e-16)
 {
-    typedef spurt::grid<T, 3>                      grid_type;
+    typedef xavier::grid<T, 3>                      grid_type;
     typedef typename grid_type::ivec_type           ivec_type;
     typedef typename grid_type::index_type          index_type;
     typedef typename grid_type::vec_type            vec_type;

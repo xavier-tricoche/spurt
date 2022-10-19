@@ -1,0 +1,56 @@
+//---------------------------------------------------------------------------
+//
+// Project:   FAnToM
+// Module:    $RCSfile: FLeastSquare.icc,v $
+// Language:  C++
+// Date:      $Date: 2001/08/02 14:54:34 $
+// Author:    $Author: bessen $
+// Version:   $Revision: 1.3 $
+//
+//---------------------------------------------------------------------------
+
+#undef inline
+
+#include <cmath>
+#include <iostream>
+
+#include "FMatrix.hh"
+#include "FVector.hh"
+#include "FMath.hh"
+#include "FException.hh"
+
+#ifdef OUTLINE
+#define inline
+#endif
+
+//---------------------------------------------------------------------------
+
+#define MM_SWAP(a,b,c) { c=a; a=b; b=c; }
+
+//---------------------------------------------------------------------------
+
+inline FLeastSquare::FLeastSquare()
+{
+  FException e ("Default constructor makes no sense, please use the other one !");
+  throw e;  
+}
+
+//---------------------------------------------------------------------------
+
+inline FLeastSquare::FLeastSquare(const FVector& x, const FVector& y, 
+				    const FVector& sig, 
+                void (*funcs)(double, const FVector&, double&, FVector&))
+{
+  this->x = x;
+  this->y = y;
+  this->sig = sig;
+  this->funcs = funcs;
+}
+
+//---------------------------------------------------------------------------
+
+inline FLeastSquare::~FLeastSquare()
+{
+}
+
+#undef inline

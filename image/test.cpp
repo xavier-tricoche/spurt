@@ -3,7 +3,7 @@
 #include "convert.hpp"
 #include "probe.hpp"
 
-using namespace spurt;
+using namespace xavier;
 using namespace gage_interface;
 
 int main( int argc, char* argv[] )
@@ -38,7 +38,7 @@ int main( int argc, char* argv[] )
     scalar_wrapper image( nrrd );
 
     srand48( time(0) );
-    vec2 x;
+    nvis::vec2 x;
     double val, err;
 
     std::cout << "checking interpolation" << std::endl;
@@ -68,7 +68,7 @@ int main( int argc, char* argv[] )
         double u = -1+drand48()*(w+1);
         double v = -1+drand48()*(h+1);
 
-        vec2 x( u, v );
+        nvis::vec2 x( u, v );
         if ( image.value( x, val ) )
         {
             if ( u<_minx ) _minx = u;

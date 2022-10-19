@@ -1,0 +1,47 @@
+//---------------------------------------------------------------------------
+//
+// Project:   FAnToM
+// Module:    $RCSfile: FObject.icc,v $
+// Language:  C++
+// Date:      $Date: 2000/05/31 19:53:30 $
+// Author:    $Author: jfrey $
+// Version:   $Revision: 1.3 $
+//
+//--------------------------------------------------------------------------- 
+
+#ifdef OUTLINE
+#define inline
+#endif
+
+#ifdef FOBJECT_DEBUG
+#include "FObjectRegistry.hh"
+#endif
+
+inline FObject::FObject()
+{
+#ifdef FOBJECT_DEBUG
+  FObjectRegistry::registry.registerObject(this);
+#endif
+}
+
+//---------------------------------------------------------------------------
+
+inline FObject::FObject(const FObject &)
+{
+#ifdef FOBJECT_DEBUG
+  FObjectRegistry::registry.registerObject(this);
+#endif
+}
+
+//---------------------------------------------------------------------------
+
+inline FObject* FObject::Clone() const
+{
+  return new FObject();
+}
+
+//===========================================================================
+
+
+
+#undef inline

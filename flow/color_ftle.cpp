@@ -6,7 +6,7 @@
 
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
-#include <misc/time_helper.hpp>
+#include <util/wall_timer.hpp>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -34,14 +34,14 @@ void initialize(int argc, char* argv[])
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
 }
 
-typedef spurt::nrrd_data_traits<Nrrd*>  field_type;
+typedef xavier::nrrd_data_traits<Nrrd*>  field_type;
 
-inline spurt::vec3 color(double f, double b, double min, double max)
+inline nvis::vec3 color(double f, double b, double min, double max)
 {
-    static spurt::vec3 red(1,0,0);
-    static spurt::vec3 white(1,1,1);
-    static spurt::vec3 blue(0,0,1);
-    static spurt::vec3 black(0,0,0);
+    static nvis::vec3 red(1,0,0);
+    static nvis::vec3 white(1,1,1);
+    static nvis::vec3 blue(0,0,1);
+    static nvis::vec3 black(0,0,0);
     
     double u = (f-min)/(max-min);
     double v = (b-min)/(max-min);
@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
 {
     initialize(argc, argv);
     
-    Nrrd* nin = spurt::readNrrd(name_in);
+    Nrrd* nin = xavier::nrrd_utils::readNrrd(name_in);
     std::vector<size_t> size(nin->dim);
     for (int i=0 ; i<size.size() ; ++i) {
         size[i] = nin->axis[i].size;
@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
     
     double max;
     std::vector<float> vals;
-    spurt::to_vector<float>(vals, nin);
+    xavier::nrrd_utils::to_vector<float>(vals, nin);
     max = *std::max_element(vals.begin(), vals.end());
     std::cerr << "max = " << max << std::endl;
     
@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
     {
         #pragma omp for schedule(dynamic,1)
         for (int n = 0 ; n < nbpix ; ++n) {
-            spurt::fvec3 c = color(vals[nb_channels*n], vals[nb_channels*n+shift], 0, max);
+            nvis::fvec3 c = color(vals[nb_channels*n], vals[nb_channels*n+shift], 0, max);
             out[3*n  ] = c[0];
             out[3*n+1] = c[1];
             out[3*n+2] = c[2];
@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
     for (int i=1 ; i<size.size() ; ++i) {
         spc[i] = nin->axis[i].spacing;
     }
-    spurt::writeNrrdFromContainers(out, name_out, /*nrrdTypeFloat,*/ size, spc);
+    xavier::nrrd_utils::writeNrrdFromContainers(out, name_out, /*nrrdTypeFloat,*/ size, spc);
     
     return 0;
 }

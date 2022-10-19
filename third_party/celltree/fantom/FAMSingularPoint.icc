@@ -1,0 +1,32 @@
+//---------------------------------------------------------------------------
+//
+// Project:   FAnToM
+// Module:    $RCSfile: FAMSingularPoint.icc,v $
+// Language:  C++
+// Date:      $Date: 2001/04/18 14:13:38 $
+// Author:    $Author: tricoche $
+// Version:   $Revision: 1.13 $
+//
+//--------------------------------------------------------------------------- 
+
+#ifdef OUTLINE
+#define inline
+#endif
+
+//--------------------------------------------------------------------------- 
+
+inline double FAMSingularPoint::getEnstrophy() const {
+
+  return enstrophy;
+}
+
+//--------------------------------------------------------------------------- 
+
+inline double FAMSingularPoint::getMaxNorm() const {
+
+  return max_norm;
+}
+
+//--------------------------------------------------------------------------- 
+
+#undef inline

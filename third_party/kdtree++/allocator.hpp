@@ -49,7 +49,7 @@ namespace KDTree
 
     protected:
       allocator_type _M_node_allocator;
-      
+
       _Node_*
       _M_allocate_node()
       {
@@ -74,7 +74,8 @@ namespace KDTree
       void
       _M_destroy_node(_Node_* __p)
       {
-        _M_node_allocator.destroy(__p);
+        std::allocator_traits<decltype(_M_node_allocator)>::destroy(_M_node_allocator, __p);
+        // _M_node_allocator.destroy(__p);
       }
     };
 

@@ -8,7 +8,7 @@
 #include <math/fixed_vector.hpp>
 #include <Eigen/Core>
 
-namespace spurt {
+namespace xavier {
 
 using namespace std;
 
@@ -20,39 +20,50 @@ template<typename T>
 struct data_traits< T, typename std::enable_if<std::is_scalar<T>::value>::type > {
     typedef T value_type;
     typedef T data_type;
+
     constexpr static size_t size() { return 1; };
-    static const T& value(const T& v, size_t) { return v; }
-    static T& value(T& v, size_t) { return v; }
-    static T& assign(T& inout, T val) { inout=val; return inout; }
+    constexpr static size_t mem_size() { return sizeof(value_type); }
+    static const value_type& value(const data_type& v, size_t) { return v; }
+    static value_type& value(data_type& v, size_t) { return v; }
+    static data_type& assign(data_type& inout, value_type val) { inout=val; return inout; }
+    static value_type norm(const data_type& v) { return std::labs(v); }
 };
 
 template<typename T, size_t N>
-struct data_traits< fixed_vector<T, N> > {
+struct data_traits< nvis::fixed_vector<T, N> > {
     typedef T value_type;
-    typedef fixed_vector<value_type, N> data_type;
+    typedef nvis::fixed_vector<value_type, N> data_type;
+
     constexpr static size_t size() { return N; }
-    static const T& value(const fixed_vector<T, N>& v, size_t i) {
+    constexpr static size_t mem_size() { return N*sizeof(value_type); }
+    static const value_type& value(const data_type& v, size_t i) {
         return v[i];
     }
-    static T& value(fixed_vector<T, N>& v, size_t i) { return v[i]; }
+    static value_type& value(data_type& v, size_t i) { return v[i]; }
     static data_type& assign(data_type& inout, T val) {
         std::fill(inout.begin(), inout.end(), val);
         return inout;
     }
+    static value_type norm(const data_type& v) { return nvis::norm(v); }
 };
 
 template<typename T, size_t N>
 struct data_traits< std::array<T, N> > {
     typedef T value_type;
     typedef std::array<value_type, N> data_type;
+
     constexpr static size_t size() { return N; }
-    static const T& value(const std::array<T, N>& v, size_t i) {
+    constexpr static size_t mem_size() { return N*sizeof(value_type); }
+    static const value_type& value(const data_type& v, size_t i) {
         return v[i];
     }
-    static T& value(std::array<T, N>& v, size_t i) { return v[i]; }
-    static data_type& assign(data_type& inout, T val) {
+    static value_type& value(data_type& v, size_t i) { return v[i]; }
+    static data_type& assign(data_type& inout, value_type val) {
         std::fill(inout.begin(), inout.end(), val);
         return inout;
+    }
+    static value_type norm(const data_type& v) {
+        return std::inner_product(v.begin(), v.end(), v.begin(), 0);
     }
 };
 
@@ -60,33 +71,55 @@ template<typename T, int NRows>
 struct data_traits< Eigen::Matrix<T, NRows, 1> > {
     typedef T value_type;
     typedef Eigen::Matrix<T, NRows, 1> data_type;
+
     constexpr static int size() { return NRows; }
-    static const T& value(const data_type& v, size_t i) {
+    constexpr static size_t mem_size() { return NRows*sizeof(value_type); }
+    static const value_type& value(const data_type& v, size_t i) {
         return v[i];
     }
-    static T& value(data_type& v, size_t i) { return v[i]; }
-    static data_type& assign(data_type& inout, T val) {
+    static value_type& value(data_type& v, size_t i) { return v[i]; }
+    static data_type& assign(data_type& inout, value_type val) {
         inout.setConstant(val);
         return inout;
     }
+    static value_type norm(const data_type& v) {
+        return v.norm();
+    }
+};
+
+template<typename T>
+struct data_wrapper {
+    typedef data_traits<T> traits_type;
+    typedef typename traits_type::value_type value_type;
+    typedef T data_type;
+    typedef value_type* iterator;
+    typedef const value_type* const_iterator;
+
+    data_wrapper(const data_type& v) : m_v(v) {}
+    int size() const { return traits_type::size(m_v); }
+    constexpr static size_t mem_size() { return traits_type::mem_size(); }
+    const value_type& operator[](size_t i) const { return traits_type::value(m_v, i); }
+    value_type& operator[](size_t i) { return traits_type::value(m_v, i); }
+    data_type& assign(value_type s) { traits_type::assign(m_v, s); return m_v; }
+    data_type& set(value_type s) { return this->assign(s); }
+    value_type norm() const { return traits_type::norm(m_v); }
+    const_iterator begin() const { return &traits_type::value(m_v, 0); }
+    const_iterator end() const { return &traits_type::value(m_v, 0) + this->size(); }
+
+    data_type& m_v;
 };
 
 template<typename T>
 struct is_array : public std::false_type {};
 
 template<typename Value_, size_t N>
-struct is_array< fixed_vector<Value_, N> > : public std::true_type {};
+struct is_array< nvis::fixed_vector<Value_, N> > : public std::true_type {};
 
 template<typename Value_, size_t N>
 struct is_array< std::array<Value_, N> > : public std::true_type {};
 
 template<typename Value, int NRows>
 struct is_array< Eigen::Matrix<Value, NRows, 1> > : public std::true_type {};
-
-// need to figure out how to use std::decltype to test existence of a given
-// method in class definition (here size())
-// template<T, typename = typename std::enable_if<std::decltype(T().size())>::type
-// struct is_array<T> : public std::true_type {};
 
 // type to human-readable string conversion
 template<typename T>
@@ -110,31 +143,15 @@ struct type2string {};
     template<> \
     struct type2string<type> { \
         typedef type data_type; \
-        static const std::string type_name; \
+        static const std::string type_name() { return #type ; } \
     }; \
-    const std::string type2string<type>::type_name = #type;
+    template<> \
+    struct type2string< std::complex<type> >{ \
+        typedef type data_type; \
+        static const std::string type_name() { return "std::complex<" #type ">"; } \
+    };
     LIST_OF_STRING_MAPABLE_TYPES
 #undef X
-
-template<>
-struct type2string< std::complex<float> > {
-    typedef float data_type;
-    static const std::string type_name;
-};
-template<>
-struct type2string< std::complex<double> > {
-    typedef double data_type;
-    static const std::string type_name;
-};
-template<>
-struct type2string< std::complex<long double> > {
-    typedef long double data_type;
-    static const std::string type_name;
-};
-const std::string type2string< std::complex<float> >::type_name = "std::complex<float>";
-const std::string type2string< std::complex<double> >::type_name = "std::complex<double>";
-const std::string type2string< std::complex<long double> >::type_name = "std::complex<long double>";
-
 
 // predicate to verify that object is a pair
 template<typename T>

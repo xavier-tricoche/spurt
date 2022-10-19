@@ -1,0 +1,1 @@
+configure_file( runbench.sh.in ${EXECUTABLE_OUTPUT_PATH}/runbench.sh )

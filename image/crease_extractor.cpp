@@ -1,16 +1,16 @@
 #include "new_creaseline.hpp"
 #include <algorithm>
-#include <boost/timer.hpp>
+#include <thread>
 
 using namespace std;
 using namespace nvis;
-using namespace spurt;
+using namespace xavier;
 using namespace gage_interface;
 
 
-double spurt::crease::threshold;
-double spurt::crease::eps;
-unsigned int spurt::crease::subdiv;
+double xavier::crease::threshold;
+double xavier::crease::eps;
+unsigned int xavier::crease::subdiv;
 
 vector< crease::Edge > crease::problematic_edges;
 vector< crease::Point > crease::all_face_points;
@@ -77,7 +77,7 @@ double MeasureWrapper::eigenvalue( const Point& p, unsigned int idx )
             _tens_wrap.mode_hess_evals( u, _evals_array );
             return _evals_array[idx];
         }
-        default: 
+        default:
         {
             assert( false );
         }
@@ -121,18 +121,18 @@ private:
     int _measure;
 };
 
-crease::Vector crease::eigenvector( const Point& p, const scalar_wrapper& gH, 
+crease::Vector crease::eigenvector( const Point& p, const scalar_wrapper& gH,
     unsigned int idx )
 {
     std::vector< Vector > evecs(3);
     gH.hess_evecs( p, evecs );
     return evecs[idx];
-}    
+}
 
 crease::Vector crease::gradient( const Point& p, const scalar_wrapper& gH )
 {
     Vector g;
-    gH.gradient( p, g ); 
+    gH.gradient( p, g );
     return g;
 }
 
@@ -165,18 +165,18 @@ double crease::zero_crossing( const Vector& ev0, const Vector& ev1,
     return -1; // invalid
 }
 
-void crease::next_evec( Vector& out, const Vector& in, 
-    const Edge& edge, const scalar_wrapper& gH, 
+void crease::next_evec( Vector& out, const Vector& in,
+    const Edge& edge, const scalar_wrapper& gH,
     unsigned int idx )
 {
     out = eigenvector( edge.second, gH, idx );
-    if ( inner(in,out)<0 )
+    if ( nvis::inner(in,out)<0 )
         out *= -1;
 }
 
 bool crease::
 track_eigenvector_orientation( Vector& out, const Vector& in,
-    const Edge& edge, const scalar_wrapper& gH, 
+    const Edge& edge, const scalar_wrapper& gH,
     unsigned int idx )
 {
     if ( !subdiv )
@@ -196,7 +196,7 @@ track_eigenvector_orientation( Vector& out, const Vector& in,
     if ( eps<0 || eps>=1 ) eps = 0.05;
 
     while ( u<v && v<=1 )
-    {    
+    {
         current.second = (1-v)*edge.first + v*edge.second;
         next_evec( next, prev, current, gH, idx );
         if ( inner( prev, next )<threshold )
@@ -220,7 +220,7 @@ track_eigenvector_orientation( Vector& out, const Vector& in,
     }
 
     return false;
-}    
+}
 
 bool crease::
 orient_face( vector< Vector >& evecs, const vector< Point >& face,
@@ -257,7 +257,7 @@ orient_face( vector< Vector >& evecs, const vector< Point >& face,
         return false;
 
     return true;
-}    
+}
 
 bool crease::
 extract_point_with_valid_emedium( Point& out, const vector< Vector >& evecs,
@@ -305,10 +305,10 @@ extract_point_with_valid_emedium( Point& out, const vector< Vector >& evecs,
     return false;
 }
 
-bool crease::extract_point_without_valid_emedium( Point& out, 
+bool crease::extract_point_without_valid_emedium( Point& out,
     const vector< Point >& face,
     const scalar_wrapper& gH, unsigned int idx )
-{    
+{
     vector< Vector > evecs_ref(4);
     vector< Vector > evecs_med(4);
     if ( orient_face( evecs_ref, face, gH, idx ) )
@@ -317,7 +317,7 @@ bool crease::extract_point_without_valid_emedium( Point& out,
 
         // pick an eigenvector in Span{orth(e_ref)} at each face vertex
         for ( unsigned int i=0 ; i<4 ; i++ )
-        { 
+        {
             evecs_med[i] = basis_vector( evecs_ref[i] );
         }
 
@@ -357,21 +357,21 @@ bool crease::extract_point_without_valid_emedium( Point& out,
             // compute the reference and medium eigenvectors associated with
             // both segment vertices. Reference eigenvector is obtained by
             // linear interpolation (consistent with Marching Cubes) while the
-            // second one is obtained by linear interpolation + projection 
-            // onto eigenspace normal to reference vector and subsequent 
+            // second one is obtained by linear interpolation + projection
+            // onto eigenspace normal to reference vector and subsequent
             // normalization. Finally, the eigenvector to be checked against
-            // the gradient is obtained by cross product between reference 
+            // the gradient is obtained by cross product between reference
             // and medium eigenvector.
 
             // 1st vertex
-            ev0_ref = (1-u0)*evecs_ref[i0] + u0*evecs_ref[(i0+1)%4];    
+            ev0_ref = (1-u0)*evecs_ref[i0] + u0*evecs_ref[(i0+1)%4];
             ev0_med = (1-u0)*evecs_med[i0] + u0*evecs_med[(i0+1)%4];
             ev0_med -= inner( ev0_med, ev0_ref )*ev0_ref;
             ev0_med *= 1/norm( ev0_med );
             evec0 = cross( ev0_ref, ev0_med );
 
             // 2nd vertex
-            ev1_ref = (1-u1)*evecs_ref[i1] + u1*evecs_ref[(i1+1)%4];    
+            ev1_ref = (1-u1)*evecs_ref[i1] + u1*evecs_ref[(i1+1)%4];
             ev1_med = (1-u1)*evecs_med[i1] + u1*evecs_med[(i1+1)%4];
             ev1_med -= inner( ev1_med, ev1_ref )*ev1_ref;
             ev1_med *= 1/norm( ev1_med );
@@ -408,7 +408,7 @@ bool crease::extract_point_without_valid_emedium( Point& out,
 void crease::connect_segments()
 {
     // compute point <- point -> point connections
-    std::vector< std::pair< int, int > > connected_to( face_found.size(), 
+    std::vector< std::pair< int, int > > connected_to( face_found.size(),
         std::pair< int, int >( -1, -1 ) );
     for ( unsigned int i=0 ; i<all_edges.size() ; i++ )
     {
@@ -419,7 +419,7 @@ void crease::connect_segments()
 
         int a, b;
         a = connected_to[f0].first;
-        b = connected_to[f1].first; 
+        b = connected_to[f1].first;
 
         if ( a == -1 )
             connected_to[f0].first = f1;
@@ -429,7 +429,7 @@ void crease::connect_segments()
         if ( b == -1 )
             connected_to[f1].first = f0;
         else
-            connected_to[f1].second = f0; 
+            connected_to[f1].second = f0;
     }
 
     components.clear();
@@ -463,7 +463,7 @@ void crease::connect_segments()
             inserted[cur] = true;
             link0 = connected_to[cur].first;
             link1 = connected_to[cur].second;
-            if ( ( unsigned int )link0 != prev && !inserted[link0] ) 
+            if ( ( unsigned int )link0 != prev && !inserted[link0] )
                 my_list.push_back( link0 );
             else if ( link1 >= 0 && ( unsigned int )link1 != prev && !inserted[link1] )
                 my_list.push_back( link1 );
@@ -480,7 +480,7 @@ void crease::connect_segments()
             inserted[cur] = true;
             link0 = connected_to[cur].first;
             link1 = connected_to[cur].second;
-            if ( ( unsigned int )link0 != prev && !inserted[link0] ) 
+            if ( ( unsigned int )link0 != prev && !inserted[link0] )
                 my_list.push_front( link0 );
             else if ( link1 >= 0 && ( unsigned int )link1 != prev && !inserted[link1] )
                 my_list.push_front( link1 );
@@ -492,12 +492,12 @@ void crease::connect_segments()
 }
 
 void crease::extract_lines( const Nrrd* nrrd, bool ridge )
-{    
+{
     // check if this is a tensor field
     bool is_tensor = false;
     if ( nrrd->dim == 4 )
         is_tensor = true;
-    
+
     // collect information about size and bounding box
     unsigned int size[3];
     double min[3], max[3];
@@ -509,7 +509,7 @@ void crease::extract_lines( const Nrrd* nrrd, bool ridge )
         size[i] = nrrd->axis[i+shift].size;
     }
     Grid grid( size, min, max );
-    
+
     scalar_wrapper gH( nrrd );
 
     set< FaceId > face_done;
@@ -518,9 +518,9 @@ void crease::extract_lines( const Nrrd* nrrd, bool ridge )
     face_found.clear();
 
     // loop over mesh cells
-    unsigned int faces[6][4] = 
-        { { 0, 1, 2, 3 }, 
-        { 4, 5, 6, 7 }, 
+    unsigned int faces[6][4] =
+        { { 0, 1, 2, 3 },
+        { 4, 5, 6, 7 },
         { 0, 1, 5, 4 },
         { 1, 2, 6, 5 },
         { 2, 3, 7, 6 },
@@ -554,7 +554,7 @@ void crease::extract_lines( const Nrrd* nrrd, bool ridge )
         }
     }
 
-    std::cout << means.size() << " (" 
+    std::cout << means.size() << " ("
         << ( float )means.size()/( float )( size[0]*size[1]*size[2] )*100.
         << "%) candidate vertices" << std::endl;
 
@@ -576,14 +576,13 @@ void crease::extract_lines( const Nrrd* nrrd, bool ridge )
 
     threshold = answer;
 
-    unsigned int _id = ( !ridge 
+    unsigned int _id = ( !ridge
         ? ( unsigned int )( means.size()*threshold )
         : ( unsigned int )( means.size()*( 1-threshold ) ) );
     double _threshold = means[_id];
 
     std::cout << "corresponding threshold = " << _threshold << std::endl;
-    boost::timer t;
-    while( t.elapsed() < 5.0 ) {}
+    std::this_thread::sleep_for(5000ms);
     std::cout << std::endl;
 
     cout << "threshold = " << _threshold << " (" << threshold << ")" << endl;
@@ -623,7 +622,7 @@ void crease::extract_lines( const Nrrd* nrrd, bool ridge )
                 {
                     gH.hess_evals( v[l], evals );
                     if ( ( ridge && evals[1]>=_threshold ) ||
-                        ( !ridge && evals[1]<=_threshold ) ) 
+                        ( !ridge && evals[1]<=_threshold ) )
                     {
                         candidate = false;
                         break;
@@ -652,7 +651,7 @@ void crease::extract_lines( const Nrrd* nrrd, bool ridge )
                     if ( face_done.find(fid) != face_done.end() )
                     {
                         // add corresponding position, if any
-                        map< FaceId, unsigned int >::const_iterator it = 
+                        map< FaceId, unsigned int >::const_iterator it =
                             face_found.find(fid);
                         if ( it != face_found.end() )
                         {
@@ -668,10 +667,10 @@ void crease::extract_lines( const Nrrd* nrrd, bool ridge )
 
                     vector< Vector > evecs(4);
                     if ( false && orient_face( evecs, p, gH, 1 ) )
-                    {                        
+                    {
                         ++nb_orientable;
                         Point xing;
-                        if ( extract_point_with_valid_emedium( xing, evecs, p, gH, 
+                        if ( extract_point_with_valid_emedium( xing, evecs, p, gH,
                             ( ridge ? 2 : 0 ) ) )
                         {
                             all_face_points.push_back( xing );
@@ -683,11 +682,11 @@ void crease::extract_lines( const Nrrd* nrrd, bool ridge )
                     {
                         ++nb_fakebasis;
                         Point xing;
-                        // here we need to resort to plan B which consists in 
+                        // here we need to resort to plan B which consists in
                         // creating an artificial but consistent (e2,e3) basis
                         // of Span(orth(e1)) over the whole face and use it instead
                         // of the eigenvectors computed by Gage.
-                        if ( extract_point_without_valid_emedium( xing, p, gH, 
+                        if ( extract_point_without_valid_emedium( xing, p, gH,
                             ( ridge ? 0 : 2 ) ) )
                         {
                             all_face_points.push_back( xing );
@@ -700,8 +699,8 @@ void crease::extract_lines( const Nrrd* nrrd, bool ridge )
                 if ( face_point.size() &&
                     face_point.size() != 2 )
                 {
-                    cout << "found " << face_point.size() 
-                        << " crease point(s) on voxel faces" 
+                    cout << "found " << face_point.size()
+                        << " crease point(s) on voxel faces"
                         << endl;
                 }
                 else if ( face_point.size() == 2 )
@@ -720,14 +719,14 @@ void crease::extract_lines( const Nrrd* nrrd, bool ridge )
     unsigned int nb_cells = ( size[0]-1 )*( size[1]-1 )*( size[2]-1 );
     cout << "fake eigenspace basis: " << nb_fakebasis
         << " / orientanble eigenvectors: " << nb_orientable
-        << " (" 
+        << " ("
         << ( double )nb_fakebasis/( double )nb_orientable*100
         << "%)" << endl;
-    cout << "percentage of candidate voxels: " 
+    cout << "percentage of candidate voxels: "
         << ( double )nbok/( double )nb_cells
         << endl;
 
-    cout << "number of segments = " << all_edges.size() 
+    cout << "number of segments = " << all_edges.size()
         << ", number of connected components: " << components.size()
         << std::endl;
 }

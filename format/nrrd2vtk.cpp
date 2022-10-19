@@ -2,12 +2,12 @@
 #include <misc/option_parse.hpp>
 #include <iostream>
 #include <boost/filesystem.hpp>
-#include <vtk/vtk_utils.hpp>
+#include <VTK/vtk_utils.hpp>
 #include <format/filename.hpp>
 #include <misc/strings.hpp>
 
 
-namespace xcl = spurt::command_line;
+namespace xcl = xavier::command_line;
 typedef boost::filesystem::path path_t;
 
 
@@ -46,7 +46,7 @@ int main(int argc, const char* argv[]) {
     }
 	
 	if (out_vtk_name.empty()) {
-		out_vtk_name = spurt::filename::replace_extension(in_nrrd_name, "vti");
+		out_vtk_name = xavier::filename::replace_extension(in_nrrd_name, "vti");
 	}
 	
 	vtkStructuredPoints* spts;

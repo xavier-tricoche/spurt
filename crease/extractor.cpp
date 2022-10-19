@@ -1,73 +1,72 @@
 #include <cmath>
-#include "extractor.hpp"
-#include "math/math.hpp"
-#include "misc/sort.hpp"
-#include "math/matrix.hpp"
-#include "grid.hpp"
+#include <crease/extractor.hpp>
+#include <math/math.hpp>
+#include <misc/sort.hpp>
+#include <math/matrix.hpp>
+#include <crease/grid.hpp>
 #include <set>
 #include <list>
 #include <algorithm>
 #include <fstream>
 #include <teem/hest.h>
-#include <boost/timer.hpp>
-#include <image/nrrd_wrapper.hpp>
-#include "pvo.hpp"
+#include <misc/progress.hpp>
+#include <crease/pvo.hpp>
 
 // for debugging display
-std::vector< std::vector< spurt::vec3 > > spurt::crease::vertices;
-std::vector< spurt::vec3 > spurt::crease::problematic_voxels;
-std::vector< spurt::vec3 > spurt::crease::fixed_voxels;
-std::vector< spurt::vec3 > spurt::crease::current_vertices;
-std::vector< spurt::vec3 > spurt::crease::ok_faces;
-std::vector< unsigned int > spurt::crease::added_vertices;
-std::vector< spurt::vec3 > spurt::crease::crossing_faces;
-std::vector< spurt::crease::point_on_face > spurt::crease::all_points_on_face;
-std::vector< spurt::crease::path > spurt::crease::paths;
-std::vector< spurt::vec3 > spurt::crease::pvo_faces;
-std::map< spurt::FaceId, spurt::vec3 > spurt::crease::reference_points;
-spurt::FaceId spurt::crease::current_face_id;
-std::vector< spurt::vec3 > spurt::crease::show_all;
-std::vector< spurt::vec3 > spurt::crease::intermediate_steps;
-std::vector< spurt::vec3 > spurt::crease::round1, spurt::crease::round2, spurt::crease::round12;
-std::string spurt::crease::flag_file_name;
-bool spurt::crease::bold_move;
+std::vector< std::vector< nvis::vec3 > > xavier::crease::vertices;
+std::vector< nvis::vec3 > xavier::crease::problematic_voxels;
+std::vector< nvis::vec3 > xavier::crease::fixed_voxels;
+std::vector< nvis::vec3 > xavier::crease::current_vertices;
+std::vector< nvis::vec3 > xavier::crease::ok_faces;
+std::vector< unsigned int > xavier::crease::added_vertices;
+std::vector< nvis::vec3 > xavier::crease::crossing_faces;
+std::vector< xavier::crease::point_on_face > xavier::crease::all_points_on_face;
+std::vector< xavier::crease::path > xavier::crease::paths;
+std::vector< nvis::vec3 > xavier::crease::pvo_faces;
+std::map< xavier::FaceId, nvis::vec3 > xavier::crease::reference_points;
+xavier::FaceId xavier::crease::current_face_id;
+std::vector< nvis::vec3 > xavier::crease::show_all;
+std::vector< nvis::vec3 > xavier::crease::intermediate_steps;
+std::vector< nvis::vec3 > xavier::crease::round1, xavier::crease::round2, xavier::crease::round12;
+std::string xavier::crease::flag_file_name;
+bool xavier::crease::bold_move;
 
-// extraction control parameters
-double spurt::crease::value_threshold = 0;
-double spurt::crease::strength_threshold = 0;
-double spurt::crease::value_threshold_select = 0;
-double spurt::crease::strength_threshold_select = 0;
-double spurt::crease::confidence_threshold = 0.5;
-double spurt::crease::gradient_eps = 1.0e-6;
-double spurt::crease::gradient_eps_rel = 0.05;
-bool spurt::crease::apply_filter;
-bool spurt::crease::speedup;
-bool spurt::crease::fixing_voxel;
-bool spurt::crease::display_debug_info = false;
-bool spurt::crease::read_info;
+// extraction control
+double xavier::crease::value_threshold = 0;
+double xavier::crease::strength_threshold = 0;
+double xavier::crease::value_threshold_select = 0;
+double xavier::crease::strength_threshold_select = 0;
+double xavier::crease::confidence_threshold = 0.5;
+double xavier::crease::gradient_eps = 1.0e-6;
+double xavier::crease::gradient_eps_rel = 0.05;
+bool xavier::crease::apply_filter;
+bool xavier::crease::speedup;
+bool xavier::crease::fixing_voxel;
+bool xavier::crease::display_debug_info = false;
+bool xavier::crease::read_info;
 
 // spatial accuracy
-unsigned int spurt::crease::max_depth = 4;
-unsigned int spurt::crease::max_depth_fix = 6;
-unsigned int spurt::crease::upsample;
-double spurt::crease::max_int_error = 0.05;
-double spurt::crease::max_align_error = 0.01;
+unsigned int xavier::crease::max_depth = 4;
+unsigned int xavier::crease::max_depth_fix = 6;
+unsigned int xavier::crease::upsample;
+double xavier::crease::max_int_error = 0.05;
+double xavier::crease::max_align_error = 0.01;
 
-unsigned int spurt::crease::nb_crossings;
+unsigned int xavier::crease::nb_crossings;
 
 // crease type
-bool spurt::crease::is_ridge;
-int spurt::crease::crease_kind;
-unsigned int spurt::crease::failed_conv;
-spurt::crease::extraction_method spurt::crease::ext_meth;
+bool xavier::crease::is_ridge;
+int xavier::crease::crease_kind;
+unsigned int xavier::crease::failed_conv;
+xavier::crease::extraction_method xavier::crease::ext_meth;
 
 // interface to gage
-spurt::MeasureWrapper* spurt::crease::the_wrapper;
+xavier::MeasureWrapper* xavier::crease::the_wrapper;
 
-using namespace spurt;
+using namespace xavier;
 
 // global face information
-spurt::crease::face_information spurt::crease::current_face_info;
+xavier::crease::face_information xavier::crease::current_face_info;
 
 namespace voxel_info {
 // multipurpose voxel information
@@ -96,7 +95,7 @@ unsigned int face_pt[3][4][3] = {
 
 };
 
-std::ostream& spurt::crease::operator<<(std::ostream& out, const face_type& face)
+std::ostream& xavier::crease::operator<<(std::ostream& out, const face_type& face)
 {
     out << "face: " << std::endl
     << "positions: 0:" << face.p[0] << ", 1:" << face.p[1]
@@ -112,10 +111,10 @@ std::ostream& spurt::crease::operator<<(std::ostream& out, const face_type& face
 
 unsigned int write_vertex_info(const Grid& grid, std::vector< bool >& ok)
 {
-    using namespace spurt;
-    using namespace spurt::crease;
+    using namespace xavier;
+    using namespace xavier::crease;
 
-    std::ofstream output(spurt::crease::flag_file_name.c_str(), std::ios::binary);
+    std::ofstream output(xavier::crease::flag_file_name.c_str(), std::ios::binary);
     unsigned int nb_ok_vertices = 0;
 
     unsigned int M, N, P;
@@ -141,7 +140,7 @@ unsigned int write_vertex_info(const Grid& grid, std::vector< bool >& ok)
                     prev_pct = pct;
                 }
 
-                spurt::vec3 q = grid(i, j, k);
+                nvis::vec3 q = grid(i, j, k);
                 double val = the_wrapper->value(q);
                 double str = the_wrapper->eigenvalue(q, 1);
 
@@ -158,7 +157,7 @@ unsigned int write_vertex_info(const Grid& grid, std::vector< bool >& ok)
 
     Nrrd *nrrd = nrrdNew();
     if (nrrdWrap_va(nrrd, buffer, nrrdTypeDouble, 4, 2, M, N, P) ||
-        nrrdSave(spurt::crease::flag_file_name.c_str(), nrrd, NULL)) {
+        nrrdSave(xavier::crease::flag_file_name.c_str(), nrrd, NULL)) {
         char *err = biffGetDone(NRRD);
         std::cout << err << std::endl;
     }
@@ -171,11 +170,11 @@ unsigned int write_vertex_info(const Grid& grid, std::vector< bool >& ok)
 
 int compute_vertex_info(const Grid& grid, std::vector< bool >& ok, std::vector< bool >& conf_ok)
 {
-    using namespace spurt;
-    using namespace spurt::crease;
+    using namespace xavier;
+    using namespace xavier::crease;
 
     std::cout << "computing vertex info..." << std::endl;
-    std::cout << "confidence threshold = " << spurt::crease::confidence_threshold << std::endl;
+    std::cout << "confidence threshold = " << xavier::crease::confidence_threshold << std::endl;
     std::cout << "value threshold = " << value_threshold << std::endl;
     std::cout << "strength threshold = " << strength_threshold << std::endl;
 
@@ -189,7 +188,7 @@ int compute_vertex_info(const Grid& grid, std::vector< bool >& ok, std::vector< 
 
     unsigned int nb_ok_vertices = 0;
 
-    spurt::vec3 p;
+    nvis::vec3 p;
     double val, conf, str;
 
     int prev_pct = -1;
@@ -212,7 +211,7 @@ int compute_vertex_info(const Grid& grid, std::vector< bool >& ok, std::vector< 
                 // std::cout << "(" << i << ", " << j << ", " << k << "): " << conf << "; " << val
                 // << "; " << str << std::endl;
 
-                conf_ok[id] = (conf > spurt::crease::confidence_threshold);
+                conf_ok[id] = (conf > xavier::crease::confidence_threshold);
                 // if (!conf_ok[id]) {
                 //     std::cout << "low confidence at (" << i << ", " << j << ", " << k << ")" << std::endl;
                 // }
@@ -235,16 +234,16 @@ int compute_vertex_info(const Grid& grid, std::vector< bool >& ok, std::vector< 
 
 unsigned int read_vertex_info(std::vector< bool >& ok, std::vector< bool >& conf_ok)
 {
-    using namespace spurt;
-    using namespace spurt::crease;
+    using namespace xavier;
+    using namespace xavier::crease;
 
     Nrrd *nrrd = nrrdNew();
-    if (nrrdLoad(nrrd, spurt::crease::flag_file_name.c_str(), NULL)) {
+    if (nrrdLoad(nrrd, xavier::crease::flag_file_name.c_str(), NULL)) {
         char *err = biffGetDone(NRRD);
         std::cout << err << std::endl;
     }
 
-    spurt::nrrd_data_wrapper<double> buffer(nrrd);
+    xavier::nrrd_utils::nrrd_data_wrapper<double> buffer(nrrd);
 
     bool has_confidence = (nrrd->dim == 4 && nrrd->axis[0].size == 3);
 
@@ -283,7 +282,7 @@ unsigned int read_vertex_info(std::vector< bool >& ok, std::vector< bool >& conf
 
                 conf_ok[id] = true;
                 if (has_confidence) {
-                    conf_ok[id] = (cfd > spurt::crease::confidence_threshold);
+                    conf_ok[id] = (cfd > xavier::crease::confidence_threshold);
                 }
                 ok[id] =  conf_ok[id] &&
                           (crease::is_ridge ?
@@ -302,7 +301,7 @@ unsigned int read_vertex_info(std::vector< bool >& ok, std::vector< bool >& conf
 // ---------------------------------------------------------------------------
 
 // compute PCA of a set of non-oriented vectors
-void crease::PCA(std::vector< spurt::vec3 >& evec, const std::vector< spurt::vec3 >& dirs)
+void crease::PCA(std::vector< nvis::vec3 >& evec, const std::vector< nvis::vec3 >& dirs)
 {
     double mat[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -328,32 +327,32 @@ void crease::PCA(std::vector< spurt::vec3 >& evec, const std::vector< spurt::vec
 }
 
 // Stetten's average direction
-spurt::vec3 crease::average(const std::vector< spurt::vec3 >& dirs)
+nvis::vec3 crease::average(const std::vector< nvis::vec3 >& dirs)
 {
-    std::vector< spurt::vec3 > tmp(3);
+    std::vector< nvis::vec3 > tmp(3);
     PCA(tmp, dirs);
     return tmp[0];
 }
 
 // ---------------------------------------------------------------------------
 // Furst's eigenvector orientation method
-void crease::Furst_orientation(spurt::vec3& ev1, const spurt::vec3& ev0)
+void crease::Furst_orientation(nvis::vec3& ev1, const nvis::vec3& ev0)
 {
-    std::vector< spurt::vec3 > vecs(2);
+    std::vector< nvis::vec3 > vecs(2);
     vecs[0] = ev0;
     vecs[1] = ev1;
-    spurt::vec3 avg = average(vecs);
-    double dot0 = inner(ev0, avg);
-    double dot1 = inner(ev1, avg);
+    nvis::vec3 avg = average(vecs);
+    double dot0 = nvis::inner(ev0, avg);
+    double dot1 = nvis::inner(ev1, avg);
     if (dot0*dot1 < 0)
         ev1 *= -1;
 }
 
 // ---------------------------------------------------------------------------
 // Naive eigenvector orientation method
-void crease::Naive_orientation(spurt::vec3& ev1, const spurt::vec3& ev0)
+void crease::Naive_orientation(nvis::vec3& ev1, const nvis::vec3& ev0)
 {
-    if (inner(ev0, ev1) < 0)
+    if (nvis::inner(ev0, ev1) < 0)
         ev1 *= -1;
 }
 
@@ -476,7 +475,7 @@ inline void ijk(unsigned int& i, unsigned int& j, unsigned& k, unsigned int id,
 // --------------------------------------------------------------------------
 
 std::map< FaceId, unsigned int > face_found;
-std::vector< spurt::vec3 > spurt::crease::all_face_points;
+std::vector< nvis::vec3 > xavier::crease::all_face_points;
 std::vector< std::pair< unsigned int, unsigned int > > all_edges;
 unsigned int nb_segments;
 
@@ -497,7 +496,7 @@ inline void add_segment(std::vector< unsigned int > ids)
             _vals[l] = crease::the_wrapper->value(crease::all_face_points[ids[l]]);
         }
         std::vector< unsigned int > _ids(np);
-        spurt::sort_ids(_ids, _vals);
+        xavier::sort_ids(_ids, _vals);
         ++nb_segments;
         unsigned int i0 = _ids[np-2];
         unsigned int i1 = _ids.back();
@@ -507,12 +506,12 @@ inline void add_segment(std::vector< unsigned int > ids)
     std::cout << "found a segment" << std::endl;
 }
 
-spurt::vec3 trilinear(const spurt::vec3& p, const std::vector< spurt::vec3 >& v)
+nvis::vec3 trilinear(const nvis::vec3& p, const std::vector< nvis::vec3 >& v)
 {
-    spurt::vec3 u;
-    const spurt::vec3& min = v[0];
-    const spurt::vec3& max = v[6];
-    if (spurt::crease::display_debug_info)
+    nvis::vec3 u;
+    const nvis::vec3& min = v[0];
+    const nvis::vec3& max = v[6];
+    if (xavier::crease::display_debug_info)
         std::cout << "min = " << min << ", max = " << max << std::endl;
     for (unsigned int i = 0; i < 3 ; ++i) {
         u[i] = (p[i] - min[i]) / (max[i] - min[i]);
@@ -520,19 +519,19 @@ spurt::vec3 trilinear(const spurt::vec3& p, const std::vector< spurt::vec3 >& v)
     return u;
 }
 
-bool inside(const spurt::vec3& local)
+bool inside(const nvis::vec3& local)
 {
     return (local[0] > 0 && local[0] < 1 &&
             local[1] > 0 && local[1] < 1 &&
             local[2] > 0 && local[2] < 1);
 }
 
-void intersect(spurt::vec3& xp, unsigned int& fid,
-               const spurt::vec3& p0, const spurt::vec3& p1)
+void intersect(nvis::vec3& xp, unsigned int& fid,
+               const nvis::vec3& p0, const nvis::vec3& p1)
 {
     static const unsigned int table[][2] = { { 5, 3 }, { 2, 4 }, { 0, 1 } };
 
-    double l = norm(p1 - p0);
+    double l = nvis::norm(p1 - p0);
     double t[] = { 0, 0, 0 };
     int c[] = { 0, 0, 0 };
     for (unsigned int i = 0 ; i < 3 ; i++) {
@@ -561,41 +560,41 @@ void intersect(spurt::vec3& xp, unsigned int& fid,
 
 // --------------------------------------------------------------------------
 
-bool track_ridge_line(spurt::vec3& out, unsigned int& fid_out,
-                      const std::vector< spurt::vec3 >& voxel,
-                      const spurt::vec3& entry,
+bool track_ridge_line(nvis::vec3& out, unsigned int& fid_out,
+                      const std::vector< nvis::vec3 >& voxel,
+                      const nvis::vec3& entry,
                       const unsigned int fid_in)
 {
     // get initial location
-    spurt::vec3 start = entry;
-    double step = 0.05 * norm(voxel[6] - voxel[0]); // 5% of voxel diagonal
+    nvis::vec3 start = entry;
+    double step = 0.05 * nvis::norm(voxel[6] - voxel[0]); // 5% of voxel diagonal
     // initialize orientation
     unsigned int f = fid_in;
     const unsigned int* face = voxel_info::faces[f];
-    spurt::vec3 fp[4];
+    nvis::vec3 fp[4];
     for (unsigned int l = 0 ; l < 4 ; l++) {
         fp[l] = voxel[face[l]];
     }
     // inward pointing face normal
-    spurt::vec3 ref = cross(fp[1] - fp[0], fp[3] - fp[0]);
+    nvis::vec3 ref = nvis::cross(fp[1] - fp[0], fp[3] - fp[0]);
 
     // Euler integration along eigenvector
-    spurt::vec3 p0 = start;
-    spurt::vec3 l0 = trilinear(p0, voxel);
-    spurt::vec3 p1;
+    nvis::vec3 p0 = start;
+    nvis::vec3 l0 = trilinear(p0, voxel);
+    nvis::vec3 p1;
     unsigned int n = 0;
     // my_path.push_back(p0);
     while (n < 100) {
         ++n;
-        spurt::crease::intermediate_steps.push_back(p0);
-        spurt::vec3 dir = spurt::crease::the_wrapper->eigenvector(p0, crease::is_ridge ? 0 : 2);
-        if (inner(dir, ref) < 0) dir *= -1;
+        xavier::crease::intermediate_steps.push_back(p0);
+        nvis::vec3 dir = xavier::crease::the_wrapper->eigenvector(p0, crease::is_ridge ? 0 : 2);
+        if (nvis::inner(dir, ref) < 0) dir *= -1;
         p1 = p0 + step * dir; // Euler step in physical space
-        spurt::vec3 l1 = trilinear(p1, voxel); // corresponding logical coordinates
+        nvis::vec3 l1 = trilinear(p1, voxel); // corresponding logical coordinates
 
         // did we leave the voxel?
         if (!inside(l1)) {
-            spurt::vec3 stop;
+            nvis::vec3 stop;
             intersect(stop, fid_out, l0, l1);
             out = voxel[0] +
                   stop[0] * (voxel[1] - voxel[0]) +
@@ -613,18 +612,18 @@ bool track_ridge_line(spurt::vec3& out, unsigned int& fid_out,
 
 // --------------------------------------------------------------------------
 
-bool trace_ray(spurt::vec3& out, unsigned int& fid_out,
-               const std::vector< spurt::vec3 >& voxel,
-               const spurt::vec3& entry,
-               const spurt::vec3& ray,
+bool trace_ray(nvis::vec3& out, unsigned int& fid_out,
+               const std::vector< nvis::vec3 >& voxel,
+               const nvis::vec3& entry,
+               const nvis::vec3& ray,
                const unsigned int fid_in)
 {
 // determine step length that ensures crossing
-    double diag = norm(voxel[0] - voxel[6]);
+    double diag = nvis::norm(voxel[0] - voxel[6]);
 // solve for intersection point in local coordinates
-    spurt::vec3 uvw0 = trilinear(entry, voxel);
-    spurt::vec3 uvw1 = trilinear(entry + 1.5 * diag * ray, voxel);
-    spurt::vec3 x;
+    nvis::vec3 uvw0 = trilinear(entry, voxel);
+    nvis::vec3 uvw1 = trilinear(entry + 1.5 * diag * ray, voxel);
+    nvis::vec3 x;
     intersect(x, fid_out, uvw0, uvw1);
 // convert to spatial coordinates
     out = voxel[0] +
@@ -676,7 +675,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
     struct pvo_solution {
         pvo_solution() : p(), local_fid(0), global_fid() {}
 
-        spurt::vec3 p;
+        nvis::vec3 p;
         unsigned int local_fid;
         FaceId global_fid;
     };
@@ -693,7 +692,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
     apply_filter = true;
     nb_crossings = 0;
 
-    spurt::crease::search_face_PVO search_face;
+    xavier::crease::search_face_PVO search_face;
 
     // check if this is a tensor field <-- do we need that?
     bool is_tensor = (nrrd->dim == 4 && nrrd->axis[0].size == 7);
@@ -724,7 +723,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
     unsigned int nb_wrong_eval = 0;
 
     // voxel data
-    std::vector< spurt::vec3 > v(4); // vertex coordinates
+    std::vector< nvis::vec3 > v(4); // vertex coordinates
     std::vector< double > val(4);   // associated values
     std::vector< double > str(4);   // associated strength
     std::vector< double > cfd(4);   // associated confidence
@@ -795,7 +794,8 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
     double total_found_face_processing_time = 0;
     unsigned int nb_found_face = 0;
     unsigned int nb_empty_face = 0;
-    boost::timer timer;
+    xavier::ProgressDisplay progress(false);
+    progress.start();
 
     for (unsigned int f = 0 ; f < n3 ; f++) {
         FaceId fid = face_id(all_faces[f].first, all_faces[f].second, M, N);
@@ -840,15 +840,16 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
 
         // do the actual work
         current_face_id = fid;
-        std::vector< spurt::vec3 > points;
+        std::vector< nvis::vec3 > points;
         current_face_info.set_info(v[0], v[1], v[2], v[3]);
         bool found_something;
 
         // std::cerr << "current valid face = " << v[0 ] << " - " << v[2] << '\n';
 
-        timer.restart();
+        progress.stop();
+        progress.start();
         int res = search_face(points, v[0], v[1], v[2], v[3], max_depth, found_something);
-        double dt = timer.elapsed();
+        double dt = progress.cpu_time();
 
         if (res) {
             total_found_face_processing_time += dt;
@@ -862,7 +863,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
         if (res) {
             std::cout << "extractor: PVO successful in " << dt << "sec. on face " << fid
                       << std::endl;
-            spurt::vec3 refpos = points.front();
+            nvis::vec3 refpos = points.front();
             double refval = the_wrapper->value(points.front());
             if (points.size() > 1) {
                 ++nb_several;
@@ -923,7 +924,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
     std::vector< bool > is_fixed(nb_voxels, false);
 
     // store tangent vectors of crease points as induced by their cell neighbor
-    std::map< FaceId, spurt::vec3 > tangents;
+    std::map< FaceId, nvis::vec3 > tangents;
 
     int delta_x, delta_y, delta_z;
     delta_x = 1;
@@ -983,16 +984,16 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
         else if (np == 2) {
             ++nb_good;
             std::cout << "segment found in voxel #" << v << std::endl;
-            spurt::vec3 p0 = all_face_points[fpids[0]];
-            spurt::vec3 p1 = all_face_points[fpids[1]];
+            nvis::vec3 p0 = all_face_points[fpids[0]];
+            nvis::vec3 p1 = all_face_points[fpids[1]];
 
             // debug code begins...
             round1.push_back(p0);
             round1.push_back(p1);
             // ...debug code ends
 
-            spurt::vec3 dpdt = p0 - p1;
-            dpdt /= norm(dpdt);
+            nvis::vec3 dpdt = p0 - p1;
+            dpdt /= nvis::norm(dpdt);
             add_segment(fpids);
             tangents[face_ids[0]] = dpdt;
             tangents[face_ids[1]] = -1 * dpdt; // orientation points to next voxel
@@ -1007,7 +1008,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                 vals[n] = the_wrapper->value(all_face_points[fpids[n]]);
             }
             std::vector< unsigned int > sorted(np);
-            spurt::sort(vals, sorted);
+            xavier::sort(vals, sorted);
             unsigned int id0, id1;
             if (is_ridge) {
                 id0 = sorted[np-1];
@@ -1019,16 +1020,16 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
             }
 
             std::cout << "TRICKY segment found in voxel #" << v << std::endl;
-            spurt::vec3 p0 = all_face_points[fpids[id0]];
-            spurt::vec3 p1 = all_face_points[fpids[id1]];
+            nvis::vec3 p0 = all_face_points[fpids[id0]];
+            nvis::vec3 p1 = all_face_points[fpids[id1]];
 
             // debug code begins...
             round1.push_back(p0);
             round1.push_back(p1);
             // ...debug code ends
 
-            spurt::vec3 dpdt = p0 - p1;
-            dpdt /= norm(dpdt);
+            nvis::vec3 dpdt = p0 - p1;
+            dpdt /= nvis::norm(dpdt);
             add_segment(fpids);
             tangents[face_ids[id0]] = dpdt;
             tangents[face_ids[id1]] = -1 * dpdt; // orientation points to next voxel
@@ -1120,16 +1121,16 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                 // this case corresponds to a secondary fix/addition of a voxel as a side effect
                 // of fixing its neighbor(s): we have killed two birds with one stone!
                 std::cout << "segment found in voxel #" << v << std::endl;
-                spurt::vec3 p0 = all_face_points[fpids[0]];
-                spurt::vec3 p1 = all_face_points[fpids[1]];
+                nvis::vec3 p0 = all_face_points[fpids[0]];
+                nvis::vec3 p1 = all_face_points[fpids[1]];
 
                 // debug code begins...
                 round12.push_back(p0);
                 round12.push_back(p1);
                 // ...debug code ends
 
-                spurt::vec3 dpdt = p0 - p1;
-                dpdt /= norm(dpdt);
+                nvis::vec3 dpdt = p0 - p1;
+                dpdt /= nvis::norm(dpdt);
                 add_segment(fpids);
                 tangents[face_ids[0]] = dpdt;
                 tangents[face_ids[1]] = -1. * dpdt; // orientation points to next voxel
@@ -1142,7 +1143,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                     vals[n] = the_wrapper->value(all_face_points[fpids[n]]);
                 }
                 std::vector< unsigned int > sorted(np);
-                spurt::sort(vals, sorted);
+                xavier::sort(vals, sorted);
                 unsigned int id0, id1;
                 if (is_ridge) {
                     id0 = sorted[np-1];
@@ -1154,16 +1155,16 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                 }
 
                 std::cout << "TRICKY segment found in voxel #" << v << std::endl;
-                spurt::vec3 p0 = all_face_points[fpids[id0]];
-                spurt::vec3 p1 = all_face_points[fpids[id1]];
+                nvis::vec3 p0 = all_face_points[fpids[id0]];
+                nvis::vec3 p1 = all_face_points[fpids[id1]];
 
                 // debug code begins...
                 round1.push_back(p0);
                 round1.push_back(p1);
                 // ...debug code ends
 
-                spurt::vec3 dpdt = p0 - p1;
-                dpdt /= norm(dpdt);
+                nvis::vec3 dpdt = p0 - p1;
+                dpdt /= nvis::norm(dpdt);
                 add_segment(fpids);
                 tangents[face_ids[id0]] = dpdt;
                 tangents[face_ids[id1]] = -1 * dpdt; // orientation points to next voxel
@@ -1183,10 +1184,11 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
 
                 bool fixed = false;
 
-                timer.restart();
+                progress.stop();
+                progress.start();
 
                 // build up voxel geometry
-                std::vector< spurt::vec3 > vert(8);
+                std::vector< nvis::vec3 > vert(8);
                 sample_grid.voxel(vert, i, j, k);
                 if (display_debug_info)
                     std::cout << "voxel is: 0=" << vert[0] << ", 1=" << vert[1] << ", 2=" << vert[2]
@@ -1195,17 +1197,17 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
 
                 fixing_voxel = true;
 
-                std::pair< int, spurt::vec3 > first_guess; // face id / position on face
+                std::pair< int, nvis::vec3 > first_guess; // face id / position on face
                 first_guess.first = -1;   // no first guess so far
 
                 // check if we have a tangent available at this position
-                std::map< FaceId, spurt::vec3 >::iterator tang_it = tangents.find(face_ids[0]);
+                std::map< FaceId, nvis::vec3 >::iterator tang_it = tangents.find(face_ids[0]);
 
                 // tracking solution specific to crease lines of mode
                 double h = 0.25;
                 if (crease_kind == 2) {
                     unsigned int fid_out;
-                    spurt::vec3 out;
+                    nvis::vec3 out;
                     if (track_ridge_line(out, fid_out, vert, all_face_points[fpids[0]], point_face[0])) {
                         double val = the_wrapper->value(out);
                         if (display_debug_info)
@@ -1224,7 +1226,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                 }
                 else if (tang_it != tangents.end()) {
                     unsigned int fid_out;
-                    spurt::vec3 out;
+                    nvis::vec3 out;
                     trace_ray(out, fid_out, vert, all_face_points[fpids[0]], tang_it->second, point_face[0]);
                     double val = the_wrapper->value(out);
                     if (display_debug_info)
@@ -1236,7 +1238,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
 
                 bool found = false;
                 bool found_something = false;
-                std::vector< spurt::vec3 > points;
+                std::vector< nvis::vec3 > points;
                 pvo_solution the_solution;
 
                 // if we choose to trust the tracking outcome we take it as solution
@@ -1251,10 +1253,11 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                     }
                 }
 
-                total_setup_time += timer.elapsed();
+                progress.stop();
+                total_setup_time += progress.cpu_time();
                 ++nb_setup;
 
-                timer.restart();
+                progress.start();
                 // if we have identified a first guess, look for it in priority
                 if (!found && first_guess.first >= 0) {
                     fixing_voxel = true;
@@ -1278,17 +1281,17 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                             if (!n) {
                                 if (display_debug_info)
                                     std::cout << "first attempt: bold approach" << std::endl;
-                                spurt::crease::speedup = true;
+                                xavier::crease::speedup = true;
                             }
                             else if (n == 1) {
                                 if (display_debug_info)
                                     std::cout << "first attempt failed: cautious approach on second attempt" << std::endl;
-                                spurt::crease::speedup = false;
+                                xavier::crease::speedup = false;
                             }
                             else {
                                 if (display_debug_info)
                                     std::cout << "everything we tried so far failed. using a smaller area" << std::endl;
-                                spurt::crease::speedup = false;
+                                xavier::crease::speedup = false;
                                 h *= 0.5;
                                 refine_face(out, face, first_guess.second, h);
                             }
@@ -1309,7 +1312,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                                       << face.p[0] << ", " << face.p[1] << ", " << face.p[2] << ", " << face.p[3]
                                       << std::endl;
 
-                        spurt::crease::speedup = false;
+                        xavier::crease::speedup = false;
                         current_vertices.clear();
                         current_face_info.set_info(face.p[0], face.p[1], face.p[2], face.p[3]);
                         found = search_face(points, face.p[0], face.p[1], face.p[2], face.p[3], max_depth_fix,
@@ -1333,8 +1336,8 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                 {
                     __d = max_depth_fix;
                     crease::max_int_error /= 5;
-                    spurt::crease::speedup = false;
-                    spurt::crease::fixing_voxel = true;
+                    xavier::crease::speedup = false;
+                    xavier::crease::fixing_voxel = true;
                     for (unsigned int vf = 0 ; vf < 6 && !found && !found_something; vf++) {
                         if (vf == point_face[0] || // skip position that we already know
                             (crease_kind < 2 && // or face we have already ruled out
@@ -1371,7 +1374,8 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
 
                 the_wrapper->turn_buffer_off();
 
-                double dt = timer.elapsed();
+                progress.stop();
+                double dt = progress.cpu_time();
 
                 if (found) {
                     // add new entry to central database
@@ -1387,16 +1391,16 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                     face_ids.push_back(the_solution.global_fid);
 
                     // update tangent information
-                    spurt::vec3 p0 = all_face_points[fpids[0]];
-                    spurt::vec3 p1 = all_face_points[fpids[1]];
+                    nvis::vec3 p0 = all_face_points[fpids[0]];
+                    nvis::vec3 p1 = all_face_points[fpids[1]];
 
                     // debug code begins...
                     round2.push_back(p0);
                     round2.push_back(p1);
                     // ...debug code ends
 
-                    spurt::vec3 dpdt = p0 - p1;
-                    dpdt /= norm(dpdt);
+                    nvis::vec3 dpdt = p0 - p1;
+                    dpdt /= nvis::norm(dpdt);
                     add_segment(fpids);
                     tangents[face_ids[0]] = dpdt;
                     tangents[face_ids[1]] = -1 * dpdt; // orientation points to next voxel
@@ -1476,7 +1480,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
               << "number of failed convergences: " << failed_conv << std::endl
               << "percentage of faces containing several zero crossing: "
               << 100*(double)nb_several / (double)all_face_points.size() << std::endl
-              << "number of PVO computations performed: " << spurt::crease::nb_pvo << std::endl;
+              << "number of PVO computations performed: " << xavier::crease::nb_pvo << std::endl;
 
     std::cout << "number of segments = " << all_edges.size()
               << ", number of connected components: " << creases.size()

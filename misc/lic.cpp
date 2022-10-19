@@ -63,7 +63,7 @@ struct texture {
 };
 
 // sample noise texture along prescribed segment using Bresenham algorithm
-float bresenham(const fvec2& x, const fvec2& y,
+float bresenham(const nvis::fvec2& x, const nvis::fvec2& y,
                 __read_only image2d_t noise, sampler_t noise_s,
                 const int2 dim, const float4 bounds, const float2 step)
 {

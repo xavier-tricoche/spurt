@@ -5,9 +5,9 @@
 double K;
 const double twopi = 6.28318530717958647688;
 
-vec2 next(const vec2& x)
+nvis::vec2 next(const nvis::vec2& x)
 {
-    vec2 y(x);
+    nvis::vec2 y(x);
     y[0] += K/twopi * sin(twopi*y[1]);
     y[1] += y[0];
 }
@@ -35,9 +35,9 @@ int main(int argc, char* argv[])
     srand48(time(0));
     for (int j=0 ; j<1000 ; ++j) {
         for (int i=0 ; i<1000 ; ++i) {
-            vec2 x((double)i/1000, (double)j/1000);
-            vec2 y(x);
-            fvec3 col(drand48(), drand48(), drand48());
+            nvis::vec2 x((double)i/1000, (double)j/1000);
+            nvis::vec2 y(x);
+            nvis::fvec3 col(drand48(), drand48(), drand48());
             for (int n=0 ; n<200 ; ++n) {
                 int u = floor(1000*modulo(y[0]));
                 int v = floor(1000*modulo(y[1]));

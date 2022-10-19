@@ -17,19 +17,19 @@ int main(int argc, char* argv[])
     float length = atof(argv[1]);
     float width  = atof(argv[2]);
     float depth  = atof(argv[3]);
-    vec3 origin(-0.5*length, -0.5*width, -depth);
+    nvis::vec3 origin(-0.5*length, -0.5*width, -depth);
     
     unsigned int Nx = atoi(argv[4]);
     unsigned int Ny = atoi(argv[5]);
     unsigned int Nz = atoi(argv[6]);
-    vec3 spacing(length / (Nx - 1), width / (Ny - 1), depth / (Nz - 1));
+    nvis::vec3 spacing(length / (Nx - 1), width / (Ny - 1), depth / (Nz - 1));
     
     int i, j, k;
     double tensor[9];
     unsigned int numPts;
     double P, twoPi, rho, rho2, rho3, rho5, nu;
     double x, x2, y, y2, z, z2, rhoPlusz2, zPlus2rho, txy, txz, tyz;
-    vec3 s, center[2];
+    nvis::vec3 s, center[2];
     
     std::cout << "Computing point load stress tensors" << std::endl;
     
@@ -43,8 +43,8 @@ int main(int argc, char* argv[])
     //
     // Compute the location of the load
     //
-    center[0] = origin + vec3(0.25 * length, 0.5 * width, depth);
-    center[1] = origin + vec3(0.75 * length, 0.5 * width, depth);
+    center[0] = origin + nvis::vec3(0.25 * length, 0.5 * width, depth);
+    center[1] = origin + nvis::vec3(0.75 * length, 0.5 * width, depth);
     
     for (unsigned int n = 0 ; n < 2 ; ++n) {
         // Traverse all points evaluating implicit function at each point. Note that

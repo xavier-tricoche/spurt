@@ -11,18 +11,14 @@
 
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
-#include <misc/time_helper.hpp>
+#include <util/wall_timer.hpp>
+#include <vis/streamline.hpp>
 
 #include "data/raster.hpp"
-
-#include <boost/numeric/odeint.hpp>
-#include <boost/filesystem.hpp>
 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-
-namespace odeint = boost::numeric::odeint;
 
 char* name_in, *pref;
 char* name_out;
@@ -57,43 +53,25 @@ void initialize(int argc, const char* argv[])
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
 }
 
-typedef spurt::nrrd_data_traits<Nrrd*>  field_type;
+typedef xavier::nrrd_data_traits<Nrrd*>  field_type;
 
 std::map<float, std::string> file_names;
 std::vector<float> _times;
 
-typedef spurt::vec3 point_type;
-typedef spurt::vec3 deriv_type;
-typedef double scalar_type;
 
-struct Observer {
-    Observer(point_type& seed, double& t, double& d) : last_p(seed), last_t(t), distance(d) {}
-    void operator()(const point_type& p, double t) {
-        distance += spurt::norm(last_p-p);
-        last_p = p;
-        last_t = t;
-    }
-    
-    point_type& last_p;
-    double& last_t;
-    double& distance;
-};
-typedef Observer observer_t;
+struct field_wrapper {
+    field_wrapper(const field_type& field) : __field(field) {}
 
-struct RHS {
-    RHS(const field_type& field) : __field(field) {}
-
-    bool operator()(const spurt::vec3& x, spurt::vec3& f, double t) const {
+    bool operator()(double, const nvis::vec3& x, nvis::vec3& f) const {
         return __field.get_value(x, f);
     }
 
-    const spurt::bbox3& bounds() const {
+    const nvis::bbox3& bounds() const {
         return __field.bounds();
     }
 
     const field_type&   __field;
 };
-typedef RHS steady_rhs_type;
 
 inline size_t KB(const size_t s)
 {
@@ -192,12 +170,12 @@ private:
 struct load_file {
     field_type* operator()(float t) {
 
-        spurt::timer dt;
+        nvis::timer dt;
         std::map<float, std::string>::iterator it = file_names.find(t);
         if (it==file_names.end()) {
             throw std::runtime_error("invalid time step");
         }
-        Nrrd* nin = spurt::readNrrd(it->second);
+        Nrrd* nin = xavier::nrrd_utils::readNrrd(it->second);
 
         std::ostringstream os;
         os << it->second << " imported in " << dt.elapsed() << " s." << std::endl;
@@ -221,7 +199,7 @@ class time_dependent_field {
     }
 
 public:
-    time_dependent_field(const spurt::bbox3& bounds) : __bounds(bounds) {
+    time_dependent_field(const nvis::bbox3& bounds) : __bounds(bounds) {
         __tmin = std::numeric_limits<float>::max();
         __tmax = std::numeric_limits<float>::min();
     }
@@ -238,7 +216,7 @@ public:
         __repo.clear();
     }
 
-    bool operator()(double t, const spurt::vec3& x, spurt::vec3& f) const {
+    bool operator()(double t, const nvis::vec3& x, nvis::vec3& f) const {
         float prev, next;
         if (!tbounds(prev, next, t)) {
             return false;
@@ -247,31 +225,31 @@ public:
         field_type* field0 = __repo.get(prev);
         field_type* field1 = __repo.get(next);
 
-        spurt::vec3 f0, f1;
+        nvis::vec3 f0, f1;
         if (!field0->get_value(x, f0)) {
             return false;
         }
         field1->get_value(x, f1);
         float u = (t-prev)/(next-prev);
         f = (1.-u)*f0 + u*f1;
-        std::cout << "f(" << x << ")=" << f << '\n';
+	std::cout << "f(" << x << ")=" << f << '\n';
         return true;
     }
 
-    const spurt::bbox3& bounds() const {
+    const nvis::bbox3& bounds() const {
         return __bounds;
     }
 
 private:
     mutable repository_type     __repo;
-    spurt::bbox3                __bounds;
+    nvis::bbox3                 __bounds;
     float                       __tmin, __tmax;
     size_t                      __start, __end;
 };
 
 int main(int argc, const char* argv[])
 {
-    using namespace spurt;
+    using namespace xavier;
 
     initialize(argc, argv);
 
@@ -291,9 +269,9 @@ int main(int argc, const char* argv[])
     }
     in.close();
 
-    Nrrd* nin = spurt::readNrrd(file_names.begin()->second);
+    Nrrd* nin = xavier::nrrd_utils::readNrrd(file_names.begin()->second);
     field_type vf(nin);
-    steady_rhs_type wrapper(vf);
+    field_wrapper wrapper(vf);
 
     size_t field_size = vf.size();
     size_t nb_alloc = how_many_fit(field_size);
@@ -301,13 +279,13 @@ int main(int argc, const char* argv[])
 
     time_dependent_field field(wrapper.bounds());
 
-    spurt::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
+    nvis::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
     std::cerr << "Resolution = " << res << std::endl;
-    spurt::raster_grid<3> sampling_grid(res, wrapper.bounds());
+    xavier::raster_grid<3> sampling_grid(res, wrapper.bounds());
     int npoints = sampling_grid.size();
     float* flowmap = (float*)calloc(3*npoints, sizeof(float));
 
-    spurt::timer timer;
+    nvis::timer timer;
 
     int lastpct = -1;
     std::cout << "nb points = " << npoints << '\n';
@@ -315,7 +293,8 @@ int main(int argc, const char* argv[])
     // initialize coordinates
 #pragma openmp parallel
     for (int n=0 ; n<npoints ; ++n) {
-        spurt::vec3 x = sampling_grid(sampling_grid.coordinates(n));
+        nvis::ivec3 c = sampling_grid.coordinates(n);
+        nvis::vec3 x = sampling_grid(c);
         flowmap[3*n  ] = x[0];
         flowmap[3*n+1] = x[1];
         flowmap[3*n+2] = x[2];
@@ -372,21 +351,19 @@ int main(int argc, const char* argv[])
         std::cerr << "current time = " << cur_time << ", dT = " << dT << std::endl;
 
         size_t nbcomputed;
-        spurt::progress_display progress(true);
-
-        progress.start(npoints);
-
-     #pragma omp parallel
+        #pragma omp parallel
         {
-        #pragma omp for schedule(dynamic,1)
-        for (size_t n = 0 ; n < npoints ; ++n) {
-            #if _OPENMP
-            const int thread=omp_get_thread_num();
-            #else
-            const int thread=0;
-            #endif
-
-            if (!thread) progress.update(n);
+            #pragma omp for schedule(dynamic,1)
+            for (int n = 0 ; n < npoints ; ++n) {
+#pragma openmp atomic
+                // ++nbcomputed;
+                // float pct = 100.*(float)nbcomputed/(float)npoints;
+                // std::ostringstream os;
+                // os << '\r' << nbcomputed << " trajectories (" << pct << "%) computed in "
+                //                               << timer.elapsed()
+                //                               << "s.                 \r"
+                //                               << std::flush;
+                // std::cerr << os.str();
 
                 if (!(n%10)) {
                     float pct = 100.*(float)n/(float)npoints;
@@ -400,22 +377,23 @@ int main(int argc, const char* argv[])
                     continue;
                 }
 
-                spurt::vec3 seed(flowmap[3*n], flowmap[3*n+1], flowmap[3*n+2]);
-                std::cout << "seed=" << seed << '\n';
+                nvis::vec3 seed(flowmap[3*n], flowmap[3*n+1], flowmap[3*n+2]);
+		        std::cout << "seed=" << seed << '\n';
+                nvis::streamline sl(seed, cur_time);
+                nvis::streamline::no_stop none;
                 sl.record = false;
                 sl.reltol = sl.abstol = eps;
                 sl.stepsz = 0;
                 try {
                     std::ostringstream os;
-                    spurt::streamline::state state = sl.advance(field, cur_time+dT, none);
-                    std::cout << "end state = " << state << '\n';
-                    spurt::vec3 p = sl(sl.t_max());
+                    nvis::streamline::state state = sl.advance(field, cur_time+dT, none);
+		            std::cout << "end state = " << state << '\n';
+                    nvis::vec3 p = sl(sl.t_max());
                     flowmap[3*n  ] = p[0];
                     flowmap[3*n+1] = p[1];
                     flowmap[3*n+2] = p[2];
-                    std::cout << spurt::norm(p-seed) << "\n";
-                } 
-                catch (std::runtime_error& e) {
+					std::cout << nvis::norm(p-seed) << "\n";
+                } catch (std::runtime_error& e) {
                     std::ostringstream os;
                     os << "unable to integrate from " << seed << '\n';
                     os << "error message was:\n" << e.what() << std::endl;
@@ -433,7 +411,7 @@ int main(int argc, const char* argv[])
 
     std::vector<size_t> size(4);
     std::vector<double> step(4);
-    const spurt::vec3& s = sampling_grid.spacing();
+    const nvis::vec3& s = sampling_grid.spacing();
     step[0] = 1 /*airNaN()*/;
     size[0] = 3;
     for (int i = 0 ; i < 3 ; ++i) {
@@ -443,7 +421,7 @@ int main(int argc, const char* argv[])
 
     std::ostringstream os;
     os << name_out << "-flowmap-t0=" << t0 << "-T=" << T << ".nrrd";
-    spurt::writeNrrdFromContainers(flowmap, os.str(), size, step);
+    xavier::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step);
 
     return 0;
 }

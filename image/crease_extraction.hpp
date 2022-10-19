@@ -13,7 +13,7 @@
 #include <set>
 #include <teem/nrrd.h>
 
-namespace spurt {
+namespace xavier {
 namespace crease {
 std::vector< double > crease_strength;
 std::vector< unsigned int > isolated;
@@ -22,7 +22,7 @@ std::vector< unsigned int > isolated;
           const Raster::Grid& grid,
           double threshold,
           bool ridge,
-          std::vector< vec2 >& intersections,
+          std::vector< nvis::vec2 >& intersections,
           std::vector< std::list< unsigned int > >& creases );
 
     // helper functions to navigate the cell structure
@@ -38,12 +38,12 @@ std::vector< unsigned int > isolated;
 };
 
 
-void spurt::crease::
+void xavier::crease::
 extract( const Nrrd* nrrd, 
      const Raster::Grid& grid,
      double threshold,
      bool ridge,
-     std::vector< vec2 >& intersections,
+     std::vector< nvis::vec2 >& intersections,
      std::vector< std::list< unsigned int > >& creases )
 {
     using namespace nvis;
@@ -145,7 +145,7 @@ extract( const Nrrd* nrrd,
         for ( unsigned int k=0 ; k<allpointsincell.size() ; k++ )
           {
             unsigned int pid = allpointsincell[k];
-            vec2 p = intersections[pid];
+            nvis::vec2 p = intersections[pid];
             double val;
             gH.value( p, val );
             vals[k] = val;
@@ -282,7 +282,7 @@ next( const std::pair< int, int >& choices, unsigned int cur )
 }
 
 inline int crease::
-right( unsigned int i, unsigned int j, const spurt::Raster::Grid& grid )
+right( unsigned int i, unsigned int j, const xavier::Raster::Grid& grid )
 {
     if ( i<grid.nx-2 ) {
         return i+1+j*(grid.nx-1);
@@ -292,7 +292,7 @@ right( unsigned int i, unsigned int j, const spurt::Raster::Grid& grid )
 }
 
 inline int crease::
-top( unsigned int i, unsigned int j, const spurt::Raster::Grid& grid )
+top( unsigned int i, unsigned int j, const xavier::Raster::Grid& grid )
 {
     if ( j<grid.ny-2 ) {
         return i+(j+1)*(grid.nx-1);
@@ -302,7 +302,7 @@ top( unsigned int i, unsigned int j, const spurt::Raster::Grid& grid )
 }
 
 inline int crease::
-left( unsigned int i, unsigned int, const spurt::Raster::Grid& )
+left( unsigned int i, unsigned int, const xavier::Raster::Grid& )
 {
     if ( i>0 ) {
         return i-1;
@@ -312,7 +312,7 @@ left( unsigned int i, unsigned int, const spurt::Raster::Grid& )
 }
 
 inline int crease::
-down( unsigned int i, unsigned int j, const spurt::Raster::Grid& grid )
+down( unsigned int i, unsigned int j, const xavier::Raster::Grid& grid )
 {
     if ( j>0 ) {
         return i+(j-1)*(grid.nx-1);
@@ -322,7 +322,7 @@ down( unsigned int i, unsigned int j, const spurt::Raster::Grid& grid )
 }
 
 inline unsigned int crease::
-cellid( unsigned int i, unsigned int j, const spurt::Raster::Grid& grid )
+cellid( unsigned int i, unsigned int j, const xavier::Raster::Grid& grid )
 {
     return i+j*( grid.nx-1 );
 }

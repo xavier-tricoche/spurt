@@ -1,5 +1,5 @@
 set( DATA_EXEC_SRC
-    test_locator
+	test_locator
 )
 
 include_directories( ${KDTREEPP_INCLUDE_DIR} )

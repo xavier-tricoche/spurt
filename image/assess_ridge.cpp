@@ -5,7 +5,7 @@
 #include <sstream>
 #include "new_creaseline.hpp"
 
-using namespace spurt;
+using namespace xavier;
 using namespace gage_interface;
 
 int main( int argc, char* argv[] )
@@ -30,7 +30,7 @@ int main( int argc, char* argv[] )
     std::fstream input( argv[2], std::ios::in );
     std::fstream output( argv[3], std::ios::out );
 
-    vec3 p;
+    nvis::vec3 p;
     while( !input.eof() )
     {
         double px, py, pz;

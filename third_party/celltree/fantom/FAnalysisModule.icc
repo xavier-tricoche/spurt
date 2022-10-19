@@ -1,0 +1,71 @@
+//---------------------------------------------------------------------------
+//
+// Project:   FAnToM
+// Module:    $RCSfile: FAnalysisModule.icc,v $
+// Language:  C++
+// Date:      $Date: 2001/01/25 17:44:49 $
+// Author:    $Author: tricoche $
+// Version:   $Revision: 1.9 $
+//
+//--------------------------------------------------------------------------- 
+
+#ifdef OUTLINE
+#define inline
+#endif
+
+inline FAnalysisModule::FAnalysisModule()
+{
+  validTimestep = validLevel = validTensorSet = false;
+}
+
+inline FAnalysisModule::FAnalysisModule(const FIndex& inLevel, 
+                                        const FIndex& inTimestep,
+                                        const FIndex& inTensorSet)
+    : currentLevel(inLevel), currentTimestep(inTimestep), currentTensorSet(inTensorSet)
+{
+  if (!find(inLevel, inTimestep, inTensorSet)) {
+    theData[currentLevel][currentTimestep][currentTensorSet] = new FAnalysisModuleData;
+  } else {
+    THROW_EXCEPTION( FObjectNotEmptyException, "ERROR: FAnalysisModuleData already existed");
+  }
+  validTimestep = validLevel = validTensorSet = true;
+}
+
+inline bool FAnalysisModule::find(const FIndex& inLevel, 
+				  const FIndex& inTimestep,
+                                  const FIndex& inTensorSet) const
+{
+  return (validTimestep && validLevel && validTensorSet &&
+          (theData.find(inLevel)                          != theData.end()) &&
+          (theData[inLevel].find(inTimestep)              != theData[inLevel].end()) &&
+          (theData[inLevel][inTimestep].find(inTensorSet) != theData[inLevel][inTimestep].end()));  
+}
+
+inline FAnalysisModuleData* FAnalysisModule::getModuleData() const
+{
+  if (!validTimestep || !validLevel || !validTensorSet){
+    THROW_EXCEPTION( FEmptyObjectException, "ERROR: there is no current valid Module");
+  }
+
+  return getModuleData(currentLevel, currentTimestep, currentTensorSet);
+}
+
+inline void FAnalysisModule::setLevel(const FIndex& inLevel)
+{
+  currentLevel = inLevel;
+  validLevel = true;
+}
+
+inline void FAnalysisModule::setTimestep(const FIndex& inTStep)
+{
+  currentTimestep = inTStep;
+  validTimestep = true;
+}
+
+inline void FAnalysisModule::setTensorSet(const FIndex& inTSet)
+{
+  currentTensorSet = inTSet;
+  validTensorSet = true;
+}
+
+#undef inline

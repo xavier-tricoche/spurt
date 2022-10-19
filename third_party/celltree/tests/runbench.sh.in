@@ -1,0 +1,39 @@
+#!/bin/sh
+
+BINDIR=${EXECUTABLE_OUTPUT_PATH}
+TSTDIR=${CMAKE_CURRENT_SOURCE_DIR}
+
+DATASETS="ellipsoid ice tdelta bmw f6"
+
+# if [ -x $BINDIR/nbench ]; then
+
+#     echo "=== native benchmarks ===";
+
+#     for t in $DATASETS; do
+#         echo "--- $t ---"
+#         $BINDIR/nbench $TSTDIR/$t/$t.dlr
+#     done
+
+# fi
+
+if [ -x $BINDIR/fbench ]; then
+
+    echo "=== FAnToM benchmarks ===";
+
+    for t in $DATASETS; do
+        echo "--- $t ---"
+        $BINDIR/fbench $TSTDIR/$t/$t.dlr
+    done
+
+fi
+
+# if [ -x $BINDIR/vbench ]; then
+
+#     echo "=== VTK benchmarks ===";
+
+#     for t in $DATASETS; do
+#         echo "--- $t ---"
+#         $BINDIR/vbench $TSTDIR/$t/$t.dlr
+#     done
+
+# fi

@@ -3,13 +3,13 @@
 
 #include <math/fixed_vector.hpp>
 
-namespace spurt { namespace reconstruction {
+namespace xavier { namespace reconstruction {
 
 template<typename T, int N>
 class point {
 public:
     typedef T                             value_type;
-    typedef spurt::fixed_vector<T, N>    vector_type;
+    typedef nvis::fixed_vector<T, N>      vector_type;
     typedef size_t                        index_type;
 
     point() : __i(), __v() {}    
@@ -41,8 +41,8 @@ public:
     }
 
 private:
-    index_type  __i;
-    vector_type __v;
+    index_type    __i;
+    vector_type   __v;
 };
 
 inline double sqr(double x){

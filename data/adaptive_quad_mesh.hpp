@@ -4,10 +4,10 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 
-namespace spurt {
+namespace xavier {
 template<typename T, typename PD, typename CD>
 struct AQM_quad {
-    typedef fixed_vector<T, 2>        pos_type;
+    typedef nvis::fixed_vector<T, 2>        pos_type;
     typedef nvis::bounding_box<pos_type>    bounds_type;
     typedef PD                              point_data_type;
     typedef CD                              cell_data_type;
@@ -25,7 +25,7 @@ struct AQM_quad {
         return U*V*point_val[0] + u*V*point_val[1] + U*v*point_val[3] + u*v*point_val[2];
     }
     
-    fixed_vector<point_data_type, 2>
+    nvis::fixed_vector<point_data_type, 2>
     derivative(const pos_type& x) const {
         T u, v, U, V, udot, vdot, Udot, Vdot;
         u = x[0];
@@ -37,7 +37,7 @@ struct AQM_quad {
         Udot = -udot;
         vdot = 1/size[1];
         Vdot = -vdot;
-        fixed_vector<point_data_type, 2> r;
+        nvis::fixed_vector<point_data_type, 2> r;
         r[0] = Udot*V*point_val[0] + udot*V*point_val[1] + Udot*v*point_val[3] + udot*v*point_val[2];
         r[1] = U*Vdot*point_val[0] + u*Vdot*point_val[1] + U*vdot*point_val[3] + u*vdot*point_val[2];
         return r;
@@ -50,7 +50,7 @@ struct AQM_quad {
 };
 
 struct Lt_index {
-    bool operator()(const ivec3& i0, const ivec3& i1) const {
+    bool operator()(const nvis::ivec3& i0, const nvis::ivec3& i1) const {
         // check depth first
         if (i0[2] < i1[2]) {
             return true;
@@ -71,7 +71,7 @@ struct Lt_index {
 template<typename D>
 class AQM_data_container {
 public:
-    typedef ivec3                                         index_type;
+    typedef nvis::ivec3                                         index_type;
     typedef D                                                   data_type;
     typedef typename std::map<index_type, data_type, Lt_index>  map_type;
     typedef typename map_type::iterator                         iterator_type;
@@ -159,11 +159,11 @@ public:
     typedef AQM_quad<T, PD, CD>                 quad_type;
     typedef PD                                  point_data_type;
     typedef CD                                  cell_data_type;
-    typedef fixed_vector<value_type, 2>   pos_type;
+    typedef nvis::fixed_vector<value_type, 2>   pos_type;
     typedef nvis::bounding_box<pos_type>        bounds_type;
     typedef self_type*                          pointer_type;
     typedef const self_type*                    const_pointer_type;
-    typedef ivec3                         index_type;
+    typedef nvis::ivec3                         index_type;
     
 private:
 
@@ -297,7 +297,7 @@ private:
 
 // template<typename T, typename PD, typename CD>
 // class AQM_node_iterator {
-//     typedef ivec3                              index_type;
+//     typedef nvis::ivec3                              index_type;
 //     typedef AQM_node<T, PD, CD>::const_pointer_type  _Base_const_ptr;
 //     _Base_const_ptr  _M_node;
 //
@@ -412,10 +412,10 @@ class AQM_root {
     }
     
 public:
-    typedef fixed_vector<T, 2>            pos_type;
+    typedef nvis::fixed_vector<T, 2>            pos_type;
     typedef PD                                  point_data_type;
     typedef CD                                  cell_data_type;
-    typedef ivec3                         index_type;
+    typedef nvis::ivec3                         index_type;
     typedef nvis::bounding_box<pos_type>        bounds_type;
     typedef AQM_node<T, PD, CD>                 node_type;
     
@@ -434,7 +434,7 @@ public:
     AQM_root(int resx, int resy, const bounds_type& bounds)
         : __res(resx, resy), __bounds(bounds), __point_data(), __cell_data() {
         __top_layer.resize(resx*resy);
-        __h = bounds.size() / vec2(resx, resy);
+        __h = bounds.size() / nvis::vec2(resx, resy);
         std::cerr << "created an adaptive mesh with base resolution = " << resx << " x " << resy
                   << ", and bounding box = " << bounds << std::endl;
         for (int n=0 ; n<resx*resy ; ++n) {
@@ -533,7 +533,7 @@ public:
     
 private:
     pos_type                                    __h;
-    ivec2                                 __res;
+    nvis::ivec2                                 __res;
     bounds_type                                 __bounds;
     AQM_data_container<point_data_type>         __point_data;
     AQM_data_container<cell_data_type>          __cell_data;

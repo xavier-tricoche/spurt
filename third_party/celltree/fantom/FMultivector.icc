@@ -1,0 +1,584 @@
+//---------------------------------------------------------------------------
+//
+// Project:   FAnToM
+// Module:    $RCSfile: FMultivector.icc,v $
+// Language:  C++
+// Date:      $Date: 2003/09/23 09:19:21 $
+// Author:    $Author: garth $
+// Version:   $Revision: 1.8 $
+//
+//--------------------------------------------------------------------------- 
+
+#ifndef __FMultivector_icc_defined
+#define __FMultivector_icc_defined
+
+#undef inline
+
+#include <cstdio>
+#include <iostream>
+#include "FException.hh"
+
+#include "FArray.hh"
+#include "FRefTensor.hh"
+#include "FTensor.hh"
+
+#ifdef OUTLINE
+#define inline
+#endif
+
+//---------------------------------------------------------------------------
+
+inline FMultivector::FMultivector() : FTensor()
+{
+}
+
+//---------------------------------------------------------------------------
+
+inline FMultivector::FMultivector(unsigned char dim, unsigned char order, bool clear)
+{
+#ifndef NODEBUG
+  // dimension may be 0 for a non meaningful tensor
+  if (order!=1)
+	{
+    FException e("ERROR: invalid order!");
+    e.addTraceMessage("FMultivector::FMultivector(unsigned char dim, unsigned char order, bool clear)");
+    throw e;
+  }
+
+  if (dim!=4 && dim!=8)
+  {
+      FInvalidDimensionException e;
+      e.addTraceMessage("FMultivector::FMultivector(unsigned char dim, unsigned char order, bool clear)");
+      throw e;
+  }
+#endif
+  comp = 0;
+  sizeOfArray = 0;
+  this->dimension = dim;
+  this->order = order;
+  int size = pow (dim, order);
+  FArray::resize(size);
+  if (clear)
+      FArray::clear();
+}
+
+//---------------------------------------------------------------------------
+
+inline FMultivector::FMultivector(unsigned char dim, unsigned char order, const std::vector<double>& a)
+{
+#ifndef NODEBUG
+    unsigned char n = (unsigned char) FMultivector::pow(dim, order);
+
+    if (a.size() != n)
+    {
+        FInvalidDimensionException e;
+        e.addTraceMessage("FMultivector::FMultivector(unsigned char dim, unsigned char order, const std::vector<double>& comp)");
+        throw e;
+    }
+
+    // dim may be 0 for a non meaningful tensor.
+    if (order!=1)
+    {
+        FInvalidDimensionException e("ERROR: invalid order!");
+        e.addTraceMessage("FMultivector::FMultivector(unsigned char dim, unsigned char order, const std::vector<double>& comp)");
+        throw e;
+    }
+
+    if (dim!=4 && dim!=8)
+    {
+        FInvalidDimensionException e;
+        e.addTraceMessage("FMultivector::FMultivector(unsigned char dim, unsigned char order, const std::vector<double>& comp)");
+        throw e;
+    }
+#endif
+
+    sizeOfArray=a.size();
+    comp=new double[sizeOfArray];
+    // copy the elements
+    unsigned int j;
+    for (j=0;j<sizeOfArray; j++)
+    {
+        comp[j]=a[j];
+    }
+    this->dimension = dim;
+    this->order = order;
+}
+
+//---------------------------------------------------------------------------
+
+inline FMultivector::FMultivector(const FMultivector& T) : FTensor(T)
+{
+}
+
+//---------------------------------------------------------------------------
+
+inline FMultivector::FMultivector(const FTensor& v) : FTensor(v)
+{
+#ifndef NODEBUG
+    if (v.getOrder()!=1)
+    {
+        FInvalidDimensionException e("ERROR: invalid order!");
+        e.addTraceMessage("FMultivector::FMultivector(const FTensor& v)");
+        throw e;
+    }
+
+    if (v.getDimension()!=2 && v.getDimension()!=3 && v.getDimension()!=4 && v.getDimension()!=8)
+    {
+        FInvalidDimensionException e;
+        e.addTraceMessage("FMultivector::FMultivector(const FTensor& v)");
+        throw e;
+    }
+#endif
+    if (v.getDimension()==2)
+    {
+        this->dimension = 4;
+        comp=new double[4];
+        comp[0]=0;
+        comp[1]=v(0);
+        comp[2]=v(1);
+        comp[3]=0;
+    }
+    else if (v.getDimension()==3)
+    {
+        this->dimension = 8;	
+        comp=new double[8];	
+        comp[0]=0;
+        comp[1]=v(0);
+        comp[2]=v(1);
+        comp[3]=v(2);
+        for(int i=4;i<8;i++)
+            comp[i]=0;
+    }
+    /*	else if (v.getDimension()==4)
+        {
+        this->dimension = 4;	
+        comp=new double[4];	
+        for(int i=0;i<4;i++)
+        comp[i]=v(i);
+        }
+        else
+        {
+        this->dimension = 8;	
+        comp=new double[8];	
+        for(int i=0;i<8;i++)
+        comp[i]=v(i);
+        }	
+     */
+}
+
+//---------------------------------------------------------------------------
+
+inline FMultivector::FMultivector(const FVector& v)
+{
+#ifndef NODEBUG
+    if (v.getDimension()!=2 && v.getDimension()!=3)
+    {
+        FInvalidDimensionException e;
+        e.addTraceMessage("FMultivector::FMultivector(const FVector& v)");
+        throw e;
+    }
+#endif
+    sizeOfArray=pow(2,v.getDimension());
+    comp=new double[sizeOfArray];
+    if (v.getDimension()==2)
+    {
+        comp[0]=0;
+        comp[1]=v(0);
+        comp[2]=v(1);
+        comp[3]=0;
+    }
+    else	//v.getDimension()==3
+    {
+        comp[0]=0;
+        comp[1]=v(0);
+        comp[2]=v(1);
+        comp[3]=v(2);
+        for(int i=4;i<8;i++)
+            comp[i]=0;
+    }
+}
+
+//---------------------------------------------------------------------------
+
+inline void FMultivector::setDimension(unsigned char dim)
+{
+#ifndef NODEBUG
+    if (dim!=4 && dim!=8)
+    {
+        FInvalidDimensionException e;
+        e.addTraceMessage("FMultivector::setDimension(unsigned char dim)");
+        throw e;
+    }
+#endif
+
+    this->dimension = dim;
+    FArray::resize(pow(this->dimension, this->order));
+}
+
+//---------------------------------------------------------------------------
+
+inline void FMultivector::setOrder( unsigned char ord)
+{
+#ifndef NODEBUG
+    if (ord!=1)
+    {
+        FException e("ERROR: invalid order!");
+        e.addTraceMessage("FMultivector::setOrder(unsigned char ord)");
+        throw e;
+    }
+#endif
+
+    this->order = ord;
+    FArray::resize(pow(this->dimension, this->order));
+}
+
+//---------------------------------------------------------------------------
+
+inline void FMultivector::resizeMultivector (unsigned char dim, unsigned char ord)
+{
+#ifndef NODEBUG
+    if (ord!=1||(dim!=4&&dim!=8))
+    {
+        FException e("ERROR: invalid order and/or dimension!");
+        e.addTraceMessage("FMultivector::resizeMultivector(unsigned char dim, unsigned char ord)");
+        throw e;
+    } 
+#endif
+
+    order = ord;
+    dimension = dim;
+    FArray::resize (pow (dim, ord));
+}
+
+
+//---------------------------------------------------------------------------
+
+inline FMultivector& FMultivector::operator=(const FMultivector& T)
+{
+    if (this != &T)
+    {
+        dimension = T.dimension;
+        order = T.order;
+        //     int size = pow (dimension, order);
+
+        //     resize (size);
+        //     memcpy( comp, T.comp, size * sizeof(double) );
+        FArray::operator= (T);
+    }
+
+    return *this ;
+}
+
+//---------------------------------------------------------------------------
+
+inline FMultivector& FMultivector::operator=(double val)
+{
+    if (!(dimension * order))
+    {
+        FEmptyObjectException e;
+        e.addTraceMessage("FMultivector& FMultivector::operator=(double val)");
+        throw e;
+    } 
+
+    for (positive i=0 ; i<sizeOfArray ; i++)
+        comp[i] = val;
+    return *this ;
+}
+
+//---------------------------------------------------------------------------
+
+inline const double& FMultivector::operator()(void) const
+{
+  FInvalidDimensionException e("ERROR: invalid order(Multivector)!");
+  e.addTraceMessage("const double& FMultivector::operator()(void) const");
+  throw e;
+  return (double&)comp[0]; //to avoid warning, is never executed
+}
+
+//---------------------------------------------------------------------------
+
+inline const double& FMultivector::operator()(unsigned char i) const 
+{
+
+#ifndef NODEBUG
+    if (order != 1)
+        THROW_EXCEPTION( FInvalidDimensionException, "Invalid Order" );
+
+    if (!sizeOfArray)
+        THROW_DEFAULT_EXCEPTION(FEmptyObjectException);
+
+    if (i>=dimension)
+        THROW_DEFAULT_EXCEPTION( FIndexOutOfBoundsException );
+#endif
+
+    return comp[i];
+}
+
+inline double& FMultivector::operator()(unsigned char i) 
+{
+
+#ifndef NODEBUG
+    if (order != 1)
+        THROW_EXCEPTION( FInvalidDimensionException, "Invalid Order" );
+
+    if (!sizeOfArray)
+        THROW_DEFAULT_EXCEPTION(FEmptyObjectException);
+
+    if (i>=dimension)
+        THROW_DEFAULT_EXCEPTION( FIndexOutOfBoundsException );
+#endif
+
+    return comp[i];
+}
+
+//---------------------------------------------------------------------------
+
+inline const double& FMultivector::operator()(unsigned char /*i*/, unsigned char /*j*/) const
+{
+  FInvalidDimensionException e("ERROR: invalid order(Multivector)!");
+  e.addTraceMessage("const double& FMultivector::operator()(unsigned char i, unsigned char j) const");
+  throw e;
+  return (double&)comp[0]; //to avoid warning, is never executed
+}
+
+//---------------------------------------------------------------------------
+
+inline const double& FMultivector::operator()(unsigned char /*i*/, unsigned char /*j*/, unsigned char /*k*/) const
+{
+  FInvalidDimensionException e("ERROR: invalid order(Multivector)!");
+  e.addTraceMessage("const double& FMultivector::operator()(unsigned char i, unsigned char j, unsigned char k) const");
+  throw e;
+  return (double&)comp[0]; //to avoid warning is never executed
+}
+
+// inline const FRefTensor FMultivector::operator[](unsigned char /*k*/) const
+// {
+//   FInvalidDimensionException e("ERROR: invalid order(Multivector)!");
+//   e.addTraceMessage("const FRefTensor FMultivector::operator[](unsigned char k) const");
+//   throw e;
+//   return FRefTensor(); //to avoid warning
+// }
+
+// inline FRefTensor FMultivector::operator[](unsigned char /*k*/)
+// {
+//   FInvalidDimensionException e("ERROR: invalid order(Multivector)!");
+//   e.addTraceMessage("FRefTensor FMultivector::operator[](unsigned char k)");
+//   throw e;
+//   return FRefTensor(); //to avoid warning
+// }
+
+//---------------------------------------------------------------------------
+
+
+inline void FMultivector::setValue(double /*val*/)
+{
+#ifndef NODEBUG
+    FInvalidDimensionException e("ERROR: invalid order(Multivector)!");
+    e.addTraceMessage("void FMultivector::setValue(double val)");
+    throw e;
+#endif
+
+}
+
+//---------------------------------------------------------------------------
+
+inline void FMultivector::setValue(unsigned char i, double val) 
+{
+    FTensor::setValue(i,val);
+}
+
+//---------------------------------------------------------------------------
+
+inline void FMultivector::setValue(unsigned char /*i*/, unsigned char /*j*/, double /*val*/)
+{
+#ifndef NODEBUG
+    FInvalidDimensionException e("ERROR: invalid order(Multivector)!");
+    e.addTraceMessage("void FMultivector::setValue(unsigned char i, unsigned char j, double val)");
+    throw e;
+#endif
+}
+
+//---------------------------------------------------------------------------
+
+inline void FMultivector::setValue(unsigned char /*i*/, unsigned char /*j*/, unsigned char /*k*/, double /*val*/)
+{
+#ifndef NODEBUG
+    FInvalidDimensionException e("ERROR: invalid order(Multivector)!");
+    e.addTraceMessage("void FMultivector::setValue(unsigned char i, unsigned char j, unsigned char k, double val)");
+    throw e;
+#endif
+}
+
+//---------------------------------------------------------------------------
+
+inline void FMultivector::setValues(const std::vector<double>& c)
+{
+    FTensor::setValues(c);
+}
+
+
+
+//---------------------------------------------------------------------------
+
+inline double operator*(const FMultivector& A, const FMultivector& B) 
+{
+#ifndef NODEBUG
+    if (A.order != 1 || B.order != 1)
+    {
+        FInvalidDimensionException e("ERROR: invalid order");
+        e.addTraceMessage("double operator*(const FMultivector& A, const FMultivector& B)");
+        throw e;
+    }
+
+    if (A.dimension != B.dimension)
+    {
+        FInvalidDimensionException e;
+        e.addTraceMessage("double operator*(const FMultivector& A, const FMultivector& B)");
+        throw e;
+    }
+#endif
+    double tmp = 0.;
+    for (unsigned char i=0 ; i<A.dimension ; i++)
+        tmp += A.comp[i]*B.comp[i];
+
+    return tmp;
+}
+
+//---------------------------------------------------------------------------
+
+inline FMultivector FMultivector::cliffordMult(const FMultivector& A, const FMultivector& B)
+{
+
+#ifndef NODEBUG
+    if (A.order != 1 || B.order != 1)
+    {
+        FInvalidDimensionException e("ERROR: invalid order");
+        e.addTraceMessage("FMultivector FMultivector::cliffordMult(const FMultivector& A, const FMultivector& B)");
+        throw e;
+    }
+
+    if (A.dimension != B.dimension)
+    {
+        FInvalidDimensionException e;
+        e.addTraceMessage("FMultivector FMultivector::cliffordMult(const FMultivector& A, const FMultivector& B)");
+        throw e;
+    }
+#endif
+    FMultivector tmp;
+    if(A.dimension == 4)
+    {
+        tmp.resizeMultivector(4,1);
+        tmp.setValue(0, A(0)*B(0) +A(1)*B(1) +A(2)*B(2) -A(3)*B(3));
+        tmp.setValue(1, A(0)*B(1) +A(1)*B(0) -A(2)*B(3) +A(3)*B(2));
+        tmp.setValue(2, A(0)*B(2) +A(1)*B(3) +A(2)*B(0) -A(3)*B(1));		
+        tmp.setValue(3, A(0)*B(3) +A(1)*B(2) -A(2)*B(1) +A(3)*B(0));
+    }
+    else //A.dimension==8
+    {
+        tmp.resizeMultivector(8,1);
+
+        tmp.setValue(0, A(0)*B(0) +A(1)*B(1) +A(2)*B(2) +A(3)*B(3)
+                -A(4)*B(4) -A(5)*B(5) -A(6)*B(6) -A(7)*B(7));
+        tmp.setValue(1, A(0)*B(1) +A(1)*B(0) -A(2)*B(6) +A(3)*B(5)
+                -A(4)*B(7) -A(5)*B(3) +A(6)*B(2) -A(7)*B(4));
+        tmp.setValue(2, A(0)*B(2) +A(1)*B(6) +A(2)*B(0) -A(3)*B(4)
+                +A(4)*B(3) -A(5)*B(7) -A(6)*B(1) -A(7)*B(5));
+        tmp.setValue(3, A(0)*B(3) -A(1)*B(5) +A(2)*B(4) +A(3)*B(0)
+                -A(4)*B(2) +A(5)*B(1) -A(6)*B(7) -A(7)*B(6));						
+        tmp.setValue(4, A(0)*B(4) +A(1)*B(7) +A(2)*B(3) -A(3)*B(2)
+                +A(4)*B(0) -A(5)*B(6) +A(6)*B(5) +A(7)*B(1));
+        tmp.setValue(5, A(0)*B(5) -A(1)*B(3) +A(2)*B(7) +A(3)*B(1)
+                +A(4)*B(6) +A(5)*B(0) -A(6)*B(4) +A(7)*B(2));
+        tmp.setValue(6, A(0)*B(6) +A(1)*B(2) -A(2)*B(1) +A(3)*B(7)
+                -A(4)*B(5) +A(5)*B(4) +A(6)*B(0) +A(7)*B(3));
+        tmp.setValue(7, A(0)*B(7) +A(1)*B(4) +A(2)*B(5) +A(3)*B(6)
+                +A(4)*B(1) +A(5)*B(2) +A(6)*B(3) +A(7)*B(0));		
+    }
+    return tmp;
+}
+
+//---------------------------------------------------------------------------
+
+
+inline void FMultivector::conjugate()
+{
+    if(dimension==4)
+    {
+        comp[3]*=-1;
+    }
+    else	//dimension==8
+    {
+        for(int i=4;i<8;i++)
+            comp[i]*=-1;
+    }
+}
+
+
+//---------------------------------------------------------------------------
+
+inline double FMultivector::getScalar() const
+{
+    return comp[0];
+}
+
+//---------------------------------------------------------------------------
+
+inline FVector FMultivector::getVector() const
+{
+    FVector help;
+    if(dimension==4)
+    {
+        help=FVector(comp[1],comp[2]);
+    }
+    else
+    {
+        help=FVector(comp[1],comp[2],comp[3]);
+    }
+    return help;
+}
+
+//---------------------------------------------------------------------------
+
+inline double FMultivector::getBivector2D() const
+{
+    return comp[3];
+}
+
+//---------------------------------------------------------------------------
+
+inline FVector FMultivector::getBivector3D() const
+{	
+#ifndef NODEBUG
+    if (dimension!=8)
+    {
+        FInvalidDimensionException e("ERROR: invalid dimension");
+        e.addTraceMessage("FVector FMultivector::getBivector3D()");
+        throw e;
+    }
+#endif
+    FVector help;
+    help=FVector(comp[4],comp[5],comp[6]);
+    return help;
+}
+
+//---------------------------------------------------------------------------
+
+inline double FMultivector::getTrivector() const
+{
+#ifndef NODEBUG
+    if (dimension!=8)
+    {
+        FInvalidDimensionException e("ERROR: invalid dimension");
+        e.addTraceMessage("double FMultivector::getTrivector()");
+        throw e;
+    }
+#endif	
+    return comp[7];
+}
+
+//---------------------------------------------------------------------------
+
+
+#undef inline
+
+#endif // __FMultivector_icc_defined

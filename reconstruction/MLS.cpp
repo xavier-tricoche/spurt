@@ -16,10 +16,10 @@
 #include <math.h>
 
 // parameters
-size_t           npts;
+size_t             npts;
 unsigned int     resolution;
-char*            basename;
-double           radius;
+char*             basename;
+double             radius;
 
 void initialize(int argc, char* argv[])
 {
@@ -33,10 +33,10 @@ void initialize(int argc, char* argv[])
     hparm = hestParmNew();
     airMopAdd(mop, hparm, AIR_CAST(airMopper, hestParmFree), airMopAlways);
     hparm->elideSingleOtherType = AIR_TRUE;
-    hestOptAdd(&hopt, "n", "# points", airTypeSize_t, 0, 1, &npts,       "10000", "number of sample points");
-    hestOptAdd(&hopt, "s", "size",     airTypeInt,    0, 1, &resolution, "512",   "size of (square) output image");
-    hestOptAdd(&hopt, "r", "radius",   airTypeDouble, 0, 1, &radius,     "0.05",  "radius of MLS fit");
-    hestOptAdd(&hopt, "o", "output",   airTypeString, 1, 1, &basename,   NULL,    "output base name");
+    hestOptAdd(&hopt, "n",    "# points",        airTypeSize_t,     0,     1,    &npts,            "10000",        "number of sample points");
+    hestOptAdd(&hopt, "s",    "size",            airTypeInt,     0,     1,    &resolution,    "512",            "size of (square) output image");
+    hestOptAdd(&hopt, "r",    "radius",        airTypeDouble,     0,     1,    &radius,        "0.05",            "radius of MLS fit");
+    hestOptAdd(&hopt, "o",    "output",        airTypeString,     1,     1,    &basename,        NULL,            "output base name");
 
     hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
                    me, "Reconstruct Franke test function using MLS",
@@ -144,7 +144,7 @@ int main(int argc, char* argv[]) {
     ssize[1] = npts;
     std::string sample_name = basename;
     sample_name += "-samples.nrrd";
-    spurt::writeNrrd(sdata, sample_name, nrrdTypeDouble, ssize);
+    xavier::writeNrrd(sdata, sample_name, nrrdTypeDouble, ssize);
     std::cout << "Made -samples.nrrd" << std::endl;
 
     int n_runs = resolution*resolution*resolution;
@@ -286,12 +286,12 @@ int main(int argc, char* argv[]) {
     size[2] = resolution;
     std::string output_name = basename;
     output_name += "-results.nrrd";
-    spurt::writeNrrd(data, output_name, nrrdTypeDouble, size, spacing);
+    xavier::writeNrrd(data, output_name, nrrdTypeDouble, size, spacing);
     std::cerr << "output results.NRRD file exported\n";
 
     output_name = basename;
     output_name += "-ml.nrrd";
-    spurt::writeNrrd(ground_truth, output_name, nrrdTypeFloat, size, spacing);
+    xavier::writeNrrd(ground_truth, output_name, nrrdTypeFloat, size, spacing);
     std::cerr << "output ml.NRRD file exported\n";
     return 0;
 }

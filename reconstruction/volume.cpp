@@ -45,10 +45,10 @@ void initialize(int argc, char* argv[])
 }
 
 int main(int argc, char* argv[]) {
-    using namespace reconstruction;
-    
+    using namespace xavier::reconstruction;
+
     initialize(argc, argv);
-    
+
     int fun = 0;
     if (!strcmp(function, "franke") || !strcmp(function, "Franke")) {
         res[2] = 1;
@@ -57,15 +57,24 @@ int main(int argc, char* argv[]) {
     else if (!strcmp(function, "sinc") || !strcmp(function, "Sinc") || !strcmp(function, "SINC")) {
         fun = 2;
     }
-    else if (!strcmp(function, "Marschner") || !strcmp(function, "MarschnerLobb") || 
+    else if (!strcmp(function, "Marschner") || !strcmp(function, "MarschnerLobb") ||
             !strcmp(function, "marschner") || !strcmp(function, "Marschner-Lobb") ||
             !strcmp(function, "ml") || !strcmp(function, "marschnerlobb") ||
             !strcmp(function, "marschner-lobb") || !strcmp(function, "marlobb")) {
         fun = 3;
     }
-    
+    else if (!strcmp(function, "Sphere") || !strcmp(function, "sphere")) {
+        fun = 4;
+    }
+    else if (!strcmp(function, "Cone") || !strcmp(function, "cone")) {
+        fun = 5;
+    }
+    else if (!strcmp(function, "Cylinder") || !strcmp(function, "cylinde")) {
+        fun = 6;
+    }
+
     std::cerr << "fun = " << fun << std::endl;
-    
+
     float *data = (float*)calloc(res[0]*res[1]*res[2], sizeof(float));
     nvis::vec3 lo(_min[0], _min[1], _min[2]);
     nvis::vec3 hi(_max[0], _max[1], _max[2]);
@@ -73,11 +82,11 @@ int main(int argc, char* argv[]) {
     nvis::vec3 size(res[0]-1, res[1]-1, res[2]-1);
     nvis::vec3 step = span/size;
     std::cerr << "lo = " << lo << ", hi = " << hi << std::endl;
-    
+
     if (res[2] <= 1) {
         _min[2] = _max[2] = 0.;
     }
-    
+
     for (int k=0 ; k<res[2] ; ++k) {
         for (int j=0 ; j<res[1] ; ++j) {
             for (int i=0 ; i<res[0] ; ++i) {
@@ -98,6 +107,17 @@ int main(int argc, char* argv[]) {
                         data[idx] = MarschnerLobb(x,y,z);
                         break;
                     }
+                    case 4: {
+                        data[idx] = Sphere(x,y,z);
+                        break;
+                    }
+                    case 5: {
+                        data[idx] = Cone(x,y,z);
+                        break;
+                    }
+                    case 6: {
+                        data[idx] = Cylinder(x,y,z);
+                    }
                     default: {
                         std::cerr << "requested function is unknown\n";
                         exit(-1);
@@ -106,12 +126,12 @@ int main(int argc, char* argv[]) {
             }
         }
     }
-    
+
     std::vector<size_t> sz(res[2]>1 ? 3 : 2);
     for (int i=0 ; i<sz.size() ; ++i) sz[i] = size[i]+1;
     std::vector<double> spc(res[2]>1 ? 3 : 2);
     for (int i=0 ; i<spc.size() ; ++i) spc[i] = step[i];
-    spurt::writeNrrd(data, name, nrrdTypeFloat, sz, spc);
-    
+    xavier::nrrd_utils::writeNrrdFromContainers(data, name, sz, spc);
+
     return 0;
 }

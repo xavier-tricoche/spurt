@@ -21,9 +21,9 @@
 #include <image/nrrd_wrapper.hpp>
 #include <image/probe.hpp>
 #include <misc/option_parse.hpp>
-#include <misc/time_helper.hpp>
+#include <misc/progress.hpp>
 #include <misc/log_helper.hpp>
-#include <vtk/vtk_utils.hpp>
+#include <VTK/vtk_utils.hpp>
 
 #include <Eigen/Core>
 #include <Eigen/SVD>
@@ -34,9 +34,9 @@
 
 namespace odeint = boost::numeric::odeint;
 
-using namespace spurt::lavd;
+using namespace xavier::lavd;
 
-typedef spurt::fixed_vector<value_t, 6> vec6;
+typedef nvis::fixed_vector<value_t, 6> vec6;
 
 std::string name_in, name_mask, name_out;
 std::vector<std::string> t_init_str(1, "0");
@@ -50,13 +50,13 @@ std::string start_time_str;
 std::string border_mask_name;
 std::ofstream log_file;
 
-spurt::log::dual_ostream spurt::lavd::_log_(log_file, std::cout, 1, 0, 0, true);
+xavier::log::dual_ostream xavier::lavd::_log_(log_file, std::cout, 1, 0, 0, true);
 
-value_t t_max=2*spurt::lavd::DAY;
+value_t t_max=2*xavier::lavd::DAY;
 value_t t_init=0;
 value_t t_skip=0;
-value_t t_export_step=3*spurt::lavd::HOUR;
-value_t t_between_files=3*spurt::lavd::HOUR;
+value_t t_export_step=3*xavier::lavd::HOUR;
+value_t t_between_files=3*xavier::lavd::HOUR;
 value_t eps=1.0e-8;
 value_t dt=30;
 value_t seed_ratio=0.01;
@@ -87,41 +87,6 @@ typedef const void* address_t;
 
 std::vector< std::vector< vec4 > > failed_paths;
 
-std::string human_readable_duration(double _t) {
-    using namespace std::chrono;
-    using dms = duration< double, std::ratio<1, 1000> >;
-
-    if (_t < 0.001) return std::string("0 ms.");
-    dms t(_t);
-    std::ostringstream os;
-    size_t h = duration_cast<hours>(t).count();
-    if (h>0) {
-        os << h << " h. ";
-        t -= duration_cast<milliseconds>(hours(h));
-    }
-    size_t m = duration_cast<minutes>(t).count();
-    if (m>0) {
-        os << m << " m. ";
-        t -= duration_cast<milliseconds>(minutes(m));
-    }
-    size_t s = duration_cast<seconds>(t).count();
-    if (s>0) {
-        os << s << " s. ";
-        t -= duration_cast<milliseconds>(seconds(s));
-    }
-    size_t ms = duration_cast<milliseconds>(t).count();
-    if (ms>0) {
-        os << ms << " ms. ";
-        /*t -= duration_cast<milliseconds>(milliseconds(ms));
-    }
-    size_t ns = duration_cast<nanoseconds>(t).count();
-    if (ns>0) {
-        os << ns << " ns. ";*/
-    }
-    std::string str=os.str();
-    return str.substr(0, str.size()-1);
-}
-
 inline vec3 append(const vec2& v, value_t t) {
     return vec3(v[0], v[1], t);
 }
@@ -141,7 +106,7 @@ void set_verbose_values() {
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = spurt::command_line;
+    namespace xcl = xavier::command_line;
 
     xcl::option_traits
             required_group(true, false, "Required Options"),
@@ -250,7 +215,7 @@ struct observer
     observer(LAVD_state& state, std::vector<vec4>& steps, 
              NrrdScalarField<3>& vorticity, NrrdScalarField<1>& average_vorticity) 
         : m_state(state), m_steps(steps), m_vort(vorticity), 
-          m_avg_vort(average_vorticity) {}
+		  m_avg_vort(average_vorticity) {}
     
     void initialize(const vec2& p0, value_t t0) {
         value_t vd0 = vorticity_deviation(p0, t0);
@@ -263,7 +228,7 @@ struct observer
     {
         value_t vd = vorticity_deviation(x, t);
         m_state.update(x, vd, t);
-        
+		
         // append latest position
         m_steps.push_back(vec4(x[0], x[1], t, m_state.m_acc_vd));
         
@@ -284,12 +249,12 @@ void filter_trajectory(trajectory_t& out, const trajectory_t& in) {
     }
     double mean_dist=0;
     out.push_back(in[0]);
-    vec2 last = spurt::subv<0, 2, value_t, 4>(in[0]);
+    vec2 last = nvis::subv<0, 2, value_t, 4>(in[0]);
     for (size_t i=1; i<in.size()-1; ++i) {
         const vec4& p = in[i];
-        vec2 cur = spurt::subv<0, 2, value_t, 4>(p);
-        // mean_dist += spurt::norm(cur - spurt::subv<0, 2, value_t, 4>(in[i-1]));
-        if (spurt::norm(cur-last) > min_dist) {
+        vec2 cur = nvis::subv<0, 2, value_t, 4>(p);
+        // mean_dist += nvis::norm(cur - nvis::subv<0, 2, value_t, 4>(in[i-1]));
+        if (nvis::norm(cur-last) > min_dist) {
             out.push_back(p);
             last = cur;
         }
@@ -302,12 +267,12 @@ void filter_trajectory(trajectory_t& out, const trajectory_t& in) {
 }
 
 void extract_parameters() {
-    Nrrd* nin = spurt::readNrrd(name_in);
+    Nrrd* nin = xavier::nrrd_utils::readNrrd(name_in);
     int nbcomments = nin->cmtArr->len;
     value_t start_time;
     for (int i=0; i<nbcomments; ++i) {
         std::vector<std::string> strs;
-        spurt::tokenize(strs, nin->cmt[i], " =[],");
+        xavier::tokenize(strs, nin->cmt[i], " =[],");
         if (strs[0] == "input") {
             name_in = strs[2];
         }
@@ -322,7 +287,7 @@ void extract_parameters() {
         }
         else if (strs[0] == "resolution") {
             std::vector<std::string> _strs;
-            spurt::tokenize(_strs, strs[1], "x");
+            xavier::tokenize(_strs, strs[1], "x");
             res[0] = std::stoi(_strs[0]);
             res[1] = std::stoi(_strs[1]);
         }
@@ -342,8 +307,9 @@ void extract_parameters() {
     all_trajectories.resize(nb);
     all_states.resize(nb);
 
-    spurt::progress_display progress(true);
+    xavier::ProgressDisplay progress(false);
     progress.start(nb, "importing seeds and states", 100);
+    progress.set_active(true);
 
     #pragma omp parallel
     {
@@ -372,7 +338,6 @@ void extract_parameters() {
             state.m_stopped = (state.m_acc_vd == -1);
         }
     }
-    progress.stop();
     nrrdNuke(nin);
 }
 
@@ -400,23 +365,23 @@ void import_data(const std::vector< std::string >& vel_filenames,
                      start_id-support_radius :
                      static_cast<size_t>(0) );
     for (size_t i=first; i<first+n_used; ++i) {
-        vel_tsteps[i-first]=spurt::readNrrd(vel_filenames[i]);
+        vel_tsteps[i-first]=xavier::nrrd_utils::readNrrd(vel_filenames[i]);
         _log_(1) << "Read " << vel_filenames[i] << std::endl;
         print(vel_tsteps[i-first]);
 
-        vor_tsteps[i-first]=spurt::readNrrd(vor_filenames[i]);
+        vor_tsteps[i-first]=xavier::nrrd_utils::readNrrd(vor_filenames[i]);
         _log_(1) << "Read " << vor_filenames[i] << std::endl;
     }
     last_time_step = first + n_used - 1;
     value_t outer_tmin = /*t_init +*/ first*t_between_files;
     _log_(2) << "outer_tmin=" << outer_tmin << std::endl;
-    current_velocity_volume = spurt::lavd::create_nrrd_volume(vel_tsteps, outer_tmin, t_between_files);
+    current_velocity_volume = xavier::lavd::create_nrrd_volume(vel_tsteps, outer_tmin, t_between_files);
     // clean up
     for (size_t i=0; i<vel_tsteps.size(); ++i) {
         nrrdNuke(vel_tsteps[i]);
     }
 
-    current_vorticity_volume = spurt::lavd::create_nrrd_volume(vor_tsteps, outer_tmin, t_between_files);
+    current_vorticity_volume = xavier::lavd::create_nrrd_volume(vor_tsteps, outer_tmin, t_between_files);
 
     current_t_min = start_id*t_between_files;
     current_t_max = last_time_step*t_between_files;
@@ -458,8 +423,9 @@ void import_data(const std::vector< std::string >& vel_filenames,
         << mini << ", " << maxi << "] x ["
         << minj << ", " << maxj << "]" << std::endl;
 
-    spurt::progress_display progress(true);
+    xavier::ProgressDisplay progress(false);
     progress.start(n_used*nsamples, "avg. vort.");
+    progress.set_active(true);
     size_t base_n=0;
     size_t ncols=maxi-mini+1;
     std::vector< value_t > sum_copies(nb_threads, 0);
@@ -493,12 +459,12 @@ void import_data(const std::vector< std::string >& vel_filenames,
         _log_(1) << std::setprecision(12) << "average vorticity[" << n << "]=" << av_array[n] << std::endl;
         _log_(1) << "nsamples=" << nsamples << ", nvalid_samples=" << nvalid << std::endl;
     }
-    progress.stop();
+	progress.end();
 
     Nrrd* av=nrrdNew();
-    if (nrrdWrap_nva(av, av_array, nrrd_value_traits_from_type<value_t>::index,
+    if (nrrdWrap_nva(av, av_array, xavier::nrrd_utils::nrrd_value_traits_from_type<value_t>::index,
                      1, &n_used)) {
-        throw std::runtime_error(spurt::error_msg("unable to create 1D average vorticity nrrd"));
+        throw std::runtime_error(xavier::nrrd_utils::error_msg("unable to create 1D average vorticity nrrd"));
     }
     // Per-axis info
     int center = nrrdCenterNode;
@@ -532,12 +498,12 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
     if (long_name) {
         os << '_' << stem << "_started_at_" << start_time_str << "_"
            << std::setw(5) << std::setfill('0')
-           << current_time/spurt::lavd::HOUR << "h_";
+           << current_time/xavier::lavd::HOUR << "h_";
         os << std::setprecision(2) << std::scientific << eps;
     }
     else {
         os << '_' << stem << "_" << std::setw(5) << std::setfill('0')
-           << current_time/spurt::lavd::HOUR << "h";
+           << current_time/xavier::lavd::HOUR << "h";
     }
     os.flags(default_settings);
     std::string suffix = os.str() + ".nrrd";
@@ -568,7 +534,7 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
     os << "kernel size=" << support_radius << '\n';
     comments.push_back(os.str());
 
-    typedef spurt::fixed_vector<float, 5> fvec5;
+    typedef nvis::fixed_vector<float, 5> fvec5;
     std::vector< fvec5 > out_array;
 
     for (size_t i=0; i<all_trajectories.size(); ++i) {
@@ -577,7 +543,7 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
         filter_trajectory(t, orig);
         for (size_t n=0; n<t.size(); ++n) {
             const auto& pt = t[n];
-            out_array.push_back(fvec5(pt, i));
+            out_array.push_back(fvec5(pt[0], pt[1], pt[2], pt[3], i));
         }
         auto pt = orig.back();
         orig.clear();
@@ -589,7 +555,7 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
     std::array<int, 2> ctr({ nrrdCenterUnknown, nrrdCenterNode });
     std::cout << "exporting " << name << "...\n";
     try {
-        spurt::writeNrrdFromContainers((float*)&out_array[0], name, dims, spc, min, ctr, comments);
+        xavier::nrrd_utils::writeNrrdFromContainers((float*)&out_array[0], name, dims, spc, min, ctr, comments);
     }
     catch(std::exception& e) {
         std::cout << "WARNING: exception caught: " << e.what() << '\n';
@@ -605,20 +571,20 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
         const auto& t = failed_paths[i];
         for (size_t n=0; n<t.size(); ++n) {
             const auto& pt = t[n];
-            out_array.push_back(fvec5(pt, i));
+            out_array.push_back(fvec5(pt[0], pt[1], pt[2], pt[3], i));
         }
     }
     dims[1] = out_array.size();
     if (dims[1] > 0) {
         std::cout << "exporting " << name << "...\n";
-        spurt::writeNrrdFromContainers((float*)&out_array[0], name, dims, spc, min, ctr, comments);
+        xavier::nrrd_utils::writeNrrdFromContainers((float*)&out_array[0], name, dims, spc, min, ctr, comments);
         std::cout << "done\n";
     }
 }
 
 int main(int argc, const char* argv[])
 {
-    using namespace spurt;
+    using namespace xavier;
     using namespace odeint;
 
     me=argv[0];
@@ -677,7 +643,7 @@ int main(int argc, const char* argv[])
     // compute bounds of entire domain
     get_spatial_info(domain, input_spc, velocity_filenames[0], 1);
     border_mask = get_border_mask(border_mask_name, velocity_filenames[0]);
-    
+	
     // if user provided bounds for computation, use them, otherwise use the
     // domain's bounds
     if ( !( bnds[0]==bnds[1]==bnds[2]==bnds[3] ) ) {
@@ -687,13 +653,13 @@ int main(int argc, const char* argv[])
     else {
         region = domain;
     }
-    std::vector<spurt::vec2> seeds;
-    spurt::vec2 span = region.max() - region.min();
-    spurt::vec2 spc = span / spurt::vec2(res[0]-1, res[1]-1);
+	std::vector<nvis::vec2> seeds;
+    nvis::vec2 span = region.max() - region.min();
+    nvis::vec2 spc = span / nvis::vec2(res[0]-1, res[1]-1);
     seeds.resize(res[0]*res[1]);
     for (int j=0; j<res[1]; ++j) {
         for (int i=0; i<res[0]; ++i) {
-            seeds[j*res[0]+i] = region.min() + spurt::vec2(i,j)*spc;
+            seeds[j*res[0]+i] = region.min() + nvis::vec2(i,j)*spc;
         }
     }
     nb_samples = seeds.size();
@@ -706,7 +672,7 @@ int main(int argc, const char* argv[])
 
     _log_(0) << nb_samples << " seed point in input\n";
 
-    support_radius = spurt::lavd::compute_support_radius();
+    support_radius = xavier::lavd::compute_support_radius();
     _log_(1) << "support radius = " << support_radius << std::endl;
 
     // initialize velocity and vorticity volumes
@@ -732,9 +698,10 @@ int main(int argc, const char* argv[])
                  [](char& c) { if (c==' ') c='_'; });
     _log_(1) << "start_time_string=" << start_time_str << std::endl;
 
-    spurt::progress_display progress(true), total_progress(false);
+    xavier::ProgressDisplay progress(false), total_progress(false);
 
     total_progress.start(1); // we only care for the timer function
+    total_progress.set_active(false);
 
     std::vector<size_t> nb_lost_copies(nb_threads);
     std::vector<size_t> counter_copies(nb_threads);
@@ -757,6 +724,7 @@ int main(int argc, const char* argv[])
         value_t current_target_time = std::min(current_t_max, next_export_time);
 
         progress.start(nb_samples, "flow map");
+        progress.set_active(true);
         #pragma omp parallel
         {
             #pragma omp for schedule(dynamic,1)
@@ -871,7 +839,7 @@ int main(int argc, const char* argv[])
 
             initial_loop = false;
         }
-        progress.stop();
+	    progress.end();
 
         nb_lost = std::accumulate(nb_lost_copies.begin(), nb_lost_copies.end(), 0);
 
@@ -883,8 +851,8 @@ int main(int argc, const char* argv[])
                 << human_readable_duration(progress.wall_time())
                 << " (" << progress.wall_time() << " ms.)\n"
                 << "Overall compute time so far (" << niter << " iterations): cpu: ";
-            double tcpu = total_progress.cpu_time();
-            double twal = total_progress.wall_time();
+            double tcpu = total_progress.instant_cpu_time();
+            double twal = total_progress.instant_wall_time();
              _log_(0)
                 << human_readable_duration(tcpu) << " (" << tcpu << " ms.) | wall: "
                 << human_readable_duration(twal) << " (" << twal << " ms.)"
@@ -899,7 +867,7 @@ int main(int argc, const char* argv[])
             import_data(velocity_filenames, vorticity_filenames,
                         last_time_step-2*support_radius);
             for (int i=0; i<nb_threads; ++i) {
-                vf_copies[i] = shared_ptr< NrrdVectorField >(new NrrdVectorField(current_velocity_volume, std::string("velocity volume for thread #") + std::to_string(i), false));
+				vf_copies[i] = shared_ptr< NrrdVectorField >(new NrrdVectorField(current_velocity_volume, std::string("velocity volume for thread #") + std::to_string(i), false));
                 rhs_copies[i] = shared_ptr< NrrdODERHS >(new NrrdODERHS(*vf_copies[i], sample_counter[i], domain, max_rhs_evals));
             }
         }
@@ -914,7 +882,7 @@ int main(int argc, const char* argv[])
         current_start_time = current_target_time;
         _log_(1) << "current start time=" << current_start_time << std::endl;
     }
-    total_progress.stop();
+    total_progress.end();
     export_results(t_max, total_progress.wall_time(),
                    total_progress.cpu_time(), true);
 

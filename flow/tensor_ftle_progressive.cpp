@@ -64,7 +64,7 @@ struct field_wrapper {
         : dpl(0), nrrd(new EigenvectorField<nrrd_field<7> >(field)),
           procedural(false), bbox(field.bounds()) {}
           
-    spurt::vec3 interpolate(const spurt::vec3& x) const {
+    nvis::vec3 interpolate(const nvis::vec3& x) const {
         if (procedural) {
             return dpl->major(x);
         } else {
@@ -72,14 +72,14 @@ struct field_wrapper {
         }
     }
     
-    const spurt::bbox3& bounds() const {
+    const nvis::bbox3& bounds() const {
         return bbox;
     }
     
     const EigenvectorField<DoublePointLoad>*     dpl;
     const EigenvectorField<nrrd_field<7> >*      nrrd;
     const bool                                  procedural;
-    spurt::bbox3                                 bbox;
+    nvis::bbox3                                 bbox;
 };
 
 int main(int argc, const char* argv[])
@@ -104,25 +104,25 @@ int main(int argc, const char* argv[])
         std::cerr << "processing nrrd file: " << name_in << std::endl;
     }
     
-    spurt::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
+    nvis::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
     std::cerr << "Resolution = " << res << std::endl;
     RasterGrid<3> sampling_grid(res, efield->bounds());
-    RasterData<spurt::vec3, 3> flowmaps[2]
-        = { RasterData<spurt::vec3, 3>(sampling_grid),
-            RasterData<spurt::vec3, 3>(sampling_grid)
+    RasterData<nvis::vec3, 3> flowmaps[2]
+        = { RasterData<nvis::vec3, 3>(sampling_grid),
+            RasterData<nvis::vec3, 3>(sampling_grid)
           };
           
     // initialize flow map to seed locations
     for (int i = 0 ; i < sampling_grid.size() ; ++i) {
-        spurt::ivec3 idx = sampling_grid.coord(i);
-        spurt::vec3 seed = sampling_grid(idx);
+        nvis::ivec3 idx = sampling_grid.coord(i);
+        nvis::vec3 seed = sampling_grid(idx);
         flowmaps[0](idx) = flowmaps[1](idx) = seed;
     }
     
-    spurt::timer timer;
+    nvis::timer timer;
     int npoints = sampling_grid.size();
     
-    const spurt::vec3 zero(0.);
+    const nvis::vec3 zero(0.);
     
     std::cout << "nb points = " << npoints << '\n';
     
@@ -151,7 +151,7 @@ int main(int argc, const char* argv[])
 #ifdef __EXPORT_ENDPOINT__
         float* endpt_f = (float*)calloc(3 * npoints, sizeof(float));
         float* endpt_b = (float*)calloc(3 * npoints, sizeof(float));
-        spurt::lexicographical_order lexorder;
+        nvis::lexicographical_order lexorder;
         std::cerr << "top reached positions will be exported" << std::endl;
 #endif
         
@@ -204,23 +204,23 @@ int main(int argc, const char* argv[])
                         std::cerr << '\r' << pct << "% completed in "
                                   << timer.elapsed() << "s.                         " << std::flush;
                     }
-                    spurt::ivec3 c = sampling_grid.coord(n);
+                    nvis::ivec3 c = sampling_grid.coord(n);
                     
                     for (int dir = 0 ; dir < 2 ; ++dir) {
                         if ((!dir && blocked_fwd[n]) || (dir && blocked_bwd[n])) {
                             continue;
                         }
                         
-                        const spurt::vec3& seed = flowmaps[dir](c);
+                        const nvis::vec3& seed = flowmaps[dir](c);
                         int error = -3;
                         std::vector<double>& last_step = (dir ? last_step_bwd : last_step_fwd);
                         std::vector<bool>& blocked = (dir ? blocked_bwd : blocked_fwd);
-                        RasterData<spurt::vec3, 3>& fmap = flowmaps[dir];
+                        RasterData<nvis::vec3, 3>& fmap = flowmaps[dir];
                         try {
                             double length_io = requested_length;
-                            spurt::vec3 z = ftle::eigen_flow_map(*efield, seed, last_step[n], length_io, error);
+                            nvis::vec3 z = ftle::eigen_flow_map(*efield, seed, last_step[n], length_io, error);
                             bool valok = true;
-                            if (std::isinf(spurt::norm(z)) || std::isnan(spurt::norm(z))) {
+                            if (std::isinf(nvis::norm(z)) || std::isnan(nvis::norm(z))) {
                                 blocked[n] = true;
                                 valok = false;
                                 ++nblocked;
@@ -258,7 +258,7 @@ int main(int argc, const char* argv[])
 #endif
                     }
 #ifdef __EXPORT_ENDPOINT__
-                    spurt::vec3 end_f, end_b;
+                    nvis::vec3 end_f, end_b;
                     if (lexorder(flowmaps[0](c), flowmaps[1](c))) {
                         end_f = flowmaps[1](c);
                         end_b = flowmaps[0](c);
@@ -278,7 +278,7 @@ int main(int argc, const char* argv[])
         
         std::vector<size_t> size_4d(4), size_3d(3);
         std::vector<double> step_4d(4), step_3d(3);
-        const spurt::vec3& s = sampling_grid.step();
+        const nvis::vec3& s = sampling_grid.step();
         step_4d[0] = airNaN();
         for (int i = 0 ; i < 3 ; ++i) {
             size_3d[i] = size_4d[i+1] = res[i];
@@ -288,24 +288,24 @@ int main(int argc, const char* argv[])
         
 #ifdef __EXPORT_ENDPOINT__
         size_4d[0] = 3;
-        spurt::writeNrrd(endpt_f, name.make("endpoints-fwd", nlengths, length), nrrdTypeFloat, size_4d, step_4d);
+        xavier::nrrd_utils::writeNrrd(endpt_f, name.make("endpoints-fwd", nlengths, length), nrrdTypeFloat, size_4d, step_4d);
         delete[] endpt_f;
-        spurt::writeNrrd(endpt_b, name.make("endpoints-bwd", nlengths, length), nrrdTypeFloat, size_4d, step_4d);
+        xavier::nrrd_utils::writeNrrd(endpt_b, name.make("endpoints-bwd", nlengths, length), nrrdTypeFloat, size_4d, step_4d);
         delete[] endpt_b;
 #endif
         
 #ifdef __EXPORT_ERROR__
         size_4d[0] = 3;
-        spurt::writeNrrd(err_f, name.make("error-fwd", nlengths, length), nrrdTypeInt, size_4d, step_4d);
+        xavier::nrrd_utils::writeNrrd(err_f, name.make("error-fwd", nlengths, length), nrrdTypeInt, size_4d, step_4d);
         delete[] err_f;
-        spurt::writeNrrd(err_b, name.make("error-bwd", nlengths, length), nrrdTypeInt, size_4d, step_4d);
+        xavier::nrrd_utils::writeNrrd(err_b, name.make("error-bwd", nlengths, length), nrrdTypeInt, size_4d, step_4d);
         delete[] err_b;
 #endif
         
 #ifdef __EXPORT_LENGTH__
-        spurt::writeNrrd(len_f, name.make("length-fwd", nlengths, length), nrrdTypeFloat, size_3d, step_3d);
+        xavier::nrrd_utils::writeNrrd(len_f, name.make("length-fwd", nlengths, length), nrrdTypeFloat, size_3d, step_3d);
         delete[] len_f;
-        spurt::writeNrrd(len_b, name.make("length-bwd", nlengths, length), nrrdTypeFloat, size_3d, step_3d);
+        xavier::nrrd_utils::writeNrrd(len_b, name.make("length-bwd", nlengths, length), nrrdTypeFloat, size_3d, step_3d);
         delete[] len_b;
 #endif
         
@@ -313,7 +313,7 @@ int main(int argc, const char* argv[])
         timer.restart();
 #pragma openmp parallel for
         for (int n = 0 ; n < npoints ; ++n) {
-            spurt::vec2 ans;
+            nvis::vec2 ans;
             try {
                 ans = ftle::eigenftle(n, *efield, flowmaps, length);
             } catch (...) {
@@ -328,7 +328,7 @@ int main(int argc, const char* argv[])
             ftle[n] = std::max(ans[0], ans[1]);
         }
         std::cout << "total computation time for ftle was " << timer.elapsed() << '\n';
-        spurt::writeNrrd(ftle, name.make("ftle", nlengths, length), nrrdTypeFloat, size_3d, step_3d);
+        xavier::nrrd_utils::writeNrrd(ftle, name.make("ftle", nlengths, length), nrrdTypeFloat, size_3d, step_3d);
         delete[] ftle;
 #endif
         

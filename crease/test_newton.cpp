@@ -37,7 +37,7 @@ unsigned int face_pt[3][4][3] = {
 struct pvo_solution {
     pvo_solution() : p(), local_fid(0), global_fid() {}
     
-    vec3 p;
+    nvis::vec3 p;
     unsigned int local_fid;
     FaceId global_fid;
 };
@@ -46,7 +46,7 @@ struct pvo_solution {
 
 int main(int argc, char* argv[])
 {
-    using namespace spurt::crease;
+    using namespace xavier::crease;
     is_ridge = true;
     crease_kind = 2;
     upsample = 1;
@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
     unsigned int nb_wrong_eval = 0;
     
     // voxel data
-    std::vector< vec3 > v(4); // vertex coordinates
+    std::vector< nvis::vec3 > v(4); // vertex coordinates
     std::vector< double > val(4);   // associated values
     std::vector< double > str(4);   // associated strength
     std::vector< double > cfd(4);   // associated confidence
@@ -236,7 +236,7 @@ int main(int argc, char* argv[])
         
         // do the actual work
         current_face_id = fid;
-        std::vector< vec3 > points;
+        std::vector< nvis::vec3 > points;
         current_face_info.set_info(v[0], v[1], v[2], v[3]);
         prev = the_wrapper->get_nb_measures();
         bool found_something;
@@ -257,7 +257,7 @@ int main(int argc, char* argv[])
         if (res) {
             std::cout << "extractor: PVO successful in " << dt << "sec. on face " << fid
                       << " after " << cur - prev << " measures" << std::endl;
-            vec3 refpos = points.front();
+            nvis::vec3 refpos = points.front();
             double refval = the_wrapper->value(points.front());
             if (points.size() > 1) {
                 ++nb_several;
@@ -317,7 +317,7 @@ int main(int argc, char* argv[])
     std::vector< bool > is_fixed(nb_voxels, false);
     
     // store tangent vectors of crease points as induced by their cell neighbor
-    std::map< FaceId, vec3 > tangents;
+    std::map< FaceId, nvis::vec3 > tangents;
     
     int delta_x, delta_y, delta_z;
     delta_x = 1;
@@ -374,16 +374,16 @@ int main(int argc, char* argv[])
         } else if (np == 2) {
             ++nb_good;
             std::cout << "segment found in voxel #" << v << std::endl;
-            vec3 p0 = all_face_points[fpids[0]];
-            vec3 p1 = all_face_points[fpids[1]];
+            nvis::vec3 p0 = all_face_points[fpids[0]];
+            nvis::vec3 p1 = all_face_points[fpids[1]];
             
             // debug code begins...
             round1.push_back(p0);
             round1.push_back(p1);
             // ...debug code ends
             
-            vec3 dpdt = p0 - p1;
-            dpdt /= norm(dpdt);
+            nvis::vec3 dpdt = p0 - p1;
+            dpdt /= nvis::norm(dpdt);
             add_segment(fpids);
             tangents[face_ids[0]] = dpdt;
             tangents[face_ids[1]] = -1 * dpdt; // orientation points to next voxel
@@ -397,7 +397,7 @@ int main(int argc, char* argv[])
                 vals[n] = the_wrapper->value(all_face_points[fpids[n]]);
             }
             std::vector< unsigned int > sorted(np);
-            spurt::sort(vals, sorted);
+            xavier::sort(vals, sorted);
             unsigned int id0, id1;
             if (is_ridge) {
                 id0 = sorted[np-1];
@@ -408,16 +408,16 @@ int main(int argc, char* argv[])
             }
             
             std::cout << "TRICKY segment found in voxel #" << v << std::endl;
-            vec3 p0 = all_face_points[fpids[id0]];
-            vec3 p1 = all_face_points[fpids[id1]];
+            nvis::vec3 p0 = all_face_points[fpids[id0]];
+            nvis::vec3 p1 = all_face_points[fpids[id1]];
             
             // debug code begins...
             round1.push_back(p0);
             round1.push_back(p1);
             // ...debug code ends
             
-            vec3 dpdt = p0 - p1;
-            dpdt /= norm(dpdt);
+            nvis::vec3 dpdt = p0 - p1;
+            dpdt /= nvis::norm(dpdt);
             add_segment(fpids);
             tangents[face_ids[id0]] = dpdt;
             tangents[face_ids[id1]] = -1 * dpdt; // orientation points to next voxel
@@ -511,16 +511,16 @@ int main(int argc, char* argv[])
                 // this case corresponds to a secondary fix/addition of a voxel as a side effect
                 // of fixing its neighbor(s): we have killed two birds with one stone!
                 std::cout << "segment found in voxel #" << v << std::endl;
-                vec3 p0 = all_face_points[fpids[0]];
-                vec3 p1 = all_face_points[fpids[1]];
+                nvis::vec3 p0 = all_face_points[fpids[0]];
+                nvis::vec3 p1 = all_face_points[fpids[1]];
                 
                 // debug code begins...
                 round12.push_back(p0);
                 round12.push_back(p1);
                 // ...debug code ends
                 
-                vec3 dpdt = p0 - p1;
-                dpdt /= norm(dpdt);
+                nvis::vec3 dpdt = p0 - p1;
+                dpdt /= nvis::norm(dpdt);
                 add_segment(fpids);
                 tangents[face_ids[0]] = dpdt;
                 tangents[face_ids[1]] = -1. * dpdt; // orientation points to next voxel
@@ -532,7 +532,7 @@ int main(int argc, char* argv[])
                     vals[n] = the_wrapper->value(all_face_points[fpids[n]]);
                 }
                 std::vector< unsigned int > sorted(np);
-                spurt::sort(vals, sorted);
+                xavier::sort(vals, sorted);
                 unsigned int id0, id1;
                 if (is_ridge) {
                     id0 = sorted[np-1];
@@ -543,16 +543,16 @@ int main(int argc, char* argv[])
                 }
                 
                 std::cout << "TRICKY segment found in voxel #" << v << std::endl;
-                vec3 p0 = all_face_points[fpids[id0]];
-                vec3 p1 = all_face_points[fpids[id1]];
+                nvis::vec3 p0 = all_face_points[fpids[id0]];
+                nvis::vec3 p1 = all_face_points[fpids[id1]];
                 
                 // debug code begins...
                 round1.push_back(p0);
                 round1.push_back(p1);
                 // ...debug code ends
                 
-                vec3 dpdt = p0 - p1;
-                dpdt /= norm(dpdt);
+                nvis::vec3 dpdt = p0 - p1;
+                dpdt /= nvis::norm(dpdt);
                 add_segment(fpids);
                 tangents[face_ids[id0]] = dpdt;
                 tangents[face_ids[id1]] = -1 * dpdt; // orientation points to next voxel
@@ -575,7 +575,7 @@ int main(int argc, char* argv[])
                 timer.restart();
                 
                 // build up voxel geometry
-                std::vector< vec3 > vert(8);
+                std::vector< nvis::vec3 > vert(8);
                 sample_grid.voxel(vert, i, j, k);
                 if (display_debug_info)
                     std::cout << "voxel is: 0=" << vert[0] << ", 1=" << vert[1] << ", 2=" << vert[2]
@@ -585,17 +585,17 @@ int main(int argc, char* argv[])
                 fixing_voxel = true;
                 prev = the_wrapper->get_nb_measures();
                 
-                std::pair< int, vec3 > first_guess; // face id / position on face
+                std::pair< int, nvis::vec3 > first_guess; // face id / position on face
                 first_guess.first = -1;   // no first guess so far
                 
                 // check if we have a tangent available at this position
-                std::map< FaceId, vec3 >::iterator tang_it = tangents.find(face_ids[0]);
+                std::map< FaceId, nvis::vec3 >::iterator tang_it = tangents.find(face_ids[0]);
                 
                 // tracking solution specific to crease lines of mode
                 double h = 0.25;
                 if (crease_kind == 2) {
                     unsigned int fid_out;
-                    vec3 out;
+                    nvis::vec3 out;
                     if (track_ridge_line(out, fid_out, vert, all_face_points[fpids[0]], point_face[0])) {
                         double val = the_wrapper->value(out);
                         if (display_debug_info)
@@ -613,7 +613,7 @@ int main(int argc, char* argv[])
                     }
                 } else if (tang_it != tangents.end()) {
                     unsigned int fid_out;
-                    vec3 out;
+                    nvis::vec3 out;
                     trace_ray(out, fid_out, vert, all_face_points[fpids[0]], tang_it->second, point_face[0]);
                     double val = the_wrapper->value(out);
                     if (display_debug_info)
@@ -625,7 +625,7 @@ int main(int argc, char* argv[])
                 
                 bool found = false;
                 bool found_something = false;
-                std::vector< vec3 > points;
+                std::vector< nvis::vec3 > points;
                 pvo_solution the_solution;
                 
                 // if we choose to trust the tracking outcome we take it as solution
@@ -651,7 +651,7 @@ int main(int argc, char* argv[])
                         std::cout << "we are about to scrutinize the right face" << std::endl;
                     }
                     const unsigned int* ids = faces[first_guess.first];
-                    face_type face(vert[ids[0]], vert[ids[1]], vert[ids[2]], vert[ids[3]], *spurt::crease::the_wrapper);
+                    face_type face(vert[ids[0]], vert[ids[1]], vert[ids[2]], vert[ids[3]], *xavier::crease::the_wrapper);
                     
                     if (crease_kind == 2) {
                         face_type out;
@@ -671,17 +671,17 @@ int main(int argc, char* argv[])
                                 if (display_debug_info) {
                                     std::cout << "first attempt: bold approach" << std::endl;
                                 }
-                                spurt::crease::speedup = true;
+                                xavier::crease::speedup = true;
                             } else if (n == 1) {
                                 if (display_debug_info) {
                                     std::cout << "first attempt failed: cautious approach on second attempt" << std::endl;
                                 }
-                                spurt::crease::speedup = false;
+                                xavier::crease::speedup = false;
                             } else {
                                 if (display_debug_info) {
                                     std::cout << "everything we tried so far failed. using a smaller area" << std::endl;
                                 }
-                                spurt::crease::speedup = false;
+                                xavier::crease::speedup = false;
                                 h *= 0.5;
                                 refine_face(out, face, first_guess.second, h);
                             }
@@ -701,7 +701,7 @@ int main(int argc, char* argv[])
                                       << face.p[0] << ", " << face.p[1] << ", " << face.p[2] << ", " << face.p[3]
                                       << std::endl;
                                       
-                        spurt::crease::speedup = false;
+                        xavier::crease::speedup = false;
                         current_vertices.clear();
                         current_face_info.set_info(face.p[0], face.p[1], face.p[2], face.p[3]);
                         found = search_face(points, face.p[0], face.p[1], face.p[2], face.p[3], max_depth_fix,
@@ -724,8 +724,8 @@ int main(int argc, char* argv[])
                 {
                     __d = max_depth_fix;
                     crease::max_int_error /= 5;
-                    spurt::crease::speedup = false;
-                    spurt::crease::fixing_voxel = true;
+                    xavier::crease::speedup = false;
+                    xavier::crease::fixing_voxel = true;
                     for (unsigned int vf = 0 ; vf < 6 && !found && !found_something; vf++) {
                         if (vf == point_face[0] || // skip position that we already know
                                 (crease_kind < 2 && // or face we have already ruled out
@@ -781,16 +781,16 @@ int main(int argc, char* argv[])
                     face_ids.push_back(the_solution.global_fid);
                     
                     // update tangent information
-                    vec3 p0 = all_face_points[fpids[0]];
-                    vec3 p1 = all_face_points[fpids[1]];
+                    nvis::vec3 p0 = all_face_points[fpids[0]];
+                    nvis::vec3 p1 = all_face_points[fpids[1]];
                     
                     // debug code begins...
                     round2.push_back(p0);
                     round2.push_back(p1);
                     // ...debug code ends
                     
-                    vec3 dpdt = p0 - p1;
-                    dpdt /= norm(dpdt);
+                    nvis::vec3 dpdt = p0 - p1;
+                    dpdt /= nvis::norm(dpdt);
                     add_segment(fpids);
                     tangents[face_ids[0]] = dpdt;
                     tangents[face_ids[1]] = -1 * dpdt; // orientation points to next voxel
@@ -872,7 +872,7 @@ int main(int argc, char* argv[])
               << "number of failed convergences: " << failed_conv << std::endl
               << "percentage of faces containing several zero crossing: "
               << 100*(double)nb_several / (double)all_face_points.size() << std::endl
-              << "number of PVO computations performed: " << spurt::crease::nb_pvo << std::endl;
+              << "number of PVO computations performed: " << xavier::crease::nb_pvo << std::endl;
               
     std::cout << "number of segments = " << all_edges.size()
               << ", number of connected components: " << creases.size()

@@ -5,8 +5,8 @@
 
 class box_point {
 public:
-    typedef vec3      vector_type;
-    typedef bbox3     box_type;
+    typedef nvis::vec3      vector_type;
+    typedef nvis::bbox3     box_type;
     typedef double          value_type;
     
     box_point() : __idx(-1) {}
@@ -26,7 +26,7 @@ public:
     }
     
 private:
-    bbox3 __b;
+    nvis::bbox3 __b;
     size_t      __idx;
 };
 

@@ -47,21 +47,21 @@ void initialize(int argc, const char* argv[])
 
 struct ABC_field {
     ABC_field(double a, double b, double c) : _a(a), _b(b), _c(c),
-        _bounds(spurt::vec3(0,0,0), spurt::vec3(2*M_PI, 2*M_PI, 2*M_PI)) {}
+        _bounds(nvis::vec3(0,0,0), nvis::vec3(2*M_PI, 2*M_PI, 2*M_PI)) {}
         
-    bool operator()(double, const spurt::vec3& x, spurt::vec3& f) const {
+    bool operator()(double, const nvis::vec3& x, nvis::vec3& f) const {
         f[0] = _a*sin(x[2]) + _c*cos(x[1]);
         f[1] = _b*sin(x[0]) + _a*cos(x[2]);
         f[2] = _c*sin(x[1]) + _b*cos(x[0]);
         return true;
     }
     
-    const spurt::bbox3& bounds() const {
+    const nvis::bbox3& bounds() const {
         return _bounds;
     }
     
     double _a, _b, _c;
-    spurt::bbox3 _bounds;
+    nvis::bbox3 _bounds;
 };
 
 
@@ -77,33 +77,33 @@ struct integration_monitor {
     
     void reset() {}
     
-    bool operator()(const spurt::dopri5<spurt::fixed_vector<double, 5ul> >::step&) {
+    bool operator()(const nvis::dopri5<nvis::fixed_vector<double, 5ul> >::step&) {
         return true;
     }
 };
 
 int main(int argc, const char* argv[])
 {
-    using namespace spurt;
+    using namespace xavier;
     
     initialize(argc, argv);
     
     ABC_field wrapper(abc[0], abc[1], abc[2]);
     
-    spurt::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
+    nvis::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
     std::cerr << "Resolution = " << res << std::endl;
-    spurt::RasterGrid<3> sampling_grid(res, wrapper.bounds());
-    spurt::RasterData<spurt::vec3, 3> flowmaps[2]
-        = { spurt::RasterData<spurt::vec3, 3>(sampling_grid),
-            spurt::RasterData<spurt::vec3, 3>(sampling_grid)
+    xavier::RasterGrid<3> sampling_grid(res, wrapper.bounds());
+    xavier::RasterData<nvis::vec3, 3> flowmaps[2]
+        = { xavier::RasterData<nvis::vec3, 3>(sampling_grid),
+            xavier::RasterData<nvis::vec3, 3>(sampling_grid)
           };
           
-    spurt::timer timer;
+    nvis::timer timer;
     int npoints = sampling_grid.size();
     
-    const spurt::vec3 zero(0.);
+    const nvis::vec3 zero(0.);
     for (int i = 0 ; i < npoints ; ++i) {
-        spurt::ivec3 c = flowmaps[0].grid().coord(i);
+        nvis::ivec3 c = flowmaps[0].grid().coord(i);
         flowmaps[0](c) = flowmaps[1](c) = zero;
     }
     
@@ -134,16 +134,16 @@ int main(int argc, const char* argv[])
             os << "\r" << counter << " (" << pct << "%)              \r" << std::flush;
             std::cout << os.str();
             
-            spurt::ivec3 c = sampling_grid.coord(n);
-            spurt::vec3 seed = sampling_grid(c);
-            spurt::streamline sl(seed);
+            nvis::ivec3 c = sampling_grid.coord(n);
+            nvis::vec3 seed = sampling_grid(c);
+            nvis::streamline sl(seed);
             sl.record = false;
             sl.reltol = sl.abstol = eps;
             sl.stepsz = 0;
             integration_monitor nostop;
             try {
                 std::ostringstream os;
-                spurt::streamline::state state = sl.advance(wrapper, length, nostop);
+                nvis::streamline::state state = sl.advance(wrapper, length, nostop);
                 flowmaps[0](c) = sl(sl.t_max());
                 state = sl.advance(wrapper, -length, nostop);
                 flowmaps[1](c) = sl(sl.t_min());
@@ -166,7 +166,7 @@ int main(int argc, const char* argv[])
     
     std::vector<size_t> size(4);
     std::vector<double> step(4);
-    const spurt::vec3& s = sampling_grid.step();
+    const nvis::vec3& s = sampling_grid.step();
     step[0] = airNaN();
     size[0] = 2;
     for (int i = 0 ; i < 3 ; ++i) {
@@ -185,7 +185,7 @@ int main(int argc, const char* argv[])
             __ftle[2*n+1] = ftle::ftle(n, flowmaps[1], length);
         } catch (...) {
         }
-        if (spurt::invalid(__ftle[2*n]) || spurt::invalid(__ftle[2*n+1])) {
+        if (xavier::invalid(__ftle[2*n]) || xavier::invalid(__ftle[2*n+1])) {
             continue;
         }
     }
@@ -193,13 +193,13 @@ int main(int argc, const char* argv[])
     
     std::ostringstream os;
     os << name_out << "-ftle-T=" << length << ".nrrd";
-    spurt::writeNrrd(__ftle, os.str(), nrrdTypeFloat, size, step);
+    xavier::nrrd_utils::writeNrrd(__ftle, os.str(), nrrdTypeFloat, size, step);
     
     size[0] = 6;
     os.clear();
     os.str("");
     os << name_out << "-flowmap-T=" << length << ".nrrd";
-    spurt::writeNrrd(__fmap, os.str(), nrrdTypeFloat, size, step);
+    xavier::nrrd_utils::writeNrrd(__fmap, os.str(), nrrdTypeFloat, size, step);
     
     return 0;
 }

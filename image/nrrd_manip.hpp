@@ -1,3 +1,6 @@
+#ifndef __XAVIER_NRRD_MANIP_HPP__
+#define __XAVIER_NRRD_MANIP_HPP__
+
 #include <functional>
 #include <cassert>
 
@@ -7,22 +10,31 @@
 #include <Eigen/Core>
 #include <Eigen/SVD>
 
-#include <misc/time_helper.hpp>
+#include <util/timer.hpp>
 
 extern double toverhead;
 
-namespace spurt {
-    size_t nrrd_size(const Nrrd* A, bool skip_first_col=false) {
+namespace {
+bool is_ok(double v)
+{
+    return !(std::isnan(v) || std::isinf(v));
+}
+}
+
+namespace xavier { 
+namespace nrrd_utils {
+
+    size_t nrrd_size(const Nrrd* A, bool is_scalar=true) {
         size_t s=1;
-        for (int i=(skip_first_col ? 1 : 0); i<A->dim; ++i) {
+        for (int i=(!is_scalar ? 1 : 0); i<A->dim; ++i) {
             s*=A->axis[i].size;
         }
         return s;
     }
     
-    bool matching_sizes(const Nrrd* A, const Nrrd* B, bool skip_first=true) {
+    bool matching_sizes(const Nrrd* A, const Nrrd* B, bool is_scalar=true) {
         if (A->dim!=B->dim) return false;
-        for (int d=(skip_first ? 1 : 0); d<A->dim; ++d) {
+        for (int d=(!is_scalar ? 1 : 0); d<A->dim; ++d) {
             if (A->axis[d].size!=B->axis[d].size) return false;
         }
         return true;
@@ -43,7 +55,7 @@ namespace spurt {
             if (nin->axis[0].size!=Nrows*Ncols) {
                 throw std::runtime_error("matrix dimensions mismatch");
             }
-            spurt::to_vector<value_t>(_val_array, nin);
+            xavier::nrrd_utils::to_vector<value_t>(_val_array, nin);
             _mat_array=reinterpret_cast<matrix_t*>(&_val_array[0]);
         }
         
@@ -67,6 +79,90 @@ namespace spurt {
         matrix_t* _mat_array;
     };
     
+    template<typename ScalarIn_, typename Value_>
+    void array2valuevector(std::vector<Value_>& out, const Nrrd* nrrd)
+    {
+        typedef data_traits<Value_> traits_t;
+        typedef typename traits_t::value_type scalar_t;
+        size_t N = traits_t::size();
+        size_t n = nrrd_size(nrrd, N==1);
+        const ScalarIn_* data = (const ScalarIn_*)nrrd->data;
+        out.resize(n);
+        size_t nvals = out[0].size();
+        for (int i = 0 ; i < n ; ++i) {
+            for (int j = 0 ; j < nvals ; ++j) {
+                out[i][j] = data[N*i+j];
+            }
+        }
+    }
+    
+    template<typename ScalarIn_, typename ScalarOut_=ScalarIn_>
+    void array2scalarvector(std::vector<ScalarOut_>& out, const Nrrd* nrrd) {
+        size_t n = nrrd_size(nrrd, true);
+        const ScalarIn_* data = (const ScalarIn_*)nrrd->data;
+        out.resize(n);
+        for (int i = 0 ; i < n ; ++i) {
+            out[i] = data[i];
+        }
+    }
+    
+    template< int N >
+    nvis::bounding_box<nvis::fixed_vector<double, N> > 
+    compute_bounds(const Nrrd* nrrd, bool is_scalar=true)
+    {
+        typedef nvis::fixed_vector<double, N>       pos_type;
+        typedef nvis::bounding_box<pos_type>        bbox_type;
+    
+        bbox_type bounds;
+        pos_type lo, hi;
+        int offset = (is_scalar ? 0 : 1);
+        
+        assert(nrrd->dim-offset == N);
+        
+        for (int i = 0 ; i < N ; ++i) {
+            const double& _min = nrrd->axis[i+offset].min;
+            const double& _max = nrrd->axis[i+offset].max;
+            const double& _spc = nrrd->axis[i+offset].spacing;
+        
+            if (is_ok(_min) && is_ok(_max)) {
+                lo[i] = _min;
+                hi[i] = _max;
+            }
+            else if (is_ok(_spc)) {
+                if (is_ok(_min)) {
+                    lo[i] = _min;
+                    hi[i] = _min + _spc * (nrrd->axis[i+offset].size - 1);
+                }
+                else if (is_ok(_max)) {
+                    hi[i] = _max;
+                    lo[i] = _max - _spc * (nrrd->axis[i+offset].size - 1);
+                }
+                else {
+                    lo[i] = 0;
+                    hi[i] = _spc * (nrrd->axis[i+offset].size - 1);
+                }
+            }
+            else {
+                if (is_ok(_min)) {
+                    lo[i] = _min;
+                    hi[i] = _min + nrrd->axis[i+offset].size - 1;
+                }
+                else if (is_ok(_max)) {
+                    hi[i] = _max;
+                    lo[i] = _max - nrrd->axis[i+offset].size - 1;
+                }
+                else {
+                    lo[i] = 0;
+                    hi[i] = nrrd->axis[i+offset].size - 1;
+                }
+            }
+            bounds.min()[i] = lo[i];
+            bounds.max()[i] = hi[i];
+        }
+
+        return bounds;
+    }
+    
     namespace detail {
         
         template<typename T>
@@ -86,7 +182,7 @@ namespace spurt {
             typedef typename wrapper_t::matrix_t rval_matrix_t;
             typedef Eigen::Matrix<T, Ncols, Nrows> lval_matrix_t;
 
-            // timer tovh;
+            // nvis::timer tovh;
             //
             assert(Nrows*Ncols==nin->axis[0].size);
             size_t nmats=nrrd_size(nin)/(Nrows*Ncols);
@@ -112,7 +208,7 @@ namespace spurt {
             typedef nrrd_matrix_wrapper<T, Nrows, P> lvalw_t;
             typedef typename lvalw_t::matrix_t lval_mat_t;
             
-            // timer tovh;
+            // nvis::timer tovh;
             //
             assert(Nrows*Ncols==nin1->axis[0].size);
             assert(Ncols*P==nin2->axis[0].size);
@@ -141,7 +237,7 @@ namespace spurt {
             typedef nrrd_matrix_wrapper<T, Nrows, P> lvalw_t;
             typedef typename lvalw_t::matrix_t lval_mat_t;
             
-            // timer tovh;
+            // nvis::timer tovh;
             //
             assert(Nrows*Ncols==nin1->axis[0].size);
             assert(Ncols*P==nin2->axis[0].size);
@@ -167,7 +263,7 @@ namespace spurt {
             typedef nrrd_matrix_wrapper<T, N, N> wrapper_t;
             typedef typename wrapper_t::matrix_t matrix_t;
 
-            // timer tovh;
+            // nvis::timer tovh;
             //
             assert(N*N==nin->axis[0].size);
             size_t nmats=nrrd_size(nin)/(N*N);
@@ -199,7 +295,7 @@ namespace spurt {
             typedef Eigen::Matrix<T, Ncols, Ncols> matrixV_t;
             typedef Eigen::Matrix<T, Ndiag, 1> sigma_t;
             
-            // timer tovh;
+            // nvis::timer tovh;
             //
             assert(Nrows*Ncols==nin->axis[0].size);
             size_t nmats=nrrd_size(nin)/(Nrows*Ncols);
@@ -228,7 +324,7 @@ namespace spurt {
     
     template<typename T, int Size>
     Nrrd* wrap_and_copy_header(const Nrrd* src, T* data) {
-        // timer tovh;
+        // nvis::timer tovh;
         //
         Nrrd *nout = nrrdNew();
         int dim=(Size<=1 ? src->dim-1 : src->dim);
@@ -310,5 +406,9 @@ namespace spurt {
             rightvecs=wrap_and_copy_header<value_t,Ncols*Ncols>(A, rightvec_data);
         }
     };
+    
+} // nrrd_utils
 
 } // xavier
+
+#endif

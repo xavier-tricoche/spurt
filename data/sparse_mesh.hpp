@@ -8,7 +8,7 @@
 #include <sstream>
 #include <map>
 
-namespace spurt {
+namespace xavier {
 
 template<typename T, typename PD, typename CD>
 struct __Node {

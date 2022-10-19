@@ -26,7 +26,7 @@ inline void check_nc( int status ) {
 }
 }
 
-namespace spurt {
+namespace xavier {
 
 namespace NCOMreader {
 
@@ -126,6 +126,22 @@ void load_velocity(std::vector<nvis::vec2>& uv,
     }
 }
 
+void load_variable(std::vector<double>& v, const std::string& name, size_t nlat, size_t nlon, int file) {
+    int id;
+    v.resize(nlat*nlon);
+        
+    try {
+        check_nc(nc_inq_varid(file, name.c_str(), &id));
+        check_nc(nc_get_var_double(file, id,
+                                   reinterpret_cast<double *>(&v[0])));
+    }
+    catch( std::runtime_error& e) {
+        std::cout << "exception caught in load_variable: " << e.what()
+            << '\n';
+    }
+    
+}
+
 double load_time(int file) {
     int id;
     size_t start = 0;
@@ -158,6 +174,21 @@ void load_dataset(const std::string& filename, size_t& nlat, size_t& nlon,
     load_dim_value(nlon, nlat, file);
     load_velocity(vel, nlat, nlon, file);
     t=load_time(file);
+}
+
+void load_dataset(const std::string& filename, std::vector<double>& lat, std::vector<double>& lon,
+                  std::vector<nvis::vec2>& vel, const std::vector<std::string>& var_names, 
+                  std::vector< std::vector<double> >& variables, double& t) {
+    int file;
+    check_nc( nc_open( filename.c_str(), NC_NOWRITE, &file ) );
+    load_coordinates(lat, lon, file);
+    load_velocity(vel, lat.size(), lon.size(), file);
+    t=load_time(file);
+    variables.resize(var_names.size());
+    for (int i=0; i<var_names.size(); ++i) {
+        load_variable(variables[i], var_names[i], lat.size(), lon.size(), file);
+    }
+    
 }
 
 } // NCOMreader

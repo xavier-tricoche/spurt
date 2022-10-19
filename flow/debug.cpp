@@ -32,15 +32,15 @@ vec4 bnds;
 
 template< typename T >
 inline T nrrd_value(const Nrrd* nin, size_t n) {
-    return spurt::nrrd_data_wrapper<T>(nin)[n];
+    return xavier::nrrd_utils::nrrd_data_wrapper<T>(nin)[n];
 }
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = spurt::command_line;
-        
-    xcl::option_traits 
-            required_group(true, false, "Required Options"), 
+    namespace xcl = xavier::command_line;
+
+    xcl::option_traits
+            required_group(true, false, "Required Options"),
             optional_group(false, false, "Optional Group");
     xcl::option_parser parser(argv[0],
             "Visualize results of particle integration");
@@ -55,11 +55,11 @@ void initialize(int argc, const char* argv[])
         parser.add_flag("notubes", notubes, "Do not use tubes for display", optional_group);
         parser.add_sequence("index", only_indices, "Display only selected trajectory indices", optional_group);
         parser.add_tuple<4>("bounds", bnds, bnds, "Sampling bounds (min longitude and latitude followed by max's)", required_group);
-        
+
         parser.parse(argc, argv);
     }
     catch(std::runtime_error& e) {
-        std::cerr << "ERROR(1): " << argv[0] << " threw exception:\n" 
+        std::cerr << "ERROR(1): " << argv[0] << " threw exception:\n"
                   << e.what() << "\n"
                   << "Command line options entered so far:\n"
                   << parser.print_self(false, true, false) << "\n\n\n";
@@ -67,7 +67,7 @@ void initialize(int argc, const char* argv[])
     }
 }
 
-VTK_SMART(Actor) make_tubes(vtkPolyData* input, const nvis::vec3& col) {
+VTK_SMART(vtkActor) make_tubes(vtkPolyData* input, const nvis::vec3& col) {
     VTK_CREATE(vtkPolyDataMapper, mapper);
     VTK_CREATE(vtkActor, actor);
     if (!notubes) {
@@ -87,10 +87,10 @@ VTK_SMART(Actor) make_tubes(vtkPolyData* input, const nvis::vec3& col) {
 
 int main(int argc, char* argv[]) {
     initialize(argc, const_cast<const char**>(argv));
-    
+
     VTK_CREATE(vtkRenderer, renderer);
-    
-    Nrrd* mask = spurt::readNrrd(mask_name);
+
+    Nrrd* mask = xavier::nrrd_utils::readNrrd(mask_name);
     nvis::bbox2 region;
     region.min() = nvis::vec2(bnds[0], bnds[1]);
     region.max() = nvis::vec2(bnds[2], bnds[3]);
@@ -99,14 +99,14 @@ int main(int argc, char* argv[]) {
     nvis::vec2 spc(mask->axis[0].spacing, mask->axis[1].spacing);
     nvis::vec2 mins(mask->axis[0].min, mask->axis[1].min);
     nvis::vec2 maxs(mins[0] + (res[0]-1)*spc[0], mins[1] + (res[1]-1)*spc[1]);
-    
+
     std::vector<nvis::vec2> region_pts(4);
     region_pts[0] = region.min();
     region_pts[1] = nvis::vec2(region.max()[0], region.min()[1]);
     region_pts[2] = region.max();
     region_pts[3] = nvis::vec2(region.min()[0], region.max()[1]);
     vtkSmartPointer<vtkPolyData> region_pd = vtk_utils::make_points(region_pts);
-        
+
     std::vector<int> region_tris(6);
     region_tris[0] = 0;
     region_tris[1] = 1;
@@ -115,25 +115,25 @@ int main(int argc, char* argv[]) {
     region_tris[4] = 2;
     region_tris[5] = 3;
     vtk_utils::add_mesh2d(region_pd, region_tris);
-    
+
     VTK_CREATE(vtkTransformFilter, tfilter);
     VTK_CREATE(vtkTransform, transform);
     transform->Translate(0,0,-0.5);
     tfilter->SetTransform(transform.GetPointer());
     tfilter->SetInputData(region_pd);
     tfilter->Update();
-    
+
     VTK_MAKE_ACTOR(region_actor, tfilter->GetOutput());
     region_actor->GetProperty()->SetColor(1,1,0);
     region_actor->GetProperty()->SetOpacity(0.5);
     // renderer->AddActor(region_actor);
-    
+
     VTK_CREATE(vtkStructuredPoints, domain);
     domain->SetDimensions(res[0], res[1], 1);
     domain->SetOrigin(mins[0], mins[1], -1);
     domain->SetSpacing(spc[0], spc[1], 1);
     std::vector<float> values;
-    spurt::to_vector(values, mask);
+    xavier::nrrd_utils::to_vector(values, mask);
     vtk_utils::add_scalars(domain, values);
     VTK_CREATE(vtkDataSetMapper, domain_mapper);
     domain_mapper->SetInputData(domain);
@@ -145,29 +145,29 @@ int main(int argc, char* argv[]) {
     VTK_CREATE(vtkActor, domain_actor);
     domain_actor->SetMapper(domain_mapper);
     renderer->AddActor(domain_actor);
-    
+
     std::vector<nvis::vec2> seeds;
     std::vector<nvis::vec2> samples;
-    
+
     std::map<int, int> id_to_id;
     std::vector< std::vector<nvis::vec3> > pathlines;
     std::vector< std::vector<nvis::vec2> > streamlines;
     std::vector< std::vector< int > > ids;
     std::vector< std::vector< float > > lavds;
-    
+
     std::set<int> indices;
     if (!only_indices.empty()) {
         std::copy(only_indices.begin(), only_indices.end(), std::inserter(indices, indices.begin()));
     }
-    
+
     for (size_t i=0; i<input_files.size(); ++i) {
         name_in = input_files[i];
-        spurt::ProgressDisplay progress(false);
-        Nrrd* traj_nrrd = spurt::readNrrd(name_in);
+        xavier::ProgressDisplay progress(false);
+        Nrrd* traj_nrrd = xavier::nrrd_utils::readNrrd(name_in);
         float* data = (float*)traj_nrrd->data;
         size_t n_pts = traj_nrrd->axis[1].size;
         progress.start(n_pts, "Processing filename #" + std::to_string(i));
-        progress.active = true;
+        progress.set_active(true);
         int id;
         for (size_t n=0; n<n_pts ; ++n) {
             id = static_cast<int>(data[5*n+4]);
@@ -197,17 +197,17 @@ int main(int argc, char* argv[]) {
         progress.end();
         std::cout << "Compute time: cpu: " << progress.cpu_time() << " ms.) |"
             << " wall: " << progress.wall_time() << " ms.)\n";
-    
+
         std::cout << "max line id = " << id << '\n';
         nrrdNuke(traj_nrrd);
     }
-    
+
     struct time_sort {
         bool operator()(const nvis::vec3& a, const nvis::vec3& b) {
             return a[2] > b[2];
         }
     };
-    
+
     size_t mean_length=0;
     for (size_t n=0; n<pathlines.size(); ++n) {
         if (pathlines[n].empty()) continue;
@@ -222,16 +222,16 @@ int main(int argc, char* argv[]) {
         mean_length += pathlines[n].size();
     }
     std::cout << "Average pathline length=" << mean_length/(float)pathlines.size() << '\n';
-    
+
     std::vector<nvis::ivec2> removed;
-    
+
     vtkSmartPointer<vtkPolyData> sl_data;
     if (!time_scaling)
         sl_data = vtk_utils::make_polylines(streamlines, removed, min_dist);
-    else 
+    else
        sl_data = vtk_utils::make_polylines(pathlines, removed, min_dist);
     std::cout << removed.size() << " removed vertices\n";
-    
+
     std::set<nvis::ivec2, nvis::lexicographical_order> missing;
     std::copy(removed.begin(), removed.end(), std::inserter(missing, missing.begin()));
 
@@ -249,50 +249,50 @@ int main(int argc, char* argv[]) {
     std::cout << clean_ids.size() << " values in ids\n";
     std::cout << clean_lavds.size() << " values in lavds\n";
 
-    
+
     int max_id = *std::max_element(clean_ids.begin(), clean_ids.end());
     float min_lavd, max_lavd;
     min_lavd = *std::min_element(clean_lavds.begin(), clean_lavds.end());
     max_lavd = *std::max_element(clean_lavds.begin(), clean_lavds.end());
-    
+
     std::cout << "min lavd = " << min_lavd << ", max lavd = " << max_lavd << '\n';
-    
+
     vtk_utils::add_scalars(sl_data, clean_lavds);
-    
+
     std::sort(clean_lavds.begin(), clean_lavds.end());
     size_t stride = clean_lavds.size()/10;
     const nvis::fvec3 yellow(1,1,0);
     const nvis::fvec3 blue(0,0,1);
-    
+
     VTK_CREATE(vtkColorTransferFunction, ctf);
     for (int i=0; i<clean_lavds.size(); i+=stride) {
         float u = i/(float)clean_lavds.size();
         nvis::fvec3 c = (1.-u)*blue + u*yellow;
         ctf->AddRGBPoint(clean_lavds[i], c[0], c[1], c[2]);
     }
-    VTK_SMART(Actor) sl_actor = make_tubes(sl_data, nvis::vec3(0, 0.5, 1));
+    VTK_SMART(vtkActor) sl_actor = make_tubes(sl_data, nvis::vec3(0, 0.5, 1));
     sl_actor->GetMapper()->ScalarVisibilityOn();
     sl_actor->GetMapper()->SetLookupTable(ctf);
     renderer->AddActor(sl_actor);
-    
+
     vtk_utils::colorbar_param cbparam;
     cbparam.height=300;
     cbparam.pos[0] = 0.85;
     cbparam.title = "LAVD";
-    
-    VTK_SMART(ScalarBarActor) scalarbar = vtk_utils::colorbar(ctf, cbparam);
+
+    VTK_SMART(vtkScalarBarActor) scalarbar = vtk_utils::colorbar(ctf, cbparam);
     scalarbar->SetNumberOfLabels(10);
-    
+
     /*
     std::vector< std::vector<nvis::vec2> > failed_paths;
     std::vector<float> failed_paths_ids;
     progress.start(failed.size(), "Processing failed paths");
-    progress.active = true;
+    progress.set_active(true);
     for (size_t n=0; n<failed.size() && n<1; ++n) {
         if (drand48()>0.1) continue;
         failed_paths.push_back(std::vector<nvis::vec2>());
         std::vector<nvis::vec2>& sl = failed_paths.back();
-        Nrrd* nin = spurt::readNrrd(failed[n]);
+        Nrrd* nin = xavier::nrrd_utils::readNrrd(failed[n]);
         size_t npts = nin->axis[1].size;
         std::cout << "\n" << npts << " points in failed path\n";
         for (int k=0; k<npts; ++k) {
@@ -306,23 +306,23 @@ int main(int argc, char* argv[]) {
     progress.end();
     std::cout << "Compute time: cpu: " << progress.cpu_time() << " ms.) |"
         << " wall: " << progress.wall_time() << " ms.)\n";
-    
+
     vtkSmartPointer<vtkPolyData> failed_data = vtk_utils::make_polylines(failed_paths);
     vtk_utils::add_scalars(failed_data, failed_paths_ids);
     VTK_CREATE(vtkColorTransferFunction, cmap2);
     cmap2->AddRGBPoint(-1, 1, 1, 1);
     cmap2->AddRGBPoint(0, 1, 0.5, 0.5);
-    cmap2->AddRGBPoint(1, 1, 0, 0);    
-    VTK_SMART(Actor) failed_actor = make_tubes(failed_data, nvis::vec3(1,0,0));
+    cmap2->AddRGBPoint(1, 1, 0, 0);
+    VTK_SMART(vtkActor) failed_actor = make_tubes(failed_data, nvis::vec3(1,0,0));
     renderer->AddActor(failed_actor);
     */
-    
+
     renderer->AddActor2D(scalarbar);
     renderer->SetBackground(0, 0, 0);
     renderer->ResetCamera();
-    
+
     nrrdNuke(mask);
-    
+
     VTK_CREATE(vtkRenderWindow, window);
     window->SetSize(1024, 768);
     VTK_CREATE(vtkRenderWindowInteractor, interactor);
@@ -331,6 +331,6 @@ int main(int argc, char* argv[]) {
     interactor->Initialize();
     window->Render();
     interactor->Start();
-    
+
     return 0;
 }

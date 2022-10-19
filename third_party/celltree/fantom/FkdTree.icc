@@ -1,0 +1,213 @@
+#ifdef OUTLINE
+#undef inline
+#define inline
+#endif
+
+inline FkdTree::kdTreeIter::kdTreeIter(const FkdTree*t)
+  :tree(t)
+{
+
+  aLeafId = 0;
+  aBlockId = 0;
+  aHeight = tree->levels;
+
+  positive levelIB = (tree->levels + lpb - 1) % lpb + 1;
+  
+  subtreeSizeIB = 1<<(levelIB-1);
+  
+  positive blockLevel =  tree->levels - levelIB;
+  
+  //number of blocks in sub-tree part
+  blocksPerSubtree
+    = ( (1<<blockLevel) - 1 ) / ( (1<<lpb) - 1 ); 
+  
+  nodeIdIB  = 0;
+  leafIdIB  = 0;
+  
+}
+
+//-----------------------------------------------------------------------------
+inline void 
+FkdTree::kdTreeIter::left()
+{
+//   cout<<"before left:"<<endl
+//       <<"nodeIB:"<<nodeIdIB<<"leafIB:"<<leafIdIB
+//       <<"leafId"<<aLeafId<<"blockId:"<<aBlockId
+//       <<"subtBlocks"<<blocksPerSubtree<<"subtsize"<<subtreeSizeIB
+//       <<endl;
+
+  if(bottom())
+    THROW_EXCEPTION(FException,"already at bottom");
+
+
+  -- aHeight;
+
+  subtreeSizeIB >>= 1;
+
+  nodeIdIB += unsigned(subtreeSizeIB!=0);
+
+
+
+  if(subtreeSizeIB==0 && blocksPerSubtree!=0){    
+    aBlockId += 1 + leafIdIB * blocksPerSubtree;
+    nodeIdIB = 0;
+    leafIdIB = 0;
+    subtreeSizeIB = 1<<(lpb-1);    
+    blocksPerSubtree >>= lpb;
+  }
+
+}
+
+
+//-----------------------------------------------------------------------------
+inline void FkdTree::kdTreeIter::right()
+{
+//   cout<<"before right:"<<endl
+//       <<"nodeIB:"<<nodeIdIB<<"leafIB:"<<leafIdIB
+//       <<"leafId"<<aLeafId<<"blockId:"<<aBlockId
+//       <<"subtBlocks"<<blocksPerSubtree<<"subtsize"<<subtreeSizeIB
+//       <<endl;
+
+  if(bottom())
+    THROW_EXCEPTION(FException,"already at bottom");
+
+  --aHeight;
+
+  //if only add subtreSizeIB if > 1
+  nodeIdIB += subtreeSizeIB & ~1;
+
+  leafIdIB += subtreeSizeIB;
+  subtreeSizeIB >>= 1;
+
+  aLeafId += 1<<aHeight;
+
+  if(subtreeSizeIB==0 && blocksPerSubtree!=0){    
+    aBlockId += 1 + leafIdIB * blocksPerSubtree;
+    nodeIdIB = 0;
+    leafIdIB = 0;
+    subtreeSizeIB = 1<<(lpb-1);    
+    blocksPerSubtree >>= lpb;
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+inline unsigned FkdTree::kdTreeIter::
+countbits1(register unsigned long x)
+{                     
+  // 0x5 = 0101 in binary format
+  x = ((x>>1) & 0x55555555) + ( x & 0x55555555 ) ;
+  // 0x3 = 0011 in binary format
+  x = ((x>>2) & 0x33333333) + ( x & 0x33333333 ) ;  
+  x = ((x>>4) & 0x0f0f0f0f) + ( x & 0x0f0f0f0f ) ;
+  x = ((x>>8) & 0x00ff00ff) + ( x & 0x00ff00ff ) ;
+  x = ((x>>16)& 0x0000ffff) + ( x & 0x0000ffff ) ;
+  return x; 
+} 
+
+
+inline void FkdTree::kdTreeIter::up()
+{
+//   cout<<"before up:"<<endl
+//       <<"nodeIB:"<<nodeIdIB<<"leafIB:"<<leafIdIB
+//       <<"leafId"<<aLeafId<<"blockId:"<<aBlockId
+//       <<"subtBlocks"<<blocksPerSubtree<<"subtsize"<<subtreeSizeIB
+//       <<endl;
+
+  if(top())
+    THROW_EXCEPTION(FException,"already at top");
+
+  if(!aHeight){
+    leafIdIB &= ~positive(1);
+    aLeafId  &= ~positive(1);
+    ++aHeight;
+    subtreeSizeIB=1;
+    return;
+  }
+
+  subtreeSizeIB <<=1;
+  
+  if(subtreeSizeIB==(1<<lpb)){    
+
+    blocksPerSubtree <<=lpb; 
+    ++blocksPerSubtree ;
+    
+    leafIdIB = (aLeafId >> aHeight) & ((1<<lpb)-1);
+    
+
+    aBlockId -= 1 + leafIdIB * blocksPerSubtree;
+    aLeafId &= ~(1LU<<aHeight);
+    leafIdIB &= ~1;
+
+        
+    subtreeSizeIB = 1;    
+    
+    //(1<<lpb)-2 because lowest bit of leafIdIB
+    //should also be set to 0.
+ 
+
+    nodeIdIB = tree->levels - aHeight - 1 ;
+
+    if (nodeIdIB>=lpb) nodeIdIB = lpb - 1;
+
+    nodeIdIB -= countbits1(leafIdIB);
+
+    nodeIdIB += leafIdIB;
+
+
+  }
+  else{
+    positive isRightSon = aLeafId & (1<<aHeight);
+  
+    if(isRightSon){
+    
+      nodeIdIB -= subtreeSizeIB;
+      leafIdIB -= subtreeSizeIB;
+
+      aLeafId -= isRightSon;
+    }
+    else
+      nodeIdIB --;
+  }
+
+            
+  ++aHeight  ;    
+}
+//-----------------------------------------------------------------------------
+
+inline double FkdTree::kdTreeIter::
+coordVal() const
+{ 
+  return (*tree->tree)(aBlockId).coordVals[nodeIdIB];
+}
+
+inline positive FkdTree::kdTreeIter::
+coordId() const
+{  
+  return (*tree->tree)(aBlockId).coordIds[nodeIdIB];
+}
+
+inline positive FkdTree::kdTreeIter::
+leafId() const
+{return aLeafId;}
+
+inline bool FkdTree::kdTreeIter::
+top() const
+{return aHeight==positive(tree->levels);}
+
+inline bool FkdTree::kdTreeIter::
+bottom() const
+{return !aHeight;}
+
+inline positive FkdTree::kdTreeIter::
+height() const
+{return aHeight;}
+
+
+inline bool FkdTree::kdTreeIter::
+operator != (const kdTreeIter &x) const
+{  
+return   aLeafId!=x.aLeafId || aHeight!=x.aHeight;
+}
+
+#undef inline

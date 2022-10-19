@@ -1,0 +1,3 @@
+The CMakeFile.txt in this folder is not part of the xavier project.
+
+Add cpp file to test the boundary-aware-rectilinear-grid (BARG) class to this folder.

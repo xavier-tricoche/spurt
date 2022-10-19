@@ -28,23 +28,25 @@
 
 #include "integrate.hpp"
 #include <iostream>
+#include "misc/progress.hpp"
 
-using namespace spurt;
+using namespace xavier;
 using namespace ten_interface;
 
+typedef xavier::ProgressDisplay progress_t;
 
-spurt::ten_interface::Fiber::Fiber()
+xavier::ten_interface::Fiber::Fiber()
         : fwd(), bwd(), valid(true)
 {}
 
-void spurt::ten_interface::Fiber::reset()
+void xavier::ten_interface::Fiber::reset()
 {
     fwd.clear();
     bwd.clear();
     fwd.total_length = 0;
     bwd.total_length = 0;
 
-    initial_dir = vec3(0, 0, 0);
+    initial_dir = nvis::vec3(0, 0, 0);
 
     valid = true;
 
@@ -55,9 +57,9 @@ void spurt::ten_interface::Fiber::reset()
     samples_bwd.clear();
 }
 
-spurt::ten_interface::Chain::Chain() {}
+xavier::ten_interface::Chain::Chain() {}
 
-spurt::ten_interface::Chain::Chain(unsigned int i0, unsigned int i1, const double* buffer)
+xavier::ten_interface::Chain::Chain(unsigned int i0, unsigned int i1, const double* buffer)
 {
     this->resize((i1 > i0 ? i1 - i0 + 1 : i0 - i1 + 1));
     if (i1 > i0)
@@ -76,11 +78,11 @@ spurt::ten_interface::Chain::Chain(unsigned int i0, unsigned int i1, const doubl
     l.resize(size());
     l[0] = 0;
     for (unsigned int i = 1 ; i < size() ; i++) {
-        l[i] = l[i-1] + norm((*this)[i] - (*this)[i-1]);
+        l[i] = l[i-1] + nvis::norm((*this)[i] - (*this)[i-1]);
     }
 }
 
-void spurt::ten_interface::Chain::probe(std::vector< point3 >& hf, const std::vector< double >& ts)
+void xavier::ten_interface::Chain::probe(std::vector< point3 >& hf, const std::vector< double >& ts)
 {
     assert(ts.size() && ts[0] > 0);
 
@@ -98,7 +100,7 @@ void spurt::ten_interface::Chain::probe(std::vector< point3 >& hf, const std::ve
     }
 }
 
-spurt::ten_interface::TrackingParam::TrackingParam()
+xavier::ten_interface::TrackingParam::TrackingParam()
         : seeds(), step(0.01), stop_criteria(), intg_method(tenFiberIntgRK4),
         eigen(tenFiberTypeEvec0),
         aniso_type(tenAniso_FA), min_aniso(0.5), max_length(10.0),
@@ -112,12 +114,12 @@ spurt::ten_interface::TrackingParam::TrackingParam()
     stop_criteria[4] = 4;
 }
 
-spurt::ten_interface::TrackingParam::~TrackingParam()
+xavier::ten_interface::TrackingParam::~TrackingParam()
 {
     dti = 0;
 }
 
-void spurt::ten_interface::
+void xavier::ten_interface::
 error_display(const std::string& who, const std::string& what,
               const char* _type)
 {
@@ -127,7 +129,7 @@ error_display(const std::string& who, const std::string& what,
     << err << std::endl;
 }
 
-int spurt::ten_interface::
+int xavier::ten_interface::
 integrate(const TrackingParam& param, std::vector< Fiber >& fibers,
           std::vector< double >& requested_lengths)
 {
@@ -200,8 +202,9 @@ integrate(const TrackingParam& param, std::vector< Fiber >& fibers,
     if (E)
         ten_interface::error_display("integrate", "trouble setting up ten fiber context", TEN);
 
+    progress_t t0;
+    t0.start();
     unsigned int nbfib = 0;
-    boost::timer t0;
     unsigned int halfBuffLen = param.max_nb_steps;
     double *buff = new double[3*(2*halfBuffLen+1)];
     unsigned int id0, id1;
@@ -264,13 +267,14 @@ integrate(const TrackingParam& param, std::vector< Fiber >& fibers,
 
     std::cout << "we were able to assign " << valid_dir << " valid orientations "
     << "for a total of " << fibers.size() << " fibers" << std::endl;
-    std::cout << (float)nbfib / t0.elapsed() << " fibers per second" << std::endl;
+    t0.end();
+    std::cout << (float)nbfib / t0.wall_time() << " fibers per second" << std::endl;
 
     return 0;
 }
 
 
-spurt::ten_interface::context::
+xavier::ten_interface::context::
 context(const TrackingParam& param)
 {
     int E;
@@ -335,7 +339,7 @@ context(const TrackingParam& param)
     }
 }
 
-bool spurt::ten_interface::context::
+bool xavier::ten_interface::context::
 setup(const TrackingParam& param)
 {
     int E;
@@ -407,7 +411,7 @@ setup(const TrackingParam& param)
     return true;
 }
 
-void spurt::ten_interface::integrate(Fiber& fiber, context& ctx)
+void xavier::ten_interface::integrate(Fiber& fiber, context& ctx)
 {
     double start[3] = { fiber.seed[0], fiber.seed[1], fiber.seed[2] };
     unsigned int id0, id1;
@@ -447,7 +451,7 @@ void spurt::ten_interface::integrate(Fiber& fiber, context& ctx)
     }
 }
 
-void spurt::ten_interface::integrate_and_sample(Fiber& fiber, context& ctx,
+void xavier::ten_interface::integrate_and_sample(Fiber& fiber, context& ctx,
         const std::vector< double >& requested_lengths, const bool save_curves)
 {
     double start[3] = { fiber.seed[0], fiber.seed[1], fiber.seed[2] };
@@ -500,36 +504,3 @@ void spurt::ten_interface::integrate_and_sample(Fiber& fiber, context& ctx,
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 
-namespace spurt
+namespace xavier
 {
     void vector2nrrd( Nrrd* nrrd, const std::vector< double >& data,
         unsigned int nx, unsigned int ny,
@@ -16,7 +16,7 @@ namespace spurt
         double dx=1, double dy=1, double dz=1 );
 };
 
-inline void spurt::
+inline void xavier::
 vector2nrrd( Nrrd* nrrd, const std::vector< double >& data,
     unsigned int nx, unsigned int ny,
     double dx, double dy )
@@ -46,7 +46,7 @@ vector2nrrd( Nrrd* nrrd, const std::vector< double >& data,
         nrrdCenterNode, nrrdCenterNode );
 }
 
-inline void spurt::
+inline void xavier::
 vector2nrrd( Nrrd* nrrd, const std::vector< double >& data,
     unsigned int nx, unsigned int ny, unsigned int nz,
     double dx, double dy, double dz )

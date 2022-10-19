@@ -1,7 +1,7 @@
 #include <array>
 #include <iomanip>
 
-#include <misc/time_helper.hpp>
+#include <util/timer.hpp>
 
 #include <image/nrrd_wrapper.hpp>
 #include <image/nrrd_matrix_manip.hpp>
@@ -24,7 +24,7 @@ void transposer(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input,
                 const std::vector<int>& dims) {
         assert(input.size()==1 && dims.size()==2);
         output.resize(1);
-        output[0]=spurt::nrrd_manip::transpose<T>(input[0], dims[0], dims[1], show_progress);
+        output[0]=xavier::nrrd_manip::transpose<T>(input[0], dims[0], dims[1], show_progress);
 };
 
 template<typename T> 
@@ -32,7 +32,7 @@ void multiplier(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input,
                 const std::vector<int>& dims) {
     assert(input.size()==2 && dims.size()==3);
     output.resize(1);
-    output[0]=spurt::nrrd_manip::product<T>(input[0], input[1], dims[0], dims[1], dims[2], show_progress);
+    output[0]=xavier::nrrd_manip::product<T>(input[0], input[1], dims[0], dims[1], dims[2], show_progress);
 }
 
 template<typename T> 
@@ -40,7 +40,15 @@ void addition(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input,
               const std::vector<int>& dims) {
     assert(input.size()==2 && dims.size()==2);
     output.resize(1);
-    output[0]=spurt::nrrd_manip::sum<T>(input[0], input[1], dims[0], dims[1], show_progress);
+    output[0]=xavier::nrrd_manip::sum<T>(input[0], input[1], dims[0], dims[1], show_progress);
+}
+
+template<typename T> 
+void subtraction(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input,
+                 const std::vector<int>& dims) {
+    assert(input.size()==2 && dims.size()==2);
+    output.resize(1);
+    output[0]=xavier::nrrd_manip::subtraction<T>(input[0], input[1], dims[0], dims[1], show_progress);
 }
 
 template<typename T> 
@@ -48,7 +56,7 @@ void SVDecomposer(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input,
                   const std::vector<int>& dims) {
     assert(input.size()==1 && dims.size()==2);
     output.resize(3);
-    spurt::nrrd_manip::SVD<T>(output[0], output[1], output[2], input[0], dims[0], dims[1], show_progress);
+    xavier::nrrd_manip::SVD<T>(output[0], output[1], output[2], input[0], dims[0], dims[1], show_progress);
 }
 
 template<typename T>
@@ -57,7 +65,7 @@ void Eigendecomposer(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input
     assert(input.size()==1 && 
            (dims.size()==1 || (dims.size()==2 && dims[0]==dims[1]))); 
     output.resize(2);
-    spurt::nrrd_manip::Eigendecomposition<T>(output[0], output[1], input[0], dims[0], is_sym, show_progress);
+    xavier::nrrd_manip::Eigendecomposition<T>(output[0], output[1], input[0], dims[0], is_sym, show_progress);
 }
 
 template<typename T> 
@@ -65,7 +73,7 @@ void transpose_multiplier(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& 
                           const std::vector<int>& dims) {
     assert(input.size()==2 && dims.size()==3);
     output.resize(1);
-    output[0]=spurt::nrrd_manip::trans_product<T>(input[0], input[1], dims[0], dims[1], dims[2], show_progress);
+    output[0]=xavier::nrrd_manip::trans_product<T>(input[0], input[1], dims[0], dims[1], dims[2], show_progress);
 }
 
 template<typename T> 
@@ -74,7 +82,7 @@ void CG(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input,
     assert(input.size()==1 && 
            (dims.size()==1 || (dims.size()==2 && dims[0]==dims[1])));
     output.resize(1);
-    output[0]=spurt::nrrd_manip::cauchy_green<T>(input[0], dims[0], show_progress);
+    output[0]=xavier::nrrd_manip::cauchy_green<T>(input[0], dims[0], show_progress);
 }
 
 template<typename T> 
@@ -83,7 +91,7 @@ void FTLE(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input,
     assert(input.size()==1 && 
            (dims.size()==1 || (dims.size()==2 && dims[0]==dims[1])));
     output.resize(1);
-    output[0]=spurt::nrrd_manip::FTLE<T>(input[0], dims[0], show_progress);
+    output[0]=xavier::nrrd_manip::FTLE<T>(input[0], dims[0], show_progress);
 }
 
 template<typename T>
@@ -91,8 +99,8 @@ void inverter(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input,
               const std::vector<int>& dims) {
     assert(input.size()==1 && dims.size()==1);
     output.resize(1);
-    // output[0]=spurt::nrrd_manip::invert<T>(input[0], dims[0], show_progress);
-    output[0]=spurt::nrrd_manip::inverse<T>(input[0], dims[0], show_progress);
+    // output[0]=xavier::nrrd_manip::invert<T>(input[0], dims[0], show_progress);
+    output[0]=xavier::nrrd_manip::inverse<T>(input[0], dims[0], show_progress);
 }
 
 template<typename T>
@@ -102,6 +110,7 @@ void select_operator(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input
      if (operator_name=="transpose") return transposer<T>(output, input, dims);
      else if (operator_name=="product") return multiplier<T>(output, input, dims);
      else if (operator_name=="sum") return addition<T>(output, input, dims);
+     else if (operator_name=="subtraction") return subtraction<T>(output, input, dims);
      else if (operator_name=="invert") return inverter<T>(output, input, dims);
      else if (operator_name=="SVD") return SVDecomposer<T>(output, input, dims);
      else if (operator_name=="eigen") return Eigendecomposer<T>(output, input, dims);
@@ -143,14 +152,23 @@ void select_type(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input,
 }
 
 int main(int argc, const char* argv[]) {
-    namespace xcl = spurt::command_line;
+    namespace xcl = xavier::command_line;
     
     xcl::option_traits
         positional_group(true, true, "Positional Group"),
         required_group(true, false, "Required Options"), 
         optional_group(false, false, "Optional Group");
     xcl::option_parser parser(argv[0],
-        "Apply linear algebra operators to matrices contained in NRRD files");
+        "Apply linear algebra operators to matrices contained in NRRD files\n\n"
+        "Supported operators:\n"
+        "+/-/* : Add/subtract/multiply matrices (2 Nrrds)\n"
+        "transpose: Transpose matrices (1 Nrrd)\n"
+        "SVD: Singular value decomposition (1 Nrrd)\n"
+        "invert: Invert square matrices (1 Nrrd)\n"
+        "transpose-product: Transpose first then multiply with second (2 Nrrds)\n"
+        "Eigen: Eigenvalues and eigenvectors (1 Nrrd)\n"
+        "FTLE: Finite-time Lyapunov exponent from flow map gradient (1 Nrrd)\n"
+        "Cauchy-Green: Cauchy-Green tensor from flow map gradient (1 Nrrd)\n");
 
     try {
         parser.use_short_symbols(false);
@@ -188,13 +206,13 @@ int main(int argc, const char* argv[]) {
     std::vector<Nrrd*> input, output;
     input.resize(input_file_names.size());
     for (int i=0; i<input.size(); ++i) {
-        input[i]=spurt::readNrrd(input_file_names[i]);
+        input[i]=xavier::nrrd_utils::readNrrd(input_file_names[i]);
     }
     
-    tname=spurt::lower_case(tname);
-    opname=spurt::lower_case(opname);
+    tname=xavier::lower_case(tname);
+    opname=xavier::lower_case(opname);
     
-    spurt::timer _timer;
+    nvis::timer _timer;
     
     // determine selected operator
     try {
@@ -204,7 +222,7 @@ int main(int argc, const char* argv[]) {
                    output_file_names.size()==1);
             select_type(output, input, dims, "transpose", tname);
         }
-        else if (opname=="product" || opname=="x" || 
+        else if (opname=="product" || opname=="x" || opname=="*" ||
                  opname=="mult" || opname=="multiply") {
             opname="x";
             assert(input_file_names.size()==2 &&
@@ -219,6 +237,14 @@ int main(int argc, const char* argv[]) {
                    output_file_names.size()==1 &&
                    dims.size()==2);
             select_type(output, input, dims, "sum", tname);
+        }
+        else if (opname=="subtract" || opname=="-" || 
+                 opname=="sub" || opname=="subtraction") {
+            opname="-";
+            assert(input_file_names.size()==2 &&
+                   output_file_names.size()==1 &&
+                   dims.size()==2);
+            select_type(output, input, dims, "subtraction", tname);
         }
         else if (opname=="svd") {
             assert(input_file_names.size()==1 &&
@@ -273,14 +299,14 @@ int main(int argc, const char* argv[]) {
     
     if (ok) {
         if (output.size()==3 && output_file_names.size()==1 && opname=="svd") {
-            std::string basename=spurt::filename::remove_extension(output_file_names[0]);
+            std::string basename=xavier::filename::remove_extension(output_file_names[0]);
             output_file_names.resize(3);
             output_file_names[0]=basename+"-sinvals.nrrd";
             output_file_names[1]=basename+"-leftvec.nrrd";
             output_file_names[2]=basename+"-rightvec.nrrd";
         }
         else if (output.size()==2 && output_file_names.size()==1 && opname=="eigen") {
-            std::string basename=spurt::filename::remove_extension(output_file_names[0]);
+            std::string basename=xavier::filename::remove_extension(output_file_names[0]);
             output_file_names.resize(2);
             output_file_names[0]=basename+"-eigenvals.nrrd";
             output_file_names[1]=basename+"-eigenvecs.nrrd";

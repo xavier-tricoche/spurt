@@ -5,9 +5,9 @@
 #include <vector>
 #include <math/fixed_vector.hpp>
 
-namespace spurt {
+namespace xavier {
 struct color_map_bwr {
-    typedef fvec3             color_type;
+    typedef nvis::fvec3             color_type;
     
     color_map_bwr(const std::vector<float>& values, float gamma = 1) : __gamma(gamma) {
         std::vector<float> __vals(values);

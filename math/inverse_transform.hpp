@@ -5,7 +5,7 @@
 #include <vector>
 #include <math/math.hpp>
 
-namespace spurt {
+namespace xavier {
 
 template<typename T>
 class inverse_transform_sampling {

@@ -5,14 +5,19 @@
 #include <cmath>
 #include <cassert>
 
-namespace spurt { namespace vector {
+namespace xavier { namespace vector {
     template<typename Vector_, typename Value_=typename Vector_::value_type>
-    inline Value_ norm(const Vector_& v) {
+    inline Value_ normsq(const Vector_& v) {
         typedef Value_ value_type;
         size_t N=v.size();
         value_type n=static_cast<value_type>(0);
         for (size_t i=0; i<N; ++i) n+=v[i]*v[i];
-        return sqrt(n);
+        return n;
+    }
+    
+    template<typename Vector_, typename Value_=typename Vector_::value_type>
+    inline Value_ norm(const Vector_& v) {
+        return sqrt(normsq(v));
     }
     
     template<typename Vector_, typename Value_=typename Vector_::value_type>
@@ -41,6 +46,7 @@ namespace spurt { namespace vector {
         assert(N == w.size());
         value_type d=static_cast<value_type>(0);
         for (size_t i=0; i<N; ++i) d+=v[i]*w[i];
+        return d;
     }
     
     template<typename Vector_, typename Value_=typename Vector_::value_type>
@@ -97,7 +103,8 @@ namespace spurt { namespace vector {
             dest[shift2+i]=src[i];
         }
     }
+    
 } // namespace vector
-} // namespace spurt
+} // namespace xavier
 
 #endif

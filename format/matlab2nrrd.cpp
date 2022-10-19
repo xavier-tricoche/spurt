@@ -4,7 +4,7 @@
 #include <iostream>
 #include <boost/filesystem.hpp>
 
-namespace xcl = spurt::command_line;
+namespace xcl = xavier::command_line;
 typedef boost::filesystem::path path_t;
 
 int main(int argc, const char* argv[]) {
@@ -83,7 +83,7 @@ int main(int argc, const char* argv[]) {
         std::string filename=output_basename+'_'+name+".nrrd";
         Nrrd* nout=nrrdNew();
         if (nrrdWrap_nva(nout, data, type, dim, sizes)) {
-            std::cerr << spurt::error_msg(exec_name, "NRRD wrapping failed") 
+            std::cerr << xavier::nrrd_utils::error_msg(exec_name, "NRRD wrapping failed") 
                       << '\n';
             exit(1);
         }
@@ -91,7 +91,7 @@ int main(int argc, const char* argv[]) {
             ("variable "+name+" extracted by "+exec_name+
              " from "+input_name).c_str());
         if (nrrdSave(filename.c_str(), nout, NULL)) {
-            std::cerr << spurt::error_msg(exec_name, "NRRD export failed");
+            std::cerr << xavier::nrrd_utils::error_msg(exec_name, "NRRD export failed");
             exit(1);
         }
         std::cout << name << " saved to " << filename << '\n';

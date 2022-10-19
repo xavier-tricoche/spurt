@@ -2,7 +2,7 @@
 #include <set>
 #include <algorithm>
 
-namespace spurt {
+namespace xavier {
 	
 template<typename T> 
 double max(const std::vector<T>& values) {

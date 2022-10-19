@@ -18,15 +18,15 @@ struct Image {
     T& operator()(unsigned int i, unsigned int j) {
         return data[i+j*m];
     }
-    vec2 gradient(unsigned int i, unsigned int j) const {
+    nvis::vec2 gradient(unsigned int i, unsigned int j) const {
         const Image& self = *this;
-        return 0.5*vec2(self(i + 1, j) - self(i - 1, j),
+        return 0.5*nvis::vec2(self(i + 1, j) - self(i - 1, j),
                               self(i, j + 1) - self(i, j - 1));
     }
-    vec3 hessian(unsigned int i, unsigned int j) const {
-        vec2 dgdx = 0.5 * (gradient(i + 1, j) - gradient(i - 1, j));
-        vec2 dgdy = 0.5 * (gradient(i, j + 1) - gradient(i, j - 1));
-        return vec3(dgdx[0], dgdx[1], dgdy[1]);
+    nvis::vec3 hessian(unsigned int i, unsigned int j) const {
+        nvis::vec2 dgdx = 0.5 * (gradient(i + 1, j) - gradient(i - 1, j));
+        nvis::vec2 dgdy = 0.5 * (gradient(i, j + 1) - gradient(i, j - 1));
+        return nvis::vec3(dgdx[0], dgdx[1], dgdy[1]);
     }
 
     T* data;
@@ -34,7 +34,7 @@ struct Image {
 };
 
 
-void eigen(double& lmin, vec2& evmin, const vec3& H)
+void eigen(double& lmin, nvis::vec2& evmin, const nvis::vec3& H)
 {
     double tr = H[0] + H[2];
     double det = H[0] * H[2] - H[1] * H[1];
@@ -57,7 +57,7 @@ void eigen(double& lmin, vec2& evmin, const vec3& H)
         evmin[0] = H[2] - lmin;
         evmin[1] = -H[1];
     }
-    evmin /= norm(evmin);
+    evmin /= nvis::norm(evmin);
 }
 
 int main(int argc, char* argv[])
@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
         threshold = atof(argv[3]);
     }
 
-    Nrrd *nin = spurt::readNrrd(argv[1]);
+    Nrrd *nin = xavier::readNrrd(argv[1]);
     Image< float > image(nin);
     unsigned int M = image.m;
     unsigned int N = image.n;
@@ -94,14 +94,14 @@ int main(int argc, char* argv[])
 
         if (i == 0 || j == 0 || i == image.m - 1 || j == image.n - 1) continue;
 
-        vec2 emin;
+        nvis::vec2 emin;
         double lmin;
-        vec3 hess = image.hessian(i, j);
+        nvis::vec3 hess = image.hessian(i, j);
         eigen(lmin, emin, hess);
         if (lmin >= threshold) continue;
 
-        vec2 grad = image.gradient(i, j);
-        double dot = inner(grad, emin);
+        nvis::vec2 grad = image.gradient(i, j);
+        double dot = nvis::inner(grad, emin);
 
         bool found = false;
         for (int di = -1 ; di <= 1 && !found; ++di) {
@@ -110,15 +110,15 @@ int main(int argc, char* argv[])
 
                 int ii = i + di;
                 int jj = j + dj;
-                vec2 g = image.gradient(ii, jj);
-                vec3 H = image.hessian(ii, jj);
-                vec2 e;
+                nvis::vec2 g = image.gradient(ii, jj);
+                nvis::vec3 H = image.hessian(ii, jj);
+                nvis::vec2 e;
                 double l;
                 eigen(l, e, H);
-                if (inner(e, emin) < 0) {
+                if (nvis::inner(e, emin) < 0) {
                     e *= -1;
                 }
-                double d = inner(e, g);
+                double d = nvis::inner(e, g);
                 if (d*dot <= 0 && lmin<l) {
                     rgb[3*n] = maxval;
                     rgb[3*n+1] = rgb[3*n+2] = minval;
@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
     size[1] = M;
     size[2] = N;
     std::vector< float > spacing;
-    spurt::writeNrrd((void*)rgb, argv[2], nrrdTypeFloat, size, spacing);
+    xavier::writeNrrd((void*)rgb, argv[2], nrrdTypeFloat, size, spacing);
 
     std::sort(evals.begin(), evals.end());
     std::cout << "ridge strength ranges from " << evals[0] << " and " << evals.back() << '\n';

@@ -30,10 +30,10 @@
 #define ARMA_USE_LAPACK
 #include "armadillo"
 
-using namespace spurt;
+using namespace xavier;
 using namespace GLUT_helper;
 int main_window;
-vec2 wc;
+nvis::vec2 wc;
 
 char*    in;
 int     npts, xaxis, yaxis;
@@ -64,12 +64,12 @@ void guiCallBack(int control);
 
 // --------------------------------------------------------------------------------
 
-bbox2 bbox;
-std::vector<vec2> pts;
+nvis::bbox2 bbox;
+std::vector<nvis::vec2> pts;
 static void init()
 {
     Nrrd* nin = nrrdNew();
-    nin = spurt::readNrrd(in);
+    nin = xavier::nrrd_utils::readNrrd(in);
     
     assert(nin->dim == 2 &&
            xaxis >= 0 && yaxis >= 0 &&
@@ -77,13 +77,13 @@ static void init()
            std::max(xaxis, yaxis) < 6);
            
     std::vector<double> array;
-    spurt::to_vector(array, nin);
+    xavier::to_vector(array, nin);
     
     int npts = nin->axis[1].size;
     bbox.reset();
     pts.resize(npts);
     
-    typedef fixed_vector<double, 6> vec6;
+    typedef nvis::fixed_vector<double, 6> vec6;
     
     vec6 mean(0);
     for (int i = 0 ; i < npts ; ++i) {
@@ -146,8 +146,8 @@ static void init()
             pt[n] = array[6*i+n];
         }
         pt -= mean;
-        pts[i][0] = inner(pt, ex);
-        pts[i][1] = inner(pt, ey);
+        pts[i][0] = nvis::inner(pt, ex);
+        pts[i][1] = nvis::inner(pt, ey);
         bbox.add(pts[i]);
     }
     
@@ -194,8 +194,8 @@ void guiCallback(int)
 
 void mouse(int button, int state, int x, int y)
 {
-    vec3 _wc = world_coordinates(x, y);
-    wc = vec2(_wc[0], _wc[1]);
+    nvis::vec3 _wc = world_coordinates(x, y);
+    wc = nvis::vec2(_wc[0], _wc[1]);
     std::ostringstream os;
     os << "Poincare plot - (" << wc[0] << ", " << wc[1] << ")";
     glutSetWindowTitle(os.str().c_str());

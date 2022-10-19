@@ -5,13 +5,14 @@
 #include <cstring>
 #include <functional>
 #include <initializer_list>
+#include <numeric>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 #include "misc_helper.hpp"
 
-namespace spurt {
+namespace xavier {
     inline std::string number_to_rank(unsigned i) {
         switch (i % 10) {
             case 1:  return std::to_string(i) + "st";
@@ -20,8 +21,8 @@ namespace spurt {
             default: return std::to_string(i) + "th";
         }
     }
-    
-    void tokenize(std::vector<std::string>& words, 
+
+    void tokenize(std::vector<std::string>& words,
                   const std::string& phrase,
                   const std::string& delim=" ,.-") {
         char* str=new char[phrase.size()+1];
@@ -31,30 +32,30 @@ namespace spurt {
         {
             words.push_back(pch);
             pch = strtok (NULL, delim.c_str());
-        }            
+        }
     }
-    
+
     std::string& lower_case(std::string& str) {
         std::transform(str.begin(), str.end(), str.begin(), ::tolower);
         return str;
     }
-    
+
     // Solution by "Eric Malenfant" found on stackoverflow
-    unsigned int 
+    unsigned int
     hamming_distance(const std::string& s1, const std::string& s2) {
-        if (s1.size()!=s2.size()) 
+        if (s1.size()!=s2.size())
             throw std::invalid_argument("hamming distance requires " \
                 "string arguments of same length");
-        return std::inner_product(s1.begin(), s1.end(), s2.begin(), 0,
-                                  std::plus<unsigned int>(), 
-                                  std::not2(std::equal_to<
-                                      std::string::value_type>()));
+        return s1.size() - std::inner_product(s1.begin(), s1.end(),
+                                              s2.begin(), 0,
+                                              std::plus<>(),
+                                              std::equal_to<>());
     }
-    
-    // From "Fast, memory efficient Levenshtein algorithm" 
+
+    // From "Fast, memory efficient Levenshtein algorithm"
     // by Sten Hjelmqvist found referenced on Wikipedia
     // https://en.wikipedia.org/wiki/Levenshtein_distance
-    unsigned int 
+    unsigned int
     levenshtein_distance(const std::string& s, const std::string& t) {
         // degenerate cases
         if (s == t) return 0;
@@ -89,15 +90,15 @@ namespace spurt {
         }
         return v1[t.size()];
     }
-    
-    unsigned int 
-    distance_multistring(std::string arg, 
+
+    unsigned int
+    distance_multistring(std::string arg,
                          const std::vector<std::string>& argv) {
         lower_case(arg);
         std::vector<std::string> lwc(argv.begin(), argv.end());
-        std::for_each(lwc.begin(), lwc.end(), [&](std::string& s) 
+        std::for_each(lwc.begin(), lwc.end(), [&](std::string& s)
             { lower_case(s);});
-    
+
         if (argv.size()==1) {
             return arg==lwc[0]? 0: 1;
         }
@@ -128,14 +129,14 @@ namespace spurt {
                 levenshtein_distance(arg, str5));
         }
     }
-    
-    bool match_multistring(std::string arg, 
+
+    bool match_multistring(std::string arg,
                            const std::vector<std::string>& argv) {
         return distance_multistring(arg, argv)==0;
     }
 
-    bool match_multistring(std::string arg, 
-                           const std::initializer_list<std::string>& 
+    bool match_multistring(std::string arg,
+                           const std::initializer_list<std::string>&
                            arg_list) {
         std::vector<std::string> argv(arg_list);
         return match_multistring(arg, argv);

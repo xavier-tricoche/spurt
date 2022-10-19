@@ -11,7 +11,7 @@
 #include <iostream>
 #include <sstream>
 
-namespace spurt
+namespace xavier
 {
     namespace crease
     {
@@ -124,7 +124,7 @@ namespace spurt
 
 
 inline
-    spurt::crease::FaceId::FaceId( unsigned int i0, unsigned int i1, 
+    xavier::crease::FaceId::FaceId( unsigned int i0, unsigned int i1, 
     unsigned int i2, unsigned int i3 )
     : is(4)
 {
@@ -136,7 +136,7 @@ inline
 }
 
 inline
-    spurt::crease::FaceId::FaceId( const FaceId& fid )
+    xavier::crease::FaceId::FaceId( const FaceId& fid )
     : is(4)
 {
     for ( unsigned int i=0 ; i<4 ; i++ )
@@ -146,7 +146,7 @@ inline
 }
 
 inline
-    int spurt::crease::FaceId::operator<( const FaceId& fid ) const
+    int xavier::crease::FaceId::operator<( const FaceId& fid ) const
 {
     return ( is[0] < fid.is[0] ||
         ( is[0] == fid.is[0] && 
@@ -158,7 +158,7 @@ inline
 }
 
 inline
-    std::ostream& spurt::crease::operator<<( ostream& os, const spurt::crease::FaceId& fid )
+    std::ostream& xavier::crease::operator<<( ostream& os, const xavier::crease::FaceId& fid )
 {
     os << "[ " << fid.is[0] << ", " << fid.is[1] << ", " 
         << fid.is[2] << ", " << fid.is[3] << "]";
@@ -166,7 +166,7 @@ inline
 }     
 
 inline
-    spurt::crease::Grid::Grid( unsigned int size[3], 
+    xavier::crease::Grid::Grid( unsigned int size[3], 
     double min[3], double max[3] )
 {
     for ( unsigned int i=0 ; i<3 ; i++ )
@@ -191,13 +191,13 @@ inline
 }
 
 inline
-    unsigned int spurt::crease::Grid::id( unsigned int i, unsigned int j, unsigned int k )
+    unsigned int xavier::crease::Grid::id( unsigned int i, unsigned int j, unsigned int k )
 {
     return i + _size[0]*( j+_size[1]*k );
 }
 
 inline
-    vec3 spurt::crease::Grid::operator()( unsigned int i, unsigned int j, unsigned int k )
+    nvis::vec3 xavier::crease::Grid::operator()( unsigned int i, unsigned int j, unsigned int k )
 {
     return vec3( _min[0]+i*_d[0],
         _min[1]+j*_d[1],

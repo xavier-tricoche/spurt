@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Visualization of Mantle Interfaces</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QVTKWidget" name="qvtkWidget">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>801</width>
+      <height>581</height>
+     </rect>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionLoad_Camera_Settings"/>
+    <addaction name="actionSave_Camera_Settings"/>
+    <addaction name="separator"/>
+    <addaction name="actionSave_Current_Frame"/>
+    <addaction name="separator"/>
+    <addaction name="actionSave_type_1_patches"/>
+    <addaction name="actionSave_type_1_patches_2"/>
+   </widget>
+   <widget class="QMenu" name="menuWindow">
+    <property name="title">
+     <string>Window</string>
+    </property>
+    <addaction name="actionHide_control_window"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuWindow"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionLoad_Camera_Settings">
+   <property name="text">
+    <string>Load Camera Settings</string>
+   </property>
+  </action>
+  <action name="actionSave_Camera_Settings">
+   <property name="text">
+    <string>Save Camera Settings</string>
+   </property>
+  </action>
+  <action name="actionSave_Current_Frame">
+   <property name="text">
+    <string>Save Current Frame</string>
+   </property>
+  </action>
+  <action name="actionHide_control_window">
+   <property name="text">
+    <string>Hide control window</string>
+   </property>
+  </action>
+  <action name="actionSave_type_1_patches">
+   <property name="text">
+    <string>Save type +1 patches</string>
+   </property>
+  </action>
+  <action name="actionSave_type_1_patches_2">
+   <property name="text">
+    <string>Save type -1 patches</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QVTKWidget</class>
+   <extends>QWidget</extends>
+   <header>QVTKWidget.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

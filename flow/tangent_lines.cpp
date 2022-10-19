@@ -8,14 +8,14 @@
 #include <image/probe.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <data/field_wrapper.hpp>
-#include <vtk/vtk_utils.hpp>
+#include <VTK/vtk_utils.hpp>
 
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 
 #include <data/raster.hpp>
 #include <misc/option_parse.hpp>
-#include <misc/time_helper.hpp>
+#include <misc/progress.hpp>
 #include <format/filename.hpp>
 
 #include <Eigen/Core>
@@ -38,12 +38,12 @@ typedef double value_t;
 constexpr value_t PI=3.14159265358979323844;
 constexpr value_t TWO_PI=6.28318530717958647688;
 
-typedef spurt::fixed_vector< value_t, 3 > state_t;
-typedef spurt::fixed_vector< value_t, 12 > ext_state_t;
+typedef nvis::fixed_vector< value_t, 3 > state_t;
+typedef nvis::fixed_vector< value_t, 12 > ext_state_t;
 typedef Eigen::Matrix< value_t, 3, 3 > matrix_t;
 typedef Eigen::Matrix< value_t, 3, 1 > col_t;
 typedef Eigen::JacobiSVD< matrix_t > svd_t;
-typedef spurt::fixed_vector< value_t, 3 > pos_t;
+typedef nvis::fixed_vector< value_t, 3 > pos_t;
 typedef nvis::bounding_box< pos_t > bbox_t;
 typedef std::vector< state_t > line_t;
 typedef std::vector< value_t > attr_t;
@@ -75,15 +75,15 @@ bbox_t to_bbox(const std::array<value_t, 6>& array) {
 }
 
 template<typename T, size_t N>
-spurt::fixed_vector<T, N> to_vec(const std::array<T, N>& array) {
-    spurt::fixed_vector<T, N> v;
+nvis::fixed_vector<T, N> to_vec(const std::array<T, N>& array) {
+    nvis::fixed_vector<T, N> v;
     for (size_t i=0; i<N; ++i) v[i]=array[i];
     return v;
 }
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = spurt::command_line;
+    namespace xcl = xavier::command_line;
         
     xcl::option_traits 
             required_group(true, false, "Required Options"), 
@@ -167,7 +167,7 @@ struct NrrdField {
         return wrapper.jacobian(x, J);
     }
     
-    spurt::gage_interface::vector_wrapper wrapper;
+    xavier::gage_interface::vector_wrapper wrapper;
 };
 
 struct IntegrationMemory {
@@ -225,7 +225,7 @@ struct NrrdFieldInterface {
                     os << "ref val remains " << m_memory.m_last << " at " 
                         << m_memory.m_last_t << ". ";
             }
-            if (spurt::inner(dxdt, m_memory.m_last)>0) {
+            if (nvis::inner(dxdt, m_memory.m_last)>0) {
                 m_memory.m_cur=dxdt;
                 dxdt*=aniso;
                 if (verbose)
@@ -265,7 +265,7 @@ void make_seeds(std::vector<state_t>& seeds) {
     if (seeding==RANDOM) {
         std::cout << "Random seeding\n";
         srand48(time(0));
-        spurt::vec3 sz=region.size();
+        nvis::vec3 sz=region.size();
         sz[2]=0.;
         for (int i=0; i<nlines; ++i) {
             seeds[i]=region.min()+random_vec()*sz;
@@ -332,7 +332,7 @@ struct store_state
 
     void operator()(const state_t &x, value_t t)
     {
-        value_t l=spurt::vector::distance(x, m_states.back());
+        value_t l=xavier::vector::distance(x, m_states.back());
         if (m_states.empty() || l>min_dist) {
             m_states.push_back(x);
             m_times.push_back(t);
@@ -356,17 +356,17 @@ std::pair<value_t, value_t> axis_bounds(const NrrdAxisInfo& axis) {
 
 int main(int argc, const char* argv[])
 {
-    using namespace spurt;
+    using namespace xavier;
     using namespace odeint;
     
     initialize(argc, argv);
     
-    name_out=spurt::filename::remove_extension(name_out);
+    name_out=xavier::filename::remove_extension(name_out);
     
     region.min()=pos_t(bnds[0], bnds[2], bnds[4]);
     region.max()=pos_t(bnds[1], bnds[3], bnds[5]);
     
-    Nrrd* nin=spurt::readNrrd(name_in);
+    Nrrd* nin=xavier::nrrd_utils::readNrrd(name_in);
     for (int i=0; i<3; ++i) {
         auto min_max=axis_bounds(nin->axis[i+1]);
         if (min_max.first!=min_max.second) {
@@ -433,7 +433,7 @@ int main(int argc, const char* argv[])
         rhss[i]=field_ptr_t(new NrrdFieldInterface(field, rhs_mem[i]));
     }
     
-    spurt::progress_display progress(true);
+    xavier::ProgressDisplay progress(true);
     
     progress.start(nlines, "Computing tangent lines");
     
@@ -502,7 +502,7 @@ int main(int argc, const char* argv[])
                 rhss[thread]->operator()(lines[2*n][i], v, times[2*n][i]);
                 std::cout << "v(" << lines[2*n][i] << ")=" << v << '\n';
                 directions[2*n][i]=v;
-                norms[2*n][i]=spurt::vector::norm(v);
+                norms[2*n][i]=xavier::vector::norm(v);
             }
             directions[2*n+1].resize(lines[2*n+1].size());
             norms[2*n+1].resize(lines[2*n+1].size());
@@ -510,7 +510,7 @@ int main(int argc, const char* argv[])
                 rhss[thread]->operator()(lines[2*n+1][i], v, times[2*n+1][i]);
                 std::cout << "v(" << lines[2*n+1][i] << ")=" << v << '\n';
                 directions[2*n+1][i]=v;
-                norms[2*n+1][i]=spurt::vector::norm(v);
+                norms[2*n+1][i]=xavier::vector::norm(v);
             }
         }
     }
@@ -562,12 +562,12 @@ int main(int argc, const char* argv[])
     vtkSmartPointer<vtkDataSetWriter> writer=vtkSmartPointer<vtkDataSetWriter>::New();
     writer->SetInputData(polydata);
     // writer->SetFileTypeToBinary();
-    writer->SetFileName((spurt::filename::remove_extension(name_out)+".vtk").c_str());
+    writer->SetFileName((xavier::filename::remove_extension(name_out)+".vtk").c_str());
     writer->Write();
     
     vtkSmartPointer<vtkPolyData> seedspd=vtk_utils::make_points(seeds);
     writer->SetInputData(seedspd);
-    writer->SetFileName((spurt::filename::remove_extension(name_out)+"-seeds.vtk").c_str());
+    writer->SetFileName((xavier::filename::remove_extension(name_out)+"-seeds.vtk").c_str());
     writer->Write();
 
     return 0;

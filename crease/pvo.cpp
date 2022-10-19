@@ -8,19 +8,19 @@
 
 #define QUICK_TEST_3
 
-using namespace spurt;
-using namespace spurt::crease;
+using namespace xavier;
+using namespace xavier::crease;
 
 const double DET_EPSILON = 1.0e-6;
 const double inside_eps = 0.01;
 
 bool __verbose = false;
-vec3 actual_pos;
+nvis::vec3 actual_pos;
 unsigned int __max_depth;
 
 double current_face_avg_norm;
 
-unsigned int spurt::crease::nb_pvo = 0;
+unsigned int xavier::crease::nb_pvo = 0;
 
 inline double dist(double v)
 {
@@ -30,7 +30,7 @@ inline double dist(double v)
 // ---------------------------------------------------------------------------
 
 // Stetten's average direction
-vec3 spurt::crease::average(vec3 dirs[4])
+nvis::vec3 xavier::crease::average(nvis::vec3 dirs[4])
 {
     double mat[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
     // mat = sum_i( dirs[i] * dirs[i]^T )
@@ -48,7 +48,7 @@ vec3 spurt::crease::average(vec3 dirs[4])
     double evec[9];
     int nbroots = ell_3m_eigensolve_d(eval, evec, mat, 1);
     
-    vec3 avg(evec[0], evec[1], evec[2]);
+    nvis::vec3 avg(evec[0], evec[1], evec[2]);
     
     return avg;
 }
@@ -75,7 +75,7 @@ std::ostream& operator<<(std::ostream& out, const std::vector< int >& refs)
 void subdivide_face(std::vector< face_type >& out, const face_type& face, bool interpolate)
 {
     out.clear();
-    vec3 p[9], g[9], Hg[9];
+    nvis::vec3 p[9], g[9], Hg[9];
     for (unsigned int i = 0 ; i < 9 ; ++i) {
         p[i] = position(i, face);
         g[i] = gradient(i, face, interpolate);
@@ -90,9 +90,9 @@ void subdivide_face(std::vector< face_type >& out, const face_type& face, bool i
         f.depth = face.depth + 1;
         
         for (unsigned int j = 0 ; j < 4 ; j++) { // loop over vertices
-            f.p[j] = p[spurt::crease::indices[i][j]];
-            f.g[j] = g[spurt::crease::indices[i][j]];
-            f.Hg[j] = Hg[spurt::crease::indices[i][j]];
+            f.p[j] = p[xavier::crease::indices[i][j]];
+            f.g[j] = g[xavier::crease::indices[i][j]];
+            f.Hg[j] = Hg[xavier::crease::indices[i][j]];
         }
         f.set_basis();
     }
@@ -100,11 +100,11 @@ void subdivide_face(std::vector< face_type >& out, const face_type& face, bool i
 
 // ---------------------------------------------------------------------------
 
-void spurt::crease::refine_face(face_type& out, const face_type& face,
-                                 const vec3& q, double h)
+void xavier::crease::refine_face(face_type& out, const face_type& face,
+                                 const nvis::vec3& q, double h)
 {
     // compute local coordinates
-    vec2 x = local_coord(face, q);
+    nvis::vec2 x = local_coord(face, q);
     double xmin = std::max(0., x[0] - h);
     double xmax = std::min(1., x[0] + h);
     double ymin = std::max(0., x[1] - h);
@@ -120,58 +120,58 @@ void spurt::crease::refine_face(face_type& out, const face_type& face,
 
 // ---------------------------------------------------------------------------
 
-bool error3(const vec3& ref, const vec3& val, bool normalize = true)
+bool error3(const nvis::vec3& ref, const nvis::vec3& val, bool normalize = true)
 {
-    using namespace spurt::crease;
+    using namespace xavier::crease;
     const double min_dot = cos(max_int_error * M_PI / 2.);
     
     double mr = 1, mv = 1;
     if (normalize) {
-        mr = norm(ref);
-        mv = norm(val);
+        mr = nvis::norm(ref);
+        mv = nvis::norm(val);
     }
     return (mr > gradient_eps &&
-            inner(ref, val) / (mr*mv) < min_dot);
+            nvis::inner(ref, val) / (mr*mv) < min_dot);
 }
 
 bool error2(const face_type& f, double ref_g_norm, double ref_Hg_norm)
 {
-    using namespace spurt::crease;
+    using namespace xavier::crease;
     
     double gm = std::max(gradient_eps, max_int_error * ref_g_norm);
     double Hgm = std::max(gradient_eps, max_int_error * ref_Hg_norm);
-    vec3 g[2], Hg[2];
+    nvis::vec3 g[2], Hg[2];
     g[0] = gradient(8, f, false);
     g[1] = gradient(8, f, true);
     Hg[0] = Hgradient(8, f, false);
     Hg[1] = Hgradient(8, f, true);
     
-    double dg = norm(g[0] - g[1]);
-    double gradmag = norm(g[0]);
+    double dg = nvis::norm(g[0] - g[1]);
+    double gradmag = nvis::norm(g[0]);
     if (gradmag > gradient_eps && // failed vanishing gradient test
             dg > gm && // failed distance test
-            inner(g[0], g[1]) < 1. - max_int_error) { // failed alignment test
+            nvis::inner(g[0], g[1]) < 1. - max_int_error) { // failed alignment test
         if (__verbose) {
             std::cout << "In face " << f.reference
                       << ": gradient error at midpoint = " << dg << " exceeds threshold (" << gm << ")" << std::endl
-                      << "mean gradient = " << g[0] << " (" << norm(g[0]) << "), values are: " << std::flush;
+                      << "mean gradient = " << g[0] << " (" << nvis::norm(g[0]) << "), values are: " << std::flush;
             for (unsigned int i = 0 ; i < 4 ; ++i) {
-                std::cout << i << ": " << f.g[i] << " (" << norm(f.g[i]) << "), ";
+                std::cout << i << ": " << f.g[i] << " (" << nvis::norm(f.g[i]) << "), ";
             }
             std::cout << std::endl;
         }
         return true;
     }
     
-    double dHg = norm(Hg[0] - Hg[1]);
+    double dHg = nvis::norm(Hg[0] - Hg[1]);
     if (dHg > Hgm && // failed distance test
-            inner(Hg[0], Hg[1]) < 1. - max_int_error) { // failed alignment test
+            nvis::inner(Hg[0], Hg[1]) < 1. - max_int_error) { // failed alignment test
         if (__verbose) {
             std::cout << "In face " << f.reference
                       << ": Hgradient error at midpoint = " << dHg << " exceeds threshold (" << Hgm << ")" << std::endl
-                      << "mean Hgradient = " << Hg[0] << " (" << norm(Hg[0]) << "), values are: " << std::flush;
+                      << "mean Hgradient = " << Hg[0] << " (" << nvis::norm(Hg[0]) << "), values are: " << std::flush;
             for (unsigned int i = 0 ; i < 4 ; ++i) {
-                std::cout << i << ": " << f.Hg[i] << " (" << norm(f.Hg[i]) << "), ";
+                std::cout << i << ": " << f.Hg[i] << " (" << nvis::norm(f.Hg[i]) << "), ";
             }
             std::cout << std::endl;
         }
@@ -183,16 +183,16 @@ bool error2(const face_type& f, double ref_g_norm, double ref_Hg_norm)
 
 // ---------------------------------------------------------------------------
 
-bool spurt::crease::par_vec_op(std::vector< vec3 >& beta, const spurt::mat3& V,
-                                const spurt::mat3& W)
+bool xavier::crease::par_vec_op(std::vector< nvis::vec3 >& beta, const xavier::mat3& V,
+                                const xavier::mat3& W)
 {
     beta.clear();
     
-    using namespace spurt;
+    using namespace xavier;
     using namespace crease;
     
     // check if W can be inverted
-    spurt::mat3 M;
+    xavier::mat3 M;
     
     
     double detW = fabs(det(W));
@@ -210,7 +210,7 @@ bool spurt::crease::par_vec_op(std::vector< vec3 >& beta, const spurt::mat3& V,
     
     // compute eigenvectors of resulting matrix
     std::vector< double > evals;
-    std::vector< vec3 > evecs;
+    std::vector< nvis::vec3 > evecs;
     M.eigensystem(evals, evecs); // returns only real eigenvalues
     
     // checking the results
@@ -232,7 +232,7 @@ bool spurt::crease::par_vec_op(std::vector< vec3 >& beta, const spurt::mat3& V,
     // looking for valid solutions
     bool found = false;
     for (unsigned int i = 0 ; i < evecs.size() ; i++) {
-        vec3 _ev = evecs[i];
+        nvis::vec3 _ev = evecs[i];
         double scal = _ev[2];
         if (scal == 0) {
             continue;
@@ -241,7 +241,7 @@ bool spurt::crease::par_vec_op(std::vector< vec3 >& beta, const spurt::mat3& V,
         _ev *= 1 / scal;
         if (_ev[0] > -inside_eps && _ev[1] > -inside_eps && _ev[0] + _ev[1] < 1 + inside_eps) {
             found = true;
-            beta.push_back(vec3(1 - _ev[0] - _ev[1], _ev[0], _ev[1]));
+            beta.push_back(nvis::vec3(1 - _ev[0] - _ev[1], _ev[0], _ev[1]));
             
             // NB: we do not verify that the found location does indeed
             // correspond to the expected kind of crease point.
@@ -262,14 +262,14 @@ bool spurt::crease::par_vec_op(std::vector< vec3 >& beta, const spurt::mat3& V,
 
 // ---------------------------------------------------------------------------
 
-bool spurt::crease::linear_parallel_operator(std::vector< vec3 >& b,
-        const vec3 g[3],
-        const vec3 ev[3])
+bool xavier::crease::linear_parallel_operator(std::vector< nvis::vec3 >& b,
+        const nvis::vec3 g[3],
+        const nvis::vec3 ev[3])
 {
     // parallel vector operator method for linear faces
     // use barycentric coordinates: #0->(0,0), #1->(1,0), #2->(0,1)
     // solve for ev_i = V*(s,t,1)^T, g_i = W*(s,t,1)^T
-    spurt::mat3 V, W;
+    xavier::mat3 V, W;
     for (unsigned int i = 0 ; i < 3 ; i++) {
         V(i, 2) = ev[0][i];
         V(i, 0) = ev[1][i] - ev[0][i];
@@ -298,7 +298,7 @@ bool check_face_for_crossings(const face_type& face)
     }
     
 #ifdef QUICK_TEST_1
-    vec2 g_tan[4], Hg_tan[4];
+    nvis::vec2 g_tan[4], Hg_tan[4];
     
     unsigned int nb_crossings = 0;
     
@@ -339,14 +339,14 @@ bool check_face_for_crossings(const face_type& face)
 #ifdef QUICK_TEST_2
     
     // first compute average gradient and eigenvector direction
-    std::vector< vec3 > basis(3);
+    std::vector< nvis::vec3 > basis(3);
     crease::PCA(basis, xprod);
     
     // express cross products in the basis formed by the 2 main eigendirections
-    vec2 x2d[4];
+    nvis::vec2 x2d[4];
     for (unsigned int i = 0 ; i < 4 ; i++) {
         for (unsigned int j = 0 ; j < 2 ; j++) {
-            x2d[i][j] = inner(xprod[i], basis[j]);
+            x2d[i][j] = nvis::inner(xprod[i], basis[j]);
         }
     }
     
@@ -369,9 +369,9 @@ bool check_face_for_crossings(const face_type& face)
 #ifdef QUICK_TEST_3
     
     if (true || !fixing_voxel) {
-        vec3 xprod[4];
+        nvis::vec3 xprod[4];
         for (unsigned int i = 0 ; i < 4 ; i++) {
-            xprod[i] = cross(face.g[i], face.Hg[i]);
+            xprod[i] = nvis::cross(face.g[i], face.Hg[i]);
         }
         
         int nbcross[3] = {0, 0, 0};
@@ -384,21 +384,21 @@ bool check_face_for_crossings(const face_type& face)
             }
         }
         
-        if (true || spurt::crease::speedup) {
+        if (true || xavier::crease::speedup) {
             return (nbcross[0]*nbcross[1] + nbcross[0]*nbcross[2]  + nbcross[1]*nbcross[2] > 0);
         } else {
             return (nbcross[0] + nbcross[1] + nbcross[2] > 0);
         }
     } else {
-        std::vector< vec3 > xprod(4);
+        std::vector< nvis::vec3 > xprod(4);
         for (unsigned int i = 0 ; i < 4 ; i++) {
-            xprod[i] = cross(face.g[i], face.Hg[i]);
+            xprod[i] = nvis::cross(face.g[i], face.Hg[i]);
         }
         
-        vec3 main_dir = crease::average(xprod);
+        nvis::vec3 main_dir = crease::average(xprod);
         double prod[4];
         for (unsigned int i = 0 ; i < 4 ; i++) {
-            prod[i] = inner(xprod[i], main_dir);
+            prod[i] = nvis::inner(xprod[i], main_dir);
         }
         for (unsigned int i = 0 ; i < 4 ; ++i) {
             unsigned int j = (i + 1) % 4;
@@ -414,15 +414,15 @@ bool check_face_for_crossings(const face_type& face)
     
 #ifdef QUICK_TEST_4
     
-    std::vector< vec3 > xprod(4);
+    std::vector< nvis::vec3 > xprod(4);
     for (unsigned int i = 0 ; i < 4 ; i++) {
-        xprod[i] = cross(face.g[i], face.Hg[i]);
+        xprod[i] = nvis::cross(face.g[i], face.Hg[i]);
     }
     
-    vec3 main_dir = crease::average(xprod);
+    nvis::vec3 main_dir = crease::average(xprod);
     double prod[4];
     for (unsigned int i = 0 ; i < 4 ; i++) {
-        prod[i] = inner(xprod[i], main_dir);
+        prod[i] = nvis::inner(xprod[i], main_dir);
     }
     for (unsigned int i = 0 ; i < 4 ; ++i) {
         unsigned int j = (i + 1) % 4;
@@ -439,10 +439,10 @@ bool check_face_for_crossings(const face_type& face)
 
 //  1: sucessful
 //  0: nothing found
-bool process_face_PVO(std::vector< vec3 >& xing,
+bool process_face_PVO(std::vector< nvis::vec3 >& xing,
                       const face_type& face, const unsigned int depth)
 {
-    using namespace spurt::crease;
+    using namespace xavier::crease;
     
     ++nb_pvo;
     
@@ -450,7 +450,7 @@ bool process_face_PVO(std::vector< vec3 >& xing,
     // std::cout << "face pos: " << p0 << " " << p1 << " " << p2 << " " << p3 << std::endl;
     bool found = false;
     
-    // bool verbose = !spurt::crease::apply_filter;
+    // bool verbose = !xavier::crease::apply_filter;
     bool verbose = __verbose;
     
     if (verbose) {
@@ -460,7 +460,7 @@ bool process_face_PVO(std::vector< vec3 >& xing,
     }
     
     // add current quadrilateral to the list
-    if (spurt::crease::display_debug_info) {
+    if (xavier::crease::display_debug_info) {
         crease::current_vertices.push_back(face.p[0]);
         crease::current_vertices.push_back(face.p[1]);
         crease::current_vertices.push_back(face.p[2]);
@@ -469,10 +469,10 @@ bool process_face_PVO(std::vector< vec3 >& xing,
     // good approximation quality achieved through bilinear interpolation
     // extract parallel location using PVO
     unsigned int triangles[2][3] = { { 0, 1, 2 }, { 0, 2, 3 } };
-    vec3 g[3], Hg[3];
+    nvis::vec3 g[3], Hg[3];
     
     for (unsigned int t = 0 ; t < 2 ; t++) {
-        std::vector< vec3 > bs;
+        std::vector< nvis::vec3 > bs;
         
         g[0] = face.g[triangles[t][0]];
         g[1] = face.g[triangles[t][1]];
@@ -484,20 +484,20 @@ bool process_face_PVO(std::vector< vec3 >& xing,
         
         if (linear_parallel_operator(bs, g, Hg)) {
         
-            // if (spurt::crease::display_debug_info) {
-            //  spurt::crease::pvo_faces.push_back(face.p[0]);
-            //  spurt::crease::pvo_faces.push_back(face.p[1]);
-            //  spurt::crease::pvo_faces.push_back(face.p[2]);
-            //  spurt::crease::pvo_faces.push_back(face.p[3]);
+            // if (xavier::crease::display_debug_info) {
+            //  xavier::crease::pvo_faces.push_back(face.p[0]);
+            //  xavier::crease::pvo_faces.push_back(face.p[1]);
+            //  xavier::crease::pvo_faces.push_back(face.p[2]);
+            //  xavier::crease::pvo_faces.push_back(face.p[3]);
             // }
             
             for (unsigned int n = 0 ; n < bs.size() ; ++n) {
-                vec3& beta = bs[n];
+                nvis::vec3& beta = bs[n];
                 if (__verbose)
                     std::cout << "d: " << depth
                               << "... PVO successful in triangle #" << t << "... " << std::endl;
                               
-                vec3 q = beta[0] * face.p[triangles[t][0]] +
+                nvis::vec3 q = beta[0] * face.p[triangles[t][0]] +
                                beta[1] * face.p[triangles[t][1]] +
                                beta[2] * face.p[triangles[t][2]];
                 xing.push_back(q);
@@ -508,25 +508,25 @@ bool process_face_PVO(std::vector< vec3 >& xing,
                     std::cout << "*************************************" << std::endl;
                     std::cout << "PVO found a solution at " << q << " in triangle "
                               << triangles[t][0] << ", " << triangles[t][1] << ", " << triangles[t][2] << std::endl;
-                    vec3 _g, _e;
+                    nvis::vec3 _g, _e;
                     _g = crease::the_wrapper->gradient(q);
                     _e = crease::the_wrapper->eigenvector(q, 0);
                     std::cout << "ground truth:" << std::endl;
                     std::cout << "value is " << std::setprecision(20) << crease::the_wrapper->value(q) << std::endl;
                     std::cout << "gradient is " << std::setprecision(8) << _g << std::endl;
                     std::cout << "eigenvector is " << _e << std::endl;
-                    std::cout << "cross product norm is " << norm(cross(_g, _e)) << std::endl;
+                    std::cout << "cross product norm is " << nvis::norm(nvis::cross(_g, _e)) << std::endl;
                     std::cout << "local linear approximation:" << std::endl;
                     std::cout << "barycentric coordinates are " << beta << std::endl;
-                    vec3 grad = beta[0] * g[0] + beta[1] * g[1] + beta[2] * g[2];
-                    vec3 Hgrad = beta[0] * Hg[0] + beta[1] * Hg[1] + beta[2] * Hg[2];
-                    double gm = norm(grad);
-                    double Hgm = norm(Hgrad);
+                    nvis::vec3 grad = beta[0] * g[0] + beta[1] * g[1] + beta[2] * g[2];
+                    nvis::vec3 Hgrad = beta[0] * Hg[0] + beta[1] * Hg[1] + beta[2] * Hg[2];
+                    double gm = nvis::norm(grad);
+                    double Hgm = nvis::norm(Hgrad);
                     std::cout << "gradient = " << grad << " (norm=" << gm << ")" << std::endl
                               << "the three gradient values are: #0: " << g[0] << ", #1: " << g[1] << ", #2:" << g[2] << std::endl
                               << "the three Hgradient values are: #0: " << Hg[0] << ", #1: " << Hg[1] << ", #2:" << Hg[2] << std::endl
-                              << "dot product = " << fabs(inner(grad, Hgrad)) / gm << std::endl
-                              << "cross product = " << norm(cross(Hgrad, grad)) << std::endl;
+                              << "dot product = " << fabs(nvis::inner(grad, Hgrad)) / gm << std::endl
+                              << "cross product = " << nvis::norm(nvis::cross(Hgrad, grad)) << std::endl;
                     std::cout << "*************************************" << std::endl;
                 }
             }
@@ -539,10 +539,10 @@ bool process_face_PVO(std::vector< vec3 >& xing,
 }
 
 unsigned int bad_counter = 0;
-int spurt::crease::
-search_face_PVO::operator()(std::vector< vec3 >& xing,
-                            const vec3& p0, const vec3& p1,
-                            const vec3& p2, const vec3& p3,
+int xavier::crease::
+search_face_PVO::operator()(std::vector< nvis::vec3 >& xing,
+                            const nvis::vec3& p0, const nvis::vec3& p1,
+                            const nvis::vec3& p2, const nvis::vec3& p3,
                             unsigned int maxdepth, bool& something_found) const
 {
     something_found = false;
@@ -560,7 +560,7 @@ search_face_PVO::operator()(std::vector< vec3 >& xing,
     unsigned int depth = 0;
     xing.clear();
     current_vertices.clear();
-    std::vector< vec3 > cur_xing;
+    std::vector< nvis::vec3 > cur_xing;
     std::vector< face_type > cur, next, sub_approx, sub_measure;
     face_type ref_face(p0, p1, p2, p3);
     cur.push_back(ref_face);
@@ -624,18 +624,18 @@ search_face_PVO::operator()(std::vector< vec3 >& xing,
                             std::cout << "PVO solution #" << n << std::endl;
                         }
                         
-                        vec3 q = cur_xing[n];
+                        nvis::vec3 q = cur_xing[n];
                         // measures
-                        double val = spurt::crease::the_wrapper->value(q);
-                        vec3 g = spurt::crease::the_wrapper->gradient(q);
-                        vec3 Hg = spurt::crease::the_wrapper->Hgradient(q);
-                        vec3 e = spurt::crease::the_wrapper->eigenvector(q, spurt::crease::is_ridge ? 0 : 2);
-                        double str = spurt::crease::the_wrapper->eigenvalue(q, 1);
+                        double val = xavier::crease::the_wrapper->value(q);
+                        nvis::vec3 g = xavier::crease::the_wrapper->gradient(q);
+                        nvis::vec3 Hg = xavier::crease::the_wrapper->Hgradient(q);
+                        nvis::vec3 e = xavier::crease::the_wrapper->eigenvector(q, xavier::crease::is_ridge ? 0 : 2);
+                        double str = xavier::crease::the_wrapper->eigenvalue(q, 1);
                         // quality metrics
-                        double gm = spurt::norm(g);
-                        double Hgm = spurt::norm(g);
-                        double dot = fabs(spurt::inner(g, Hg)) / gm / Hgm;
-                        double cross = norm(spurt::cross(g, Hg));
+                        double gm = nvis::norm(g);
+                        double Hgm = nvis::norm(g);
+                        double dot = fabs(nvis::inner(g, Hg)) / gm / Hgm;
+                        double cross = nvis::norm(nvis::cross(g, Hg));
                         double avggm = fp.average_norm(fp.g);
                         double avgHgm = fp.average_norm(fp.Hg);
                         
@@ -648,16 +648,16 @@ search_face_PVO::operator()(std::vector< vec3 >& xing,
                         bool tmp_found = false;
                         while (true) {
                             // did we find an extremum?
-                            if (gm < std::max(spurt::crease::gradient_eps_rel*avggm,
-                                              spurt::crease::gradient_eps)) {
+                            if (gm < std::max(xavier::crease::gradient_eps_rel*avggm,
+                                              xavier::crease::gradient_eps)) {
                                 tmp_found = true;
                                 break;
                             }
                             
                             // check that we have a valid solution of the PVO
-                            if (dot > (1 - spurt::crease::max_align_error)) {
+                            if (dot > (1 - xavier::crease::max_align_error)) {
                                 // is this the eigenvector we were looking for
-                                if (fabs(spurt::inner(g, e)) > 1 - spurt::crease::max_align_error) {
+                                if (fabs(nvis::inner(g, e)) > 1 - xavier::crease::max_align_error) {
                                     tmp_found = true;
                                     break;
                                 } else {
@@ -699,8 +699,8 @@ search_face_PVO::operator()(std::vector< vec3 >& xing,
                                           << "(" << crease::strength_threshold_select << "), depth is " << depth << std::endl;
                                           
                             // make sure that we did not get ahead of ourselves with our shaky heuristics
-                            if (gm > spurt::crease::gradient_eps &&
-                                    dot < (1 - spurt::crease::max_align_error)) {
+                            if (gm > xavier::crease::gradient_eps &&
+                                    dot < (1 - xavier::crease::max_align_error)) {
                                 // this is still a pretty bad approximation - let us try to do better
                                 // before we give up
                                 face_type tmp;
@@ -726,9 +726,9 @@ search_face_PVO::operator()(std::vector< vec3 >& xing,
                         // this is the real thing
                         else {
                             std::cout << "found crease point around at " << q << " and depth " << depth
-                                      << std::endl << "value = " << spurt::crease::the_wrapper->value(q)
-                                      << std::endl << "<g,e>/|g| = " << fabs(inner(g, e)) << std::endl
-                                      << "gm = " << norm(g) << std::endl
+                                      << std::endl << "value = " << xavier::crease::the_wrapper->value(q)
+                                      << std::endl << "<g,e>/|g| = " << fabs(nvis::inner(g, e)) << std::endl
+                                      << "gm = " << nvis::norm(g) << std::endl
                                       << "strength = " << str << std::endl;
                                       
                             something_found = true;

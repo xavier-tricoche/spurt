@@ -1,7 +1,7 @@
 #include "locator.hpp"
 #include <iostream>
 #include <string>
-#include <misc/time_helper.hpp>
+#include <util/timer.hpp>
 
 void printUsageAndExit( const std::string& argv0, const std::string& offending="",
                         bool doExit = true )
@@ -26,14 +26,14 @@ void printUsageAndExit( const std::string& argv0, const std::string& offending="
 template<typename P>
 bool test_solution(const std::vector<P>& allpoints, const P& query, const P& answer)
 {
-    double d = norm(answer.coordinate()-query.coordinate());
+    double d = nvis::norm(answer.coordinate()-query.coordinate());
     double secondbest = std::numeric_limits<double>::max();
     int secondbesti = -1;
     for (int i=0 ; i<allpoints.size() ; ++i) {
         if (i == answer.data()) {
             continue;
         }
-        double dd = norm(allpoints[i].coordinate()-query.coordinate());
+        double dd = nvis::norm(allpoints[i].coordinate()-query.coordinate());
         if (dd < d) {
             return false;
         } else if (dd < secondbest) {
@@ -53,7 +53,7 @@ bool test_solution(const std::vector<P>& allpoints, const P& query, const P& ans
 template<int K>
 void test_locator(int n, int ns)
 {
-    typedef spurt::point_locator<double, int, K>   locator_type;
+    typedef xavier::point_locator<double, int, K>   locator_type;
     typedef typename locator_type::point_type       point_type;
     typedef typename locator_type::coord_type       coord_type;
     
@@ -69,7 +69,7 @@ void test_locator(int n, int ns)
         locator.insert(all_points[i]);
     }
     
-    spurt::timer _timer;
+    nvis::timer _timer;
     double total_time = 0;
     int nbwrong = 0;
     for (int i=0 ; i<ns ; ++i) {
@@ -77,7 +77,7 @@ void test_locator(int n, int ns)
         for (int k=0 ; k<K ; ++k) {
             c[k] = -1. + drand48() * 2.;
         }
-        _timer.start();
+        _timer.restart();
         point_type nearest = locator.find_nearest_point(c);
         total_time += _timer.elapsed();
         if (!test_solution(all_points, point_type(c, 0), nearest)) {

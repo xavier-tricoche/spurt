@@ -12,7 +12,7 @@
 #include <sstream>
 #include <string>
 
-namespace spurt
+namespace xavier
 {
     template< typename T >
     void display_stats( const std::vector< T >& data, const std::string& msg );
@@ -124,7 +124,7 @@ namespace spurt
 
 
 inline
-    spurt::crease::FaceId::FaceId( unsigned int i0, unsigned int i1, 
+    xavier::crease::FaceId::FaceId( unsigned int i0, unsigned int i1, 
     unsigned int i2, unsigned int i3 )
     : is(4)
 {
@@ -136,7 +136,7 @@ inline
 }
 
 inline
-    spurt::crease::FaceId::FaceId( const FaceId& fid )
+    xavier::crease::FaceId::FaceId( const FaceId& fid )
     : is(4)
 {
     for ( unsigned int i=0 ; i<4 ; i++ )
@@ -146,7 +146,7 @@ inline
 }
 
 inline
-    int spurt::crease::FaceId::operator<( const FaceId& fid ) const
+    int xavier::crease::FaceId::operator<( const FaceId& fid ) const
 {
     return ( is[0] < fid.is[0] ||
         ( is[0] == fid.is[0] && 
@@ -158,7 +158,7 @@ inline
 }
 
 inline
-    std::ostream& spurt::crease::operator<<( ostream& os, const spurt::crease::FaceId& fid )
+    std::ostream& xavier::crease::operator<<( ostream& os, const xavier::crease::FaceId& fid )
 {
     os << "[ " << fid.is[0] << ", " << fid.is[1] << ", " 
         << fid.is[2] << ", " << fid.is[3] << "]";

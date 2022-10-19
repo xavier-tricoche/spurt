@@ -6,10 +6,13 @@
 #include <vector>
 
 #include "vtk_macros.hpp"
+#include "vtk_data_helper.hpp"
 #include <format/filename.hpp>
 #include <misc/strings.hpp>
 
 #include <math/fixed_vector.hpp>
+
+#include <vtkDataSetReader.h>
 
 #include <vtkSmartPointer.h>
 #include <vtkStructuredPoints.h>
@@ -19,23 +22,26 @@
 #include <vtkImageData.h>
 #include <vtkSliderRepresentation.h>
 #include <vtkSliderRepresentation2D.h>
+#include <vtkProperty2D.h>
+#include <vtkTextProperty.h>
 
 #include <vtkXMLImageDataReader.h>
 #include <vtkXMLUnstructuredGridReader.h>
 #include <vtkXMLPolyDataReader.h>
+#include <vtkXMLRectilinearGridReader.h>
 #include <vtkXMLImageDataWriter.h>
 #include <vtkXMLUnstructuredGridWriter.h>
 #include <vtkXMLStructuredGridWriter.h>
 #include <vtkXMLRectilinearGridWriter.h>
 #include <vtkXMLPolyDataWriter.h>
-    
+
 
 namespace vtk_utils {
-    
+
 template< typename Reader_ >
 vtkDataSet* __readVTK(const std::string& name) {
     typedef Reader_ reader_type;
-    
+
     vtkSmartPointer<reader_type> reader = vtkSmartPointer<reader_type>::New();
     reader->SetFileName(name.c_str());
     reader->Update();
@@ -47,62 +53,63 @@ vtkDataSet* __readVTK(const std::string& name) {
 template< typename DataSetPtr_, typename Writer_ >
 void __saveVTK(DataSetPtr_ data, const std::string& name) {
     typedef Writer_ writer_type;
-    
+
     // note: no check is performed that data type is compatible with selected writer type
     vtkSmartPointer<writer_type> writer = vtkSmartPointer<writer_type>::New();
     writer->SetFileName(name.c_str());
     writer->SetInputData(data);
     writer->Write();
-} 
+}
 
 vtkDataSet* readVTK(const std::string& filename)
 {
-    std::string ext = spurt::filename::extension(filename);
-    spurt::lower_case(ext);
+    std::string ext = xavier::filename::extension(filename);
+    xavier::lower_case(ext);
     if      (ext == "vtk") return __readVTK<vtkDataSetReader>(filename);
     else if (ext == "vti") return __readVTK<vtkXMLImageDataReader>(filename);
     else if (ext == "vtu") return __readVTK<vtkXMLUnstructuredGridReader>(filename);
     else if (ext == "vtp") return __readVTK<vtkXMLPolyDataReader>(filename);
+    else if (ext == "vtr") return __readVTK<vtkXMLRectilinearGridReader>(filename);
     else throw std::runtime_error("Unrecognized VTK file extension");
-    
+
     return NULL;
 }
 
 template< typename DataSetPtr_ >
 void saveVTK(DataSetPtr_ dataset, const std::string& filename) {
-    std::string ext = spurt::filename::extension(filename);
-    spurt::lower_case(ext);
+    std::string ext = xavier::filename::extension(filename);
+    xavier::lower_case(ext);
     if      (ext == "vtk") __saveVTK<DataSetPtr_, vtkDataSetWriter>(dataset, filename);
     else if (ext == "vti") __saveVTK<DataSetPtr_, vtkXMLImageDataWriter>(dataset, filename);
     else if (ext == "vtu") __saveVTK<DataSetPtr_, vtkXMLUnstructuredGridWriter>(dataset, filename);
     else if (ext == "vtp") __saveVTK<DataSetPtr_, vtkXMLPolyDataWriter>(dataset, filename);
     else if (ext == "vts") __saveVTK<DataSetPtr_, vtkXMLStructuredGridWriter>(dataset, filename);
     else if (ext == "vtr") __saveVTK<DataSetPtr_, vtkXMLRectilinearGridWriter>(dataset, filename);
-    else throw std::runtime_error("Unrecognized VTK file extension");
+    else throw std::runtime_error("Unrecognized VTK file extension: " + ext);
 }
 
 template< typename DataSetPtr_ >
 void saveVTK_XML(DataSetPtr_ dataset, const std::string& filename) {
     if (vtkImageData::SafeDownCast(dataset)) {
-        spurt::filename::replace_extension(filename, "vti");
+        xavier::filename::replace_extension(filename, "vti");
     }
     else if (vtkUnstructuredGrid::SafeDownCast(dataset)) {
-        spurt::filename::replace_extension(filename, "vtu");
+        xavier::filename::replace_extension(filename, "vtu");
     }
     else if (vtkPolyData::SafeDownCast(dataset)) {
-        spurt::filename::replace_extension(filename, "vtp");
+        xavier::filename::replace_extension(filename, "vtp");
     }
     else if (vtkRectilinearGrid::SafeDownCast(dataset)) {
-        spurt::filename::replace_extension(filename, "vtr");
+        xavier::filename::replace_extension(filename, "vtr");
     }
     else if (vtkStructuredGrid::SafeDownCast(dataset)) {
-        spurt::filename::replace_extension(filename, "vts");
+        xavier::filename::replace_extension(filename, "vts");
     }
     else {
-        spurt::filename::replace_extension(filename, "vtk");
+        xavier::filename::replace_extension(filename, "vtk");
         std::cout << "WARNING: Unrecognized VTK dataset type. Using Legacy format" << '\n';
     }
-    
+
     saveVTK(dataset, filename);
 };
 
@@ -112,7 +119,7 @@ void saveVTK_XML(DataSetPtr_ dataset, const std::string& filename) {
 //     reader->SetGridFileName(grid.c_str());
 //     reader->SetPvalFileName(pval.c_str());
 //     reader->Update();
-//     
+//
 //     vtkDataSet* grid = static_cast<vtkDataSet*>(reader->GetOutput());
 //     grid->Register(0);
 //     reader->Delete();
@@ -120,13 +127,13 @@ void saveVTK_XML(DataSetPtr_ dataset, const std::string& filename) {
 // }
 
 void save_lines_VTK(const std::string& name, const std::string& comment,
-                    const std::vector<std::vector<spurt::vec3> >& lines)
+                    const std::vector<std::vector<nvis::vec3> >& lines)
 {
     int npts = 0;
     for (int i = 0 ; i < lines.size() ; ++i) {
         npts += lines[i].size();
     }
-    
+
     std::fstream file(name.c_str(), std::ios::out);
     file << "# vtk DataFile Version 2.0\n"
          << comment << '\n'
@@ -135,7 +142,7 @@ void save_lines_VTK(const std::string& name, const std::string& comment,
          << "POINTS " << npts  << " float\n";
     for (int i = 0 ; i < lines.size() ; ++i) {
         for (int j = 0 ; j < lines[i].size() ; ++j) {
-            const spurt::vec3& x = lines[i][j];
+            const nvis::vec3& x = lines[i][j];
             file << x[0] << " " << x[1] << " " << x[2] << '\n';
         }
     }
@@ -148,16 +155,16 @@ void save_lines_VTK(const std::string& name, const std::string& comment,
         }
         file << '\n';
     }
-    
+
     file.close();
 }
 
 void save_triangles_VTK(const std::string& name, const std::string& comment,
-                        const std::vector<spurt::vec3>& points,
-                        const std::vector<spurt::vec3>& triangles)
+                        const std::vector<nvis::vec3>& points,
+                        const std::vector<nvis::ivec3>& triangles)
 {
     int npts = points.size();
-    
+
     std::fstream file(name.c_str(), std::ios::out);
     file << "# vtk DataFile Version 2.0\n"
          << comment << '\n'
@@ -165,24 +172,24 @@ void save_triangles_VTK(const std::string& name, const std::string& comment,
          << "DATASET POLYDATA\n"
          << "POINTS " << npts  << " float\n";
     for (int i = 0 ; i < points.size() ; ++i) {
-        const spurt::vec3& x = points[i];
+        const nvis::vec3& x = points[i];
         file << x[0] << " " << x[1] << " " << x[2] << '\n';
     }
     file << "POLYGONS " << triangles.size() << " " << 4*triangles.size() << '\n';
     for (int i = 0 ; i < triangles.size() ; ++i) {
-        const spurt::vec3& t = triangles[i];
+        const nvis::ivec3& t = triangles[i];
         file << "3 " << t[0] << " " << t[1] << " " << t[2] << '\n';
     }
-    
+
     file.close();
 }
 
 vtkStructuredPoints* load_nrrd(const std::string& filename) {
-    Nrrd* nin = spurt::readNrrd(filename);
+    Nrrd* nin = xavier::nrrd_utils::readNrrd(filename);
     int attribute_type = 0; // scalar
     if (nin->axis[0].size == 2 || nin->axis[0].size == 3) attribute_type = 1;
     else if (nin->axis[0].size == 4 || nin->axis[0].size == 9) attribute_type = 2;
-    
+
     int dims[3] = {1, 1, 1};
     double spc[3] = {1, 1, 1};
     double min[3] = {0, 0, 0};
@@ -194,7 +201,7 @@ vtkStructuredPoints* load_nrrd(const std::string& filename) {
         if (!std::isinf(sp) && !std::isnan(sp)) spc[i] = sp;
         if (!std::isinf(m) && !std::isnan(m)) min[i] = m;
     }
-    
+
     VTK_PTR(vtkStructuredPoints, dataset);
     dataset->SetDimensions(dims[0], dims[1], dims[2]);
     dataset->SetSpacing(spc[0], spc[1], spc[2]);
@@ -202,8 +209,8 @@ vtkStructuredPoints* load_nrrd(const std::string& filename) {
     dataset->SetExtent(0, dims[0]-1, 0, dims[1]-1, 0, 0);
     if (nin->type == nrrdTypeFloat) {
         std::vector<float> data;
-        spurt::to_vector(data, nin);
-        if (attribute_type == 0) 
+        xavier::nrrd_utils::to_vector(data, nin);
+        if (attribute_type == 0)
             add_scalars(dataset, data);
         else if (attribute_type == 1) {
             if (nin->axis[0].size == 2)
@@ -220,8 +227,8 @@ vtkStructuredPoints* load_nrrd(const std::string& filename) {
     }
     else if (nin->type == nrrdTypeDouble) {
         std::vector<double> data;
-        spurt::to_vector(data, nin);
-        if (attribute_type == 0) 
+        xavier::nrrd_utils::to_vector(data, nin);
+        if (attribute_type == 0)
             add_scalars(dataset, data);
         else if (attribute_type == 1) {
             if (nin->axis[0].size == 2)
@@ -238,8 +245,8 @@ vtkStructuredPoints* load_nrrd(const std::string& filename) {
     }
     else {
         std::vector<int> data;
-        spurt::to_vector(data, nin);
-        if (attribute_type == 0) 
+        xavier::nrrd_utils::to_vector(data, nin);
+        if (attribute_type == 0)
             add_scalars(dataset, data);
         else if (attribute_type == 1) {
             if (nin->axis[0].size == 2)
@@ -255,13 +262,13 @@ vtkStructuredPoints* load_nrrd(const std::string& filename) {
         }
     }
     nrrdNuke(nin);
-    
+
     return dataset;
 }
 
-vtkSliderRepresentation* 
-make_slider_representation(const std::string& text, const spurt::vec2& range, 
-                           double value, double x, double dx, double y=0.07, 
+vtkSliderRepresentation*
+make_slider_representation(const std::string& text, const nvis::vec2& range,
+                           double value, double x, double dx, double y=0.07,
                            const std::string& format="") {
     VTK_PTR(vtkSliderRepresentation2D, rep);
     rep->SetMinimumValue(range[0]);
@@ -298,6 +305,3 @@ make_slider_representation(const std::string& text, const spurt::vec2& range,
 
 
 #endif
-
-
-

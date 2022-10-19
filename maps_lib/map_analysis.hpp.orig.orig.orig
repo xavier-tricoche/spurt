@@ -1,0 +1,63 @@
+#ifndef __MAP_ANALYSIS_HPP__
+#define __MAP_ANALYSIS_HPP__
+
+// std
+#include <iostream>
+#include <vector>
+#include <list>
+#include <map>
+#include <iomanip>
+// boost
+#include <boost/format.hpp>
+#include <boost/limits.hpp>
+#include <boost/rational.hpp>
+// nvis
+#include <math/fixed_vector.hpp>
+#include <util/wall_timer.hpp>
+// teem
+#include <teem/nrrd.h>
+// xavier
+#include <data/grid.hpp>
+#include <data/kdtree.hpp>
+#include <data/raster_data.hpp>
+#include <graphics/colors.hpp>
+#include <image/nrrd_wrapper.hpp>
+#include <maps_lib/display.hpp>
+#include <maps_lib/period.hpp>
+#include <math/divergence_cleaning.hpp>
+#include <math/rational.hpp>
+#include "xmt_poincare_map.hpp"
+#include "map_field_wrapper.hpp"
+// nate
+#include <graphics/GLUT_helper.hpp>
+#include <graphics/GUI/GLUI_Wrapper.h>
+
+namespace xavier {
+
+struct map_analysis_param {
+    nvis::ivec2 									resolution;
+    nvis::bbox2 									bounds;
+    map_metric										metric;
+    int 											upsampling_factor;
+    int 											max_depth;
+    int 											min_period;
+    int												max_period;
+    int 											nb_iterations;
+    std::vector<nvis::vec2>							edges;
+    std::vector<std::pair<nvis::vec2, nvis::vec2>	vectors;
+};
+
+int best_period(const std::vector<nvis::vec2>& steps, int maxp, const map_metric& metric);
+
+template<typename MAP>
+void sample_raster(dataset_type& dataset, const grid_type& grid,
+	const MAP& pmap, map_analysis_param& params, int period=-1);
+
+template<typename MAP>
+void process_cell(const dataset_type& dataset, const grid_type& grid,
+                  const nvis::ivec2& cell_id, const MAP& pmap, 
+				  map_analysis_param& params);
+}
+
+
+#endif

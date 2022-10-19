@@ -15,7 +15,7 @@
 #include <map>
 #include <set>
 
-namespace spurt {
+namespace xavier {
 
 nvis::vec2 simple_linear_regression(const std::vector<double>& x, const std::vector<double>& y)
 {

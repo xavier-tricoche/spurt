@@ -12,12 +12,11 @@
 
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
-#include <misc/time_helper.hpp>
+#include <util/timer.hpp>
 
 #include <data/locator.hpp>
 #include <misc/meta_utils.hpp>
-#include "rbf_basis.hpp"
-#include "polynomial.hpp"
+#include "RBFbasis.hpp"
 
 // using Eigen SVD-based LS solution
 #include <Eigen/Core>
@@ -26,7 +25,7 @@
 #define EIGEN_YES_I_KNOW_SPARSE_MODULE_IS_NOT_STABLE_YET
 #include <Eigen/Sparse>
 
-namespace spurt {
+namespace xavier {
 
 namespace RBF {
 
@@ -38,17 +37,17 @@ public:
     static const size_t dimension          = Dim;
     static const unsigned polynomial_order = Order;
 
-    typedef spurt::fixed_vector<T, Dim>                      point_type;
+    typedef nvis::fixed_vector<T, Dim>                        point_type;
     typedef Value                                             value_type;
     typedef data_traits<value_type>                           value_traits;
-    typedef spurt::fixed_vector<Value, Dim>                  derivative_type;
+    typedef nvis::fixed_vector<Value, Dim>                    derivative_type;
     typedef T                                                 scalar_type;
     typedef Func                                              function_type;
     typedef Eigen::SparseMatrix<T>                            matrix_type;
     typedef Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>  rhs_type;
     typedef Eigen::Triplet<T>                                 triplet_type;
     typedef Eigen::Matrix<T, Eigen::Dynamic, 1>               vector_type;
-    typedef spurt::point_locator<T, int, Dim>                locator_type;
+    typedef xavier::point_locator<T, int, Dim>                locator_type;
     typedef typename locator_type::point_type                 source_type;
     typedef typename polynomial::polynomial_basis<T, Dim>     polynomial_basis;
     typedef typename polynomial_basis::monomial_type          monomial_type;
@@ -83,8 +82,7 @@ public:
             std::cout << "building sparse RBF matrix of dimension "
                       << total_size << "...\n";
         }
-        spurt::timer _timer;
-        _timer.start();
+        nvis::timer _timer;
         size_t counter=0;
 
         // insert all sites into kd-tree using efficient constructor
@@ -106,7 +104,7 @@ public:
                     ++counter;
                 }
                 else {
-                    scalar_type r = spurt::norm(it->coordinate()-_points[i]);
+                    scalar_type r = nvis::norm(it->coordinate()-_points[i]);
                     if ( r < _radius) {
                         scalar_type v = _phi(r);
                         coeff.push_back(triplet_type(i, j, v));
@@ -154,7 +152,7 @@ public:
         std::cout << "matrix exported to file\n";
             std::cout << "starting Cholesky solver...\n";
         }
-        _timer.start();
+        _timer.restart();
         rhs_type sol = cholesky.solve(rhs);
         std::cout << "Cholesky solver took " << _timer.elapsed()
                   << " seconds\n";
@@ -197,7 +195,7 @@ public:
 
         _locator.find_within_range(in_cube, x, _radius);
         for (it=in_cube.begin(); it!=in_cube.end() ; ++it) {
-            scalar_type r = spurt::norm(it->coordinate()-x);
+            scalar_type r = nvis::norm(it->coordinate()-x);
             if ( r < _radius) {
                 val += _phi(r)*_weights[it->data()];
             }
@@ -220,7 +218,7 @@ public:
 
         _locator.find_within_range(in_cube, x, _radius);
         for (it=in_cube.begin(); it!=in_cube.end() ; ++it) {
-            scalar_type r = spurt::norm(it->coordinate()-x);
+            scalar_type r = nvis::norm(it->coordinate()-x);
             if ( r < _radius && r > 0) {
                 point_type nabla_r = (x - it->coordinate())/r;
                 scalar_type phi_prime = _phi.derivative(r);
@@ -271,10 +269,10 @@ template< typename Value, typename T, size_t Dim, typename Func,
           unsigned Order=0 >
 class InfiniteSupportRBFInterpolator {
 public:
-    typedef spurt::fixed_vector<T, Dim>                        point_type;
+    typedef nvis::fixed_vector<T, Dim>                        point_type;
     typedef Value                                             value_type;
     typedef data_traits<value_type>                           value_traits;
-    typedef spurt::fixed_vector<Value, Dim>                    derivative_type;
+    typedef nvis::fixed_vector<Value, Dim>                    derivative_type;
     typedef T                                                 scalar_type;
     typedef Func                                              function_type;
     typedef Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>  matrix_type;
@@ -317,8 +315,7 @@ public:
             std::cout << "Building dense RBF matrix of dimension "
             << total_size << "...\n";
         }
-        spurt::timer _timer;
-        _timer.start();
+        nvis::timer _timer;
         // set value constraints
         for (size_t i=0 ; i<_size ; ++i) {
             // A(i,j) = \phi(||xi-xj||)
@@ -331,7 +328,7 @@ public:
                 << std::flush;
             }
             for (size_t j=i+1 ; j<_size ; ++j) {
-                scalar_type r = spurt::norm(_points[i]-_points[j]);
+                scalar_type r = nvis::norm(_points[i]-_points[j]);
                 scalar_type v = _phi(r);
                 A(i,j) = v;
                 A(j,i) = v;
@@ -371,7 +368,7 @@ public:
             std::cout << "starting solver...\n";
         }
 
-        _timer.start();
+        _timer.restart();
         solver_type solver(A);
         matrix_type sol = solver.solve(rhs);
         if (verbose) {
@@ -415,7 +412,7 @@ public:
         value_type val(0);
 
         for (int i=0 ; i<_size ; ++i) {
-            scalar_type r = spurt::norm(_points[i]-x);
+            scalar_type r = nvis::norm(_points[i]-x);
             val += _phi(r)*_weights[i];
         }
 
@@ -434,7 +431,7 @@ public:
         // \nabla \phi_j = \nabla r(x,xj) \phi'(r(x,xj))
         // \nabla r(x,xj) = (x-xj)/r(x,xj)
         for (int i=0 ; i<_size ; ++i) {
-            scalar_type r = spurt::norm(_points[i]-x);
+            scalar_type r = nvis::norm(_points[i]-x);
         if (r==0) continue;
             point_type nabla_r = (x - _points[i])/r;
             scalar_type phi_prime = _phi.derivative(r);
@@ -477,7 +474,7 @@ private:
 
 } // namespace RBF
 
-} // namespace spurt
+} // namespace xavier
 
 
 #endif

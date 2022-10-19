@@ -13,7 +13,7 @@ inline double sign(const double& x)
 }
 }
 
-namespace spurt {
+namespace xavier {
 const double TWO_PI = 2*M_PI;
 
 inline double signed_angle(const nvis::vec2& x)
@@ -72,6 +72,11 @@ inline double signed_angle(const nvis::vec2& v0, const nvis::vec2& v1)
     }
     double det = w0[0] * w1[1] - w0[1] * w1[0];
     return sign(det)*theta;
+}
+
+template<typename Vector_>
+inline double signed_angle(const Vector_& v0, const Vector_& v1) {
+    return signed_angle(nvis::vec2(v0[0], v0[1]), nvis::vec2(v1[0], v1[1]));
 }
 
 template<int N>

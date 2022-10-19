@@ -6,67 +6,67 @@
 #include <map>
 #include <cassert>
 
-namespace spurt {
+namespace xavier {
 template<typename T>
-inline double luminosity(const spurt::fixed_vector<T,3>& color, double gamma=2.2) {
+inline double luminosity(const nvis::fixed_vector<T,3>& color, double gamma=2.2) {
     return 0.2126 * pow(color[0], gamma) + 
            0.7152 * pow(color[1], gamma) + 
            0.0722 * pow(color[2], gamma);
 }
 
-inline spurt::vec3 hsv2rgb(double hue, double sat, double val)
+inline nvis::vec3 hsv2rgb(double hue, double sat, double val)
 {
     double chroma = val * sat;
     double h_ = hue / 60.;
     double x = chroma * (1.-fabs(fmod(h_, 2.)-1));
     
-    spurt::vec3 rgb_;
+    nvis::vec3 rgb_;
     if(val == 0) {
-        rgb_ = spurt::vec3(0, 0, 0);
+        rgb_ = nvis::vec3(0, 0, 0);
     } else if(0 <= h_ && h_ < 1) {
-        rgb_ = spurt::vec3(chroma, x, 0);
+        rgb_ = nvis::vec3(chroma, x, 0);
     } else if(1 <= h_ && h_ < 2) {
-        rgb_ = spurt::vec3(x, chroma, 0);
+        rgb_ = nvis::vec3(x, chroma, 0);
     } else if(2 <= h_ && h_ < 3) {
-        rgb_ = spurt::vec3(0, chroma, x);
+        rgb_ = nvis::vec3(0, chroma, x);
     } else if(3 <= h_ && h_ < 4) {
-        rgb_ = spurt::vec3(0, x, chroma);
+        rgb_ = nvis::vec3(0, x, chroma);
     } else if(4 <= h_ && h_ < 5) {
-        rgb_ = spurt::vec3(x, 0, chroma);
+        rgb_ = nvis::vec3(x, 0, chroma);
     } else if(5 <= h_ && h_ < 6) {
-        rgb_ = spurt::vec3(chroma, 0, x);
+        rgb_ = nvis::vec3(chroma, 0, x);
     }
     
     double m = val-chroma;
-    return rgb_+  spurt::vec3(m, m, m);
+    return rgb_+  nvis::vec3(m, m, m);
 }
 
-const spurt::fvec3 red(1, 0, 0);
-const spurt::fvec3 green(0, 1, 0);
-const spurt::fvec3 blue(0, 0, 1);
-const spurt::fvec3 yellow(1, 1, 0);
-const spurt::fvec3 cyan(0, 1, 1);
-const spurt::fvec3 white(1, 1, 1);
-const spurt::fvec3 black(0, 0, 0);
-const spurt::fvec3 orange(1, 0.5, 0);
-const spurt::fvec3 magenta(1, 0, 1);
+const nvis::fvec3 red(1, 0, 0);
+const nvis::fvec3 green(0, 1, 0);
+const nvis::fvec3 blue(0, 0, 1);
+const nvis::fvec3 yellow(1, 1, 0);
+const nvis::fvec3 cyan(0, 1, 1);
+const nvis::fvec3 white(1, 1, 1);
+const nvis::fvec3 black(0, 0, 0);
+const nvis::fvec3 orange(1, 0.5, 0);
+const nvis::fvec3 magenta(1, 0, 1);
 // some funky color names after Apple's color editor
-const spurt::fvec3 cayenne(0.5, 0, 0);
-const spurt::fvec3 midnight(0, 0, 0.5);
-const spurt::fvec3 aqua(0, 0.5, 1);
-const spurt::fvec3 sea_green(0, 1, 0.5);
-const spurt::fvec3 lime(0.5, 1, 0);
-const spurt::fvec3 framboise(1, 0, 0.5);
-const spurt::fvec3 carnation(1, 0.5, 1);
+const nvis::fvec3 cayenne(0.5, 0, 0);
+const nvis::fvec3 midnight(0, 0, 0.5);
+const nvis::fvec3 aqua(0, 0.5, 1);
+const nvis::fvec3 sea_green(0, 1, 0.5);
+const nvis::fvec3 lime(0.5, 1, 0);
+const nvis::fvec3 framboise(1, 0, 0.5);
+const nvis::fvec3 carnation(1, 0.5, 1);
 
-const spurt::fvec3 rainbow[] = {
+const nvis::fvec3 rainbow[] = {
     black, midnight, blue, aqua,
     cyan, sea_green, green, lime,
     yellow, orange, red, framboise,
     magenta, carnation, white
 }; // 15 colors spanning the rainbow
 
-static void spiral_scale(std::vector<spurt::fvec3>& colors, int n, 
+static void spiral_scale(std::vector<nvis::fvec3>& colors, int n, 
                          double minval, int r=1, 
                          double initsat=1, double endsat=1,
                          double order=1) {
@@ -101,7 +101,7 @@ struct adaptive_color_map {
         }
     };
 	
-	spurt::fvec3 interpolate(double u, const std::vector<spurt::fvec3>& scale) {
+	nvis::fvec3 interpolate(double u, const std::vector<nvis::fvec3>& scale) {
 		assert(!scale.empty());
 		if (u<=0 || scale.size()==1) return scale[0];
 		else if (u>=1) return scale.back();
@@ -114,7 +114,7 @@ struct adaptive_color_map {
 	}
 	
     adaptive_color_map(const std::vector<T>& vals, 
-                       const std::vector<spurt::fvec3>& scale,
+                       const std::vector<nvis::fvec3>& scale,
                        bool _ascending=true,
 					   int ncolors=-1)
         : t(scale.size()), colors(scale), ascending(_ascending) {
@@ -143,7 +143,7 @@ struct adaptive_color_map {
         t.back() = tmp.back();
     }
     
-    spurt::fvec3 operator()(const T& val) const {
+    nvis::fvec3 operator()(const T& val) const {
         unsigned int bin = 
             std::distance(t.begin(), 
                           std::lower_bound(t.begin(), t.end(), val));
@@ -158,7 +158,7 @@ struct adaptive_color_map {
     }
 
     std::vector<T>           t;
-    std::vector<spurt::fvec3> colors;
+    std::vector<nvis::fvec3> colors;
     bool ascending;
 };
 
@@ -166,7 +166,7 @@ template<typename T>
 struct discrete_color_map {
 
     discrete_color_map(const std::vector<T>& cps, 
-                       const std::vector<spurt::fvec3>& scale)
+                       const std::vector<nvis::fvec3>& scale)
         : colors(scale) {
         assert(cps.size() == colors.size());
         for (int i=0 ; i<cps.size() ; ++i) {
@@ -174,30 +174,30 @@ struct discrete_color_map {
         }
     }
     
-    spurt::fvec3 operator()(const T& val) const {
+    nvis::fvec3 operator()(const T& val) const {
         typename std::map<T, int>::const_iterator it = lookup.find(val);
         if (it == lookup.end()) {
-            return spurt::fvec3(0,0,0);
+            return nvis::fvec3(0,0,0);
         } else {
             return colors[it->second];
         }
     }
 
     std::map<T, int>            lookup;
-    std::vector<spurt::fvec3>     colors;
+    std::vector<nvis::fvec3>     colors;
 };
 
 template<typename T>
 struct fixed_color_map {
 
     fixed_color_map(const std::vector<T>& cps, 
-                    const std::vector<spurt::fvec3>& scale)
+                    const std::vector<nvis::fvec3>& scale)
         : t(cps), colors(scale) {
         std::sort(t.begin(), t.end());
         assert(t.size() == colors.size());
     }
     
-    fixed_color_map(T min, T max, const std::vector<spurt::fvec3>& scale)
+    fixed_color_map(T min, T max, const std::vector<nvis::fvec3>& scale)
         : t(scale.size()), colors(scale) {    
         int n = scale.size();
         t[0] = min;
@@ -210,7 +210,7 @@ struct fixed_color_map {
         }    
     }
     
-    spurt::fvec3 operator()(const T& val) const {
+    nvis::fvec3 operator()(const T& val) const {
         unsigned int bin = 
             std::distance(t.begin(),
                           std::lower_bound(t.begin(), t.end(), val));
@@ -220,18 +220,18 @@ struct fixed_color_map {
     }
 
     std::vector<T>                t;
-    std::vector<spurt::fvec3>     colors;
+    std::vector<nvis::fvec3>     colors;
 };
 
 template<typename T>
 struct band_color_map {
-    band_color_map(const std::vector<T>& cps, const std::vector<spurt::fvec3>& scale)
+    band_color_map(const std::vector<T>& cps, const std::vector<nvis::fvec3>& scale)
         : t(cps), colors(scale) {
         std::sort(t.begin(), t.end());
         assert(t.size()+2 == colors.size());
     }
     
-    spurt::fvec3 operator()(const T& val) const {
+    nvis::fvec3 operator()(const T& val) const {
         unsigned int bin = 
             std::distance(t.begin(),
                           std::lower_bound(t.begin(), t.end(), val));
@@ -239,7 +239,7 @@ struct band_color_map {
     }
 
     std::vector<T>                t;
-    std::vector<spurt::fvec3>     colors;
+    std::vector<nvis::fvec3>     colors;
 };
 
 } // xavier

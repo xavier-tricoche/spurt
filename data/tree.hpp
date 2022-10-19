@@ -4,7 +4,7 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 
-namespace spurt {
+namespace xavier {
 
 namespace QuadTree {
 struct _Node_base {
@@ -100,7 +100,7 @@ class base_quadtree {
 public:
     typedef T                                   value_type;
     typedef D                                   data_type;
-    typedef fixed_vector<T, 2>            vector_type;
+    typedef nvis::fixed_vector<T, 2>            vector_type;
     typedef nvis::bounding_box<vector_type>     box_type;
     typedef base_quadtree<vect_type>            self_type;
     typedef self_type*                          pointer_type;

@@ -10,7 +10,7 @@
 
 extern double toverhead;
 
-namespace spurt {
+namespace xavier {
     size_t nrrd_size(const Nrrd* A, bool skip_first_col=false) {
         size_t s=1;
         for (int i=(skip_first_col ? 1 : 0); i<A->dim; ++i) {
@@ -42,7 +42,7 @@ namespace spurt {
             if (nin->axis[0].size!=Nrows*Ncols) {
                 throw std::runtime_error("matrix dimensions mismatch");
             }
-            spurt::to_vector<value_t>(_val_array, nin);
+            xavier::to_vector<value_t>(_val_array, nin);
             _mat_array=reinterpret_cast<matrix_t*>(&_val_array[0]);
         }
         
@@ -85,7 +85,7 @@ namespace spurt {
             typedef typename wrapper_t::matrix_t rval_matrix_t;
             typedef Eigen::Matrix<T, Ncols, Nrows> lval_matrix_t;
 
-            // timer tovh;
+            // nvis::timer tovh;
             //
             assert(Nrows*Ncols==nin->axis[0].size);
             size_t nmats=nrrd_size(nin)/(Nrows*Ncols);
@@ -111,7 +111,7 @@ namespace spurt {
             typedef nrrd_matrix_wrapper<T, Nrows, P> lvalw_t;
             typedef typename lvalw_t::matrix_t lval_mat_t;
             
-            // timer tovh;
+            // nvis::timer tovh;
             //
             assert(Nrows*Ncols==nin1->axis[0].size);
             assert(Ncols*P==nin2->axis[0].size);
@@ -140,7 +140,7 @@ namespace spurt {
             typedef nrrd_matrix_wrapper<T, Nrows, P> lvalw_t;
             typedef typename lvalw_t::matrix_t lval_mat_t;
             
-            // timer tovh;
+            // nvis::timer tovh;
             //
             assert(Nrows*Ncols==nin1->axis[0].size);
             assert(Ncols*P==nin2->axis[0].size);
@@ -166,7 +166,7 @@ namespace spurt {
             typedef nrrd_matrix_wrapper<T, N, N> wrapper_t;
             typedef typename wrapper_t::matrix_t matrix_t;
 
-            // timer tovh;
+            // nvis::timer tovh;
             //
             assert(N*N==nin->axis[0].size);
             size_t nmats=nrrd_size(nin)/(N*N);
@@ -198,7 +198,7 @@ namespace spurt {
             typedef Eigen::Matrix<T, Ncols, Ncols> matrixV_t;
             typedef Eigen::Matrix<T, Ndiag, 1> sigma_t;
             
-            // timer tovh;
+            // nvis::timer tovh;
             //
             assert(Nrows*Ncols==nin->axis[0].size);
             size_t nmats=nrrd_size(nin)/(Nrows*Ncols);
@@ -227,7 +227,7 @@ namespace spurt {
     
     template<typename T, int Size>
     Nrrd* wrap_and_copy_header(const Nrrd* src, T* data) {
-        // timer tovh;
+        // nvis::timer tovh;
         //
         Nrrd *nout = nrrdNew();
         int dim=(Size<=1 ? src->dim-1 : src->dim);

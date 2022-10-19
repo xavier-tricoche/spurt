@@ -13,16 +13,17 @@ template< typename Float_, typename = typename std::enable_if< std::is_floating_
 struct eps_compare {
     typedef Float_ float_t;
     static constexpr float_t eps = static_cast<float_t>(10)*std::numeric_limits<float_t>::epsilon();
-    
+
     static bool equal(float_t u, float_t v) {
+        // std::cout << std::setprecision(16) << eps << '\n';
         return ( std::abs(u-v)/std::abs(u) <= eps ) ||
                ( std::abs(u-v)/std::abs(v) <= eps );
     }
-    
+
     static bool equal_zero(float_t u) {
         return std::abs(u) <= eps;
     }
-    
+
     template< typename Compare_ = std::less< float_t > >
     static bool strict_compare(float_t u, float_t v, Compare_ comp ) {
         if ( equal(u, v) ) return false;
@@ -31,12 +32,12 @@ struct eps_compare {
 };
 }
 
-namespace spurt {
-    
+namespace xavier {
+
 template< typename CoordArray_, typename SizeArray_ >
 long coord_to_index(const CoordArray_& coord, const SizeArray_& size) {
     size_t N = size.size();
-    
+
     // i + size0*(j + size1*(k + size2*(l + ....)))
     long idx=coord[N-1];
     for (long dim=N-2; dim>=0; --dim) {
@@ -59,16 +60,16 @@ CoordArray_ index_to_coord(long idx, const SizeArray_& size) {
     }
     return coord;
 }
-    
+
 
 /*****************************************************************************
-    
+
                                 index_shifter
-    
+
 *****************************************************************************/
 
 template<size_t Dim_, typename Size_>
-inline typename index_shifter<Dim_, Size_>::coord_type 
+inline typename index_shifter<Dim_, Size_>::coord_type
 index_shifter<Dim_, Size_>::local_coords(size_t local_id) const {
     coord_type r;
     std::bitset<sizeof(size_type)> bits(local_id);
@@ -79,19 +80,19 @@ index_shifter<Dim_, Size_>::local_coords(size_t local_id) const {
 }
 
 template<size_t Dim_, typename Size_>
-index_shifter<Dim_, Size_>::index_shifter(const array_type& sizes) 
+index_shifter<Dim_, Size_>::index_shifter(const array_type& sizes)
     : m_sizes(sizes) {
     size_type shift = 1;
     for (size_t i=0 ; i<dimension ; ++i) {
         m_dim_shifts[i] = shift;
         shift *= m_sizes[i];
     }
-    
+
     size_t points_per_cell = 1;
     points_per_cell = points_per_cell << dimension;
     m_cell_shifts.resize(points_per_cell);
     std::fill(m_cell_shifts.begin(), m_cell_shifts.end(), 0);
-    
+
     for (size_t i=1 ; i<points_per_cell ; ++i) {
         std::bitset<sizeof(size_type)> bits(i);
         for (size_t j=0 ; j<dimension ; ++j) {
@@ -101,41 +102,41 @@ index_shifter<Dim_, Size_>::index_shifter(const array_type& sizes)
 }
 
 template<size_t Dim_, typename Size_>
-index_shifter<Dim_, Size_>::index_shifter(const index_shifter& other) 
+index_shifter<Dim_, Size_>::index_shifter(const index_shifter& other)
     : m_sizes(other.m_sizes), m_dim_shifts(other.m_dim_shifts),
       m_cell_shifts(other.m_cell_shifts) {}
 
-template<size_t Dim_, typename Size_>  
-typename index_shifter<Dim_, Size_>::size_type 
+template<size_t Dim_, typename Size_>
+typename index_shifter<Dim_, Size_>::size_type
 index_shifter<Dim_, Size_>::
 operator()(size_type base, size_type i) const {
     return base + i;
 }
-      
-template<size_t Dim_, typename Size_>  
-typename index_shifter<Dim_, Size_>::size_type 
+
+template<size_t Dim_, typename Size_>
+typename index_shifter<Dim_, Size_>::size_type
 index_shifter<Dim_, Size_>::
 operator()(size_type base, size_type i, size_type j) const {
     return base + i + j*m_dim_shifts[1];
 }
 
-template<size_t Dim_, typename Size_>  
-typename index_shifter<Dim_, Size_>::size_type 
+template<size_t Dim_, typename Size_>
+typename index_shifter<Dim_, Size_>::size_type
 index_shifter<Dim_, Size_>::
 operator()(size_type base, size_type i, size_type j, size_type k) const {
     return base + i + j*m_dim_shifts[1] + k*m_dim_shifts[2];
 }
 
-template<size_t Dim_, typename Size_>  
-typename index_shifter<Dim_, Size_>::size_type 
+template<size_t Dim_, typename Size_>
+typename index_shifter<Dim_, Size_>::size_type
 index_shifter<Dim_, Size_>::
 operator()(size_type base, size_type i, size_type j, size_type k,
            size_type l) const {
     return base + i + j*m_dim_shifts[1] + k*m_dim_shifts[2] + l*m_dim_shifts[3];
 }
 
-template<size_t Dim_, typename Size_>  
-typename index_shifter<Dim_, Size_>::size_type 
+template<size_t Dim_, typename Size_>
+typename index_shifter<Dim_, Size_>::size_type
 index_shifter<Dim_, Size_>::
 operator()(size_type base, const coord_type& c) const {
     size_type r(base);
@@ -144,7 +145,7 @@ operator()(size_type base, const coord_type& c) const {
         r += c[i]*m_dim_shifts[i];
     return r;
 }
-    
+
 template<size_t Dim_, typename Size_>
 typename index_shifter<Dim_, Size_>::size_type
 index_shifter<Dim_, Size_>::lift(size_type base, size_type d) const {
@@ -158,9 +159,9 @@ index_shifter<Dim_, Size_>::index(size_type base, size_type local_id) const {
 }
 
 /*****************************************************************************
-    
+
                                 raster_grid
-    
+
 *****************************************************************************/
 
 template<size_t Dim_, typename Scalar_, typename Size_>
@@ -169,7 +170,7 @@ raster_grid(const coord_type& resolution, const bounds_type& bounds,
             bool cell_based)
     : m_res(resolution), m_bounds(bounds), m_shifter(resolution)
 {
-    static_assert(dim != 0, "zero dimension is invalid");
+    static_assert(dim != 0, "Invalid 0 dimension in raster_grid constructor");
     if (cell_based) m_res += coord_type(1);
     vec_type d = m_bounds.size();
     m_npos = 1;
@@ -187,8 +188,8 @@ raster_grid(const coord_type& resolution, const vec_type& origin,
             const vec_type& spacing, bool cell_based)
     : m_res(resolution), m_spacing(spacing), m_shifter(resolution)
 {
-    static_assert(dim != 0, "zero dimension is invalid");
-    if (cell_based) m_res += coord_type(1); 
+    static_assert(dim != 0, "Invalid 0 dimension in raster_grid constructor");
+    if (cell_based) m_res += coord_type(1);
     m_bounds.min() = origin;
     m_npos = 1;
     for (dim_type i = 0 ; i < dim ; ++i) {
@@ -214,7 +215,7 @@ inline typename raster_grid<Dim_, Scalar_, Size_>::vec_type
 raster_grid<Dim_, Scalar_, Size_>::operator()(size_type i, size_type j)
 const
 {
-    static_assert(dim >= 2, "too many indices for a 1D grid");
+    static_assert(dim >= 2, "Invalid dimension (<2) in raster_grid::operator()");
     assert(i < m_res[0] && j < m_res[1]);
     vec_type r((*this)(i));
     r[1] += static_cast<scalar_type>(j)*m_spacing[1];
@@ -226,7 +227,7 @@ inline typename raster_grid<Dim_, Scalar_, Size_>::vec_type
 raster_grid<Dim_, Scalar_, Size_>::operator()(size_type i, size_type j,
         size_type k) const
 {
-    static_assert(dim >= 3, "too many indices for a (at most) 2D grid");
+    static_assert(dim >= 3, "Invalid dimension (<3) in raster_grid::operator()");
     assert(i < m_res[0] && j < m_res[1] && k < m_res[2]);
     vec_type r((*this)(i,j));
     r[2] += static_cast<scalar_type>(k)*m_spacing[2];
@@ -238,7 +239,7 @@ inline typename raster_grid<Dim_, Scalar_, Size_>::vec_type
 raster_grid<Dim_, Scalar_, Size_>::operator()(size_type i, size_type j,
         size_type k, size_type l) const
 {
-    static_assert(dim >= 4, "too many indices for a (at most) 3D grid");
+    static_assert(dim >= 4, "Invalid dimension (<4) in raster_grid::operator()");
     assert(i < m_res[0] && j < m_res[1] && k < m_res[2] && l < m_res[3]);
     vec_type r((*this)(i,j,k));
     r[3] += static_cast<scalar_type>(l)*m_spacing[3];
@@ -256,7 +257,7 @@ raster_grid<Dim_, Scalar_, Size_>::operator()(const coord_type& ids) const
 }
 
 template<size_t Dim_, typename Scalar_, typename Size_>
-inline typename raster_grid<Dim_, Scalar_, Size_>::size_type 
+inline typename raster_grid<Dim_, Scalar_, Size_>::size_type
 raster_grid<Dim_, Scalar_, Size_>::index(size_type i) const
 {
     assert(i < m_res[0]);
@@ -267,27 +268,27 @@ template<size_t Dim_, typename Scalar_, typename Size_>
 inline typename raster_grid<Dim_, Scalar_, Size_>::size_type
 raster_grid<Dim_, Scalar_, Size_>::index(size_type i, size_type j) const
 {
-    static_assert(dim >= 2, "too many indices for a 1D grid");
+    static_assert(dim >= 2, "Invalid dimension (<2) in raster_grid::operator()");
     assert(i < m_res[0] && j < m_res[1]);
     return m_shifter(0, i, j);
 }
 
 template<size_t Dim_, typename Scalar_, typename Size_>
 inline typename raster_grid<Dim_, Scalar_, Size_>::size_type
-raster_grid<Dim_, Scalar_, Size_>::index(size_type i, size_type j, 
+raster_grid<Dim_, Scalar_, Size_>::index(size_type i, size_type j,
                                          size_type k) const
 {
-    static_assert(dim >= 3, "too many indices for a (at most) 2D grid");
+    static_assert(dim >= 3, "Invalid dimension (<3) in raster_grid::operator()");
     assert(i < m_res[0] && j < m_res[1] && k < m_res[2]);
     return m_shifter(0, i, j, k);
 }
 
 template<size_t Dim_, typename Scalar_, typename Size_>
 inline typename raster_grid<Dim_, Scalar_, Size_>::size_type
-raster_grid<Dim_, Scalar_, Size_>::index(size_type i, size_type j, 
+raster_grid<Dim_, Scalar_, Size_>::index(size_type i, size_type j,
                                          size_type k, size_type l) const
 {
-    static_assert(dim >= 4, "too many indices for a (at most) 3D grid");
+    static_assert(dim >= 4, "Invalid dimension (<4) in raster_grid::operator()");
     assert(i < m_res[0] && j < m_res[1] && k < m_res[2] && l < m_res[3]);
     return m_shifter(0, i, j, k, l);
 }
@@ -324,7 +325,7 @@ template<size_t Dim_, typename Scalar_, typename Size_>
 inline std::pair<typename raster_grid<Dim_, Scalar_, Size_>::coord_type,
                  typename raster_grid<Dim_, Scalar_, Size_>::vec_type>
 raster_grid<Dim_, Scalar_, Size_>::locate(const point_type& x) const
-{   
+{
     typedef eps_compare< scalar_type > eps_comp_t;
     vec_type y = x - m_bounds.min();
     y /= m_spacing;
@@ -348,9 +349,9 @@ raster_grid<Dim_, Scalar_, Size_>::locate(const point_type& x) const
         }
         else {
             std::ostringstream os;
-            os << std::setprecision(16) 
-            << "invalid " << spurt::number_to_rank(i+1) << " coordinate in raster_grid::locate()\n"
-            << "coordinate mapped from " << x[i] << " to " << y[i] 
+            os << std::setprecision(16)
+            << "invalid " << xavier::number_to_rank(i+1) << " coordinate in raster_grid::locate()\n"
+            << "coordinate mapped from " << x[i] << " to " << y[i]
             << " was tested against: [0, " << _max << "]\n";
             throw std::runtime_error(os.str());
         }
@@ -359,9 +360,9 @@ raster_grid<Dim_, Scalar_, Size_>::locate(const point_type& x) const
 }
 
 /*****************************************************************************
-    
+
                                 raster_data
-    
+
 *****************************************************************************/
 
 template<typename Value_, size_t Dim_, typename Scalar_, typename Size_>
@@ -417,9 +418,9 @@ template<typename Value_, size_t Dim_, typename Scalar_, typename Size_>
 void raster_data<Value_, Dim_, Scalar_, Size_>::
 save_as_nrrd(const std::string& filename) const
 {
-    std::string type_string = spurt::type2string<Scalar_>::type_name;
-    size_t ncomp = spurt::data_traits<Value_>::size();
-    
+    std::string type_string = xavier::type2string<Scalar_>::type_name();
+    size_t ncomp = xavier::data_traits<Value_>::size();
+
     std::ostringstream os;
     os << "NRRD0001\n";
     os << "# Complete NRRD file format specification at:\n";
@@ -452,12 +453,12 @@ save_as_nrrd(const std::string& filename) const
     os << '\n';
     os << "endian: little\n";
     os << "encoding: raw\n";
-    
+
     size_t sz = ncomp*m_data.size()*sizeof(Scalar_);
     std::cout << "exporting " << sz << " bytes" << '\n';
     std::cout << "grid res: " << m_grid.resolution() << '\n';
     std::cout << "grid size: " << m_grid.size() << '\n';
-    
+
     std::ofstream out(filename.c_str(), std::ios::binary);
     out << os.str() << std::endl;
     out.write((char*)&m_data[0], sz);
@@ -465,9 +466,9 @@ save_as_nrrd(const std::string& filename) const
 }
 
 /*****************************************************************************
-    
+
                                 image
-    
+
 *****************************************************************************/
 
 template<typename Value_, size_t Dim_, typename Scalar_, typename Size_>
@@ -487,9 +488,9 @@ bilinear(const vec_type& u, size_type a) const
     const vec_type& hi = u;
     vec_type lo = vec_type(1.) - hi;
     return
-        lo[0]*lo[1]*this->m_data[a           ] + 
+        lo[0]*lo[1]*this->m_data[a           ] +
         hi[0]*lo[1]*this->m_data[shift(a,1)  ] +
-        lo[0]*hi[1]*this->m_data[shift(a,0,1)] + 
+        lo[0]*hi[1]*this->m_data[shift(a,0,1)] +
         hi[0]*hi[1]*this->m_data[shift(a,1,1)];
 }
 
@@ -500,16 +501,16 @@ trilinear(const vec_type& u, size_type a) const
 {
     const typename base_type::shifter_type& shift = this->grid().shifter();
     const vec_type& hi = u;
-    vec_type lo = vec_type(1.) - hi;   
-    
-    return 
-        lo[0]*lo[1]*lo[2]*this->m_data[a             ] + 
+    vec_type lo = vec_type(1.) - hi;
+
+    return
+        lo[0]*lo[1]*lo[2]*this->m_data[a             ] +
         hi[0]*lo[1]*lo[2]*this->m_data[shift(a,1)    ] +
-        lo[0]*hi[1]*lo[2]*this->m_data[shift(a,0,1)  ] + 
-        hi[0]*hi[1]*lo[2]*this->m_data[shift(a,1,1)  ] + 
-        lo[0]*lo[1]*hi[2]*this->m_data[shift(a,0,0,1)] + 
+        lo[0]*hi[1]*lo[2]*this->m_data[shift(a,0,1)  ] +
+        hi[0]*hi[1]*lo[2]*this->m_data[shift(a,1,1)  ] +
+        lo[0]*lo[1]*hi[2]*this->m_data[shift(a,0,0,1)] +
         hi[0]*lo[1]*hi[2]*this->m_data[shift(a,1,0,1)] +
-        lo[0]*hi[1]*hi[2]*this->m_data[shift(a,0,1,1)] + 
+        lo[0]*hi[1]*hi[2]*this->m_data[shift(a,0,1,1)] +
         hi[0]*hi[1]*hi[2]*this->m_data[shift(a,1,1,1)];
 }
 
@@ -521,22 +522,22 @@ quadrilinear(const vec_type& u, size_type a) const
     const typename base_type::shifter_type& shift = this->grid().shifter();
     const vec_type& hi = u;
     vec_type lo = vec_type(1.) - hi;
-    return 
-        lo[0]*lo[1]*lo[2]*lo[3]*this->m_data[a] + 
+    return
+        lo[0]*lo[1]*lo[2]*lo[3]*this->m_data[a] +
         hi[0]*lo[1]*lo[2]*lo[3]*this->m_data[shift(a,1)      ] +
-        lo[0]*hi[1]*lo[2]*lo[3]*this->m_data[shift(a,0,1)    ] + 
+        lo[0]*hi[1]*lo[2]*lo[3]*this->m_data[shift(a,0,1)    ] +
         hi[0]*hi[1]*lo[2]*lo[3]*this->m_data[shift(a,1,1)    ] +
-        lo[0]*lo[1]*hi[2]*lo[3]*this->m_data[shift(a,0,0,1)  ] + 
+        lo[0]*lo[1]*hi[2]*lo[3]*this->m_data[shift(a,0,0,1)  ] +
         hi[0]*lo[1]*hi[2]*lo[3]*this->m_data[shift(a,1,0,1)  ] +
-        lo[0]*hi[1]*hi[2]*lo[3]*this->m_data[shift(a,0,1,1)  ] + 
+        lo[0]*hi[1]*hi[2]*lo[3]*this->m_data[shift(a,0,1,1)  ] +
         hi[0]*hi[1]*hi[2]*lo[3]*this->m_data[shift(a,1,1,1)  ] +
-        lo[0]*lo[1]*lo[2]*hi[3]*this->m_data[shift(a,0,0,0,1)] + 
+        lo[0]*lo[1]*lo[2]*hi[3]*this->m_data[shift(a,0,0,0,1)] +
         hi[0]*lo[1]*lo[2]*hi[3]*this->m_data[shift(a,1,0,0,1)] +
-        lo[0]*hi[1]*lo[2]*hi[3]*this->m_data[shift(a,0,1,0,1)] + 
+        lo[0]*hi[1]*lo[2]*hi[3]*this->m_data[shift(a,0,1,0,1)] +
         hi[0]*hi[1]*lo[2]*hi[3]*this->m_data[shift(a,1,1,0,1)] +
-        lo[0]*lo[1]*hi[2]*hi[3]*this->m_data[shift(a,0,0,1,1)] + 
+        lo[0]*lo[1]*hi[2]*hi[3]*this->m_data[shift(a,0,0,1,1)] +
         hi[0]*lo[1]*hi[2]*hi[3]*this->m_data[shift(a,1,0,1,1)] +
-        lo[0]*hi[1]*hi[2]*hi[3]*this->m_data[shift(a,0,1,1,1)] + 
+        lo[0]*hi[1]*hi[2]*hi[3]*this->m_data[shift(a,0,1,1,1)] +
         hi[0]*hi[1]*hi[2]*hi[3]*this->m_data[shift(a,1,1,1,1)] ;
 }
 
@@ -557,10 +558,12 @@ multilinear(const vec_type& u, size_type a, size_t n) const
         case 4:
             return quadrilinear(u, a);
         default:
-            break;
+            scalar_type alpha = 1. - u[n-1];
+            scalar_type beta = u[n-1];
+            value_type v = alpha * multilinear(u, a, n-1);
+            v += beta * multilinear(u, this->grid().shifter().lift(a, n-1), n-1);
+            return v;
     }
-    return (1.-u[n-1])*multilinear(u, a, n-1) +
-           u[n-1]*multilinear(u, this->grid().shifter().lift(a, n-1), n-1);
 }
 
 template<typename Value_, size_t Dim_, typename Scalar_, typename Size_>
@@ -593,14 +596,14 @@ dbilinear_part(const vec_type& p, size_type a, size_type d) const
     /*
         bilinear:
             B(u,v) = (1-v)*L(u,v=0) + v*L(u,v=1)
-            dB/du(u,v) = (1-v)*dL/du(u,v=0) + v*dL/du(u,v=1) 
+            dB/du(u,v) = (1-v)*dL/du(u,v=0) + v*dL/du(u,v=1)
             dB/dv(u,v) = L(u,v=1) - L(u,v=0)
     */
     const scalar_type& v = p[1];
     const size_type& lo = a;
     const size_type hi = _lift(a, 1);
     switch(d) {
-        case 0: return 
+        case 0: return
             (1-v)*dlinear_part(p, lo) + v*dlinear_part(p, hi);
         case 1: return
             linear(p, hi) - linear(p, lo);
@@ -628,7 +631,7 @@ dtrilinear_part(const vec_type& p, size_type a, size_type d) const
             (1-w)*dbilinear_part(p, lo, 0) + w*dbilinear_part(p, hi, 0);
         case 1: return
             (1-w)*dbilinear_part(p, lo, 1) + w*dbilinear_part(p, hi, 1);
-        case 2: return 
+        case 2: return
             bilinear(p, hi) - bilinear(p, lo);
     }
     throw std::runtime_error("invalid dimension in image<>::dtrilinear_part()");
@@ -666,7 +669,7 @@ dquadrilinear_part(const vec_type& p, size_type a, size_type d) const
 template<typename Value_, size_t Dim_, typename Scalar_, typename Size_>
 typename image<Value_, Dim_, Scalar_, Size_>::value_type
 image<Value_, Dim_, Scalar_, Size_>::
-dmultilinear_part(const vec_type& p, size_type a, size_type d, 
+dmultilinear_part(const vec_type& p, size_type a, size_type d,
     size_type n) const
 {
     switch (n) {
@@ -754,7 +757,7 @@ typename image<Value_, Dim_, Scalar_, Size_>::val1
 image<Value_, Dim_, Scalar_, Size_>::
 derivative(size_type i) const
 {
-    BOOST_STATIC_ASSERT(dim == 1);
+    static_assert(dim == 1, "Invalid dimension (!=1) in image::derivative(Int)");
     val1 r;
     r[0] = central_diff(i, i, 0);
     return r;
@@ -765,7 +768,7 @@ typename image<Value_, Dim_, Scalar_, Size_>::val2
 image<Value_, Dim_, Scalar_, Size_>::
 derivative(size_type i, size_type j) const
 {
-    BOOST_STATIC_ASSERT(dim == 2);
+    static_assert(dim == 2, "Invalid dimension (!=2) in image::derivative(Int, Int)");
     val2 r;
     coord_type id = this->m_grid.idx(i, j);
     r[0] = central_diff(i, id, 0);
@@ -778,7 +781,7 @@ typename image<Value_, Dim_, Scalar_, Size_>::val3
 image<Value_, Dim_, Scalar_, Size_>::
 derivative(size_type i, size_type j, size_type k) const
 {
-    BOOST_STATIC_ASSERT(dim == 3);
+    static_assert(dim == 3, "Invalid dimension (!=3) in image::derivative(Int, Int, Int)");
     val3 r;
     coord_type id = this->m_grid.idx(i, j, k);
     r[0] = central_diff(i, id, 0);
@@ -793,7 +796,7 @@ image<Value_, Dim_, Scalar_, Size_>::
 derivative(size_type i, size_type j, size_type k, size_type l)
 const
 {
-    BOOST_STATIC_ASSERT(dim == 4);
+    static_assert(dim == 4, "Invalid dimension (!=4) in image::derivative(Int, Int, Int, Int)");
     vec_type r;
     coord_type id = this->m_grid.idx(i, j, k, l);
     r[0] = central_diff(i, id, 0);
@@ -814,5 +817,4 @@ derivative(const coord_type& id) const
     }
     return r;
 }
-
-} // namespace spurt
+} // namespace xavier

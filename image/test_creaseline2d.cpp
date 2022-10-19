@@ -28,14 +28,14 @@ int main(int argc, char* argv[])
     std::string filename = argv[1];
     Nrrd *nin = readNrrd(filename);
 
-    spurt::Raster::Grid grid;
+    xavier::Raster::Grid grid;
     grid.nx = nin->axis[0].size;
     grid.ny = nin->axis[1].size;
     grid.minx = grid.miny = 0;
     grid.maxx = nin->axis[0].size - 1;
     grid.maxy = nin->axis[1].size - 1;
 
-    std::vector< vec2 > points;
+    std::vector< nvis::vec2 > points;
     std::vector< std::list< unsigned int > > ridges;
     float *input = (float*)nin->data;
     unsigned int N = nin->axis[0].size * nin->axis[1].size;
@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
     nrrdWrap_va(_nin, _data, nrrdTypeFloat, 3, nin->axis[0].size, nin->axis[1].size, 2);
     nrrdAxisInfoSet_va(_nin, nrrdAxisInfoCenter, nrrdCenterCell, nrrdCenterCell, nrrdCenterCell );
     nrrdAxisInfoSet_va(_nin, nrrdAxisInfoSpacing, 1.0, 1.0, 1.0 );
-    spurt::crease::extract(_nin, grid, -1000000, true, points, ridges);
+    xavier::crease::extract(_nin, grid, -1000000, true, points, ridges);
     float *data = (float*)calloc(3 * N, sizeof(float));
     for (unsigned int i = 0 ; i < N ; ++i) {
         data[3*i  ] = input[i];
@@ -65,8 +65,8 @@ int main(int argc, char* argv[])
     }
 
     /*
-    for (unsigned int n = 0 ; n < spurt::crease::skipped.size() ; ++n) {
-        if (spurt::crease::skipped[n]) {
+    for (unsigned int n = 0 ; n < xavier::crease::skipped.size() ; ++n) {
+        if (xavier::crease::skipped[n]) {
             unsigned int i = n % grid.nx;
             unsigned int j = n / grid.nx;
 
@@ -81,8 +81,8 @@ int main(int argc, char* argv[])
     }
     */
     /*
-    for (unsigned int n = 0 ; n < spurt::crease::singular.size() ; ++n) {
-        if (spurt::crease::singular[n]) {
+    for (unsigned int n = 0 ; n < xavier::crease::singular.size() ; ++n) {
+        if (xavier::crease::singular[n]) {
             unsigned int i = n % grid.nx;
             unsigned int j = n / grid.nx;
 
@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
 
         double str = 0;
         for (it = ridges[n].begin() ; it != ridges[n].end() ; ++it) {
-            str += fabs(spurt::crease::crease_strength[*it]);
+            str += fabs(xavier::crease::crease_strength[*it]);
         }
         ridge_strength[n] = str / (double)ridges[n].size();
     }
@@ -119,12 +119,12 @@ int main(int argc, char* argv[])
     for (unsigned n = 0 ; n < ridges.size() ; ++n) {
         if (ridge_strength[n] < threshold || ridges[n].size()<10 ) continue;
 
-        fvec3 color(0.3 * drand48(), 0.3 * drand48(), 0.3 * drand48());
+        nvis::fvec3 color(0.3 * drand48(), 0.3 * drand48(), 0.3 * drand48());
         color *= max;
         std::list< unsigned int >::iterator it;
         for (it = ridges[n].begin() ; it != ridges[n].end() ; ++it) {
 
-            const vec2& x = points[*it];
+            const nvis::vec2& x = points[*it];
             unsigned int i = (unsigned int)floor(x[0]);
             unsigned int j = (unsigned int)floor(x[1]);
             unsigned int p = i + j * nin->axis[0].size;

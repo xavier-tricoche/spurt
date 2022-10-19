@@ -10,7 +10,7 @@
 #include <omp.h>
 #endif
 
-namespace spurt { namespace log { 
+namespace xavier { namespace log { 
     
 class dual_ostream {
 public:

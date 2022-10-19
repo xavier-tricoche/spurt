@@ -1,11 +1,9 @@
 #include <iostream>
 
 #include <math/bounding_box.hpp>
-
 #include <crease/measure_wrapper.hpp>
-#include <image/nrrd_wrapper.hpp>
 
-using namespace spurt;
+using namespace xavier;
 using namespace nvis;
 using namespace std;
 
@@ -102,8 +100,8 @@ vec6 _hessian(const MeasureWrapper& wrap, const vec3& p)
             dg_cur = 0.5 / h * (grad[1] - grad[0]);
             std::cout << dg_cur << "... " << std::flush;
             if (n) {
-                double delta = spurt::norm(dg_cur - dg_prev);
-                double denom = spurt::norm(dg_prev);
+                double delta = nvis::norm(dg_cur - dg_prev);
+                double denom = nvis::norm(dg_prev);
                 double err = fabs(delta / denom);
                 if (err < 1.0e-6) {
                     switch (i) {
@@ -142,12 +140,12 @@ vec6 _hessian(const MeasureWrapper& wrap, const vec3& p)
 
 // --------------------------------------------------------------------------
 
-void spurt::test_derivatives(const Nrrd* nrrd, int aniso)
+void xavier::test_derivatives(const Nrrd* nrrd, int aniso)
 {
     srand48(time(0));
     MeasureWrapper wrapper(nrrd, aniso);
 
-    bbox3 box = spurt::bounds<3>(nrrd);
+    nvis::bbox3 box = xavier::nrrd_utils::get_bounds<3>(nrrd);
 
     // check gradient
     double avg = 0, total_max = 0;
@@ -155,7 +153,7 @@ void spurt::test_derivatives(const Nrrd* nrrd, int aniso)
     for (unsigned int n = 0 ; n < 100 ; k++) {
         std::cout << "computing gradient at point #" << k
                   << " (" << n << ")" << std::endl;
-        vec3 random(drand48(), drand48(), drand48());
+        nvis::vec3 random(drand48(), drand48(), drand48());
         vec3 p = box.min() + random * box.size();
 
         // make sure we are at a valid position within the volume
@@ -194,7 +192,7 @@ void spurt::test_derivatives(const Nrrd* nrrd, int aniso)
     for (unsigned int n = 0 ; n < 100 ; k++) {
         std::cout << "computing hessian at point #" << k
                   << " (" << n << ")" << std::endl;
-        vec3 random(drand48(), drand48(), drand48());
+        nvis::vec3 random(drand48(), drand48(), drand48());
         vec3 p = box.min() + random * box.size();
 
         // make sure we are at a valid position within the volume
@@ -214,8 +212,8 @@ void spurt::test_derivatives(const Nrrd* nrrd, int aniso)
 
         double max = 0;
         for (unsigned int i = 0 ; i < 3 ; i++) {
-            double delta = spurt::norm(hess_ref - hess_app);
-            double denom = spurt::norm(hess_ref);
+            double delta = nvis::norm(hess_ref - hess_app);
+            double denom = nvis::norm(hess_ref);
             if (denom == 0) denom = 1.;
             double diff = fabs(delta / denom);
             if (diff > max) max = diff;

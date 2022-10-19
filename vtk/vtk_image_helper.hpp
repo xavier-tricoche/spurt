@@ -3,6 +3,9 @@
 
 #include "vtk_macros.hpp"
 #include "vtk_data_helper.hpp"
+
+#include <third_party/fastmathparser/exprtk.hpp>
+
 #include <string>
 
 #include <math/fixed_vector.hpp>
@@ -17,9 +20,7 @@
 #include <vtkImageShiftScale.h>
 #include <vtkJPEGReader.h>
 #include <vtkJPEGWriter.h>
-#if VTK_MAJOR_VERSION >= 6
 #include <vtkNrrdReader.h>
-#endif
 #include <vtkOrientationMarkerWidget.h>
 #include <vtkPNGReader.h>
 #include <vtkPNGWriter.h>
@@ -33,13 +34,17 @@
 #include <vtkTIFFWriter.h>
 #include <vtkWindowToImageFilter.h>
 
+#if __VTK_HAS_LIC__
+// #include <vtkLineIntegralConvolution2D.h>
+#endif
+
 namespace vtk_utils {
 
 inline vtkOrientationMarkerWidget* coord_axes_widget(
     vtkRenderWindowInteractor* inter,
-    const spurt::vec3& txt_col=spurt::vec3(1,1,1),
-    const spurt::vec3& bg_color=spurt::vec3(0,0,0),
-    const spurt::vec4& viewport=spurt::vec4(0,0,0.4,0.4),
+    const nvis::vec3& txt_col=nvis::vec3(1,1,1),
+    const nvis::vec3& bg_color=nvis::vec3(0,0,0),
+    const nvis::vec4& viewport=nvis::vec4(0,0,0.4,0.4),
     double radius=0.05,
     const std::string& Xlabel="X",
     const std::string& Ylabel="Y",
@@ -71,6 +76,118 @@ inline vtkOrientationMarkerWidget* coord_axes_widget(
     return widget;
 }
 
+template<typename T>
+inline vtkImageData* expr_to_image(const std::vector<std::string>& expr_str,
+                                   const nvis::bbox3& bounds,
+                                   const nvis::ivec3& res) {
+
+    typedef T                                              value_t;
+    typedef nvis::fixed_vector<value_t, 3>                  vec3_t;
+    typedef typename vtk_array_traits<value_t>::array_type array_t;
+    typedef exprtk::symbol_table<double >           symbol_table_t;
+    typedef exprtk::expression<double>                expression_t;
+    typedef exprtk::parser<double>                        parser_t;
+
+
+    const size_t deg=expr_str.size();
+
+    symbol_table_t symbol_table;
+    std::vector<expression_t> expr(deg);
+    double x, y, z;
+
+    symbol_table.add_variable("x", x);
+    symbol_table.add_variable("y", y);
+    symbol_table.add_variable("z", z);
+    symbol_table.add_constants();
+
+    // std::cout << "symbol table created\n";
+
+    for (int i=0; i<deg; ++i) {
+        expr[i].register_symbol_table(symbol_table);
+    }
+
+    // std::cout << "symbol table registered to " << deg << " expressions\n";
+
+    parser_t parser;
+    for (int i=0; i<deg; ++i) {
+        if (!parser.compile(expr_str[i], expr[i])) {
+            std::cerr << "parser error: " << parser.error()
+                << " for expression " << expr_str[i] << '\n';
+            throw std::runtime_error("Invalid expression: " + expr_str[i]);
+        }
+    }
+
+    // std::cout << "res=" << res << '\n';
+
+    vtkSmartPointer<array_t> values(array_t::New());
+    values->SetNumberOfComponents(deg);
+    if (deg==1) values->SetNumberOfTuples(res[0]*res[1]*res[2]);
+    nvis::vec3 delta=bounds.size()/(nvis::vec3(res)-nvis::vec3(1.));
+
+    if (res[2]==1) delta[2]=1.;
+
+    // std::cout << "delta=" << delta << '\n';
+
+    int counter=0;
+    for (int n=0; n<res[0]*res[1]*res[2]; ++n) {
+        // n = i + res[0]*(j + res[1]*k)
+        int i=n%res[0];
+        int j=(n/res[0])%res[1];
+        int k=n/(res[0]*res[1]);
+        x=std::min(bounds.min()[0]+i*delta[0], bounds.max()[0]);
+        y=std::min(bounds.min()[1]+j*delta[1], bounds.max()[1]);
+        z=std::min(bounds.min()[2]+k*delta[2], bounds.max()[2]);
+        // std::cout << "evaluation at " << nvis::vec3(x,y,z) << '\n';
+        if (deg==1) {
+            value_t v=static_cast<value_t>(expr[0].value());
+            values->SetValue(counter, v);
+        }
+        else if (deg==3) {
+            vec3_t v;
+            v[0]=static_cast<value_t>(expr[0].value());
+            v[1]=static_cast<value_t>(expr[1].value());
+            v[2]=static_cast<value_t>(expr[2].value());
+            // std::cout << "v=" << v << '\n';
+            values->InsertNextTypedTuple(v.begin());
+        }
+    }
+
+    /*
+    for (z=bounds.min()[2]; z<=bounds.max()[2]; z+=delta[2]) {
+        for (y=bounds.min()[1]; y<=bounds.max()[1]; y+=delta[1]) {
+            for (x=bounds.min()[0]; x<=bounds.max()[0]; x+=delta[0], ++counter) {
+                std::cout << "evaluation at " << nvis::vec3(x,y,z) << '\n';
+                if (deg==1) {
+                    double v=expr[0].value();
+                    values->SetValue(counter, v);
+                }
+                else if (deg==3) {
+                    nvis::vec3 v;
+                    v[0]=expr[0].value();
+                    v[1]=expr[1].value();
+                    v[2]=expr[2].value();
+                    std::cout << "v=" << v << '\n';
+                    values->InsertNextTypedTuple(v.begin());
+                }
+            }
+        }
+    }
+    */
+
+    vtkImageData* out=vtkImageData::New();
+    out->SetDimensions(res[0], res[1], res[2]);
+    out->SetOrigin(bounds.min()[0], bounds.min()[1], bounds.min()[2]);
+    out->SetSpacing(delta[0], delta[1], delta[2]);
+    if (deg==1) {
+        out->GetPointData()->SetScalars(values);
+    }
+    else if (deg==3) {
+        out->GetPointData()->SetVectors(values);
+    }
+    return out;
+}
+
+
 inline vtkTexture* image_to_texture(const vtkImageData* img)
 {
     const vtkDataArray* data = const_cast<vtkImageData*>(img)->GetPointData()->GetScalars();
@@ -85,11 +202,7 @@ inline vtkTexture* image_to_texture(const vtkImageData* img)
         tmp_img->GetPointData()->SetScalars(byte_data);
         //
         VTK_PTR(vtkDataSetWriter, writer);
-#if (VTK_MAJOR_VERSION >= 6)
         writer->SetInputData(tmp_img);
-#else
-        writer->SetInput(tmp_img);
-#endif
         writer->SetFileName("debug2.vtk");
         writer->SetFileTypeToBinary();
         writer->Update();
@@ -135,9 +248,25 @@ inline void save_image_in_given_format<vtkJPEGWriter>(const vtkImageData* data,
     writer->Write();
 }
 
+template<>
+inline void save_image_in_given_format<vtkTIFFWriter>(const vtkImageData* data,
+                                                      const std::string& filename,
+													  int quality) {
+    VTK_CREATE(vtkTIFFWriter, writer);
+    VTK_CONNECT(writer, const_cast<vtkImageData*>(data));
+    writer->SetFileName(filename.c_str());
+    if (quality < 100) {
+        writer->SetCompressionToJPEG();
+    }
+    else {
+        writer->SetCompressionToPackBits();
+    }
+    writer->Write();
+}
+
 inline vtkImageData* load_image(const std::string& filename)
 {
-    std::string ext = spurt::filename::extension(filename);
+    std::string ext = xavier::filename::extension(filename);
     if (ext == "png") {
         return load_image_of_given_format<vtkPNGReader>(filename);
     } else if (ext == "tif" || ext == "tiff") {
@@ -147,11 +276,9 @@ inline vtkImageData* load_image(const std::string& filename)
     } else if (ext == "jpg" || ext == "jpeg" || ext == "jpg2" || ext == "jpeg2") {
         return load_image_of_given_format<vtkJPEGReader>(filename);
     }
-#if VTK_MAJOR_VERSION >= 6
     else if (ext == "nrrd" || ext == "nhdr") {
         return load_image_of_given_format<vtkNrrdReader>(filename);
     }
-#endif
     else if (ext == "pnm" || ext == "ppm") {
         return load_image_of_given_format<vtkPNMReader>(filename);
     } else {
@@ -162,7 +289,7 @@ inline vtkImageData* load_image(const std::string& filename)
 
 inline void save_image(const vtkImageData* data, const std::string& filename, int quality=100)
 {
-    std::string ext = spurt::filename::extension(filename);
+    std::string ext = xavier::filename::extension(filename);
     if (ext == "png") {
         VTK_CREATE(vtkImageShiftScale, cast);
         VTK_CONNECT(cast, const_cast<vtkImageData*>(data));
@@ -175,7 +302,7 @@ inline void save_image(const vtkImageData* data, const std::string& filename, in
         cast->Update();
         save_image_in_given_format<vtkPNGWriter>(cast->GetOutput(), filename);
     } else if (ext == "tif" || ext == "tiff") {
-        save_image_in_given_format<vtkTIFFWriter>(data, filename);
+        save_image_in_given_format<vtkTIFFWriter>(data, filename, quality);
     } else if (ext == "bmp") {
         save_image_in_given_format<vtkBMPWriter>(data, filename);
     } else if (ext == "jpg" || ext == "jpeg" || ext == "jpg2" || ext == "jpeg2") {
@@ -209,10 +336,37 @@ inline void save_frame(vtkRenderWindow* window,
     save_image(capture->GetOutput(), filename, quality);
 }
 
+#if 0 /*__VTK_HAS_LIC__*/
+// inline vtkImageData* do_lic(const vtkImageData* rhs, int nsteps, float eps,
+//                             bool enhanced=false, int factor=1)
+// {
+//     // temporary render window provides local context to GPU computation
+//     VTK_PTR(vtkRenderWindow, context);
+//
+//     // compute LIC texture
+//     vtkImageData* img;
+//     VTK_PTR(vtkLineIntegralConvolution2D, lic);
+//     VTK_CONNECT(lic, const_cast<vtkImageData*>(rhs));
+//     lic->SetContext(context);
+//     lic->SetNumberOfSteps(nsteps);
+//     lic->SetStepSize(eps);
+//     lic->SetMagnification(factor);
+// 	lic->EnhancedLICOn();
+// 	lic->AntiAliasOn();
+//     // if (enhanced) lic->EnhanceOn();
+//     lic->UpdateInformation();
+//     lic->Update();
+//     context->Delete();
+//     img=lic->GetOutput();
+//     img->Register(img);
+//     lic->Delete();
+//     return img;
+// }
+#endif
 
-inline vtkRenderer* fill_window(vtkRenderer* inout, const spurt::bbox2& bounds) {
+inline vtkRenderer* fill_window(vtkRenderer* inout, const nvis::bbox2& bounds) {
     inout->GetActiveCamera()->SetParallelProjection(1);
-    spurt::vec2 center=bounds.center();
+    nvis::vec2 center=bounds.center();
     inout->GetActiveCamera()->SetPosition(center[0], center[1], 1);
     inout->GetActiveCamera()->SetFocalPoint(center[0], center[1], 0);
     inout->GetActiveCamera()->SetViewUp(0, 1, 0);

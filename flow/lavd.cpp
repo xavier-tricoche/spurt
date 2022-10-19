@@ -22,9 +22,9 @@
 #include <image/nrrd_wrapper.hpp>
 #include <image/probe.hpp>
 #include <misc/option_parse.hpp>
-#include <misc/time_helper.hpp>
+#include <misc/progress.hpp>
 #include <misc/log_helper.hpp>
-#include <vtk/vtk_utils.hpp>
+#include <VTK/vtk_utils.hpp>
 
 #include <Eigen/Core>
 #include <Eigen/SVD>
@@ -35,17 +35,17 @@
 
 template<typename T, size_t N>
 std::ostream& operator<<(std::ostream& os, const std::array<T, N>& a) {
-    os << "[" << a[0];
-    for (int i=1; i<N; ++i) {
-        os << ", " << a[i];
-    }
-    os << "]";
-    return os;
+	os << "[" << a[0];
+	for (int i=1; i<N; ++i) {
+		os << ", " << a[i];
+	}
+	os << "]";
+	return os;
 }
 
 namespace odeint = boost::numeric::odeint;
 
-using namespace spurt::lavd;
+using namespace xavier::lavd;
 
 
 std::string name_in, name_out;
@@ -61,13 +61,13 @@ std::string border_mask_name;
 std::string restart_name;
 std::ofstream log_file;
 
-spurt::log::dual_ostream spurt::lavd::_log_(log_file, std::cout, 1, 0, 0, true);
+xavier::log::dual_ostream xavier::lavd::_log_(log_file, std::cout, 1, 0, 0, true);
 
-value_t t_max=2*spurt::lavd::DAY;
+value_t t_max=2*xavier::lavd::DAY;
 value_t t_init=0;
 value_t t_skip=0;
-value_t t_export_step=3*spurt::lavd::HOUR;
-value_t t_between_files=3*spurt::lavd::HOUR;
+value_t t_export_step=3*xavier::lavd::HOUR;
+value_t t_between_files=3*xavier::lavd::HOUR;
 value_t eps=1.0e-8;
 value_t dt=30;
 std::array<size_t, 2> res( { 512, 512 } );
@@ -113,114 +113,79 @@ void set_verbose_values() {
 }
 
 void parse_restart_file() {
-    _log_(2) << "parsing restart file" << std::endl;
-    Nrrd* nin = spurt::readNrrd(restart_name);
-    spurt::nrrd_traits traits(nin);
-    res[0] = traits.sizes()[1];
-    res[1] = traits.sizes()[2];
-    
-    std::cout << "resolution: " << res[0] << " x " << res[1] << std::endl;
-    
-    const std::vector<std::string>& comments = traits.comments();
-    std::cout << "There are " << comments.size() << " lines of comments" << std::endl;
-        
-    std::string param, val_as_str;
-    
-    std::regex line_regex("[ ]*\\*[ ]*(.*)[ ]*=[ ]*(.*)$"); // "* <what>=<value>"
-    std::regex res_regex("(.*)[ ]*x[ ]*(.*)$");
-    std::regex bnd_regex("(.*)[ ]*->[ ]*(.*)$");
-    std::smatch line_match, res_match, bnd_match;
-    for (int i=0; i<comments.size(); ++i) { // skip first 2 lines of comments
-        const std::string& c = comments[i];
-        if (std::regex_search(c, line_match, line_regex)) {
-            param = line_match[1].str();
-            val_as_str = line_match[2].str();
-        }
-        else {
-            std::cout << "skipping comment line: " << c << std::endl;
-            continue;
-        }
-        std::cout << "parameter: " << param << ", value: " << val_as_str << std::endl;
-        if (param == "input file") name_in = val_as_str;
-        else if (param == "current time" || param == "tmax") t_init = std::stod(val_as_str);
-        else if (param == "epsilon") eps = std::stod(val_as_str);
-        else if (param == "resolution") {
-            if (std::regex_search(val_as_str, res_match, res_regex)) {
-                res[0] = std::stoi(res_match[1].str());
-                res[1] = std::stoi(res_match[2].str());
-            }
-            else throw std::runtime_error("invalid resolution syntax in restart file");
-        }
-        else if (param == "bounds") {
-            if (std::regex_search(val_as_str, bnd_match, bnd_regex)) {
-                std::istringstream iss1(bnd_match[1].str());
-                spurt::vec2 x;
-                iss1 >> x;
-                bnds[0] = x[0];
-                bnds[1] = x[1];
-                std::istringstream iss2(bnd_match[2].str());
-                iss2 >> x;
-                bnds[2] = x[0];
-                bnds[3] = x[1];
-            }
-            else throw std::runtime_error("invalid bounds syntax in restart file");
-        }
-        else if (param == "dt") dt = std::stod(val_as_str);
-        else {
-            std::cout << "skipping value assignment for " << param << std::endl;
-            continue;
-        }
-    }
-    
-    std::cout << "imported parameters:\n";
-    std::cout << "name_in=" << name_in << '\n';
-    std::cout << "t_init=" << t_init << '\n';
-    std::cout << "epsilon=" << eps << '\n';
-    std::cout << "resolution=" << res << '\n';
-    std::cout << "bounds=" << bnds << '\n';
-    std::cout << "dt=" << dt << '\n';
-    
-    nrrdNuke(nin); // we will reopen the file later to access particle coordinates
-}
-
-std::string human_readable_duration(double _t) {
-    using namespace std::chrono;
-    using dms = duration< double, std::ratio<1, 1000> >;
-    
-    if (_t < 0.001) return std::string("0 ms.");
-    dms t(_t);
-    std::ostringstream os;
-    size_t h = duration_cast<hours>(t).count();
-    if (h>0) {
-        os << h << " h. ";
-        t -= duration_cast<milliseconds>(hours(h));
-    }
-    size_t m = duration_cast<minutes>(t).count();
-    if (m>0) {
-        os << m << " m. ";
-        t -= duration_cast<milliseconds>(minutes(m));
-    }
-    size_t s = duration_cast<seconds>(t).count();
-    if (s>0) {
-        os << s << " s. ";
-        t -= duration_cast<milliseconds>(seconds(s));
-    }
-    size_t ms = duration_cast<milliseconds>(t).count();
-    if (ms>0) {
-        os << ms << " ms. ";
-        /*t -= duration_cast<milliseconds>(milliseconds(ms));
-    }
-    size_t ns = duration_cast<nanoseconds>(t).count();
-    if (ns>0) {
-        os << ns << " ns. ";*/
-    }
-    std::string str=os.str();
-    return str.substr(0, str.size()-1);
+	_log_(2) << "parsing restart file" << std::endl;
+	Nrrd* nin = xavier::nrrd_utils::readNrrd(restart_name);
+	xavier::nrrd_utils::nrrd_traits traits(nin);
+	res[0] = traits.sizes()[1];
+	res[1] = traits.sizes()[2];
+	
+	std::cout << "resolution: " << res[0] << " x " << res[1] << std::endl;
+	
+	const std::vector<std::string>& comments = traits.comments();
+	std::cout << "There are " << comments.size() << " lines of comments" << std::endl;
+		
+	std::string param, val_as_str;
+	
+	std::regex line_regex("[ ]*\\*[ ]*(.*)[ ]*=[ ]*(.*)$"); // "* <what>=<value>"
+	std::regex res_regex("(.*)[ ]*x[ ]*(.*)$");
+	std::regex bnd_regex("(.*)[ ]*->[ ]*(.*)$");
+	std::smatch line_match, res_match, bnd_match;
+	for (int i=0; i<comments.size(); ++i) { // skip first 2 lines of comments
+		const std::string& c = comments[i];
+		if (std::regex_search(c, line_match, line_regex)) {
+			param = line_match[1].str();
+			val_as_str = line_match[2].str();
+		}
+		else {
+			std::cout << "skipping comment line: " << c << std::endl;
+			continue;
+		}
+		std::cout << "parameter: " << param << ", value: " << val_as_str << std::endl;
+		if (param == "input file") name_in = val_as_str;
+		else if (param == "current time" || param == "tmax") t_init = std::stod(val_as_str);
+		else if (param == "epsilon") eps = std::stod(val_as_str);
+		else if (param == "resolution") {
+			if (std::regex_search(val_as_str, res_match, res_regex)) {
+				res[0] = std::stoi(res_match[1].str());
+				res[1] = std::stoi(res_match[2].str());
+			}
+			else throw std::runtime_error("invalid resolution syntax in restart file");
+		}
+		else if (param == "bounds") {
+			if (std::regex_search(val_as_str, bnd_match, bnd_regex)) {
+				std::istringstream iss1(bnd_match[1].str());
+				nvis::vec2 x;
+				iss1 >> x;
+				bnds[0] = x[0];
+				bnds[1] = x[1];
+				std::istringstream iss2(bnd_match[2].str());
+				iss2 >> x;
+				bnds[2] = x[0];
+				bnds[3] = x[1];
+			}
+			else throw std::runtime_error("invalid bounds syntax in restart file");
+		}
+		else if (param == "dt") dt = std::stod(val_as_str);
+		else {
+			std::cout << "skipping value assignment for " << param << std::endl;
+			continue;
+		}
+	}
+	
+	std::cout << "imported parameters:\n";
+	std::cout << "name_in=" << name_in << '\n';
+	std::cout << "t_init=" << t_init << '\n';
+	std::cout << "epsilon=" << eps << '\n';
+	std::cout << "resolution=" << res << '\n';
+	std::cout << "bounds=" << bnds << '\n';
+	std::cout << "dt=" << dt << '\n';
+	
+	nrrdNuke(nin); // we will reopen the file later to access particle coordinates
 }
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = spurt::command_line;
+    namespace xcl = xavier::command_line;
         
     xcl::option_traits 
             required(true, false, "Required Options"), 
@@ -237,7 +202,7 @@ void initialize(int argc, const char* argv[])
         parser.use_brackets(true);
         parser.add_value("input", name_in, "Input info filename", optional);
         parser.add_value("output", name_out, "Output file basename ", required);
-        parser.add_value("restart", restart_name, "Restart filename", optional);
+		parser.add_value("restart", restart_name, "Restart filename", optional);
         parser.add_sequence("tinit", t_init_str, t_init_str, "Integration starting time, expressed either in time since initial time step (in seconds; for minutes append \"m\", for hours \"h\", for days \"d\", for weeks \"w\") or as a date MM/DD", optional, "<float>[<char>]");
         parser.add_value("tmax", t_max_str, "Integration ending time (in seconds; for minutes append \"m\", for hours \"h\", for days \"d\", for weeks \"w\")", optional, "<float>[<char>]");
         parser.add_value("step", t_expstp_str, t_expstp_str, "Time interval between intermediate result outputs", optional);
@@ -271,14 +236,14 @@ void initialize(int argc, const char* argv[])
         }
         validate_value_with_time_unit(t_skip, t_skip_str, false);
         set_verbose_values();
-        if (!restart_name.empty()) { // input file will override existing values
-            _log_(1) << "Restart file provided: " << restart_name << std::endl;
-            parse_restart_file();
-        }
-        if (name_in.empty()) {
-            std::cerr << "ERROR: " << argv[0] << ": Neither input file nor restart file have been provided.\n";
-            exit(1);
-        }
+		if (!restart_name.empty()) { // input file will override existing values
+			_log_(1) << "Restart file provided: " << restart_name << std::endl;
+			parse_restart_file();
+		}
+		if (name_in.empty()) {
+			std::cerr << "ERROR: " << argv[0] << ": Neither input file nor restart file have been provided.\n";
+			exit(1);
+		}
     }
     catch(std::runtime_error& e) {
         std::cerr << "ERROR: " << argv[0] << " threw exception:\n" 
@@ -393,20 +358,20 @@ void import_data(const std::vector< std::string >& vel_filenames,
     size_t first = ( start_id >= support_radius ? start_id-support_radius : static_cast<size_t>(0) );
     for (size_t i=first; i<first+n_used; ++i) {
         _log_(1) << "Reading " << vel_filenames[i] << "... " << std::flush;
-        vel_tsteps[i-first]=spurt::readNrrd(vel_filenames[i]);
+        vel_tsteps[i-first]=xavier::nrrd_utils::readNrrd(vel_filenames[i]);
         _log_(1) << "done" << std::endl;
         print(vel_tsteps[i-first]);
         
         _log_(1) << "Reading " << vor_filenames[i] << "... " << std::flush;
-        vor_tsteps[i-first]=spurt::readNrrd(vor_filenames[i]);
-        _log_(1) << "printing contents of vorticity input Nrrd #" << i << "\n";
-        print(vor_tsteps[i-first]);
+        vor_tsteps[i-first]=xavier::nrrd_utils::readNrrd(vor_filenames[i]);
+		_log_(1) << "printing contents of vorticity input Nrrd #" << i << "\n";
+		print(vor_tsteps[i-first]);
         _log_(1) << "done" << std::endl;
     }
     last_time_step = first + n_used - 1;
     value_t outer_tmin = /*t_init +*/ first*t_between_files;
     _log_(2) << "outer_tmin=" << outer_tmin << std::endl;
-    current_velocity_volume = spurt::lavd::create_nrrd_volume(vel_tsteps, outer_tmin, t_between_files);
+    current_velocity_volume = xavier::lavd::create_nrrd_volume(vel_tsteps, outer_tmin, t_between_files);
     _log_(2) << "after velocity volume creation:" << std::endl;
     print(current_velocity_volume);
     
@@ -415,7 +380,7 @@ void import_data(const std::vector< std::string >& vel_filenames,
         nrrdNuke(vel_tsteps[i]);
     }
     
-    current_vorticity_volume = spurt::lavd::create_nrrd_volume(vor_tsteps, outer_tmin, t_between_files);
+    current_vorticity_volume = xavier::lavd::create_nrrd_volume(vor_tsteps, outer_tmin, t_between_files);
     current_t_min = start_id*t_between_files;
     // if (outer_tmin > t_init) {
     //     current_t_min += support_radius*t_between_files;
@@ -474,8 +439,9 @@ void import_data(const std::vector< std::string >& vel_filenames,
         << mini << ", " << maxi << "] x [" 
         << minj << ", " << maxj << "]" << std::endl;
     
-    spurt::progress_display progress(true);
+    xavier::ProgressDisplay progress(false);
     progress.start(n_used*nsamples, "avg. vort.");
+    progress.set_active(true);
     size_t base_n=0;
     size_t ncols=maxi-mini+1;
     for (size_t n=0; n<n_used; ++n, base_n+=nsamples) {
@@ -510,12 +476,12 @@ void import_data(const std::vector< std::string >& vel_filenames,
         _log_(1) << std::setprecision(12) << "average vorticity[" << n << "]=" << av_array[n] << std::endl;
         _log_(1) << "nsamples=" << nsamples << ", nvalid_samples=" << nvalid_samples << std::endl;
     }
-    progress.stop();
+	progress.end();
     
     Nrrd* av=nrrdNew();
-    if (nrrdWrap_nva(av, av_array, nrrd_value_traits_from_type<value_t>::index, 
+    if (nrrdWrap_nva(av, av_array, xavier::nrrd_utils::nrrd_value_traits_from_type<value_t>::index, 
                      1, &n_used)) {
-        throw std::runtime_error(spurt::error_msg("unable to create 1D average vorticity nrrd"));
+        throw std::runtime_error(xavier::nrrd_utils::error_msg("unable to create 1D average vorticity nrrd"));
     }
     // Per-axis info
     int center = nrrdCenterNode;
@@ -536,42 +502,42 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
     std::ostringstream os;
     ios::fmtflags default_settings = os.flags();
     if (long_name) {
-        os << name_out << "_started_at_" << start_time_str << "_flowmap+lavd_" << std::setw(5) << std::setfill('0') << current_time/spurt::lavd::HOUR << "h_";
+        os << name_out << "_started_at_" << start_time_str << "_flowmap+lavd_" << std::setw(5) << std::setfill('0') << current_time/xavier::lavd::HOUR << "h_";
         os << res[0] << "x" << res[1] << "_" << std::setprecision(2)
            << std::scientific << eps;
         os.flags(default_settings);
     }
     else {
-        os << name_out << "_fmap+lavd_" << std::setw(5) << std::setfill('0') << current_time/spurt::lavd::HOUR << "h";
+        os << name_out << "_fmap+lavd_" << std::setw(5) << std::setfill('0') << current_time/xavier::lavd::HOUR << "h";
     }
     std::string basename = os.str();
     
-    std::vector<std::string> comments;
+	std::vector<std::string> comments;
     os.clear(); os.str("");
     os << "This file was produced by " << me
        << ". 1st axis corresponds to (flowmap_x, flowmap_y, lavd), where "
        << "lavd stands for Lagrangian averaged vorticity deviation.\n";
-    comments.push_back(os.str()); os.clear(); os.str("");
+	comments.push_back(os.str()); os.clear(); os.str("");
     os << "Computation parameters:\n";
-    comments.push_back(os.str()); os.clear(); os.str("");
+	comments.push_back(os.str()); os.clear(); os.str("");
     os << " * input file=" << name_in << '\n';
-    comments.push_back(os.str()); os.clear(); os.str("");
-    os << " * current time=" << current_time << "\n";
-    comments.push_back(os.str()); os.clear(); os.str("");
+	comments.push_back(os.str()); os.clear(); os.str("");
+	os << " * current time=" << current_time << "\n";
+	comments.push_back(os.str()); os.clear(); os.str("");
     os << " * tmax=" << current_time << '\n';
-    comments.push_back(os.str()); os.clear(); os.str("");
+	comments.push_back(os.str()); os.clear(); os.str("");
     os << " * epsilon=" << eps << '\n';
-    comments.push_back(os.str()); os.clear(); os.str("");
+	comments.push_back(os.str()); os.clear(); os.str("");
     os << " * resolution=" << res[0] << "x" << res[1] << '\n';
-    comments.push_back(os.str()); os.clear(); os.str("");
+	comments.push_back(os.str()); os.clear(); os.str("");
     os << " * bounds=" << region.min() << "->" << region.max() << '\n';
-    comments.push_back(os.str()); os.clear(); os.str("");
+	comments.push_back(os.str()); os.clear(); os.str("");
     os << " * dt=" << dt << '\n';
-    comments.push_back(os.str()); os.clear(); os.str("");
+	comments.push_back(os.str()); os.clear(); os.str("");
     os << " * kernel size=" << support_radius << '\n';
-    comments.push_back(os.str());
+	comments.push_back(os.str());
     
-    spurt::lavd::export_results< float >(
+    xavier::lavd::export_results< float >(
         current_time, 
         wall_time, cpu_time, 
         final,
@@ -589,7 +555,7 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
 
 int main(int argc, const char* argv[])
 {
-    using namespace spurt;
+    using namespace xavier;
     using namespace odeint;
     
     me=argv[0];
@@ -620,7 +586,7 @@ int main(int argc, const char* argv[])
     
     nb_samples = res[0]*res[1];
     
-    name_out=spurt::filename::remove_extension(name_out);
+    name_out=xavier::filename::remove_extension(name_out);
     
     std::vector<std::string> velocity_filenames;
     std::vector<std::string> vorticity_filenames;
@@ -663,19 +629,19 @@ int main(int argc, const char* argv[])
     // storage for LAVD states and trajectories
     all_trajectories.resize(nb_samples);
     all_states.resize(nb_samples);
-    
-    // if restarting from last output, initialize these arrays with available information
+	
+	// if restarting from last output, initialize these arrays with available information
 
-    std::vector<double> restart_values;
-    if (!restart_name.empty()) {
-        Nrrd* nin = spurt::readNrrd(restart_name);
-        spurt::to_vector(restart_values, nin);
-        for (size_t i=0; i<all_trajectories.size(); ++i) {
-            all_trajectories[i].push_back(spurt::vec2(restart_values[3*i], restart_values[3*i+1]));
-        }
-    }
+	std::vector<double> restart_values;
+	if (!restart_name.empty()) {
+		Nrrd* nin = xavier::nrrd_utils::readNrrd(restart_name);
+		xavier::nrrd_utils::to_vector(restart_values, nin);
+		for (size_t i=0; i<all_trajectories.size(); ++i) {
+			all_trajectories[i].push_back(nvis::vec2(restart_values[3*i], restart_values[3*i+1]));
+		}
+	}
     
-    support_radius = spurt::lavd::compute_support_radius();
+    support_radius = xavier::lavd::compute_support_radius();
     _log_(1) << "support radius = " << support_radius << std::endl;
     
     // initialize velocity and vorticity volumes
@@ -690,7 +656,7 @@ int main(int argc, const char* argv[])
     _log_(1) << "bounds=" << region << std::endl;
     
     if (export_region) 
-        spurt::lavd::export_mask(vorticity_filenames[t_init/HOUR/3], region, true);
+        xavier::lavd::export_mask(vorticity_filenames[t_init/HOUR/3], region, true);
     
     std::vector<size_t> sample_counter(nb_threads);
     std::vector< shared_ptr< NrrdODERHS > > rhs_copies(nb_threads);
@@ -705,9 +671,10 @@ int main(int argc, const char* argv[])
                  [](char& c) { if (c==' ') c='_'; });
     _log_(1) << "start_time_string=" << start_time_str << std::endl;
     
-    spurt::progress_display progress(true), total_progress(false);
+    xavier::ProgressDisplay progress(false), total_progress(false);
     
     total_progress.start(1); // we only care for the timer function
+    total_progress.set_active(false);
     
     std::clock_t clock_begin=std::clock();
     auto timer_start = std::chrono::high_resolution_clock::now();
@@ -722,6 +689,7 @@ int main(int argc, const char* argv[])
             << " (" << next_export_time << " s.)" << std::endl;
         
         progress.start(nb_samples, "flow map");
+        progress.set_active(true);
         counter = 0;
         nb_lost = 0;
         size_t nb_early = 0;
@@ -757,9 +725,9 @@ int main(int argc, const char* argv[])
                 }
                 else {
                     x0 = all_trajectories[n].back();
-                    if (initial_loop && !restart_name.empty()) {
-                        _log_(2) << "\n\n\n\nresuming integration #" << n << " at " << x0 << std::endl;
-                    }
+					if (initial_loop && !restart_name.empty()) {
+						_log_(2) << "\n\n\n\nresuming integration #" << n << " at " << x0 << std::endl;
+					}
                 }
             
                 #pragma omp atomic
@@ -780,9 +748,9 @@ int main(int argc, const char* argv[])
                     _log_(2) << "initializing observer at " << x0 << std::endl;
                     try {
                         an_observer.initialize(x0, current_t_min);
-                        if (!restart_name.empty()) {
-                            all_states[n].m_acc_vd = restart_values[3*n+2];
-                        }
+						if (!restart_name.empty()) {
+							all_states[n].m_acc_vd = restart_values[3*n+2];
+						}
                     }
                     catch( std::exception& e ) {
                         _log_(1) << "caught exception while attempting "
@@ -818,7 +786,7 @@ int main(int argc, const char* argv[])
 
             initial_loop = false;
         }
-        progress.stop();
+	    progress.end();
         
         if (current_target_time == next_export_time) {
             ++niter;
@@ -827,11 +795,11 @@ int main(int argc, const char* argv[])
                     << " (" << progress.cpu_time() << " ms.) | wall: "
                 << human_readable_duration(progress.wall_time()) 
                 << " (" << progress.wall_time() << " ms.)\n";
-            _log_(0) << "Interrupted trajectories: " << nb_lost << " (" << nb_lost*100/nb_samples << "%)" << std::endl;
+			_log_(0) << "Interrupted trajectories: " << nb_lost << " (" << nb_lost*100/nb_samples << "%)" << std::endl;
             _log_(0) << "Overall compute time so far (" << niter << " iterations): cpu: ";
-            
-            double tcpu = total_progress.cpu_time();
-            double twal = total_progress.wall_time();
+			
+            double tcpu = total_progress.instant_cpu_time();
+            double twal = total_progress.instant_wall_time();
              _log_(0)
                 << human_readable_duration(tcpu) << " (" << tcpu << " ms.) | wall: "
                 << human_readable_duration(twal) << " (" << twal << " ms.)"

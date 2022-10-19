@@ -6,7 +6,8 @@
 
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
-#include <misc/time_helper.hpp>
+#include <util/wall_timer.hpp>
+#include <vis/streamline.hpp>
 
 #include "ftle.hpp"
 #include "data/raster.hpp"
@@ -51,7 +52,7 @@ struct scaled_field {
     scaled_field(const field_type& field, double scale = 1)
         : _field(field), _s(scale) {}
         
-    bool operator()(const spurt::vec3& x, spurt::vec3& f) const {
+    bool operator()(const nvis::vec3& x, nvis::vec3& f) const {
         bool valid = _field.get_value(x, f);
         f *= _s;
         return valid;
@@ -61,7 +62,7 @@ struct scaled_field {
     double _s;
 };
 
-typedef spurt::nrrd_data_traits<Nrrd*>  field_type;
+typedef xavier::nrrd_data_traits<Nrrd*>  field_type;
 typedef scaled_field<field_type>    rhs_type;
 
 template<typename RHS>
@@ -76,11 +77,11 @@ struct euler {
     
     euler(const rhs_type& rhs, double h) : _rhs(rhs), _h(h) {}
     
-    state fmap(const spurt::vec3& in, spurt::vec3& out, double length, double& actual_length) const {
+    state fmap(const nvis::vec3& in, nvis::vec3& out, double length, double& actual_length) const {
         double h = (length < 0 ? -_h : _h);
         actual_length = 0;
         out = in;
-        spurt::vec3 f;
+        nvis::vec3 f;
         int n = floor(fabs(length) / _h);
         for (int i = 0 ; i < n ; ++i) {
             if (_rhs(out, f)) {
@@ -106,30 +107,29 @@ struct euler {
 
 int main(int argc, const char* argv[])
 {
-    using namespace spurt;
+    using namespace xavier;
     
     initialize(argc, argv);
     
-    Nrrd* nin = spurt::readNrrd(name_in);
+    Nrrd* nin = xavier::nrrd_utils::readNrrd(name_in);
     field_type  vf(nin);
     rhs_type    rhs(vf, scale);
     euler<rhs_type> intg(rhs, h);
     
-    spurt::fixed_vector<size_t, 3> res(nsamples[0], nsamples[1], nsamples[2]);
+    nvis::fixed_vector<size_t, 3> res(nsamples[0], nsamples[1], nsamples[2]);
     std::cerr << "Resolution = " << res << std::endl;
-    spurt::rgrid3d sampling_grid(res, vf.bounds());
-    spurt::image3d<spurt::vec3> flowmaps[2] = {
-        spurt::image3d<spurt::vec3>(sampling_grid),
-        spurt::image3d<spurt::vec3>(sampling_grid)
+    xavier::rgrid3d sampling_grid(res, vf.bounds());
+    xavier::image3d<nvis::vec3> flowmaps[2] = {
+        xavier::image3d<nvis::vec3>(sampling_grid),
+        xavier::image3d<nvis::vec3>(sampling_grid)
     };
     
-    spurt::timer timer;
-    timer.start();
+    nvis::timer timer;
     int npoints = sampling_grid.size();
     
-    const spurt::vec3 zero(0.);
+    const nvis::vec3 zero(0.);
     for (int i = 0 ; i < npoints ; ++i) {
-        spurt::ivec3 c = flowmaps[0].grid().coordinates(i);
+        nvis::ivec3 c = flowmaps[0].grid().coordinates(i);
         flowmaps[0](c) = flowmaps[1](c) = zero;
     }
     
@@ -165,8 +165,8 @@ int main(int argc, const char* argv[])
                           << std::flush;
             }
             
-            spurt::ivec3 c = sampling_grid.coordinates(n);
-            spurt::vec3 seed = sampling_grid(c);
+            nvis::ivec3 c = sampling_grid.coordinates(n);
+            nvis::vec3 seed = sampling_grid(c);
             double l_fwd, l_bwd;
             intg.fmap(seed, flowmaps[0](c), length, l_fwd);
             intg.fmap(seed, flowmaps[1](c), -length, l_bwd);
@@ -183,11 +183,10 @@ int main(int argc, const char* argv[])
             __leng[2*n+1] = l_bwd;
         }
     }
-    timer.stop();
     
     std::cout << "\ntotal computation time for flow map was " << timer.elapsed() << '\n';
     
-    timer.start();
+    timer.restart();
 #pragma openmp parallel for
     for (int n = 0 ; n < npoints ; ++n) {
         try {
@@ -199,7 +198,6 @@ int main(int argc, const char* argv[])
         } catch (...) {
         }
     }
-    timer.stop();
     std::cout << "total computation time for ftle was " << timer.elapsed() << '\n';
     
     std::string out;
@@ -211,7 +209,7 @@ int main(int argc, const char* argv[])
         out = std::string(name_out);
     }
     
-    const spurt::vec3& s = sampling_grid.spacing();
+    const nvis::vec3& s = sampling_grid.spacing();
     size_t size[] = {2, res[0], res[1], res[2]};
     double spc[] = {airNaN(), s[0], s[1], s[2]};
     std::ostringstream os;

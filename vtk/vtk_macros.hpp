@@ -1,7 +1,6 @@
 #ifndef __VTK_MACROS_HPP__
 #define __VTK_MACROS_HPP__
 
-#include <vtkAlgorithm.h>
 #include <vtkCharArray.h>
 #include <vtkDataSet.h>
 #include <vtkDataSetMapper.h>
@@ -25,6 +24,15 @@
 #include <vtkUnsignedLongLongArray.h>
 #include <vtkUnsignedShortArray.h>
 #include <vtkUnstructuredGrid.h>
+#include "boundary-aware-rectgrid/boundaryAwareRectGrid.h"
+
+#if __VTK_HAS_DAG__
+#include <vtkDirectedAcyclicGraph.h>
+#include <vtkDirectedGraph.h>
+#include <vtkGraphMapper.h>
+#include <vtkMutableDirectedGraph.h>
+#include <vtkUndirectedGraph.h>
+#endif
 
 #include <misc/meta_utils.hpp>
 
@@ -39,7 +47,7 @@
 // Declare and initialize a VTK smart pointer
 #define VTK_CREATE(type, name)  \
     vtkSmartPointer<type> name = vtkSmartPointer<type>::New();
-    
+
 // Initialize an existing VTK smart pointer
 #define VTK_INIT(type, name) \
     name = vtkSmartPointer<type>::New();
@@ -54,42 +62,16 @@
 
 // Same but for regular input / output pointers
 // Fix for backward incompatibility between VTK6 and VTK5 required here
-#if (VTK_MAJOR_VERSION >= 6)
 #define VTK_CONNECT(receives, supplies) \
     (receives)->SetInputData(supplies);
-#else
-#define VTK_CONNECT(receives, supplies) \
-    (receives)->SetInput(supplies);
-#endif
 
 // Special case of Image to Texture connections
-#if (VTK_MAJOR_VERSION >= 6)
 #define VTK_IMAGE_CONNECT(receives, image) \
     (receives)->SetInputData(image);
-#else
-#define VTK_IMAGE_CONNECT(receives, image) \
-    (receives)->SetInputConnection((image)->GetProducerPort());
-#endif
 
 // Special case of Source connections
-#if (VTK_MAJOR_VERSION >= 6)
 #define VTK_SOURCE_CONNECT(receives, supplies) \
     (receives)->SetSourceData(supplies);
-#else
-#define VTK_SOURCE_CONNECT(receives, supplies) \
-    (receives)->SetSource(supplies);
-#endif
-    
-// Create an actor pointer for a given object.
-// NOTE: A mapper of the correct type is automatically
-//       deduced and created. It is accessible upon 
-//       completion of this macro through the actor's
-//       GetMapper() method.
-#define VTK_MAKE_ACTOR(actor, object) \
-    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New(); \
-    actor->SetMapper(vtk_utils::right_mapper(vtk_utils::get_ptr(object)));
-
-namespace vtk_utils {
 
 // X-Macro used to automate the creation of type traits for vtkDataObject subtypes
 #define LIST_OF_MAPABLE_VTK_DATA_OBJECT_TYPES \
@@ -97,11 +79,17 @@ namespace vtk_utils {
     X(vtkStructuredPoints, VTK_STRUCTURED_POINTS, vtkDataSetMapper); \
     X(vtkStructuredGrid, VTK_STRUCTURED_GRID, vtkDataSetMapper); \
     X(vtkRectilinearGrid, VTK_RECTILINEAR_GRID, vtkDataSetMapper); \
+	X(boundaryAwareRectGrid, BDRY_AWARE_RECTILINEAR_GRID, vtkDataSetMapper); \
     X(vtkUnstructuredGrid, VTK_UNSTRUCTURED_GRID, vtkDataSetMapper); \
     X(vtkDataSet, VTK_DATA_SET, vtkDataSetMapper); \
     X(vtkPointSet, VTK_POINT_SET, vtkDataSetMapper); \
     X(vtkUniformGrid, VTK_UNIFORM_GRID, vtkDataSetMapper); \
-    
+    /*X(vtkGraph, VTK_GRAPH, vtkGraphMapper); \
+    X(vtkUndirectedGraph, VTK_UNDIRECTED_GRAPH, vtkGraphMapper); \
+    X(vtkDirectedGraph, VTK_DIRECTED_GRAPH, vtkGraphMapper); \
+    X(vtkDirectedAcyclicGraph, VTK_DIRECTED_ACYCLIC_GRAPH, vtkGraphMapper); \
+    X(vtkMutableDirectedGraph, VTK_DIRECTED_GRAPH, vtkGraphMapper);*/
+
 template<typename T>
 struct vtk_mapable_data_object_traits {};
 
@@ -140,16 +128,12 @@ struct vtk_array_traits {};
     LIST_OF_VTK_DATA_TYPES
 #undef X
 
-template< typename DataObject, 
-          typename Mapper = 
+template< typename DataObject,
+          typename Mapper =
           typename vtk_mapable_data_object_traits<DataObject>::mapper_type >
 inline Mapper* right_mapper(DataObject* data) {
     Mapper* mapper = Mapper::New();
-#if VTK_MAJOR_VERSION >= 6
     mapper->SetInputData(data);
-#else
-    mapper->SetInput(data);
-#endif
     return mapper;
 }
 
@@ -168,13 +152,16 @@ inline void vtk_connect(vtkAlgorithm* receiver, vtkAlgorithm* provider) {
 }
 
 inline void vtk_connect(vtkAlgorithm* receiver, vtkDataObject* provider) {
-#if VTK_MAJOR_VERSION >= 6    
     receiver->SetInputDataObject(provider);
-#else
-    receiver->SetInputConnection(provider->GetProducerPort());
-#endif
 }
 
-} // namespace vtk_utils
+// Create an actor pointer for a given object.
+// NOTE: A mapper of the correct type is automatically
+//       deduced and created. It is accessible upon
+//       completion of this macro through the actor's
+//       GetMapper() method.
+#define VTK_MAKE_ACTOR(actor, object) \
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New(); \
+    actor->SetMapper(right_mapper(get_ptr(object)));
 
 #endif

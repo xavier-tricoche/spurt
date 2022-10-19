@@ -66,7 +66,7 @@ struct field_wrapper {
         : dpl(0), nrrd_9(new EigenvectorField<nrrd_field<9> >(field, false)), _7d(false)
         procedural(false), bbox(field.bounds()) {}
         
-    spurt::vec3 interpolate(const spurt::vec3& x) const {
+    nvis::vec3 interpolate(const nvis::vec3& x) const {
         if (procedural)
             switch (eigen) {
                 case 0:
@@ -102,7 +102,7 @@ struct field_wrapper {
             }
     }
     
-    const spurt::bbox3& bounds() const {
+    const nvis::bbox3& bounds() const {
         return bbox;
     }
     
@@ -110,7 +110,7 @@ struct field_wrapper {
     const EigenvectorField<nrrd_field<7> >*      nrrd_7;
     const EigenvectorField<nrrd_field<9> >*      nrrd_9;
     const bool                                  procedural, _7d;
-    spurt::bbox3                                 bbox;
+    nvis::bbox3                                 bbox;
 };
 
 int main(int argc, const char* argv[])
@@ -155,20 +155,20 @@ int main(int argc, const char* argv[])
         std::cerr << "processing nrrd file: " << name_in << std::endl;
     }
     
-    spurt::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
+    nvis::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
     std::cerr << "Resolution = " << res << std::endl;
     RasterGrid<3> sampling_grid(res, efield->bounds());
-    RasterData<spurt::vec3, 3> flowmaps[2]
-        = { RasterData<spurt::vec3, 3>(sampling_grid),
-            RasterData<spurt::vec3, 3>(sampling_grid)
+    RasterData<nvis::vec3, 3> flowmaps[2]
+        = { RasterData<nvis::vec3, 3>(sampling_grid),
+            RasterData<nvis::vec3, 3>(sampling_grid)
           };
           
-    spurt::timer timer;
+    nvis::timer timer;
     int npoints = sampling_grid.size();
     
-    const spurt::vec3 zero(0.);
+    const nvis::vec3 zero(0.);
     for (int i = 0 ; i < npoints ; ++i) {
-        spurt::ivec3 c = flowmaps[0].grid().coord(i);
+        nvis::ivec3 c = flowmaps[0].grid().coord(i);
         flowmaps[0](c) = flowmaps[1](c) = zero;
     }
     
@@ -190,13 +190,13 @@ int main(int argc, const char* argv[])
     valid[1].resize(npoints, true);
     
     // data structure to keep track of the intermediate positions reached
-    std::vector<std::pair<spurt::vec3, spurt::vec3> > end_pt[2];
+    std::vector<std::pair<nvis::vec3, nvis::vec3> > end_pt[2];
     end_pt[0].resize(npoints);
     end_pt[1].resize(npoints);
     for (int i = 0 ; i < npoints ; ++i) {
-        spurt::ivec3 c = sampling_grid.coord(i);
-        spurt::vec3 x = sampling_grid(c);
-        spurt::vec3 e;
+        nvis::ivec3 c = sampling_grid.coord(i);
+        nvis::vec3 x = sampling_grid(c);
+        nvis::vec3 e;
         try {
             e = efield->interpolate(x);
         } catch(...) {
@@ -252,7 +252,7 @@ int main(int argc, const char* argv[])
                                   << std::flush;
                     }
                     
-                    spurt::ivec3 c = sampling_grid.coord(n);
+                    nvis::ivec3 c = sampling_grid.coord(n);
                     
                     for (int dir = 0 ; dir < 2 ; ++dir) {
                         if (!valid[dir][n]) {
@@ -263,11 +263,11 @@ int main(int argc, const char* argv[])
                             double length_io = length;
                             flowmaps[dir](c) = ftle::eigen_flow_map(*efield, end_pt[dir][n].first, dx,
                                                                     length_io, error, end_pt[dir][n].second);
-                            const spurt::vec3& z = flowmaps[dir](c);
+                            const nvis::vec3& z = flowmaps[dir](c);
                             if (length_io < length) {
                                 valid[dir][n] = false;
                             }
-                            if (std::isinf(spurt::norm(z)) || std::isnan(spurt::norm(z))) {
+                            if (std::isinf(nvis::norm(z)) || std::isnan(nvis::norm(z))) {
                                 flowmaps[dir](c) = zero;
                                 valid[dir][n] = false;
                             }
@@ -290,7 +290,7 @@ int main(int argc, const char* argv[])
         
         std::vector<size_t> size(4), size3(3);
         std::vector<double> step(4), step3(3);
-        const spurt::vec3& s = sampling_grid.step();
+        const nvis::vec3& s = sampling_grid.step();
         step[0] = airNaN();
         for (int i = 0 ; i < 3 ; ++i) {
             size3[i] = size[i+1] = res[i];
@@ -305,14 +305,14 @@ int main(int argc, const char* argv[])
                 _size[k] = size[k+1];
                 _spac[k] = step[k+1];
             }
-            spurt::writeNrrd(len, name.make("length.nrrd", counter, cur_length), nrrdTypeInt, _size, _spac);
+            xavier::nrrd_utils::writeNrrd(len, name.make("length.nrrd", counter, cur_length), nrrdTypeInt, _size, _spac);
         }
 #endif
         
         timer.restart();
 #pragma openmp parallel for
         for (int n = 0 ; n < npoints ; ++n) {
-            spurt::vec2 ans;
+            nvis::vec2 ans;
             try {
                 ans = ftle::eigenftle(n, *efield, flowmaps, length);
             } catch (...) {
@@ -328,7 +328,7 @@ int main(int argc, const char* argv[])
         }
         std::cout << "total computation time for ftle was " << timer.elapsed() << '\n';
         
-        spurt::writeNrrd(ftle, name.make("ftle", counter, cur_length), nrrdTypeFloat, size3, step3);
+        xavier::nrrd_utils::writeNrrd(ftle, name.make("ftle", counter, cur_length), nrrdTypeFloat, size3, step3);
         
         cur_length = next_length;
     }

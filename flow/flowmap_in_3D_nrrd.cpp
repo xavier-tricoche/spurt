@@ -6,7 +6,7 @@
 #include <image/probe.hpp>
 #include <math/fixed_vector.hpp>
 // #include <vis/streamline.hpp>
-#include <misc/time_helper.hpp>
+#include <misc/progress.hpp>
 #include <data/raster.hpp>
 #include <format/filename.hpp>
 #include <misc/option_parse.hpp>
@@ -23,28 +23,28 @@ using namespace nvis;
 
 using namespace boost::numeric::odeint;
 
-typedef spurt::raster_grid<2, double, size_t> grid_t;
-typedef spurt::raster_data<spurt::vec3, 2, double, size_t> raster_t;
-typedef spurt::vec3 state_t; // (x, y, inside)
+typedef xavier::raster_grid<2, double, size_t> grid_t;
+typedef xavier::raster_data<vec3, 2, double, size_t> raster_t;
+typedef vec3 state_t; // (x, y, inside)
 
 
 std::string in_name, out_name;
 double t0=0, t;
 double eps=1.0e-6;
-spurt::ivec2 res(256, 256);
+ivec2 res(256, 256);
 bool verbose=false;
-spurt::vec4 bounds_as_array(0);
-spurt::bbox2 bounds;
+vec4 bounds_as_array(0);
+bbox2 bounds;
 
 struct nrrd_vector_field {
-    typedef spurt::gage_interface::vector_wrapper wrapper_t;
+    typedef xavier::gage_interface::vector_wrapper wrapper_t;
     
     nrrd_vector_field(Nrrd* nin) 
-        : m_wrapper(nin, spurt::gage_interface::BC_INTERP, false) {
+        : m_wrapper(nin, xavier::gage_interface::BC_INTERP, false) {
             m_wrapper.use_world();
         }
             
-    bool operator()(const spurt::vec3& x, spurt::vec3& f) const {
+    bool operator()(const vec3& x, vec3& f) const {
         return m_wrapper.value(x, f);
     }
     
@@ -59,8 +59,8 @@ struct odeint_rhs {
         : m_field( other.m_field ) {}
     
     void operator()( const state_t& x, state_t& dxdt, double t) const {
-        spurt::vec3 v;
-        bool ok = m_field( spurt::vec3(x[0], x[1], t), v );
+        vec3 v;
+        bool ok = m_field( vec3(x[0], x[1], t), v );
         if (!ok) {
             dxdt = state_t(0, 0, 1);
         }
@@ -112,7 +112,7 @@ find_condition(state_t& x0, RHS rhs, Condition cond, const double t_start,
 }
 
 void initialize(int argc, char* argv[]) {
-    namespace xcl = spurt::command_line;
+    namespace xcl = xavier::command_line;
     xcl::option_traits 
         required_group(true, false, "Required Options"), 
         positional_group(true, true, "Positional Group"),
@@ -163,9 +163,9 @@ int main(int argc, char* argv[]) {
 
     // bool fwd = (t > 0);
     
-    spurt::progress_display progress;
+    xavier::ProgressDisplay progress;
     
-    Nrrd* nin = spurt::readNrrd(in_name);
+    Nrrd* nin = xavier::nrrd_utils::readNrrd(in_name);
     
     std::vector<nrrd_vector_field*> nrrd_vfs(nthreads);
     for (int i=0; i<nthreads; ++i) {
@@ -174,8 +174,8 @@ int main(int argc, char* argv[]) {
     
     if (bounds_as_array[2]>bounds_as_array[0] &&
         bounds_as_array[3]>bounds_as_array[1]) {
-        bounds.min()=spurt::vec2(bounds_as_array[0], bounds_as_array[1]);
-        bounds.max()=spurt::vec2(bounds_as_array[2], bounds_as_array[3]);    
+        bounds.min()=vec2(bounds_as_array[0], bounds_as_array[1]);
+        bounds.max()=vec2(bounds_as_array[2], bounds_as_array[3]);    
     }
     else {
         bounds.min()[0] = nin->axis[1].min;
@@ -214,18 +214,18 @@ int main(int argc, char* argv[]) {
 
         odeint_rhs rhs(*nrrd_vfs[thread]);
         
-        spurt::vec2 x0 = sampling_grid[i];
+        nvis::vec2 x0 = sampling_grid[i];
         state_t x(x0[0], x0[1], 0);
         state_t x_cond;
         double t_cond;
         std::tie(t_cond, x_cond) = find_condition(x, rhs, left_c, t0, t0+t, dt, 1.0e-6);
           
         if ((dt > 0 && t_cond > t0+t) || (dt < 0 && t_cond < t0+t)) {
-            fmap[i] = spurt::vec3(x[0], x[1], t0+t);
+            fmap[i] = vec3(x[0], x[1], t0+t);
         }
         else {
             ++nfailed;
-            fmap[i] = spurt::vec3(x_cond[0], x_cond[1], t_cond);
+            fmap[i] = vec3(x_cond[0], x_cond[1], t_cond);
         }
 
 #if 0        
@@ -268,7 +268,7 @@ int main(int argc, char* argv[]) {
 #endif
     }
     }
-    progress.stop();
+    progress.end();
     
     std::cout << nfailed << " incomplete trajectories\n";
     
@@ -277,7 +277,7 @@ int main(int argc, char* argv[]) {
     }
     
     if (out_name.empty()) {
-        out_name = spurt::filename::remove_extension(in_name) + "-fmap.nrrd";
+        out_name = xavier::filename::remove_extension(in_name) + "-fmap.nrrd";
     }
     fmap.save_as_nrrd(out_name);
     

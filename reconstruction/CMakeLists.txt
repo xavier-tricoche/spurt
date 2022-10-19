@@ -3,10 +3,14 @@ set( RECONSTRUCTION_SRCS
     resampleLS
     resampleRBF
     resample_celltree
+    volume
+    downsample
+    #decimate
+    # resampleMLS
 )
 
 if( VTK_FOUND AND NetCDF_FOUND )
-    include( ${VTK_USE_FILE} )
+    # include( ${VTK_USE_FILE} )
     include_directories( ${CELLTREE_INCLUDE_DIR} )
     include_directories( ${STANN_INCLUDE_DIR} )
     foreach( name ${RECONSTRUCTION_SRCS} )
@@ -15,7 +19,7 @@ if( VTK_FOUND AND NetCDF_FOUND )
                                ${Teem_LIBRARIES}
                                ${Boost_LIBRARIES}
                                ${CELLTREE_LIBRARIES}
-                               ${NetCDF_LIBRARIES} 
+                               ${NetCDF_LIBRARIES}
                                ${VTK_LIBRARIES} )
         install( TARGETS ${name} RUNTIME DESTINATION bin )
     endforeach()

@@ -31,20 +31,19 @@
 
 #include "teem/ten.h"
 #include "math/fixed_vector.hpp"
-#include "boost/timer.hpp"
 #include <map>
 #include <vector>
 #include <assert.h>
 
 #define __QUIET__
 
-namespace spurt {
+namespace xavier {
 
 namespace ten_interface {
 
 // Fiber: basic data structure to store tracks after integration
 
-typedef vec3 point3;
+typedef nvis::vec3 point3;
 
 struct HalfFiber : public std::vector< point3 > {
     HalfFiber() : total_length(0) {}
@@ -150,10 +149,10 @@ struct context {
 
 void error_display(const std::string& who, const std::string& what,
                    const char* _type);
-                   
+
 int integrate(const TrackingParam& param, std::vector< Fiber >& fibers,
               std::vector< double >& requested_lengths);
-              
+
 void integrate(Fiber& fiber, context& ctx);
 void integrate_and_sample(Fiber& fiber, context& ctx,
                           const std::vector< double >& requested_lengths,
@@ -162,17 +161,3 @@ void integrate_and_sample(Fiber& fiber, context& ctx,
 };
 
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-

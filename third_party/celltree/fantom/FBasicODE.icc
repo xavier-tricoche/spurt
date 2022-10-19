@@ -1,0 +1,127 @@
+//---------------------------------------------------------------------------
+//
+// Project:   FAnToM
+// Module:    $RCSfile: FBasicODE.icc,v $
+// Language:  C++
+// Date:      $Date: 2003/06/25 07:54:46 $
+// Author:    $Author: garth $
+// Version:   $Revision: 1.6 $
+//
+//--------------------------------------------------------------------------- 
+
+#undef inline
+
+//includes
+#include <math.h>
+
+#ifdef OUTLINE
+#define inline
+#endif
+
+inline int FBasicODE::steps()
+{
+  return kount; 
+}
+
+//---------------------------------------------------------------------------
+
+inline int FBasicODE::goodSteps()
+{
+  return nok;
+}
+
+//---------------------------------------------------------------------------
+
+inline int FBasicODE::badSteps()
+{
+  return nbad;
+}
+
+//---------------------------------------------------------------------------
+
+inline void FBasicODE::setMinimalStepSize( const double val )
+{
+  hmin = val;
+}
+
+//---------------------------------------------------------------------------
+
+inline double FBasicODE::getMinimalStepSize() const
+{
+  return hmin;
+}
+
+//---------------------------------------------------------------------------
+
+inline void FBasicODE::setAccuracy( const double value )
+{
+  eps = value;
+}
+
+//---------------------------------------------------------------------------
+
+inline double FBasicODE::getAccuracy()
+{
+  return eps;
+}
+
+//---------------------------------------------------------------------------
+
+inline int FBasicODE::maxIntermediateSteps()
+{
+  return kmax;
+}
+
+//---------------------------------------------------------------------------
+
+inline void FBasicODE::setMinDistanceBetweenIntermediateSteps( double value )
+{
+  dxsav = value;
+}
+
+//---------------------------------------------------------------------------
+
+inline void FBasicODE::setMaxIntermediateSteps( int num )
+{
+  kmax = num;
+}
+
+//---------------------------------------------------------------------------
+
+inline const FString& FBasicODE::getClassName() const
+{
+  static const FString className("FBasicODE");
+
+  return className;
+}
+
+//---------------------------------------------------------------------------
+
+inline double ABS( double a )
+{
+  return fabs(a); // results in only one assembler instruction
+}
+
+//---------------------------------------------------------------------------
+
+inline double SIGN( double a, double b )
+{
+  return ( b>=(double)0 ? ABS(a) : -ABS(a) );
+}
+
+//---------------------------------------------------------------------------
+
+inline double FMAX(double a, double b)
+{
+  return (a>b ? a : b);
+}
+
+//---------------------------------------------------------------------------
+
+inline double FMIN(double a, double b)
+{
+  return (a<b ? a : b);
+}
+
+//===========================================================================
+#undef inline

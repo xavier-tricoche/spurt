@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <math/fixed_vector.hpp>
 
-namespace spurt {
+namespace xavier {
 template< typename T >
 bool LtIndexed(const T& v1, const T& v2)
 {
@@ -69,25 +69,25 @@ inline unsigned int max_id(const std::vector< T >& values)
     return std::distance(values.begin(), std::max_element(values.begin(), values.end()));
 }
 
-inline bool bary_coords(vec3& b, const vec3& p,
-                        const vec3& p0, const vec3& p1, const vec3& p2)
+inline bool bary_coords(nvis::vec3& b, const nvis::vec3& p,
+                        const nvis::vec3& p0, const nvis::vec3& p1, const nvis::vec3& p2)
 {
     // bring problem back to 2D
-    vec3 q, e1(p1), e2(p2);
+    nvis::vec3 q, e1(p1), e2(p2);
     double x, y, x1, x2, y2, /*det,*/ delta;
     
     e1 -= p0;
     e2 -= p0;
-    x1 = norm(e1);
+    x1 = nvis::norm(e1);
     e1 *= 1 / x1; // e1 normalized
-    x2 = inner(e2, e1);
+    x2 = nvis::inner(e2, e1);
     e2 -= x2 * e1; // e2 orthogonal to e1
-    y2 = norm(e2);
+    y2 = nvis::norm(e2);
     e2 *= 1 / y2;
     
     q = p - p0;
-    x = inner(q, e1);
-    y = inner(q, e2);
+    x = nvis::inner(q, e1);
+    y = nvis::inner(q, e2);
     
     delta = x1 * y2; // NB: y1==0
     b[1] = (x * y2 - y * x2) / delta;

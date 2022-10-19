@@ -1,7 +1,7 @@
-#include "rbf_basis.hpp"
+#include "RBFbasis.hpp"
 #include <iostream>
 #include <limits>
-#include <misc/time_helper.hpp>
+#include <util/timer.hpp>
 
 template<typename T>
 inline T quadratic(T x) {
@@ -43,7 +43,7 @@ inline T dquintic(T x) {
     return 5*x*x*x*x;
 }
 
-namespace xrbf = spurt::RBF;
+namespace xrbf = xavier::RBF;
 
 template<typename T>
 struct type_traits {};
@@ -69,7 +69,7 @@ void compare(size_t N) {
     
     std::cout << "Performance comparison for type=" << type_traits<T>::name() << ":\n";
     
-    spurt::timer _timer;
+    nvis::timer _timer;
     T x, y, r, err=0;
     double tic, toc;
     for (size_t i=0 ; i<N ; ++i) {

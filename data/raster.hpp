@@ -15,7 +15,7 @@
 
 #include <image/nrrd_wrapper.hpp>
 
-namespace spurt {
+namespace xavier {
     
 template< typename CoordArray_, typename SizeArray_=CoordArray_ >
 long coord_to_index(const CoordArray_& coord, const SizeArray_& size);
@@ -23,15 +23,15 @@ long coord_to_index(const CoordArray_& coord, const SizeArray_& size);
 template< typename SizeArray_, typename CoordArray_=SizeArray_ >
 CoordArray_ index_to_coord(long idx, const SizeArray_& size);
         
-// namespace spurt {
+// namespace xavier {
 template<size_t Dim_, typename Size_>
 class index_shifter
 {
 public:
     static const size_t dimension = Dim_;
     typedef Size_                           size_type;
-    typedef fixed_vector<Size_, Dim_> array_type;
-    typedef fixed_vector<Size_, Dim_> coord_type;
+    typedef nvis::fixed_vector<Size_, Dim_> array_type;
+    typedef nvis::fixed_vector<Size_, Dim_> coord_type;
     
     index_shifter(const array_type& sizes = array_type(0));
     index_shifter(const index_shifter& other);
@@ -90,9 +90,9 @@ public:
     typedef Size_                                     size_type;
     typedef size_t                                    dim_type;
     typedef index_shifter<dim, size_type>             shifter_type;
-    typedef fixed_vector<Size_, Dim_>           coord_type;
-    typedef fixed_vector<scalar_type, dim>      vec_type;
-    typedef fixed_vector<scalar_type, dim>      point_type;
+    typedef nvis::fixed_vector<Size_, Dim_>           coord_type;
+    typedef nvis::fixed_vector<scalar_type, dim>      vec_type;
+    typedef nvis::fixed_vector<scalar_type, dim>      point_type;
     typedef nvis::bounding_box<vec_type>              bounds_type;
     typedef raster_grid<dim, scalar_type, size_type>  self_type;
     
@@ -284,11 +284,11 @@ public:
     typedef typename base_type::vec_type         vec_type;
     typedef typename base_type::coord_type       coord_type;
     typedef typename base_type::bounds_type      bounds_type;
-    typedef fixed_vector<value_type, dim>  deriv_type;
-    typedef fixed_vector<value_type, 1>    val1;
-    typedef fixed_vector<value_type, 2>    val2;
-    typedef fixed_vector<value_type, 3>    val3;
-    typedef fixed_vector<value_type, 4>    val4;
+    typedef nvis::fixed_vector<value_type, dim>  deriv_type;
+    typedef nvis::fixed_vector<value_type, 1>    val1;
+    typedef nvis::fixed_vector<value_type, 2>    val2;
+    typedef nvis::fixed_vector<value_type, 3>    val3;
+    typedef nvis::fixed_vector<value_type, 4>    val4;
     typedef typename base_type::iterator         iterator;
     typedef typename base_type::const_iterator   const_iterator;
 
@@ -378,7 +378,7 @@ template<typename Val_>
 using image4f = image<Val_, 4, float>;
 
 
-} // namespace spurt
+} // namespace xavier
 
 #include "detail/raster.hpp"
 

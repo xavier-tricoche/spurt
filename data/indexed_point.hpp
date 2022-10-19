@@ -9,13 +9,13 @@
 */
 
 
-namespace spurt {
+namespace xavier {
 
 template<typename T, int N>
 class indexed_point {
 public:
     typedef T                           value_type;
-    typedef fixed_vector<T, N>    vector_type;
+    typedef nvis::fixed_vector<T, N>    vector_type;
     typedef size_t                      index_type;
     
     static size_t size() {
@@ -48,7 +48,7 @@ public:
     }
     
     value_type distance_to(const indexed_point& p) const {
-        return norm(p.__v - __v);
+        return nvis::norm(p.__v - __v);
     }
     
     value_type operator[](size_t n) const {

@@ -9,14 +9,14 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 
-#include <GL/glut.h>
+#include <glut.h>
 #include "Camera/CameraWrapper_Misc.h"
 
 namespace GLUT_helper {
 
-typedef spurt::fvec3             color_type;
-typedef spurt::vec2              point2d;
-typedef spurt::vec3              point3d;
+typedef nvis::fvec3             color_type;
+typedef nvis::vec2              point2d;
+typedef nvis::vec3              point3d;
 
 static float                screen_ratio;
 static int                  width, height;
@@ -29,7 +29,7 @@ extern void set_my_idle(void (*f)(void));         /* idle instructions */
 
 inline double max_dim(const nvis::bbox2& abox)
 {
-    spurt::vec2 span = abox.size();
+    nvis::vec2 span = abox.size();
     return std::max(span[0], span[1]);
 }
 
@@ -40,6 +40,7 @@ inline nvis::bbox2 current_bounds()
     cur_box.max()[0] = camera.getRightClipPlane();
     cur_box.min()[1] = camera.getBottomClipPlane();
     cur_box.max()[1] = camera.getTopClipPlane();
+    return cur_box;
 }
 
 inline double current_size()
@@ -63,11 +64,11 @@ inline void update_panning_sensitivity(float s = 2.)
     camera.setPanSensitivityY(sensitivityScale);
 }
 
-inline spurt::vec3 world_coordinates(int x, int y)
+inline nvis::vec3 world_coordinates(int x, int y)
 {
     camera.getActualPixelCoordinates(x,y);
     Vector3f v = camera.unProject(x,y);
-    return spurt::vec3(v(0), v(1), v(2));
+    return nvis::vec3(v(0), v(1), v(2));
 }
 
 inline void resetCamera()
@@ -186,7 +187,7 @@ static void glut_helper_keyboard(unsigned char key, int x, int y)
     glutPostRedisplay();
 }
 
-inline void __draw_vector(const spurt::vec2& x, const spurt::vec2& v)
+inline void __draw_vector(const nvis::vec2& x, const nvis::vec2& v)
 {
     const double cos_alpha = cos(M_PI/12.);
     const double sin_alpha = sin(M_PI/12.);
@@ -194,20 +195,20 @@ inline void __draw_vector(const spurt::vec2& x, const spurt::vec2& v)
     if (nvis::norm(v) == 0) {
         return;
     }
-    spurt::vec2 y = x + v;
+    nvis::vec2 y = x + v;
     glVertex2f(x[0], x[1]);
     glVertex2f(y[0], y[1]);
-    spurt::vec2 e0 = -0.2 * v;
-    spurt::vec2 e1(-e0[1], e0[0]);
+    nvis::vec2 e0 = -0.2 * v;
+    nvis::vec2 e1(-e0[1], e0[0]);
     glVertex2f(y[0], y[1]);
-    spurt::vec2 z = y + cos_alpha * e0 + sin_alpha * e1;
+    nvis::vec2 z = y + cos_alpha * e0 + sin_alpha * e1;
     glVertex2f(z[0], z[1]);
     glVertex2f(y[0], y[1]);
     z = y + cos_alpha * e0 - sin_alpha * e1;
     glVertex2f(z[0], z[1]);
 }
 
-inline void draw_vector(const spurt::vec2& x, const spurt::vec2& v, const spurt::fvec3& col, float width=1)
+inline void draw_vector(const nvis::vec2& x, const nvis::vec2& v, const nvis::fvec3& col, float width=1)
 {
     glEnable(GL_BLEND);
     glEnable(GL_LINE_SMOOTH);
@@ -218,8 +219,8 @@ inline void draw_vector(const spurt::vec2& x, const spurt::vec2& v, const spurt:
     glEnd();
 }
 
-inline void draw_vectors(const std::vector<spurt::vec2>& xs,
-                         const std::vector<spurt::vec2>& vs, const spurt::fvec3& col, float width=1)
+inline void draw_vectors(const std::vector<nvis::vec2>& xs,
+                         const std::vector<nvis::vec2>& vs, const nvis::fvec3& col, float width=1)
 {
 
     assert(xs.size() == vs.size());
@@ -230,14 +231,14 @@ inline void draw_vectors(const std::vector<spurt::vec2>& xs,
     glColor3f(col[0], col[1], col[2]);
     glBegin(GL_LINES);
     for (int i=0 ; i<xs.size() ; ++i) {
-        const spurt::vec2& x = xs[i];
-        const spurt::vec2& v = vs[i];
+        const nvis::vec2& x = xs[i];
+        const nvis::vec2& v = vs[i];
         __draw_vector(x, v);
     }
     glEnd();
 }
 
-inline void draw_vectors(const std::vector<std::pair<spurt::vec2, spurt::vec2> >& ps, const spurt::fvec3& col, float width=1)
+inline void draw_vectors(const std::vector<std::pair<nvis::vec2, nvis::vec2> >& ps, const nvis::fvec3& col, float width=1)
 {
     glEnable(GL_BLEND);
     glEnable(GL_LINE_SMOOTH);
@@ -245,14 +246,14 @@ inline void draw_vectors(const std::vector<std::pair<spurt::vec2, spurt::vec2> >
     glColor3f(col[0], col[1], col[2]);
     glBegin(GL_LINES);
     for (int i=0 ; i<ps.size() ; ++i) {
-        const spurt::vec2& x = ps[i].first;
-        const spurt::vec2& v = ps[i].second;
+        const nvis::vec2& x = ps[i].first;
+        const nvis::vec2& v = ps[i].second;
         __draw_vector(x, v);
     }
     glEnd();
 }
 
-inline void draw_curve(const std::vector<spurt::vec2>& xs, const spurt::fvec3& col, float width=1)
+inline void draw_curve(const std::vector<nvis::vec2>& xs, const nvis::fvec3& col, float width=1)
 {
     glEnable(GL_BLEND);
     glEnable(GL_LINE_SMOOTH);
@@ -265,14 +266,14 @@ inline void draw_curve(const std::vector<spurt::vec2>& xs, const spurt::fvec3& c
     glEnd();
 }
 
-inline void draw_quad(const nvis::bbox2& box, const spurt::fvec3& col, float width=1)
+inline void draw_quad(const nvis::bbox2& box, const nvis::fvec3& col, float width=1)
 {
     glEnable(GL_BLEND);
     glEnable(GL_LINE_SMOOTH);
     glColor3f(col[0], col[1], col[2]);
     glLineWidth(width);
-    const spurt::vec2& minp = box.min();
-    const spurt::vec2& maxp = box.max();
+    const nvis::vec2& minp = box.min();
+    const nvis::vec2& maxp = box.max();
     glBegin(GL_LINE_STRIP);
     glVertex2f(minp[0], minp[1]);
     glVertex2f(maxp[0], minp[1]);
@@ -282,7 +283,7 @@ inline void draw_quad(const nvis::bbox2& box, const spurt::fvec3& col, float wid
     glEnd();
 }
 
-inline void draw_dots(const std::vector<spurt::vec2>& xs, const spurt::fvec3& col, float sz=1)
+inline void draw_dots(const std::vector<nvis::vec2>& xs, const nvis::fvec3& col, float sz=1)
 {
     glDisable(GL_POINT_SMOOTH);
     glDisable(GL_BLEND);
@@ -290,7 +291,7 @@ inline void draw_dots(const std::vector<spurt::vec2>& xs, const spurt::fvec3& co
     glColor3f(col[0], col[1], col[2]);
     glBegin(GL_POINTS);
     for (int i=0 ; i<xs.size() ; ++i) {
-        spurt::vec2 x = xs[i];
+        nvis::vec2 x = xs[i];
         glVertex2f(x[0], x[1]);
     }
     glEnd();
@@ -299,30 +300,3 @@ inline void draw_dots(const std::vector<spurt::vec2>& xs, const spurt::fvec3& co
 } // GLUT_helper
 
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

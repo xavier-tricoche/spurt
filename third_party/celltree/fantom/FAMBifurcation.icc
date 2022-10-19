@@ -1,0 +1,83 @@
+//---------------------------------------------------------------------------
+//
+// Project:   FAnToM
+// Module:    $RCSfile: FAMBifurcation.icc,v $
+// Language:  C++
+// Date:      $Date: 2000/11/15 14:23:21 $
+// Author:    $Author: tricoche $
+// Version:   $Revision: 1.4 $
+//
+//--------------------------------------------------------------------------- 
+
+#ifdef OUTLINE
+#define inline
+#endif
+
+//---------------------------------------------------------------------------  
+
+inline void FAMBifurcation::getPosition(FPosition& result) const {
+
+  if (pos.getDimension() == 0) {
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+  }
+  result = pos;
+}
+
+//--------------------------------------------------------------------------- 
+
+inline void FAMBifurcation::setPosition(const FPosition& pos) {
+
+  if (pos.getDimension() != 3) {
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  }
+  this->pos = pos;
+}
+
+//--------------------------------------------------------------------------- 
+
+inline void FAMBifurcation::getType(bifurcationType& result) const {
+
+  if (type == NONE_BIF) {
+    THROW_EXCEPTION( FException, "ERROR: no type has been set" );
+  }
+  result = type;
+}
+
+//--------------------------------------------------------------------------- 
+
+inline void FAMBifurcation::getIncludingCellIndex(FIndex& cellId) const {
+
+  if (!this->cellId.isValid()) {
+    THROW_EXCEPTION( FException, "ERROR: no cell index has been set" );
+  }
+
+  cellId = this->cellId;
+}
+
+//--------------------------------------------------------------------------- 
+
+inline void FAMBifurcation::setIncludingCellIndex(const FIndex& cellId) {
+
+  this->cellId = cellId;
+}
+
+//--------------------------------------------------------------------------- 
+
+inline void FAMBifurcation::setInvolvedSingPathsIndices(const FIndex& singPathId1,
+							const FIndex& singPathId2) {
+
+  this->singPathId1 = singPathId1;
+  this->singPathId2 = singPathId2;
+}
+
+//--------------------------------------------------------------------------- 
+
+inline void FAMBifurcation::getInvolvedSingPathsIndices(FIndex& singPathId1,
+							FIndex& singPathId2) {
+
+  singPathId1 = this->singPathId1;
+  singPathId2 = this->singPathId2;
+}
+
+
+#undef inline

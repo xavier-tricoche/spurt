@@ -19,7 +19,7 @@
 #include "vtkContourFilter.h"
 #include "vtkCutter.h"
 #include "vtkCylinderSource.h"
-#include "vtkDataArrayTemplate.h"
+// #include "vtkDataArrayTemplate.h"
 #include "vtkDataSetMapper.h"
 #include "vtkDataSetReader.h"
 #include "vtkDataSetWriter.h"
@@ -61,13 +61,12 @@
 #include "vtkProbeFilter.h"
 #include "vtkProperty.h"
 #include "vtkRenderer.h"
-#include "vtkSmartPointer.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
-#include "vtkRenderWindowInteractor.h"
 #include "vtkShortArray.h"
 #include "vtkSmoothPolyDataFilter.h"
 #include "vtkSphereSource.h"
+#include "vtkStaticCellLinks.h"
 #include "vtkStructuredGrid.h"
 #include "vtkStructuredPoints.h"
 #include "vtkStructuredPointsReader.h"
@@ -104,7 +103,7 @@
 
 #include <boost/static_assert.hpp>
 #include <boost/type_traits.hpp>
-
+//#include <type_traits>
 #include <format/filename.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <math/vector_manip.hpp>
@@ -113,15 +112,11 @@
 #include <Eigen/SVD>
 #include <Eigen/Eigenvalues>
 
-namespace spurt {
-    typedef fixed_vector<double, 1>    vec1;
-    typedef nvis::bounding_box<vec1>   bbox1;
+namespace nvis {
+    typedef fixed_vector<double, 1> vec1;
+    typedef bounding_box<vec1>     bbox1;
 }
 
-namespace {
-    template<typename T>
-    using must_be_number = typename std::enable_if< std::is_arithmetic< T >::value >::type;
-}
 
 namespace vtk_utils {
 
@@ -146,11 +141,11 @@ inline DataSetPtr add_vertices(DataSetPtr);
 template< typename ForwardContainer>
 inline vtkPoints* make_vtkpoints(const ForwardContainer& pos)
 {
-    typedef typename ForwardContainer::value_type              point_type;
-    typedef typename ForwardContainer::const_iterator          iterator_type;
+    typedef typename ForwardContainer::value_type       point_type;
+    typedef typename ForwardContainer::const_iterator   iterator_type;
     typedef typename point_type::value_type                    value_type;
     typedef typename vtk_array_traits<value_type>::array_type  array_type;
-    typedef typename spurt::fixed_vector<value_type, 3>       vec_type;
+    typedef typename nvis::fixed_vector<value_type, 3>         vec_type;
 
     VTK_CREATE(array_type, coords);
     coords->SetNumberOfComponents(3);
@@ -163,31 +158,6 @@ inline vtkPoints* make_vtkpoints(const ForwardContainer& pos)
     VTK_PTR(vtkPoints, points);
     points->SetData(coords);
     return points;
-}
-
-// Return a data array of requested type
-template< typename ForwardContainer, typename Value, typename = must_be_number< typename ForwardContainer::value_type> >
-inline vtkDataArray* make_typed_data_array(const ForwardContainer& data) 
-{
-    typedef Value                                              value_type;
-    typedef typename ForwardContainer::value_type              in_value_type;
-    typedef typename ForwardContainer::const_iterator          iterator_type;
-    typedef typename vtk_array_traits<value_type>::array_type  array_type;
-    VTK_PTR(array_type, array);
-    array->SetNumberOfTuples(data.size());
-    array->SetNumberOfComponents(1); // NB: input data is assumed to be scalar
-    vtkIdType n=0;
-    for (iterator_type it=data.begin() ; it!=data.end() ; ++it, ++n) {
-        array->SetTypedComponent(n, 0, value_type(*it));
-    }
-    return array;
-}
-
-// return a data array of same type as input container's value type
-template< typename ForwardContainer, typename = must_be_number< typename ForwardContainer::value_type > >
-inline vtkDataArray* make_data_array(const ForwardContainer& data) 
-{
-    return make_typed_data_array<ForwardContainer, typename ForwardContainer::value_type>(data);
 }
 
 // Return a polydata that contains only point information
@@ -212,7 +182,7 @@ inline vtkPolyData* make_points(const RandomAccessContainer& pos,
     typedef typename ForwardContainer::const_iterator          iterator_type;
     typedef typename point_type::value_type                    value_type;
     typedef typename vtk_array_traits<value_type>::array_type  array_type;
-    typedef typename spurt::fixed_vector<value_type, 3>         vec_type;
+    typedef typename nvis::fixed_vector<value_type, 3>         vec_type;
 
     VTK_CREATE(array_type, coords);
     coords->SetNumberOfComponents(3);
@@ -233,7 +203,7 @@ inline vtkPolyData* make_points(const RandomAccessContainer& pos,
 template< typename ForwardContainer>
 inline vtkPolyData*
 make_polylines(const ForwardContainer& lines,
-               std::vector<spurt::ivec2>& removed, double mind=1.0e-6,
+               std::vector<nvis::ivec2>& removed, double mind=1.0e-6,
                bool verbose=false)
 {
     typedef typename ForwardContainer::const_iterator          iterator_type;
@@ -242,7 +212,7 @@ make_polylines(const ForwardContainer& lines,
     typedef typename line_type::value_type                     point_type;
     typedef typename point_type::value_type                    value_type;
     typedef typename vtk_array_traits<value_type>::array_type  array_type;
-    typedef typename spurt::fixed_vector<value_type, 3>         vec_type;
+    typedef typename nvis::fixed_vector<value_type, 3>         vec_type;
 
     removed.clear();
 
@@ -253,6 +223,10 @@ make_polylines(const ForwardContainer& lines,
     size_t lid=0;
     for (iterator_type it=lines.begin(); it!=lines.end(); ++it, ++lid) {
         const line_type& line = *it;
+        if (line.size() < 2) {
+            std::cerr << "Invalid number of points in line #" << lid << ": " << line.size() << '\n';
+            continue;
+        }
 
         // run sanity check on line
         std::vector<point_type> valid_pts;
@@ -264,14 +238,16 @@ make_polylines(const ForwardContainer& lines,
             else {
                 const point_type& p=*lt;
                 const point_type& q=valid_pts.back();
-                if (!mind || (mind>0 && spurt::vector::distance(p, q)>mind)) {
+                if (!mind || // no lower bound on segment length
+                    (i==line.size()-1) || // always include last point
+                    (mind>0 && xavier::vector::distance(p, q)>mind)) { // else we must pass the filtering criterion
                     valid_pts.push_back(p);
                 }
                 else {
-                    removed.push_back(spurt::ivec2(lid, i));
+                    removed.push_back(nvis::ivec2(lid, i));
                     if (verbose) {
                         std::cout << "point #" << i << " rejected, distance="
-                            << spurt::vector::distance(p, q) << '\n';
+                            << xavier::vector::distance(p, q) << '\n';
                         std::cout << "p=" << p << ", q=" << q << '\n';
                     }
                 }
@@ -299,7 +275,7 @@ inline vtkPolyData*
 make_polylines(const ForwardContainer& lines, double mind=1.0e-6,
                bool verbose=false)
 {
-    std::vector<spurt::ivec2> dummy;
+    std::vector<nvis::ivec2> dummy;
     return make_polylines(lines, dummy, mind, verbose);
 }
 
@@ -371,6 +347,30 @@ inline DataSetPtr add_scalars(DataSetPtr inout, const ForwardContainer& scalars,
     return inout;
 }
 
+template< typename T, typename DataSetPtr>
+inline DataSetPtr add_scalars_from_carray(DataSetPtr inout, const T* scalars, size_t nvals,
+                                          bool point_data=true, const std::string& name="anonymous_scalars",
+                                          bool active=true) {
+    typedef T value_type;
+    typedef typename vtk_array_traits<value_type>::array_type array_type;
+    VTK_CREATE(array_type, values);
+    values->SetNumberOfComponents(1);
+    values->SetNumberOfTuples(nvals);
+    for (size_t i=0; i<nvals; ++i) {
+        values->SetTypedTuple(i, &scalars[i]);
+    }
+    values->SetName(name.c_str());
+    if (point_data) {
+        if (active) inout->GetPointData()->SetScalars(values);
+        else inout->GetPointData()->AddArray(values);
+    }
+    else {
+        if (active) inout->GetCellData()->SetScalars(values);
+        else inout->GetCellData()->AddArray(values);
+    }
+    return inout;
+}
+
 // add color attributes to point/cell data. "colors" is a container of RGB
 // 3-vectors that can be cast to unsigned char
 template< typename ForwardContainer, typename DataSetPtr >
@@ -418,7 +418,9 @@ inline DataSetPtr add_vectors(DataSetPtr inout, const ForwardContainer& vectors,
     typedef typename ForwardContainer::const_iterator         iterator_type;
     typedef typename vector_type::value_type                  value_type;
     typedef typename vtk_array_traits<value_type>::array_type array_type;
-    const static size_t N = vector_type::size();
+
+    size_t N=0;
+    if (!vectors.empty()) N = vectors.front().size();
 
     assert(N==2 || N==3);
 
@@ -455,17 +457,17 @@ inline DataSetPtr add_vectors(DataSetPtr inout, const ForwardContainer& vectors,
 
 // Add vector attributes to point/cell data. "vectors" is a container of
 // vector components, each of size N
-template< typename ForwardContainer, typename DataSetPtr, size_t N >
+template< typename ForwardContainer, typename DataSetPtr, int N >
 inline DataSetPtr add_vectors_from_numbers(DataSetPtr inout,
                                            const ForwardContainer& vectors,
                                            bool point_data=true,
                                            const std::string& name="anonymous_vectors",
                                            bool active=true)
 {
-    BOOST_STATIC_ASSERT(N==2 || N==3);
+    static_assert(N==2 || N==3, "invalid vector dimensions in add_vectors_from_numbers");
 
     typedef typename ForwardContainer::const_iterator         iterator_type;
-    typedef typename ForwardContainer::value_type           value_type;
+    typedef typename ForwardContainer::value_type             value_type;
     typedef typename vtk_array_traits<value_type>::array_type array_type;
 
     VTK_CREATE(array_type, _vectors);
@@ -485,6 +487,43 @@ inline DataSetPtr add_vectors_from_numbers(DataSetPtr inout,
             _vec[1] = (*it++);
             _vec[2] = (*it++);
             _vectors->SetTypedTuple(_count, _vec);
+        }
+    }
+    _vectors->SetName(name.c_str());
+    if (point_data) {
+        if (active) inout->GetPointData()->SetVectors(_vectors);
+        else inout->GetPointData()->AddArray(_vectors);
+    }
+    else {
+        if (active) inout->GetCellData()->SetVectors(_vectors);
+        else inout->GetCellData()->AddArray(_vectors);
+    }
+    return inout;
+}
+
+template< typename T, typename DataSetPtr, int N>
+inline DataSetPtr add_vectors_from_carray(DataSetPtr inout, const T* vectors, size_t nvals,
+                                          bool point_data=true, const std::string& name="anonymous_vectors",
+                                          bool active=true) {
+    typedef T value_type;
+    typedef typename vtk_array_traits<value_type>::array_type array_type;
+    VTK_CREATE(array_type, _vectors);
+    _vectors->SetNumberOfComponents(3);
+    _vectors->SetNumberOfTuples(nvals);
+    value_type v[3] = {0, 0, 0};
+    if (N==2) {
+        for (size_t i=0; i<nvals; ++i) {
+            v[0] = vectors[2*i];
+            v[1] = vectors[2*i+1];
+            _vectors->SetTypedTuple(i, v);
+        }
+    }
+    else {
+        for (size_t i=0; i<nvals; ++i) {
+            v[0] = vectors[3*i];
+            v[1] = vectors[3*i+1];
+            v[2] = vectors[3*i+2];
+            _vectors->SetTypedTuple(i, v);
         }
     }
     _vectors->SetName(name.c_str());
@@ -577,7 +616,7 @@ inline DataSetPtr add_tensors_from_numbers(DataSetPtr inout,
                                            const std::string& name="anonymous_tensors",
                                            bool active=true)
 {
-    BOOST_STATIC_ASSERT(N==3 || N==4 || N==6 || N==9);
+    static_assert(N==3 || N==4 || N==6 || N==9, "invalid tensor dimensions in add_tensors_from_numbers");
 
     typedef typename ForwardContainer::value_type             value_type;
     typedef typename ForwardContainer::const_iterator         iterator_type;
@@ -637,6 +676,30 @@ inline DataSetPtr add_tensors_from_numbers(DataSetPtr inout,
     return inout;
 }
 
+// Add texture coordinates to point data. "tcoords" is a container
+// of 1D arrays
+template< typename ForwardContainer,
+          typename DataSetPtr >
+inline DataSetPtr add_tcoords(DataSetPtr inout, const ForwardContainer& tcoords)
+{
+    typedef typename ForwardContainer::value_type             coord_type;
+    typedef typename ForwardContainer::const_iterator         iterator_type;
+    typedef typename coord_type::value_type                   value_type;
+    typedef typename vtk_array_traits<value_type>::array_type array_type;
+
+    VTK_CREATE(array_type, _tcoords);
+    _tcoords->SetNumberOfComponents(2);
+    _tcoords->SetNumberOfTuples(tcoords.size());
+    vtkIdType _count = 0;
+    value_type _coord[2] = {0, 0};
+    for (iterator_type it=tcoords.begin() ; it!=tcoords.end() ; ++it, ++_count) {
+        _coord[0] = (*it)[0];
+        _coord[1] = (*it)[1];
+        _tcoords->SetTypedTuple(_count, _coord);
+    }
+    inout->GetPointData()->SetTCoords(_tcoords);
+    return inout;
+}
 
 template<typename DataSetPtr>
 inline DataSetPtr add_vertices(DataSetPtr inout)
@@ -664,7 +727,7 @@ inline DataSetPtr add_lines(DataSetPtr inout, const ForwardContainer& lines)
         cells->InsertCellPoint((*it++));
         cells->InsertCellPoint((*it++));
     }
-    inout->SetPolys(cells);
+    inout->SetLines(cells);
     return inout;
 }
 
@@ -764,81 +827,282 @@ inline vtkPolyData* add_mesh2d(vtkPolyData* inout,
     return inout;
 }
 
-inline vtkSmartPointer<vtkUnstructuredGrid>
-add_jacobian(vtkSmartPointer<vtkUnstructuredGrid> inout)
-{
-    typedef typename vtk_array_traits<double>::array_type array_type;
-    inout->BuildLinks();
-    vtkSmartPointer<vtkCellLinks> cell_links = inout->GetCellLinks();
-    size_t npts = inout->GetNumberOfPoints();
-    VTK_CREATE(array_type, Js);
-    Js->SetNumberOfComponents(9);
-    Js->SetNumberOfTuples(npts);
-    vtkIdType _count = 0;
-    double tensor[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-    
-    for (size_t i=0; i<npts; ++i) {
-        // std::cout << "point #" << i+1 << " from " << npts << '\n';
-        
-        double* tmp;
-        tmp = inout->GetPoint(i);
-        spurt::vec3 x0(tmp[0], tmp[1], tmp[2]);
-        tmp = inout->GetPointData()->GetVectors()->GetTuple(i);
-        spurt::vec3 f0(tmp[0], tmp[1], tmp[2]);
-        vtkCellLinks::Link _link = cell_links->GetLink(i);
-        std::vector<spurt::vec3> points;
-        std::vector<spurt::vec3> vectors;
-        std::set<size_t> point_ids;
-        vtkIdType* cell_ids = _link.cells;
-        for (size_t n=0; n<_link.ncells; ++n) {
-            vtkIdType cellid = cell_ids[n];
-            vtkIdType* points_in_cell;
-            vtkIdType n_points_in_cell;
-            inout->GetCellPoints(cellid, n_points_in_cell, points_in_cell);
-            for (size_t k=0; k<n_points_in_cell; ++k) {
-                vtkIdType id = points_in_cell[k];
-                if (id != i) point_ids.insert(id);
-            } 
+/*
+template<typename dataset_type, typename Enable=void>
+struct cell_links {};
+
+template<typename dataset_type>
+struct cell_links<dataset_type, typename std::enable_if<is_structured<dataset_type>::value>::type> {
+    typedef dataset_type dataset_t;
+
+    cell_links(dataset_t* dataset) {
+        dataset->GetDimensions(_dims);
+    }
+
+    void get_neighbors(std::vector<vtkIdType>& neighbors, unsigned int i) {
+        constexpr int all_neighbors[26][3] = {
+            {-1, -1, -1}, {-1, 0, -1}, {-1, 1, -1},
+            { 0, -1, -1}, { 0, 0, -1}, { 0, 1, -1},
+            { 1, -1, -1}, { 1, 0, -1}, { 1, 1, -1},
+            {-1, -1,  0}, {-1, 0,  0}, {-1, 1,  0},
+            { 0, -1,  0}, { 0, 1,  0},
+            { 1, -1,  0}, { 1, 0,  0}, { 1, 1,  0},
+            {-1, -1,  1}, {-1, 0,  1}, {-1, 1,  1},
+            { 0, -1,  1}, { 0, 0,  1}, { 0, 1,  1},
+            { 1, -1,  1}, { 1, 0,  1}, { 1, 1,  1},
+        };
+        int c[3];
+        c[0] = i % _dims[0];
+        int j = i / _dims[0];
+        c[1] = j % _dims[1];
+        c[2] = j / _dims[1];
+        for (int n=0; n<26; ++n) {
+            const int *ids = all_neighbors[n];
+            bool skip = false;
+            for (int d=0; d<3 && !skip; ++d) {
+                if ( (c[d]==0 && ids[d]==-1) ||
+                     (c[d]==_dims[d]-1 && ids[d]==1) )
+                    skip = true;
+            }
+            if (skip) continue;
+            int _c[3] = { c[0]+ids[0], c[1]+ids[1], c[2]+ids[2] };
+            neighbors.push_back(_c[0] + _dims[0]*(_c[1] + _dims[1]*_c[2]));
         }
+    }
+
+    int _dims[3];
+};
+*/
+
+template<typename DataSet>
+struct cell_links {
+    typedef DataSet dataset_t;
+    typedef cell_links<dataset_t> self_t;
+
+    cell_links(dataset_t* dataset) {
+        VTK_INIT(vtkStaticCellLinks, _links);
+        _dataset = dataset;
+        std::cout << "Building cell links\n";
+        _links->Initialize();
+        _links->BuildLinks(_dataset);
+        std::cout << "Cell links built\n";
+        _links->PrintSelf(std::cout, vtkIndent(0));
+        // _links = vtkCellLinks::SafeDownCast(dataset->GetCellLinks());
+    }
+
+    void get_neighbors(std::vector<vtkIdType>& neighbors, unsigned int i) {
+        int nneighs = _links->GetNumberOfCells(i);
+        // std::cout << "vertex " << i << " is surrounded by " << nneighs << " cells\n";
+        std::set<size_t> point_ids;
+        vtkIdType* cell_ids = _links->GetCells(i);
+        for (size_t n=0; n<nneighs; ++n) {
+            vtkIdType cellid = cell_ids[n];
+            VTK_CREATE(vtkIdList, cellpts);
+            // std::cout << "from neighbor cell " << n << "(" << cellid << "): ";
+            _dataset->GetCellPoints(cellid, cellpts);
+            for (size_t k=0; k<cellpts->GetNumberOfIds(); ++k) {
+                vtkIdType id = cellpts->GetId(k);
+                if (id != i) {
+                    point_ids.insert(id);
+                    // std::cout << id << ", ";
+                }
+                else {
+                    // std::cout << "(" << i << "), ";
+                }
+            }
+            // std::cout << '\n';
+        }
+        neighbors = std::vector<vtkIdType>(point_ids.begin(), point_ids.end());
+        // std::cout << "there are " << neighbors.size() << " unique vertex neighbors\n";
+    }
+
+    VTK_SMART(vtkStaticCellLinks) _links;
+    VTK_SMART(dataset_t) _dataset;
+};
+
+template<typename dataset_type>
+VTK_SMART(dataset_type)
+add_derivative_impl(VTK_SMART(dataset_type) inout,
+               const std::string& value_name,
+               const std::string& deriv_name="") {
+    typedef Eigen::MatrixXd matrix_t;
+    typedef Eigen::VectorXd vector_t;
+    typedef Eigen::Vector<double, 3> point_t;
+
+    /*
+        Quadratic fit in 3D
+
+        [1, x, y, z, x^2, xy, xz, y^2, yz, z^2]
+
+        d/dx [0, 1, 0, 0, 2x, y, z, 0, 0, 0]
+        d/dy [0, 0, 1, 0, 0, x, 0, 2y, z, 0]
+        d/dz [0, 0, 0, 1, 0, 0, x, 0, y, 2z]
+
+        d2/dx2  [0, 0, 0, 0, 2, 0, 0, 0, 0, 0]
+        d2/dxdy [0, 0, 0, 0, 0, 1, 0, 0, 0, 0]
+        d2/dxdz [0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
+        d2/dy2  [0, 0, 0, 0, 0, 0, 0, 2, 0, 0]
+        d2/dydz [0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
+        d2dz2   [0, 0, 0, 0, 0, 0, 0, 0, 0, 2]
+
+        f(x0+p) - f(x0) = a.x + b.y + c.z + d.x^2 + e.xy + f.xz + g.y^2 + h.yz + i*z^2
+        d/dx [] = a + 2dx + ey + fz
+        d/dy [] = b + ex + 2gy + hz
+        d/dz [] = c + fx + hy + 2iz
+        d2/dx2 [] = 2d
+        d2/dxdy [] = e
+        d2/dxdz [] = f
+        d2/dy2 [] = 2g
+        d2/dydz [] = h
+        d2/dz2 [] = 2i
+    */
+
+    cell_links<dataset_type> links(inout);
+    size_t npts = inout->GetNumberOfPoints();
+
+    int dummy;
+    VTK_SMART(vtkDataArray) array = inout->GetPointData()->GetArray(value_name.c_str(), dummy);
+    VTK_CREATE(vtkDoubleArray, derivative);
+    if (!deriv_name.empty()) {
+        derivative->SetName(deriv_name.c_str());
+    }
+    else {
+        std::string n = "derivative of ";
+        n += array->GetName();
+        derivative->SetName(n.c_str());
+    }
+    int ncomp = array->GetNumberOfComponents();
+    derivative->SetNumberOfComponents(3*ncomp);
+    derivative->SetNumberOfTuples(npts);
+    vtkIdType _count = 0;
+    vector_t tensor(3*ncomp);
+
+    for (size_t i=0; i<npts; ++i) {
+        double tmp[12];
+        inout->GetPoint(i, tmp);
+        point_t x0(tmp[0], tmp[1], tmp[2]);
+        array->GetTuple(i, tmp);
+        vector_t f0(ncomp);
+        std::copy(tmp, tmp + ncomp, &f0(0));
+        std::vector<vtkIdType> point_ids;
+        links.get_neighbors(point_ids, i);
+        std::vector<point_t> points;
+        std::vector<vector_t> values;
         for (auto it=point_ids.begin(); it!=point_ids.end(); ++it) {
             vtkIdType ptid = *it;
-            tmp = inout->GetPoint(ptid);
-            points.push_back(spurt::vec3(tmp[0], tmp[1], tmp[2])-x0);
-            tmp = inout->GetPointData()->GetVectors()->GetTuple(ptid);
-            vectors.push_back(spurt::vec3(tmp[0], tmp[1], tmp[2])-f0);
+            inout->GetPoint(ptid, tmp);
+            points.push_back(point_t(tmp[0], tmp[1], tmp[2])-x0);
+            array->GetTuple(ptid, tmp);
+            vector_t f(ncomp);
+            std::copy(tmp, tmp + ncomp, &f(0));
+            values.push_back(f-f0);
         }
         // compute weighted linear fit of surrounding values
-        Eigen::MatrixXd A(points.size(), 3);
-        Eigen::MatrixXd rhs(points.size(), 3);
+        matrix_t A(points.size(), 3);
+        matrix_t rhs(points.size(), ncomp);
         for (size_t n=0; n<points.size(); ++n) {
-            double dsq = spurt::inner(points[n], points[n]);
+            double dsq = points[n].squaredNorm();
             A(n,0) = points[n][0]/(dsq+1.0e-6);
             A(n,1) = points[n][1]/(dsq+1.0e-6);
             A(n,2) = points[n][2]/(dsq+1.0e-6);
-            rhs(n,0) = vectors[n][0]/(dsq+1.0e-6);
-            rhs(n,1) = vectors[n][1]/(dsq+1.0e-6);
-            rhs(n,2) = vectors[n][2]/(dsq+1.0e-6);
+            for (int k=0; k<ncomp; ++k) {
+                rhs(n,k) = values[n][k]/(dsq+1.0e-6);
+            }
+        }
+        if (points.size() == 0) {
+            std::fill(&tensor(0), &tensor(0)+ncomp*3, (double)0);
+            // tensor = vector_t::Zero();
+            std::cerr << "WARNING: Vertex #" << i << " has no neighbors!";
+            double q[3];
+            inout->GetPoint(i, q);
+            std::cerr << " Position: (" << q[0] << ", " << q[1] << "," << q[2] << ")\n";
+        }
+        else {
+            Eigen::JacobiSVD<matrix_t> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
+            matrix_t fit = svd.solve(rhs);
+            // the columns of "fit" are the rows of the jacobian
+            for (int col=0; col<ncomp; ++col) {
+                for (int d=0; d<3; ++d) {
+                    tensor[3*col+d] = fit(d, col);
+                }
+            }
         }
 
-        Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
-        Eigen::MatrixXd fit = svd.solve(rhs);
-        // the columns of "fit" are the rows of the jacobian
-        tensor[0] = fit(0,0);
-        tensor[1] = fit(1,0);
-        tensor[2] = fit(2,0);
-        tensor[3] = fit(0,1);
-        tensor[4] = fit(1,1);
-        tensor[5] = fit(2,1);
-        tensor[6] = fit(0,2);
-        tensor[7] = fit(1,2);
-        tensor[8] = fit(2,2);
-        
-        Js->SetTypedTuple(_count++, tensor);
+        derivative->SetTypedTuple(_count++, &tensor(0));
     }
-    Js->SetName("Jacobian");
-    inout->GetPointData()->AddArray(Js);
-    inout->GetPointData()->SetActiveTensors("Jacobian");
-    
+    inout->GetPointData()->AddArray(derivative);
+    return inout;
+}
+
+template<typename dataset_type>
+VTK_SMART(dataset_type)
+add_derivative(VTK_SMART(dataset_type) inout,
+               const std::string& value_name,
+               const std::string& deriv_name="") {
+    if (vtkUnstructuredGrid::SafeDownCast(inout) != nullptr) {
+        VTK_SMART(vtkUnstructuredGrid) ugrid = vtkUnstructuredGrid::SafeDownCast(inout);
+        add_derivative_impl(ugrid, value_name, deriv_name);
+    }
+    else if (vtkRectilinearGrid::SafeDownCast(inout) != nullptr) {
+        VTK_SMART(vtkRectilinearGrid) rgrid = vtkRectilinearGrid::SafeDownCast(inout);
+        add_derivative_impl(rgrid, value_name, deriv_name);
+    }
+    else if (vtkStructuredGrid::SafeDownCast(inout) != nullptr) {
+        VTK_SMART(vtkStructuredGrid) sgrid = vtkStructuredGrid::SafeDownCast(inout);
+        add_derivative_impl(sgrid, value_name, deriv_name);
+    }
+    else if (vtkImageData::SafeDownCast(inout) != nullptr) {
+        VTK_SMART(vtkImageData) igrid = vtkImageData::SafeDownCast(inout);
+        add_derivative_impl(igrid, value_name, deriv_name);
+    }
+    else {
+        std::cerr << "Unsupported dataset type!";
+    }
+    return inout;
+}
+
+template<typename dataset_type>
+VTK_SMART(dataset_type)
+add_jacobian(VTK_SMART(dataset_type) inout, const std::string& name="Jacobian")
+{
+    if (inout->GetPointData()->GetVectors() == nullptr) {
+        std::cerr << "ERROR: No vector field available for Jacobian computation!\n";
+        throw std::runtime_error("ERROR: No vector field available for Jacobian computation!\n");
+    }
+    inout = add_derivative(inout, inout->GetPointData()->GetVectors()->GetName(), name);
+
+    return inout;
+}
+
+template<typename dataset_type>
+VTK_SMART(dataset_type)
+add_gradient(VTK_SMART(dataset_type) inout, const std::string& name="Gradient")
+{
+    if (inout->GetPointData()->GetScalars() == nullptr) {
+        std::cerr << "ERROR: No scalar field available for gradient computation!\n";
+        throw std::runtime_error("ERROR: No scalar field available for gradient computation!\n");
+    }
+    inout = add_derivative(inout, inout->GetPointData()->GetScalars()->GetName(), name);
+
+    return inout;
+}
+
+template<typename dataset_type>
+VTK_SMART(dataset_type)
+add_hessian(VTK_SMART(dataset_type) inout, const std::string& gradient_name="Gradient", const
+            std::string& hessian_name="Hessian") {
+    if (inout->GetPointData()->GetArray(gradient_name.c_str()) == nullptr) {
+        try {
+            add_gradient(inout, gradient_name);
+        }
+        catch (std::exception& e) {
+            std::cerr << "Exception caught in add_hessian:\n";
+            std::cerr << e.what() << '\n';
+            throw;
+        }
+    }
+
+    inout = add_derivative(inout, "Gradient", "Hessian");
     return inout;
 }
 
@@ -846,13 +1110,12 @@ inline vtkSmartPointer<vtkUnstructuredGrid>
 add_vorticity(vtkSmartPointer<vtkUnstructuredGrid> inout, const std::string& jacobian_name="Jacobian")
 {
     typedef typename vtk_array_traits<double>::array_type array_type;
-    VTK_SMART(vtkDataArray) jacobian = inout->GetPointData()->GetTensors(jacobian_name.c_str());
-    if (jacobian.Get() == nullptr || jacobian_name != jacobian->GetName()) {
-        add_jacobian(inout);
-        jacobian = inout->GetPointData()->GetTensors("Jacobian");
-        if (jacobian_name != "Jacobian") jacobian->SetName(jacobian_name.c_str());
+    VTK_SMART(vtkDataArray) jacobian = inout->GetPointData()->GetArray(jacobian_name.c_str());
+    if (jacobian.Get() == nullptr) {
+        add_jacobian(inout, jacobian_name);
+        jacobian = inout->GetPointData()->GetArray(jacobian_name.c_str());
     }
-    
+
     size_t npts = inout->GetNumberOfPoints();
     VTK_CREATE(array_type, vorticity);
     vorticity->SetNumberOfComponents(3);
@@ -860,7 +1123,7 @@ add_vorticity(vtkSmartPointer<vtkUnstructuredGrid> inout, const std::string& jac
     vorticity->SetName("vorticity");
     double vec[3] = {0, 0, 0};
     double tens[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-    
+
     for (size_t i=0; i<npts; ++i) {
         jacobian->GetTuple(i, tens);
         vec[0] = tens[7] - tens[5];
@@ -876,19 +1139,18 @@ inline vtkSmartPointer<vtkUnstructuredGrid>
 add_lambda2(vtkSmartPointer<vtkUnstructuredGrid> inout, const std::string& jacobian_name="Jacobian")
 {
     typedef typename vtk_array_traits<double>::array_type array_type;
-    VTK_SMART(vtkDataArray) jacobian = inout->GetPointData()->GetTensors(jacobian_name.c_str());
-    if (jacobian.Get() == nullptr || jacobian_name != jacobian->GetName()) {
-        add_jacobian(inout);
-        jacobian = inout->GetPointData()->GetTensors("Jacobian");
-        if (jacobian_name != "Jacobian") jacobian->SetName(jacobian_name.c_str());
+    VTK_SMART(vtkDataArray) jacobian = inout->GetPointData()->GetArray(jacobian_name.c_str());
+    if (jacobian.Get() == nullptr) {
+        add_jacobian(inout, jacobian_name);
+        jacobian = inout->GetPointData()->GetArray(jacobian_name.c_str());
     }
-    
+
     size_t npts = inout->GetNumberOfPoints();
     VTK_CREATE(array_type, lambda2);
     lambda2->SetNumberOfComponents(1);
     lambda2->SetNumberOfTuples(npts);
     lambda2->SetName("lambda2");
-    
+
     Eigen::Matrix3d J, S, Omega;
     for (size_t i=0; i<npts; ++i) {
         jacobian->GetTuple(i, reinterpret_cast<double*>(&J(0,0)));
@@ -899,12 +1161,13 @@ add_lambda2(vtkSmartPointer<vtkUnstructuredGrid> inout, const std::string& jacob
         Omega *= Omega;
         Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> solver(S + Omega);
         Eigen::Vector3d evalue = solver.eigenvalues();      // compute eigenvalues
-        
+
         lambda2->SetTuple(i, &evalue[1]);
     }
     inout->GetPointData()->AddArray(lambda2);
     return inout;
 }
+
 
 // NOTE: Tetrahedras are not supported by vtkPolyData. Hence the output data
 //       type has to be vtkUnstructuredGrid, which prevents a direct change
@@ -1044,7 +1307,7 @@ inline vtkPolyData* create_mesh(const std::vector<Position_>& pos,
 }
 
 template<typename Position_, typename Vector_, typename Int_,
-         typename = typename std::enable_if<spurt::is_array<Vector_>::value>::type >
+         typename = typename std::enable_if<xavier::is_array<Vector_>::value>::type >
 inline vtkPolyData* create_mesh(const std::vector<Position_>& pos,
                                 const std::string& name,
                                 const std::vector<Vector_>& vectors,
@@ -1074,7 +1337,7 @@ inline T* clip_polydata(T* ds, vtkPlane* plane)
     return out;
 }
 
-inline vtkPlane* make_plane(const spurt::vec3& normal, const spurt::vec3& x)
+inline vtkPlane* make_plane(const nvis::vec3& normal, const nvis::vec3& x)
 {
     VTK_PTR(vtkPlane, plane);
     plane->SetOrigin(x[0], x[1], x[2]);
@@ -1129,8 +1392,8 @@ inline bool is_integral(const vtkDataArray* _in)
         case VTK_ID_TYPE:
         case VTK_LONG_LONG:
         case VTK_UNSIGNED_LONG_LONG:
-        case VTK___INT64:
-        case VTK_UNSIGNED___INT64:
+        // case VTK_INT64:
+        // case VTK_UNSIGNED_INT64:
             return true;
         default:
             return false;
@@ -1315,9 +1578,9 @@ inline vtkDataArray* convert(const vtkDataArray* _in)
     // 5) decrease precision (both integral) -> quantize
 
     bool input_is_integral        = is_integral(_in);
-    bool output_is_integral       = boost::is_integral<T>::value;
+    bool output_is_integral       = std::is_integral<T>::value;
     bool input_is_floating_point  = is_floating_point(_in);
-    bool output_is_floating_point = boost::is_floating_point<T>::value;
+	bool output_is_floating_point = std::is_floating_point<T>::value;
 
     if (!input_is_integral && !input_is_floating_point) {
         throw std::runtime_error("data type of input array is not arithmetic");

@@ -6,7 +6,7 @@
 
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
-#include <misc/time_helper.hpp>
+#include <util/wall_timer.hpp>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -36,14 +36,14 @@ void initialize(int argc, const char* argv[])
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
 }
 
-typedef spurt::nrrd_data_traits<Nrrd*>  field_type;
+typedef xavier::nrrd_data_traits<Nrrd*>  field_type;
 
 int main(int argc, const char* argv[])
 {
     initialize(argc, argv);
     
-    Nrrd* nins = spurt::readNrrd(name_in_scale);
-    Nrrd* ninv = spurt::readNrrd(name_in_val);
+    Nrrd* nins = xavier::nrrd_utils::readNrrd(name_in_scale);
+    Nrrd* ninv = xavier::nrrd_utils::readNrrd(name_in_val);
     
     int M = nins->axis[0].size;
     int N = nins->axis[1].size;
@@ -51,8 +51,8 @@ int main(int argc, const char* argv[])
     int nbpix = M*N;
     
     std::vector<double> scales, values;
-    spurt::to_vector(scales, nins);
-    spurt::to_vector(values, ninv);
+    xavier::nrrd_utils::to_vector(scales, nins);
+    xavier::nrrd_utils::to_vector(values, ninv);
     
     double* out = (double*)calloc(M*N, sizeof(double));
     
@@ -86,7 +86,33 @@ int main(int argc, const char* argv[])
     std::vector<double> spc(2);
     spc[0] = nins->axis[0].spacing;
     spc[1] = nins->axis[1].spacing;
-    spurt::writeNrrdFromContainers(out, name_out, /*nrrdTypeDouble,*/ dims, spc);
+    xavier::nrrd_utils::writeNrrdFromContainers(out, name_out, /*nrrdTypeDouble,*/ dims, spc);
     
     return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

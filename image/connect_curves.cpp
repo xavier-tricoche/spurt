@@ -8,13 +8,13 @@
 
 std::vector< std::vector< unsigned int > > ueber_components;
 std::vector< std::vector< unsigned int > > components;
-std::vector< vec3 > points;
+std::vector< nvis::vec3 > points;
 
 double eps;
 
 struct EpsilonSpatialOrdering
 {
-    bool operator()( const vec3& p0, const vec3& p1 )
+    bool operator()( const nvis::vec3& p0, const nvis::vec3& p1 )
     {
         return 
             ( p0[0]<p1[0]-eps || 
@@ -55,7 +55,7 @@ int main( int argc, char* argv[] )
         {
             case 'p':
             input >> px >> py >> pz;
-            points.push_back( vec3( px, py, pz ) );
+            points.push_back( nvis::vec3( px, py, pz ) );
             components.back().push_back( nb_pos++ );
             break;
             case 'n':
@@ -86,8 +86,8 @@ int main( int argc, char* argv[] )
     eps = atof( argv[3] );
 
     // uniquify found locations
-    std::map< vec3, unsigned int, EpsilonSpatialOrdering > unique_points;
-    std::map< vec3, unsigned int, EpsilonSpatialOrdering >::iterator it;
+    std::map< nvis::vec3, unsigned int, EpsilonSpatialOrdering > unique_points;
+    std::map< nvis::vec3, unsigned int, EpsilonSpatialOrdering >::iterator it;
     
     // test ordering
     if ( false )
@@ -95,7 +95,7 @@ int main( int argc, char* argv[] )
         std::cout << "epsilon = " << eps << std::endl;
         
         unique_points.clear();
-        vec3 q0( 0, 0, 0 ), q;
+        nvis::vec3 q0( 0, 0, 0 ), q;
         unique_points[q0] = 10;
         
         unsigned int wrong = 0;
@@ -143,7 +143,7 @@ int main( int argc, char* argv[] )
         }
         else
         {
-            //unique_points.insert( std::pair< vec3, unsigned int >( points[i], sz ) );
+            //unique_points.insert( std::pair< nvis::vec3, unsigned int >( points[i], sz ) );
             unique_points[points[i]] = sz;
             it = unique_points.find( points[i] );
             std::cout << "after insertion: element in map = "

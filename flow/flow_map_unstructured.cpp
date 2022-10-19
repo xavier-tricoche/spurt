@@ -1,23 +1,24 @@
-#include <fstream>
 #include <iostream>
 #include <map>
-#include <new>
 #include <queue>
 #include <sstream>
+#include <fstream>
+#include <new>
 
-#include <boost/numeric/odeint.hpp>
-#include <boost/filesystem.hpp>
+#include <flow/time_dependent_field.hpp>
+#include <flow/vector_field.hpp>
+#include <misc/progress.hpp>
+#include <misc/strings.hpp>
+#include <misc/option_parse.hpp>
 
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
-
-#include <data/raster.hpp>
-#include <flow/time_dependent_field.hpp>
 #include <flow/vector_field.hpp>
-#include <misc/option_parse.hpp>
-#include <misc/strings.hpp>
-#include <misc/time_helper.hpp>
-#include <vtk/vtk_field.hpp>
+#include <data/vtk_field.hpp>
+#include <data/raster.hpp>
+
+#include <boost/numeric/odeint.hpp>
+#include <boost/filesystem.hpp>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -28,6 +29,7 @@ std::string name_in, name_out, path;
 double length, eps, T;
 size_t dim, mem;
 std::array<size_t, 3> res;
+std::array<bool, 3> periodic;
 std::array<double, 6> bounds;
 bool verbose;
 size_t max_rhs_evals = 1000000;
@@ -36,7 +38,7 @@ namespace odeint = boost::numeric::odeint;
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = spurt::command_line;
+    namespace xcl = xavier::command_line;
 
     xcl::option_traits
             required(true, false, "Required Options"),
@@ -47,6 +49,7 @@ void initialize(int argc, const char* argv[])
     mem = 1024;
     eps = 1.0e-6;
     res = { 64, 64, 64 };
+    periodic = { false, false, false };
     bounds = { 1, -1, 1, -1, 1, -1 }; // invalid bounds
     verbose = false;
 
@@ -59,6 +62,7 @@ void initialize(int argc, const char* argv[])
         parser.add_value("T", T, "Integration time", required);
         parser.add_value("maxeval", max_rhs_evals, max_rhs_evals, "Maximum number of RHS evaluations", optional);
         parser.add_tuple<3>("res", res, res, "Sampling resolution", optional);
+        parser.add_tuple<3>("periodic", periodic, periodic, "Periodic boundary conditions", optional);
         parser.add_tuple<6>("bounds", bounds, "Sampling bounds", optional);
         parser.add_value("verbose", verbose, verbose, "Verbose output", optional);
 
@@ -72,9 +76,9 @@ void initialize(int argc, const char* argv[])
     }
 }
 
-using namespace spurt;
+using namespace xavier;
 
-typedef vtk_field<double>         field_type;  // steady 3D vector field
+typedef vtk_field                 field_type;  // steady 3D vector field
 typedef field_type::point_type    point_type;  // position in 3D space
 typedef field_type::vector_type   vector_type; // 3D vector
 typedef field_type::scalar_type   scalar_type; // scalar (e.g., time)
@@ -85,7 +89,7 @@ struct RHS {
     }
 
     void operator()(const point_type& x, vector_type& dxdt, scalar_type t) const {
-        m_field(x, dxdt, t); // exception will be passed along if position is invalid
+        dxdt = m_field(x /*, t*/); // exception will be passed along if position is invalid
         ++m_counter;
     }
 
@@ -98,7 +102,7 @@ typedef RHS rhs_type;
 struct Observer {
     Observer(point_type& seed, double& t, double& d) : last_p(seed), last_t(t), distance(d) {}
     void operator()(const point_type& p, double t) {
-        distance += spurt::norm(last_p-p);
+        distance += nvis::norm(last_p-p);
         last_p = p;
         last_t = t;
         // std::cout << "distance = " << distance << '\n';
@@ -112,7 +116,7 @@ typedef Observer observer_t;
 
 int main(int argc, const char* argv[])
 {
-    using namespace spurt;
+    using namespace xavier;
     using namespace odeint;
 
     initialize(argc, argv);
@@ -127,7 +131,7 @@ int main(int argc, const char* argv[])
     RHS rhs(field);
     
     std::cerr << "Resolution = " << res[0] << " x " << res[1] << " x " << res[2] << std::endl;
-    spurt::raster_grid<3> sampling_grid(res, field.bounds());
+    xavier::raster_grid<3> sampling_grid(res, field.bounds());
 
     std::cout << "sampling grid bounds are: " << sampling_grid.bounds().min()
     << " -> " << sampling_grid.bounds().max() << '\n';
@@ -141,7 +145,8 @@ int main(int argc, const char* argv[])
     // initialize coordinates
 #pragma openmp parallel
     for (int n=0 ; n<npoints ; ++n) {
-        spurt::vec3 x = sampling_grid(sampling_grid.coordinates(n));
+        nvis::ivec3 c = sampling_grid.coordinates(n);
+        nvis::vec3 x = sampling_grid(c);
         flowmap[3*n  ] = x[0];
         flowmap[3*n+1] = x[1];
         flowmap[3*n+2] = x[2];
@@ -151,7 +156,7 @@ int main(int argc, const char* argv[])
     int incr = (T > 0) ? +1 : -1;
 
    size_t nbcomputed=0;
-   spurt::progress_display progress(true);
+   xavier::ProgressDisplay progress(true);
 
    size_t nb_lost = 0;
    progress.start(npoints);
@@ -168,6 +173,8 @@ int main(int argc, const char* argv[])
 
        if (!thread) progress.update(n);
        
+       progress.update(n);
+
        if (stopped[n]) {
            continue;
        }
@@ -202,10 +209,10 @@ int main(int argc, const char* argv[])
    }
    }
 
-   progress.stop();
+   progress.end();
    
-   // std::cout << "number of successful cell searches: " << field.n_found << "\n"
-   //     << "number of failed searches: " << field.n_failed << '\n';
+   std::cout << "number of successful cell searches: " << field.n_found << "\n"
+       << "number of failed searches: " << field.n_failed << '\n';
 
    std::vector<size_t> size(4);
    std::vector<double> step(4), mins(4);
@@ -221,7 +228,7 @@ int main(int argc, const char* argv[])
 
    std::ostringstream os;
    os << name_out << "-flowmap-deltaT=" << T << ".nrrd";
-   spurt::writeNrrdFromContainers(flowmap, os.str(), size, step, mins);
+   xavier::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step, mins);
 
    std::cout << "done (5)\n";
 

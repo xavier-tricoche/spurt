@@ -11,7 +11,7 @@
 
 #include <data/raster.hpp>
 #include <misc/option_parse.hpp>
-#include <misc/time_helper.hpp>
+#include <misc/progress.hpp>
 #include <format/filename.hpp>
 
 #ifdef _OPENMP
@@ -25,8 +25,8 @@ typedef double value_t;
 constexpr value_t PI=3.14159265358979323844;
 constexpr value_t TWO_PI=6.28318530717958647688;
 
-typedef spurt::fixed_vector< value_t, 3> state_t;
-typedef spurt::fixed_vector< value_t, 3 > pos_t;
+typedef nvis::fixed_vector< value_t, 3> state_t;
+typedef nvis::fixed_vector< value_t, 3 > pos_t;
 typedef nvis::bounding_box< pos_t > bbox_t;
 
 std::string name_out;
@@ -45,15 +45,15 @@ bbox_t to_bbox(const std::array<value_t, 6>& array) {
 }
 
 template<typename T, size_t N>
-spurt::fixed_vector<T, N> to_vec(const std::array<T, N>& array) {
-    spurt::fixed_vector<T, N> v;
+nvis::fixed_vector<T, N> to_vec(const std::array<T, N>& array) {
+    nvis::fixed_vector<T, N> v;
     for (size_t i=0; i<N; ++i) v[i]=array[i];
     return v;
 }
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = spurt::command_line;
+    namespace xcl = xavier::command_line;
         
     xcl::option_traits 
             required_group(true, false, "Required Options"), 
@@ -97,17 +97,17 @@ struct ABC_field {
 
 int main(int argc, const char* argv[])
 {
-    using namespace spurt;
+    using namespace xavier;
     using namespace odeint;
     
     initialize(argc, argv);
     
-    name_out=spurt::filename::remove_extension(name_out);
+    name_out=xavier::filename::remove_extension(name_out);
     
     ABC_field rhs(abc[0], abc[1], abc[2]);
     
     if (verbose) std::cout << "Resolution = " << res[0] << "x" << res[1] << "x" << res[2] << std::endl;
-    spurt::raster_grid<3> sampling_grid(to_vec(res), to_bbox(bnds));
+    xavier::raster_grid<3> sampling_grid(to_vec(res), to_bbox(bnds));
           
     size_t npoints = sampling_grid.size();
         
@@ -125,7 +125,7 @@ int main(int argc, const char* argv[])
     runge_kutta_dopri5<state_t> stepper;
     value_t dt = 1.0e-2;
     
-    spurt::progress_display progress(true);
+    xavier::ProgressDisplay progress(true);
     
     progress.start(npoints, "Computing flow map");
     #pragma omp parallel
@@ -143,7 +143,7 @@ int main(int argc, const char* argv[])
 #endif
             if (!thread) progress.update(counter);
             
-            spurt::ivec3 c = sampling_grid.coordinates(n);
+            nvis::ivec3 c = sampling_grid.coordinates(n);
             state_t x = sampling_grid(c);
             
             integrate_adaptive(make_controlled(eps, eps, stepper), rhs, x,
@@ -154,12 +154,12 @@ int main(int argc, const char* argv[])
             fmap[3*n+2]=x[2];
         }
     }
-    progress.stop();
+    progress.end();
     
     std::vector<size_t> size(4);
     std::vector<double> step(4);
     std::vector<double> mins(4);
-    const spurt::vec3& s = sampling_grid.spacing();
+    const nvis::vec3& s = sampling_grid.spacing();
     step[0] = AIR_NAN;
     mins[0] = AIR_NAN;
     for (int i = 0 ; i < 3 ; ++i) {
@@ -172,7 +172,7 @@ int main(int argc, const char* argv[])
     
     size[0] = 3;
     os << name_out << "-flowmap-e=" << eps << "-T=" << std::setw(4) << std::setfill('0') << t_max << ".nrrd";
-    spurt::writeNrrdFromContainers(fmap, os.str(), /*nrrd_value_traits_from_type<value_t>::index,*/ size, step, mins);
+    xavier::nrrd_utils::writeNrrdFromContainers(fmap, os.str(), /*nrrd_value_traits_from_type<value_t>::index,*/ size, step, mins);
     
     return 0;
 }

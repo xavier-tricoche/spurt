@@ -11,7 +11,7 @@
 #include <stdexcept>
 #include <assert.h>
 
-namespace spurt {
+namespace xavier {
 extern bool display_eigen_stuff;
 
 // ultra-basic matrix type
@@ -44,7 +44,7 @@ struct matrix {
         if (_m == _n) {
             return _m;
         }
-        throw std::runtime_error("spurt::matrix::size(): matrix is not symmetric");
+        throw std::runtime_error("xavier::matrix::size(): matrix is not symmetric");
     }
     
     void resize(unsigned int m, unsigned int n) {
@@ -136,8 +136,8 @@ public:
         return _m;
     }
     
-    vec3 operator*(const vec3& v) const {
-        vec3 _w;
+    nvis::vec3 operator*(const nvis::vec3& v) const {
+        nvis::vec3 _w;
         ell_3mv_mul_d(_w.begin(), __mat, v.begin());
         return _w;
     }
@@ -174,24 +174,24 @@ public:
     }
     
     void eigensystem(std::vector< double >& evals,
-                     std::vector< vec3 >& evecs) const;
+                     std::vector< nvis::vec3 >& evecs) const;
                      
     friend double det(const mat3& M);
     friend mat3 invert(const mat3& M);
     friend mat3 transpose(const mat3& M);
     friend int eigenvalues(std::vector< double >& evals, const mat3& M);
-    friend int eigensystem(std::vector<vec3>& evecs,
+    friend int eigensystem(std::vector<nvis::vec3>& evecs,
                            std::vector<double>& evals,
                            const mat3& M);
     friend void eigen(std::vector< double >& evals,
-                      std::vector< vec3 >& evecs, const mat3& M);
-    friend vec3 eigenvector(const mat3& M, const double lambda);
+                      std::vector< nvis::vec3 >& evecs, const mat3& M);
+    friend nvis::vec3 eigenvector(const mat3& M, const double lambda);
     
 private:
     double __mat[9];
 };
 
-vec3 eigenvector(const mat3& M, const double lambda);
+nvis::vec3 eigenvector(const mat3& M, const double lambda);
 
 inline double norm(const mat3& M)
 {
@@ -240,7 +240,7 @@ inline int eigenvalues(std::vector< double >& evals,
     return ret;
 }
 
-inline int eigensystem(std::vector<vec3>& evecs,
+inline int eigensystem(std::vector<nvis::vec3>& evecs,
                        std::vector<double>& evals,
                        const mat3& M)
 {
@@ -251,13 +251,13 @@ inline int eigensystem(std::vector<vec3>& evecs,
     int roots = ell_3m_eigensolve_d(_eval, _evec, M.__mat, 0);
     for (int i = 0 ; i < 3 ; ++i) {
         evals[i] = _eval[i];
-        evecs[i] = vec3(_evec[3*i], _evec[3*i+1], _evec[3*i+2]);
+        evecs[i] = nvis::vec3(_evec[3*i], _evec[3*i+1], _evec[3*i+2]);
     }
     return roots;
 }
 
 inline void eigen(std::vector< double >& evals,
-                  std::vector< vec3 >& evecs,
+                  std::vector< nvis::vec3 >& evecs,
                   const mat3& M)
 {
     double _val[3];
@@ -291,9 +291,9 @@ inline void eigen(std::vector< double >& evals,
     for (unsigned int j = 0 ; j < valid.size() ; j++) {
         // check results
         unsigned int i = valid[j];
-        vec3 ev(_vec[3*i], _vec[3*i+1], _vec[3*i+2]);
+        nvis::vec3 ev(_vec[3*i], _vec[3*i+1], _vec[3*i+2]);
         double lambda = _val[i];
-        double dot = inner(M * ev, ev);
+        double dot = nvis::inner(M * ev, ev);
         if ((lambda == 0 && fabs(dot) > 1.0e-6) ||
                 (lambda != 0 && fabs((dot - lambda) / lambda) > 1.0e-6)) {
             continue;

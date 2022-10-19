@@ -12,7 +12,7 @@ template<int dim>
 void compare()
 {
     typedef Eigen::Matrix<float, dim, 1>        vec_type;
-    typedef spurt::indexed_point<float, dim>   point_type;
+    typedef xavier::indexed_point<float, dim>   point_type;
     typedef kdtree<vec_type, int, dim>          tree_type_1;
     typedef KDTree::KDTree<dim, point_type>     tree_type_2;
     typedef sfcnn<vec_type, dim, float>         tree_type_3;
@@ -41,7 +41,7 @@ void compare()
             all_pts[i] = x1;
         }
         
-        timer init_t;
+        nvis::timer init_t;
         tree_type_3 tree3(all_pts, npts);
         std::cerr << "STANN initialization took " << init_t.elapsed() << " s.\n";
         init_t.restart();
@@ -54,7 +54,7 @@ void compare()
         double dist1 = 0;
         double dist2 = 0;
         double dist3 = 0;
-        timer t;
+        nvis::timer t;
         for (int i=0 ; i<100 ; ++i) {
             vec_type    x1;
             point_type  x2;

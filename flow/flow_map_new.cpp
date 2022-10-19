@@ -9,7 +9,7 @@
 #include <data/field_wrapper.hpp>
 #include <flow/time_dependent_field.hpp>
 #include <flow/vector_field.hpp>
-#include <misc/time_helper.hpp>
+#include <misc/progress.hpp>
 #include <misc/strings.hpp>
 #include <misc/option_parse.hpp>
 
@@ -26,6 +26,10 @@
 #include <omp.h>
 #endif
 
+/*
+bin/flow_map_new --input ~/data/Dana/ABC/files.txt --path ~/data/Dana/ABC --output ~/data/Dana/ABC/dec8 --res 4 4 4 --periodic 1 1 1 --t0 -8 --T 8 
+*/
+
 std::string name_in, name_out, path;
 double length, eps, t0, T;
 size_t dim, mem;
@@ -39,7 +43,7 @@ namespace odeint = boost::numeric::odeint;
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = spurt::command_line;
+    namespace xcl = xavier::command_line;
 
     xcl::option_traits
             required(true, false, "Required Options"),
@@ -80,7 +84,7 @@ void initialize(int argc, const char* argv[])
     }
 }
 
-using namespace spurt;
+using namespace xavier;
 
 typedef gage_vector_field                         interpolator_type;   // single thread steady 3D vector field
 typedef time_dependent_field< interpolator_type > unsteady_field_type; // single thread unsteady (3+1D) vector field
@@ -92,9 +96,12 @@ struct RHS {
     RHS(std::shared_ptr<unsteady_field_type> field, size_t max_evals=1000)
         : m_field(field), m_counter(0), m_max_evals(max_evals) {
         std::ostringstream os;
+        // os << "RHS(const ...): resetting counter to 0" << std::endl;
+//std::cout << os.str();
     }
 
     void operator()(const point_type& x, vector_type& dxdt, scalar_type t) const {
+        // std::cout << "RHS: operator(" << x << ", " << t << ")" << std::endl;
         dxdt = m_field->operator()(x, t); // exception will be passed along if time or position are invalid
         ++m_counter;
     }
@@ -107,7 +114,7 @@ typedef RHS rhs_type;
 
 int main(int argc, const char* argv[])
 {
-    using namespace spurt;
+    using namespace xavier;
     using namespace odeint;
 
     initialize(argc, argv);
@@ -136,9 +143,9 @@ int main(int argc, const char* argv[])
     }
     in.close();
 
-    Nrrd* nin = spurt::readNrrd(data_files.begin()->second);
+    Nrrd* nin = xavier::nrrd_utils::readNrrd(data_files.begin()->second);
     std::cerr << "Resolution = " << res[0] << " x " << res[1] << " x " << res[2] << std::endl;
-    spurt::raster_grid<3> sampling_grid(res, spurt::bounds<3>(nin));
+    xavier::raster_grid<3> sampling_grid(res, xavier::nrrd_utils::get_bounds<3>(nin));
     nrrdNuke(nin);
 
     std::cout << "sampling grid bounds are: " << sampling_grid.bounds().min()
@@ -148,9 +155,9 @@ int main(int argc, const char* argv[])
     const double min_time = T > 0 ? t0 : t0+T;
     const double max_time = T > 0 ? t0+T : t0;
 
-    std::vector< std::shared_ptr<spurt::nrrd_wrapper> > input_nrrds;
+    std::vector< std::shared_ptr<xavier::nrrd_utils::nrrd_wrapper> > input_nrrds;
     for (auto name : data_files) {
-        input_nrrds.push_back(std::make_shared<spurt::nrrd_wrapper>(name.second));
+        input_nrrds.push_back(std::make_shared<xavier::nrrd_utils::nrrd_wrapper>(name.second));
     }
     const size_t nb_steps = input_nrrds.size();
     
@@ -158,11 +165,11 @@ int main(int argc, const char* argv[])
     std::vector< double > times(input_nrrds.size());
 
     for (size_t n=0; n<nb_threads; ++n) {
-        steps[n].resize(nb_steps);
-        for (size_t i=0; i<nb_steps; ++i) {
-            times[i] = data_files[i].first;
+		steps[n].resize(nb_steps);
+		for (size_t i=0; i<nb_steps; ++i) {
+        	times[i] = data_files[i].first;
             steps[n][i] = std::make_shared<gage_vector_field>(input_nrrds[i]->pointer(), data_files[i].second, false, periodic);
-        }
+		}
     }
     
     std::vector< std::shared_ptr<rhs_type> > per_thread_rhs(nb_threads);
@@ -185,8 +192,8 @@ int main(int argc, const char* argv[])
     // initialize coordinates
 #pragma openmp parallel
     for (int n=0 ; n<npoints ; ++n) {
-        spurt::ivec3 c = sampling_grid.coordinates(n);
-        spurt::vec3 x = sampling_grid(c);
+        nvis::ivec3 c = sampling_grid.coordinates(n);
+        nvis::vec3 x = sampling_grid(c);
         flowmap[3*n  ] = x[0];
         flowmap[3*n+1] = x[1];
         flowmap[3*n+2] = x[2];
@@ -196,7 +203,7 @@ int main(int argc, const char* argv[])
     int incr = (T > 0) ? +1 : -1;
 
    size_t nbcomputed=0;
-   spurt::progress_display progress(true);
+   xavier::ProgressDisplay progress(true);
 
    size_t nb_lost = 0;
    progress.start(npoints);
@@ -226,8 +233,8 @@ int main(int argc, const char* argv[])
 
        point_type x(flowmap[3*n], flowmap[3*n+1], flowmap[3*n+2]);
        try {
-           rhs_type& rhs = *(per_thread_rhs[thread]);
-           
+		   rhs_type& rhs = *(per_thread_rhs[thread]);
+		   
            point_type y(x);
            integrate_adaptive(stepper, rhs, y, initial_time, target_time, 1.0e-4);
            flowmap[3*n  ] = y[0];
@@ -247,9 +254,9 @@ int main(int argc, const char* argv[])
            stopped[n] = true;
        }
    }
-   }
+	}
 
-   progress.stop();
+   progress.end();
 
    std::vector<size_t> size(4);
    std::vector<double> step(4), mins(4);
@@ -265,8 +272,13 @@ int main(int argc, const char* argv[])
 
    std::ostringstream os;
    os << name_out << "-flowmap-t0=" << t0 << "-T=" << T << ".nrrd";
-   spurt::writeNrrdFromContainers(flowmap, os.str(), size, step, mins);
+   xavier::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step, mins);
+
+   std::cout << "done (5)\n";
+
    delete[] flowmap;
+
+   std::cout << "done (6)\n";
 
    return 0;
 }

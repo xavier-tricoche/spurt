@@ -6,7 +6,7 @@
 #include <misc/meta_utils.hpp>
 #include <matio.h>
 
-namespace spurt { namespace matlab {
+namespace xavier { namespace matlab {
     
 template<typename T>
 class mat_struct {

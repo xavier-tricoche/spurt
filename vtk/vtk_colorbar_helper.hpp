@@ -13,27 +13,27 @@
 
 namespace vtk_utils {
     
-typedef spurt::vec3 color_t;
+typedef nvis::vec3 color_t;
 
 void export_colormap(const std::string& name, vtkColorTransferFunction* ctf) {
-    std::fstream out(name.c_str(), std::ios::out);
-    int npts = ctf->GetSize();
-    double val[6];
-    for (int i=0; i<npts; ++i) {
-        ctf->GetNodeValue(i, val);
-        out << val[0] << " " << val[1] << " " << val[2] << " " << val[3] << '\n';
-    }
-    out.close();
+	std::fstream out(name.c_str(), std::ios::out);
+	int npts = ctf->GetSize();
+	double val[6];
+	for (int i=0; i<npts; ++i) {
+		ctf->GetNodeValue(i, val);
+		out << val[0] << " " << val[1] << " " << val[2] << " " << val[3] << '\n';
+	}
+	out.close();
 }
 
 void import_colormap(const std::string& name, vtkColorTransferFunction* ctf) {
-    std::fstream in(name.c_str(), std::ios::in);
-    double v, r, g, b;
-    while (!in.eof()) {
-        in >> v >> r >> g >> b;
-        if (in.good()) ctf->AddRGBPoint(v, r, g, b);
-    }
-    in.close();
+	std::fstream in(name.c_str(), std::ios::in);
+	double v, r, g, b;
+	while (!in.eof()) {
+		in >> v >> r >> g >> b;
+		if (in.good()) ctf->AddRGBPoint(v, r, g, b);
+	}
+	in.close();
 }
     
 struct colorbar_param {
@@ -46,7 +46,7 @@ struct colorbar_param {
   
     std::string   title;
     color_t       title_col, label_col;
-    spurt::vec2    pos;
+    nvis::vec2    pos;
     unsigned int  width, height;
     unsigned int  nlabels;
     unsigned int  font_size;

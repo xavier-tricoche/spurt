@@ -1,0 +1,184 @@
+#include "map_analysis.hpp"
+
+using namespace xavier;
+using namespace map_analysis;
+using namespace map_display;
+using namespace div_cleaning;
+
+typedef grid<double, 2>							grid_type;
+typedef std::pair<nvis::vec2, double>			data_type;
+typedef raster_data<data_type, double, 2>		dataset_type;
+
+struct Quad
+{
+    typedef nvis::vec2		vec_type;
+    typedef nvis::bbox2>	bounds_type;		
+
+    bounds_type bounds() const {
+        return bounds_type(pos[0], pos[2]);
+    }
+
+	vec_type interpolate(const vec_type_type& x) const {
+		double u, v, U, V;
+		u = x[0];
+		v = x[1];
+		U = 1-u;
+		V = 1-v;
+		return U*V*point_val[0] + u*V*point_val[1] + U*v*point_val[3] + u*v*point_val[2];
+	}
+	
+	nvis::mat2 
+	derivative(const vec_type& x) const {
+		double u, v, U, V, udot, vdot, Udot, Vdot;
+		u = x[0];
+		v = x[1];
+		U = 1-u;
+		V = 1-v;
+		vec_type size = pos[2] - pos[0];
+		udot = 1/size[0];
+		Udot = -udot;
+		vdot = 1/size[1];
+		Vdot = -vdot;
+		nvis::mat2 J;
+		vec_type row;
+		row = Udot*V*point_val[0] + udot*V*point_val[1] + Udot*v*point_val[3] + udot*v*point_val[2];
+		J(0,0) = row[0];
+		J(0,1) = row[1];
+		row = U*Vdot*point_val[0] + u*Vdot*point_val[1] + U*vdot*point_val[3] + u*vdot*point_val[2];
+		J(1,0) = row[0];
+		J(1,1) = row[1];
+		return J;
+	}
+
+    vec_type	pos[4];
+    vec_type 	vec[4];
+};
+
+
+double average_distance(const std::vector<nvis::vec2>& steps, int p,
+                        const map_metric& metric) {
+    if (steps.size() < p) return std::numeric_limits<double>::max();
+    double d = 0;
+    int count = 0;
+    for (int i=0 ; i<steps.size() ; ++i) {
+        if (i+p<steps.size()) {
+            d += metric.distance(steps[i], steps[i+p]);
+            ++count;
+        }
+        if (i>=p) {
+            d += metric.distance(steps[i-p], steps[i]);
+            ++count;
+        }
+    }
+    return d/(double)count;
+}
+
+int xavier::best_period(const std::vector<nvis::vec2>& steps, int maxp,
+                        const map_metric& metric) {
+    std::map<double, int> period_to_dist;
+    for (int p=1 ; p<=maxp ; ++p) {
+        period_to_dist[average_distance(steps, p, metric)] = p;
+    }
+    return period_to_dist.begin()->second;
+}
+
+template<typename MAP>
+void xavier::sample_raster(dataset_type& dataset, const grid_type& grid,
+                           const MAP& pmap, map_analysis_param& params, int period=-1)
+{
+    typedef grid_type::bounds_type	bounds_type;
+    typedef grid_type::vec_type		vec_type;
+    typedef grid_type::ivec_type	ivec_type;
+
+    const vec_type& step 		= grid.spacing();
+    const bounds_type& bounds 	= grid.bounds();
+    const ivec_type& resolution = grid.dimensions();
+    const map_metric& metric 	= params.metric;
+
+    // draw mesh
+    std::cerr << "bounds = " << bounds << std::endl;
+    std::cerr << "step = " << step << std::endl;
+    double x = bounds.min()[0];
+    for (int i=0 ; i<resolution[1] ; ++i, x+=step[0]) {
+        params.edges.push_back(nvis::vec2(x, bounds.min()[1]));
+        params.edges.push_back(nvis::vec2(x, bounds.max()[1]));
+    }
+    double y = bounds.min()[1];
+    for (int j=0 ; j<resolution[0] ; ++j, y+=step[1]) {
+        params.edges.push_back(nvis::vec2(bounds.min()[0], y));
+        params.edges.push_back(nvis::vec2(bounds.max()[0], y));
+    }
+
+    data_type dummy(nvis::vec2(0,0), 0);
+
+    int niter;
+    if (period > 0) niter = period;
+    else niter = params.nb_iterations;
+
+    int npoints = resolution[0]*resolution[1];
+
+    #pragma omp parallel
+    {
+        #pragma omp for schedule(dynamic,1)
+        for(int n = 0 ; n < npoints ; ++n) {
+            int thread_id = 0;
+#if _OPENMP
+            thread_id = omp_get_thread_num();
+#endif
+            int j = n / dims[1];
+            int i = n % dims[1];
+            nvis::ivec2 id(i,j);
+            dataset(id) = dummy;
+
+            if (thread_id == 0) {
+                std::ostringstream os;
+                os << "\rcompleted " << n << " / " << dims[0]*dims[1] << " ("
+                   << 100*n/dims[0]/dims[1] << "%), added vector " << v << " of period " << period << "      \r";
+                std::cout << os.str();
+            }
+
+            nvis::vec2 x0 = bounds.min() + step * nvis::vec2(i,j);
+
+            MAP *amap = pmap.clone();
+            std::vector<nvis::vec2> tmp;
+            try {
+                amap->map(x0, tmp, niter);
+            }
+            catch(...) {
+                continue;
+            }
+            if (period > 0 && tmp.size() < period) {
+                continue;
+            }
+            else if (period > 0) {
+                dataset(id) = data_type(metric.displacement(x0, tmp[period-1]), period);
+            }
+            else {
+                std::vector<nvis::vec2> steps;
+                steps.push_back(x0);
+                std::copy(tmp.begin(), tmp.end(), std::back_inserter(steps));
+                int p = best_period(steps, maxp);
+                nvis::vec2 v = metric2d.displacement(steps[0], steps[p]);
+                dataset(id) = data_type(v, p);
+            }
+        }
+    }
+    std::cout << '\n';
+}
+
+template<typename MAP>
+void xavier::process_cell(const dataset_type& dataset, const grid_type& grid,
+                          const nvis::ivec2& cell_id,
+                          const MAP& pmap, map_analysis_param& params)
+{
+    typedef grid_type::bounds_type	bounds_type;
+    typedef grid_type::vec_type		vec_type;
+    typedef grid_type::ivec_type	ivec_type;
+
+    const vec_type& step 		= grid.spacing();
+    const bounds_type& bounds 	= grid.bounds();
+    const ivec_type& resolution = grid.dimensions();
+    const map_metric& metric 	= params.metric;
+
+	
+}

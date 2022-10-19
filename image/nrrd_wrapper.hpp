@@ -11,6 +11,10 @@
 #include <math/bounding_box.hpp>
 #include <math/fixed_vector.hpp>
 #include <math/vector_manip.hpp>
+#include <misc/meta_utils.hpp>
+
+
+namespace xavier { namespace nrrd_utils {
 
 #define LIST_OF_NRRD_DATA_TYPES \
     X(void,           nrrdTypeUnknown); \
@@ -64,9 +68,6 @@ struct nrrd_value_size {
         }
     }
 };
-
-
-namespace spurt {
 
 struct nrrd_deleter {
     nrrd_deleter() : m_own(false) {}
@@ -167,6 +168,22 @@ template<typename T>
 inline bool invalid(T v)
 {
     return (std::isnan(v) || std::isinf(v));
+}
+
+inline size_t nrrd_raster_size(const Nrrd* A, bool is_scalar=true) {
+    size_t s=1;
+    for (int i=(is_scalar ? 0 : 1); i<A->dim; ++i) {
+        s*=A->axis[i].size;
+    }
+    return s;
+}
+
+inline bool matching_raster_sizes(const Nrrd* A, const Nrrd* B, bool is_scalar=true) {
+    if (A->dim!=B->dim) return false;
+    for (int d=(is_scalar ? 0 : 1); d<A->dim; ++d) {
+        if (A->axis[d].size!=B->axis[d].size) return false;
+    }
+    return true;
 }
 
 class nrrd_traits {
@@ -275,47 +292,60 @@ inline std::string error_msg(const std::string& fun_name="", const char* what=NR
     return fun_name + ": " + biffGetDone(what);
 }
 
-template<int N> inline
-nvis::bounding_box<fixed_vector<double, N> > bounds(const Nrrd* nrrd)
+inline void
+compute_raster_bounds(std::vector< std::pair<double, double > >& bounds,
+                      const Nrrd* nrrd, bool is_scalar=true)
 {
-    typedef fixed_vector<double, N>   vec_type;
-    typedef nvis::bounding_box<vec_type>    bounds_type;
-
-    bounds_type b;
-    for (int i = 0 ; i < N ; ++i) {
-        const NrrdAxisInfo& axis = nrrd->axis[nrrd->dim-N+i];
+    int skip = (is_scalar ? 0 : 1);
+    bounds.resize(nrrd->dim - skip);
+    for (int i = skip ; i < nrrd->dim ; ++i) {
+        const NrrdAxisInfo& axis = nrrd->axis[i];
         double step = axis.spacing;
         if (invalid(step)) step = 1;
         double width = (axis.size - 1) * step;
         if (!invalid(axis.min)) {
-            b.min()[i] = axis.min;
-            b.max()[i] = axis.min + width;
+            bounds[i].first = axis.min;
+            bounds[i].second = axis.min + width;
         }
         else if (!invalid(axis.max)) {
-            b.max()[i] = axis.max;
-            b.min()[i] = axis.max - width;
+            bounds[i].second = axis.max;
+            bounds[i].first = axis.max - width;
         }
         else {
-            b.min()[i] = 0;
-            b.max()[i] = width;
+            bounds[i].first = 0;
+            bounds[i].second = width;
         }
         if (axis.center == nrrdCenterCell) {
-            b.min()[i] -= 0.5 * step;
-            b.max()[i] += 0.5 * step;
+            bounds[i].first -= 0.5 * step;
+            bounds[i].second += 0.5 * step;
         }
+    }
+}
+
+template<int N> inline
+nvis::bounding_box<nvis::fixed_vector<double, N> >
+get_bounds(const Nrrd* nrrd, bool is_scalar=true)
+{
+    nvis::bounding_box<nvis::fixed_vector<double, N> > b;
+
+    std::vector< std::pair< double, double > > tmp;
+    compute_raster_bounds(tmp, nrrd, is_scalar);
+    for (int i=0; i<tmp.size(); ++i) {
+        b.min()[i] = tmp[i].first;
+        b.max()[i] = tmp[i].second;
     }
     return b;
 }
 
 template<int N> inline
-nvis::bounding_box< fixed_vector<double, N> > bounds(const nrrd_wrapper& wrap) {
-    return bounds<N>(wrap.pointer());
+nvis::bounding_box< nvis::fixed_vector<double, N> > get_bounds(const nrrd_wrapper& wrap) {
+    return get_bounds<N>(wrap.pointer());
 }
 
 template<int N> inline
-fixed_vector<double, N> step(const Nrrd* nrrd)
+nvis::fixed_vector<double, N> step(const Nrrd* nrrd)
 {
-    fixed_vector<double, N> s;
+    nvis::fixed_vector<double, N> s;
     for (int i = 0 ; i < N ; ++i)
     {
         s[i] = nrrd->axis[nrrd->dim-N+i].spacing;
@@ -325,7 +355,7 @@ fixed_vector<double, N> step(const Nrrd* nrrd)
 }
 
 template<int N> inline
-nvis::bounding_box< fixed_vector<double, N> > step(const nrrd_wrapper& wrap) {
+nvis::bounding_box< nvis::fixed_vector<double, N> > step(const nrrd_wrapper& wrap) {
     return step<N>(wrap.pointer());
 }
 
@@ -369,9 +399,14 @@ struct nrrd_data_wrapper {
 template<typename T1, typename T2>
 inline void to_vector(std::vector<T1>& vals, const void* data, size_t size)
 {
+    typedef data_traits<T1> traits_type;
+    typedef typename traits_type::value_type value_type;
+    size_t nvals = traits_type::size();
+
     vals.resize(size);
-    for (size_t i = 0 ; i < size ; ++i) {
-        vals[i] = ((T2*)data)[i];
+    value_type* ptr = (value_type *)&(vals[0]);
+    for (size_t i = 0 ; i < size*nvals ; ++i) {
+        (*ptr++) = ((T2*)data)[i];
     }
 }
 
@@ -465,6 +500,47 @@ inline T* to_array(const nrrd_wrapper& wrap) {
     return to_array<T>(wrap.pointer());
 }
 
+template< typename T >
+inline Nrrd* make3d(Nrrd* nin, bool is_scalar=true) {
+    typedef T value_t;
+
+    int offset = is_scalar ? 0 : 1;
+    if (nin->dim == 3 + offset) return nin;
+
+    size_t sz[4] = {2, 2, 2, 2};
+    double spc[4] = {1, 1, 1, 1};
+    int ctr[4] = {nrrdCenterNode, nrrdCenterNode, nrrdCenterNode, nrrdCenterNode};
+    double min[4] = {0, 0, 0, 0};
+    value_t* data;
+
+    nrrd_data_wrapper<value_t> value_wrapper(nin);
+
+    assert(nin->dim == 2 + offset);
+    for (int i=0; i<nin->dim; ++i) {
+        sz[i] = nin->axis[i].size;
+        spc[i] = nin->axis[i].spacing;
+        min[i] = nin->axis[i].min;
+        ctr[i] = nin->axis[i].center;
+    }
+    size_t nscalars = is_scalar ? sz[0] * sz[1] : sz[0] * sz[1] * sz[2];
+    data = (value_t *)calloc(nscalars * 2, sizeof(value_t));
+    size_t stride = nscalars;
+    for (size_t i=0; i<stride; ++i) {
+            data[i] = data[i+stride] = value_wrapper[i];
+    }
+
+    Nrrd* nout=nrrdNew();
+    if (nrrdWrap_nva(nout, data, nrrd_value_traits_from_type<value_t>::index, 3+offset, sz)) {
+        throw std::runtime_error(error_msg("Unable to create Nrrd"));
+    }
+    nrrdAxisInfoSet_nva(nout, nrrdAxisInfoSpacing, spc);
+    nrrdAxisInfoSet_nva(nout, nrrdAxisInfoCenter, ctr);
+    nrrdAxisInfoSet_nva(nout, nrrdAxisInfoMin, min);
+
+    return nout;
+}
+
+
 inline Nrrd* readNrrd(const std::string& filename)
 {
     Nrrd *nin = nrrdNew();
@@ -479,18 +555,29 @@ inline nrrd_wrapper::nrrd_wrapper(const std::string& filename, bool own) {
     m_own = own;
 }
 
+inline void writeNrrd(Nrrd* nout, const std::string& filename,
+                      bool compressed=false) {
+    NrrdIoState *nio = nullptr;
+    if (compressed) {
+        nio = nrrdIoStateNew();
+        nio->encoding = nrrdEncodingBzip2;
+        nio->bzip2BlockSize = -1;
+        nio->format = nrrdFormatNRRD;
+    }
+    if (nrrdSave(filename.c_str(), nout, nio)) {
+        throw std::runtime_error(error_msg("writeNrrd: error while saving"));
+    }
+}
+
 inline void writeNrrd(void* data, const std::string& filename,
-                      int data_type, int ndim, size_t* dims)
+                      int data_type, int ndim, size_t* dims,
+                      bool compressed=false)
 {
     Nrrd *nout = nrrdNew();
-
     if (nrrdWrap_nva(nout, data, data_type, ndim, dims)) {
         throw std::runtime_error(error_msg("writeNrrd: error while wrapping"));
     }
-    if (nrrdSave(filename.c_str(), nout, NULL)) {
-        throw std::runtime_error(error_msg("writeNrrd: error while saving"));
-    }
-
+    writeNrrd(nout, filename, compressed);
     nrrdNix(nout); // only deletes the structure not the data
 }
 
@@ -594,6 +681,8 @@ inline void writeNrrdFromParams(void* data, const std::string& filename,
     nrrdNix(nout);  // only deletes the structure not the data
 }
 
-}
+} // nrrd_utils
+
+} // xavier
 
 #endif

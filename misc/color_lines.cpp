@@ -5,10 +5,9 @@
 #include <list>
 #include <teem/nrrd.h>
 
-using namespace spurt;
 
-std::vector<fvec3> points;
-std::vector<fvec3> colors;
+std::vector<nvis::fvec3> points;
+std::vector<nvis::fvec3> colors;
 std::vector<std::vector<unsigned int> > lines;
 
 char* input, *output;
@@ -38,12 +37,12 @@ void initialize(int argc, char* argv[])
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
 }
 
-fvec3 color(unsigned int lid, unsigned int pid)
+nvis::fvec3 color(unsigned int lid, unsigned int pid)
 {
     const std::vector<unsigned int>& l = lines[lid];
-    fvec3 dir;
+    nvis::fvec3 dir;
     if (l.size() < 2) {
-        return fvec3(0, 0, 0);
+        return nvis::fvec3(0, 0, 0);
     }
     if (pid == 0) {
         dir = points[l[pid+1]] - points[l[pid]];
@@ -53,10 +52,10 @@ fvec3 color(unsigned int lid, unsigned int pid)
         dir = points[l[pid+1]] - points[l[pid-1]];
     }
     
-    if (norm(dir) == 0) {
-        return fvec3(0, 0, 0);
+    if (nvis::norm(dir) == 0) {
+        return nvis::fvec3(0, 0, 0);
     }
-    return abs(dir / norm(dir));
+    return nvis::abs(dir / nvis::norm(dir));
 }
 
 int main(int argc, char* argv[])
@@ -83,9 +82,9 @@ int main(int argc, char* argv[])
     std::getline(vtk_in, buffer);
     points.resize(npts);
     colors.resize(npts);
-    std::fill(colors.begin(), colors.end(), fvec3(0, 0, 0));
+    std::fill(colors.begin(), colors.end(), nvis::fvec3(0, 0, 0));
     for (int i = 0 ; i < npts ; ++i) {
-        fvec3& p = points[i];
+        nvis::fvec3& p = points[i];
         vtk_in >> p[0] >> p[1] >> p[2];
         vtk_out << p[0] << " " << p[1] << " " << p[2] << '\n';
     }

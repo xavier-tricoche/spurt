@@ -4,10 +4,10 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 
-namespace spurt {
+namespace xavier {
 template<typename T, typename PD, typename CD>
 struct AMR_quad {
-    typedef fixed_vector<T, 2>        pos_type;
+    typedef nvis::fixed_vector<T, 2>        pos_type;
     typedef nvis::bounding_box<pos_type>    bounds_type;
     typedef PD                              point_data_type;
     typedef CD                              cell_data_type;
@@ -23,7 +23,7 @@ struct AMR_quad {
 };
 
 struct Lt_index {
-    static bool operator()(const ivec3& i0, const ivec3& i1) {
+    static bool operator()(const nvis::ivec3& i0, const nvis::ivec3& i1) {
         // check depth first
         if (i0[2] < i1[2]) {
             return true;
@@ -44,7 +44,7 @@ struct Lt_index {
 template<typename D>
 class AMR_data_container {
 public:
-    typedef ivec3                                 index_type;
+    typedef nvis::ivec3                                 index_type;
     typedef D                                           data_type;
     typedef std::map<index_type, data_type, Lt_index>   map_type;
     typedef map_type::key_type                          key_type;
@@ -130,11 +130,11 @@ public:
     typedef AMR_root<T, PD, CD>                 root_type;
     typedef PD                                  point_data_type;
     typedef CD                                  cell_data_type;
-    typedef fixed_vector<value_type, 2>   pos_type;
+    typedef nvis::fixed_vector<value_type, 2>   pos_type;
     typedef nvis::bounding_box<pos_type>        bounds_type;
     typedef self_type*                          pointer_type;
     typedef const self_type*                    const_pointer_type;
-    typedef ivec3                         index_type;
+    typedef nvis::ivec3                         index_type;
     
 private:
     static const index_type __corner_shift[] = {
@@ -225,7 +225,7 @@ private:
 template<typename T, typename PD, typename CD>
 class _node_leaf_iterator {
 protected:
-    typedef ivec3                             index_type;
+    typedef nvis::ivec3                             index_type;
     typedef AMR_node<T, PD, CD>::const_pointer_type _Base_const_ptr;
     _Base_const_ptr _M_node;
     
@@ -322,10 +322,10 @@ class AMR_root {
     }
     
 public:
-    typedef fixed_vector<T, 2>            pos_type;
+    typedef nvis::fixed_vector<T, 2>            pos_type;
     typedef PD                                  point_data_type;
     typedef CD                                  cell_data_type;
-    typedef ivec3                         index_type;
+    typedef nvis::ivec3                         index_type;
     typedef nvis::bounding_box<pos_type>        bounds_type;
     typedef AMR_node<T, PD, CD>                 node_type;
     

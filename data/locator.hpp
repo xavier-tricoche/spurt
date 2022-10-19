@@ -8,14 +8,14 @@
 #include <limits>
 #include <list>
 
-namespace spurt {
+namespace xavier {
     
 // defines a data point associating a spatial coordinate with a value
 template<typename T, typename V, int K>
 class data_point {
 public:
     typedef T                         value_type;
-    typedef fixed_vector<T, K>  coord_type;
+    typedef nvis::fixed_vector<T, K>  coord_type;
     typedef V                         data_type;
 
     data_point() {}
@@ -35,7 +35,7 @@ public:
         return __d;
     }
     value_type distance_to(const data_point& dp) const {
-        return norm(dp.__c - __c);
+        return nvis::norm(dp.__c - __c);
     }
     value_type operator[](size_t n) const {
         return __c[n];

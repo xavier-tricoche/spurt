@@ -1,0 +1,107 @@
+
+#include "FException.hh"
+#include<sstream>
+
+#ifdef OUTLINE
+#define inline
+#endif
+
+
+//-----------------------------------------------------------------------------
+
+inline positive FmmappedArray::
+getFileForBlock( positive i) const
+{
+  return partsMap.getInterval(i);
+}
+
+//-----------------------------------------------------------------------------
+
+inline void FmmappedArray::
+getFileNames( vector<string> &names) const
+{
+  names.resize(parts.size());
+  for(positive i=0;i<parts.size();i++)
+    names[i]=parts[i].fileName;    
+}
+//-----------------------------------------------------------------------------
+    
+inline void FmmappedArray::
+getBlocksPerFile( vector<positive> &sizes) const
+{
+  sizes.resize(parts.size());
+  for(positive i=0;i<parts.size();i++)
+    sizes[i]=parts[i].numBlocks;    
+}
+
+//-----------------------------------------------------------------------------
+
+inline 
+void * 
+FmmappedArray::
+getBlock( positive & numconsecutive , positive i )
+{
+  
+#ifndef NODEBUG
+  if( i >= numBlocks ){
+    ostringstream o;
+    o<<" too big block Id: "<<i<<" while size is:"<<numBlocks<<endl;    
+    THROW_EXCEPTION(FIndexOutOfBoundsException,o.str());
+  }
+#endif
+  //if actuallyMapped is Not empty
+  if( lastMapped !=EmptyList.begin() ){
+    
+    register positive k = i - lastMapped->startBlockId ;
+
+    //if the requested block is in the las mapped arry region:
+    if( k < lastMapped->numBlocks ){
+      numconsecutive = lastMapped->numBlocks - k;
+      return lastMapped->startBlock +  k * blockSize;
+    }
+  }
+
+  //if the requested block was not in
+  //the last mapped array region:
+
+  positive partId = partsMap.getInterval(i);
+
+
+  //  if( partId >= parts.size())
+  // THROW_EXCEPTION(FIndexOutOfBoundsException," sth went wrong ");
+
+  part& actPart = parts[partId];
+
+  positive regionId  = ( i - actPart.firstIndex ) >> pMmappedBlocks;
+
+  //if( regionId >= actPart.regionMaps.size())
+  //  THROW_EXCEPTION(FIndexOutOfBoundsException," sth went wrong : regionID  2 big");
+  
+  mapRegions::iterator & aIter = actPart.regionMaps[regionId];
+
+  
+  //if the needed region is not already mapped:
+  if( aIter == EmptyList.begin() )
+
+    mapNewBlock(aIter,actPart,regionId);
+
+  else{
+    //put actual elemnt at beginning of actuallyMapped
+    actuallyMapped.splice
+      (actuallyMapped.begin(),actuallyMapped,aIter);
+    //    printf("|");fflush(stdout);
+  }
+
+  lastMapped = aIter;
+        
+  positive k = i - lastMapped->startBlockId ;
+
+#ifndef NODEBUG
+  assert( k < lastMapped->numBlocks );
+#endif
+
+  numconsecutive    =  lastMapped->numBlocks - k;
+  return lastMapped->startBlock +  k * blockSize;
+    
+}
+#undef inline

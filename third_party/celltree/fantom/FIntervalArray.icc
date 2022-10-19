@@ -1,0 +1,27 @@
+
+#ifdef OUTLINE
+#define inline
+#endif
+
+//for upper_bound
+#include<algorithm>
+
+/** returns the number of the interval in which
+ * i lies (the index range is split into intervals whose sizes
+ * are given by the array sizes given in the constructor
+ */
+inline positive FIntervalArray::getInterval(positive i) const
+{
+
+  if(i>=sumSize)
+    return positive(-1);
+
+  if(pMinSize<0)
+    return std::upper_bound(table.begin(),table.end(),i)->interval ;
+
+  const hashIt &h = table[i>>pMinSize];
+
+  return h.interval + positive( i>=h.border );
+
+}
+

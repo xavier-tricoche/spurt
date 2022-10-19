@@ -1,0 +1,76 @@
+//---------------------------------------------------------------------------
+//
+// Project:   FAnToM
+// Module:    $RCSfile: FRefTensor.icc,v $
+// Language:  C++
+// Date:      $Date: 2003/02/06 10:22:33 $
+// Author:    $Author: garth $
+// Version:   $Revision: 1.2 $
+//
+//--------------------------------------------------------------------------- 
+
+#ifndef __FRefTensor_icc_defined
+#define __FRefTensor_icc_defined
+
+#ifdef OUTLINE
+#define inline
+#endif
+
+inline const FRefTensor FTensor::operator[](unsigned char k) const
+{
+  try{
+
+#ifndef NODEBUG
+    if (order==0) 
+      throw FInvalidDimensionException 
+	("ERROR: tensor of order 0 can't have subcomponents with lower order");
+
+    if (!sizeOfArray)
+      throw FEmptyObjectException();
+
+    if (k>=dimension) 
+      throw FIndexOutOfBoundsException();
+#endif
+
+    return FRefTensor(dimension,order-1,comp+k*pow(dimension,order-1));
+
+  }
+ 
+  catch(FException e)
+    {
+      e.addTraceMessage
+	("const FRefTensor FTensor::operator[](unsigned char k) const");
+      throw e;
+    }  
+}
+
+inline FRefTensor FTensor::operator[](unsigned char k)
+{
+  try{
+
+#ifndef NODEBUG
+    if (order==0) 
+      throw FInvalidDimensionException 
+	("ERROR: tensor of order 0 can't have subcomponents with lower order");
+
+    if (!sizeOfArray)
+      throw FEmptyObjectException();
+
+    if (k>=dimension) 
+      throw FIndexOutOfBoundsException();
+#endif
+
+    return FRefTensor(dimension,order-1,comp+k*pow(dimension,order-1));
+
+  }
+
+  catch(FException e)
+    {
+      e.addTraceMessage("FRefTensor FTensor::operator[](unsigned char k)");
+      throw e;
+    }
+
+}
+
+#endif //__FRefTensor_icc_defined
+

@@ -3,9 +3,9 @@ set(IMAGE_SRC
     integrate.cpp
     creaseline2d.cpp
 )
-add_library( spurt_image ${LIBMODE} ${IMAGE_SRC} )
-target_link_libraries( spurt_image ${Teem_LIBRARIES} )
-install( TARGETS spurt_image
+add_library( xavier_image ${LIBMODE} ${IMAGE_SRC} )
+target_link_libraries( xavier_image ${Teem_LIBRARIES} )
+install( TARGETS xavier_image
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
 )

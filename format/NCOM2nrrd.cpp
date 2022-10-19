@@ -4,10 +4,11 @@
 #include <format/filename.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <misc/option_parse.hpp>
+#include <misc/strings.hpp>
 
 #include <VTK/vtk_data_helper.hpp>
 
-std::string name_in, name_out;
+std::string name_in, name_out, var_names;
 bool verbose=false;
 bool save_mesh=false;
 bool save_uv=true;
@@ -28,7 +29,7 @@ inline double rad2deg(double r) {
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = spurt::command_line;
+    namespace xcl = xavier::command_line;
         
     xcl::option_traits 
             required_group(true, false, "Required Options"), 
@@ -43,6 +44,7 @@ void initialize(int argc, const char* argv[])
         parser.add_value("output", name_out, "Output filename", optional_group);
         parser.add_flag("mesh", save_mesh, "Export mesh information", optional_group);
         parser.add_flag("uv", save_uv, "Export velocity in m/s", optional_group);
+        parser.add_value("vars", var_names, "Variable names", optional_group);
         parser.add_value("verbose", verbose, verbose, "Verbose output", optional_group);
         
         
@@ -79,59 +81,67 @@ int main(int argc, char* argv[]) {
     size_t nlat, nlon;
     double t;
     if (name_out.empty()) {
-        name_out = spurt::filename::remove_extension(name_in);
+        name_out = xavier::filename::remove_extension(name_in);
     }
     else {
-        name_out = spurt::filename::remove_extension(name_out);
+        name_out = xavier::filename::remove_extension(name_out);
     }
-
-    spurt::NCOMreader::load_dataset(name_in, lat_deg, lon_deg, vel_spatial, t);
+    
+    std::vector<std::string> names;
+    std::vector< std::vector<double > > variables;
+    if (!var_names.empty()) {
+        xavier::tokenize(names, var_names);
+        xavier::NCOMreader::load_dataset(name_in, lat_deg, lon_deg, vel_spatial, names, variables, t);
+    }
+    else {
+        xavier::NCOMreader::load_dataset(name_in, lat_deg, lon_deg, vel_spatial, t);
+    }
     nlat=lat_deg.size();
     nlon=lon_deg.size();
     if (verbose) {
-		std::cout << "latitude range (in degrees): " << lat_deg[0] << " - " << lat_deg.back() << '\n';
-    	std::cout << "longitude range (in degrees): " << lon_deg[0] << " - " << lon_deg.back() << '\n';
-	}
-	
-	std::vector<double> vel_norm;
-	size_t nvalid = 0;
-	for (size_t i=0; i<vel_spatial.size(); ++i) {
-		if (vel_spatial[i][0] == _invalid_ || vel_spatial[i][1] == _invalid_) {
-			vel_spatial[i] = nvis::vec2(0,0);
-		}
-		else {
-			vel_spatial[i] *= 0.001;
-			vel_norm.push_back(nvis::norm(vel_spatial[i]));
-		}
-	}
-	
-	double max_vel, min_vel, mean_vel=0;
-	max_vel = *std::max_element(vel_norm.begin(), vel_norm.end());
-	min_vel = *std::min_element(vel_norm.begin(), vel_norm.end());
-	std::for_each(vel_norm.begin(), vel_norm.end(), [&](double v) 
-	{
-		mean_vel += v;
-	});
-	mean_vel /= vel_norm.size();
-	
-	if (verbose) {
-		std::cout << "min spatial velocity: " << min_vel << '\n'
-		      << "max spatial velocity: " << max_vel << '\n'
-		      << "mean spatial velocity: " << mean_vel << '\n';
+        std::cout << "latitude range (in degrees): " << lat_deg[0] << " - " << lat_deg.back() << '\n';
+        std::cout << "longitude range (in degrees): " << lon_deg[0] << " - " << lon_deg.back() << '\n';
     }
-	
+    
+    std::vector<double> vel_norm;
+    size_t nvalid = 0;
+    for (size_t i=0; i<vel_spatial.size(); ++i) {
+        if (vel_spatial[i][0] == _invalid_ || vel_spatial[i][1] == _invalid_) {
+            vel_spatial[i] = nvis::vec2(0,0);
+        }
+        else {
+            vel_spatial[i] *= 0.001;
+            vel_norm.push_back(nvis::norm(vel_spatial[i]));
+        }
+    }
+    
+    double max_vel, min_vel, mean_vel=0;
+    max_vel = *std::max_element(vel_norm.begin(), vel_norm.end());
+    min_vel = *std::min_element(vel_norm.begin(), vel_norm.end());
+    std::for_each(vel_norm.begin(), vel_norm.end(), [&](double v) 
+    {
+        mean_vel += v;
+    });
+    mean_vel /= vel_norm.size();
+    
+    if (verbose) {
+        std::cout << "min spatial velocity: " << min_vel << '\n'
+              << "max spatial velocity: " << max_vel << '\n'
+              << "mean spatial velocity: " << mean_vel << '\n';
+    }
+    
     // convert to radians:
     double min_lat_deg = lat_deg[0];
     double min_lon_deg = lon_deg[0];
     double max_lat_deg = lat_deg.back();
-	double max_long_deg = lon_deg.back();
+    double max_long_deg = lon_deg.back();
     double dlat_deg = lat_deg[1]-lat_deg[0];
     double dlon_deg = lon_deg[1]-lon_deg[0];
-	double delta_long_deg = max_long_deg - min_lon_deg;
-	double delta_lat_deg = max_lat_deg - min_lat_deg;
+    double delta_long_deg = max_long_deg - min_lon_deg;
+    double delta_lat_deg = max_lat_deg - min_lat_deg;
     
     double mid_lon_deg = 0.5*(lon_deg[0] + lon_deg.back());
-	double mid_lat_deg = 0.5*(lat_deg[0] + lat_deg.back());
+    double mid_lat_deg = 0.5*(lat_deg[0] + lat_deg.back());
     
     if (save_mesh) {
         std::vector<nvis::vec2> vertices(nlat*nlon);
@@ -141,23 +151,23 @@ int main(int argc, char* argv[]) {
             vertices[i][0] = Earth_radius*deg2rad(_lon_deg)*cos(deg2rad(_lat_deg));
             vertices[i][1] = Earth_radius*deg2rad(_lat_deg);
         }
-		
-		if (verbose) {
-			double width = Earth_radius*cos(deg2rad(mid_lat_deg))*deg2rad(delta_long_deg);
-			double height = Earth_radius*deg2rad(delta_lat_deg);
-			std::cout << "region size at center: longitude: " << width/1000. << " km, latitude: " << height/1000. << " km\n";
-		}
+        
+        if (verbose) {
+            double width = Earth_radius*cos(deg2rad(mid_lat_deg))*deg2rad(delta_long_deg);
+            double height = Earth_radius*deg2rad(delta_lat_deg);
+            std::cout << "region size at center: longitude: " << width/1000. << " km, latitude: " << height/1000. << " km\n";
+        }
         
         double vedge = Earth_radius*deg2rad(dlat_deg);
         double hedge_bottom = Earth_radius*cos(deg2rad(min_lat_deg))*deg2rad(dlon_deg);
         double hedge_top = Earth_radius*cos(deg2rad(max_lat_deg))*deg2rad(dlon_deg);
         
         if (verbose) {
-			std::cout << "length of vertical edges: " << vedge << '\n';
-        	std::cout << "length of horizontal edges: from " << hedge_bottom 
-            	<< " to " << hedge_top << ", ratio: " << 100.*hedge_top/hedge_bottom
-            	<< '\n';
-		}
+            std::cout << "length of vertical edges: " << vedge << '\n';
+            std::cout << "length of horizontal edges: from " << hedge_bottom 
+                << " to " << hedge_top << ", ratio: " << 100.*hedge_top/hedge_bottom
+                << '\n';
+        }
         
         vtkStructuredGrid* grid = vtkStructuredGrid::New();
         vtkPoints* points = vtk_utils::make_vtkpoints(vertices);
@@ -186,12 +196,12 @@ int main(int argc, char* argv[]) {
         err += fabs(deg2rad(lat_deg[i])-lat_rad[i]);
     }
     if (verbose) {
-		std::cout << "error=" << err << '\n';
-		std::cout << "latitude: ";
-    	check_delta(lat_deg);
-    	std::cout << "longitude: ";
-    	check_delta(lon_deg);
-	}
+        std::cout << "error=" << err << '\n';
+        std::cout << "latitude: ";
+        check_delta(lat_deg);
+        std::cout << "longitude: ";
+        check_delta(lon_deg);
+    }
     
     /* formulae to convert spatial velocity to lat/lon degree / s
        simplified expression for 
@@ -236,12 +246,21 @@ int main(int argc, char* argv[]) {
     center[1] = nrrdCenterNode;
     center[2] = nrrdCenterNode;
     if (save_uv) {
-        spurt::writeNrrdFromContainers(reinterpret_cast<double *>(&vel_spatial[0]), 
+        xavier::nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&vel_spatial[0]), 
             name_out+"-spatial_velocity.nrrd", /*nrrdTypeDouble,*/ sz, spc, min, center, empty);
     }
-    spurt::writeNrrdFromContainers(reinterpret_cast<double *>(&vel_angular[0]),
+    xavier::nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&vel_angular[0]),
             name_out+"-angular_velocity.nrrd", /*nrrdTypeDouble,*/ sz, spc, min, center, empty);
     std::cout << "t=" << t << '\n';
+    
+    for (size_t i=0; i<names.size(); ++i) {
+        xavier::nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&variables[i][0]),
+            name_out + "-" + names[i], /*nrrdTypeDouble,*/ 
+            std::vector<size_t>(sz.begin()+1, sz.end()), 
+            std::vector<double>(spc.begin()+1, spc.end()), 
+            std::vector<double>(min.begin()+1, min.end()), 
+            std::vector<int>(center.begin()+1, center.end()), empty);
+    }
             
     return 0;
 }

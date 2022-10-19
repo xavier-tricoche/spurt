@@ -1,0 +1,466 @@
+#ifndef __XAVIER_GEOMETRY_BOUNDARY_EXTRACTION_HPP__
+#define __XAVIER_GEOMETRY_BOUNDARY_EXTRACTION_HPP__
+
+#include <format/DLRreader.hpp>
+#include <list>
+#include <map>
+#include <algorithm>
+#include <vector>
+#include <iostream>
+#include <misc/progress.hpp>
+
+namespace xavier {
+    
+template<typename T>
+struct subvector {
+    typedef typename std::vector<T> container_type;
+    typedef typename container_type::value_type value_type;
+    typedef typename container_type::const_iterator const_iterator;
+    
+    subvector(const_iterator begin, const_iterator end);
+    subvector(const container_type& c, size_t first, size_t length);
+    
+    const value_type& operator[](int i) const ;
+    
+    const_iterator begin() const;
+    const_iterator end() const;
+    
+    const_iterator m_begin, m_end;
+};
+
+class mesh {
+public:
+    enum cell_kind : int {
+        // 3D / volume cells
+        Tetrahedron   = DLRreader::TETRAHEDRON,
+        Hexahedron    = DLRreader::HEXAHEDRON,
+        Prism         = DLRreader::PRISM,
+        Pyramid       = DLRreader::PYRAMID,
+        // 2D / boundary cells
+        Triangle      = DLRreader::TRIANGLE,
+        Quadrilateral = DLRreader::QUADRILATERAL
+    };
+    typedef long unsigned int index_type;
+    static constexpr index_type invalid_index = std::numeric_limits<index_type>::max();
+    typedef nvis::fixed_vector<float, 3> vertex_type;
+    typedef nvis::fixed_vector<float, 3> vec3_type;
+    typedef subvector<index_type> subvector_type;
+    typedef std::pair<cell_kind, const subvector_type> cell_type;
+    
+    class face : public std::array<index_type, 4> {
+    private:
+        bool is_valid() const;
+        bool is_triangle(bool check=false) const;
+        bool is_quad(bool check=false) const;                                 
+                                                                                                                                 
+    public:
+        typedef std::array<index_type, 4> base_type;
+        typedef base_type::iterator iterator;
+        typedef base_type::const_iterator const_iterator;
+        
+        iterator begin();
+        const_iterator begin() const;
+        iterator end();
+        const_iterator end() const;
+        
+        size_t size() const;
+        
+        face();
+        face(const face& other);
+        face(index_type i, index_type j, index_type k, int id, bool sort=true);
+        face(index_type i, index_type j, index_type k, index_type l, int id, bool sort=true) ;
+        void sort();
+        bool operator<(const face& other) const;
+        int face_id() const;
+        int& face_id();
+        
+        int m_id;
+    };
+    
+    void load_mesh(const std::string& mesh_name);
+    void load_data(const std::string& data_name);
+    
+    cell_type get_cell(const index_type& id);
+    
+    static const std::vector<face>& reference_faces(cell_kind kind);
+    
+    void get_faces(const cell_type& cell, std::vector<face>& faces, bool sort=true);
+    
+    void get_actual_face(const cell_type& cell, int id, face& f);
+    void extract_boundary();
+    std::vector<face> get_boundary();
+    std::vector<face> get_offset();
+    std::vector<vec3_type> get_shear_stress(); 
+    const std::vector<vertex_type> get_vertices() const;
+    cell_type get_cell(index_type cellid) const;
+
+private:    
+    static const std::vector<face> _tetrahedron;
+    static const std::vector<face> _pyramid;
+    static const std::vector<face> _prism;
+    static const std::vector<face> _hexahedron; 
+    std::vector<vertex_type> vertices; // 3D mesh vertices
+    std::vector<vec3_type> velocity; // velocity vector field
+    std::vector<index_type> cell_indices; // 1D list of all cells's vertices
+    std::vector<std::pair<cell_kind, index_type>> cell_offsets; // per-cell access in cell_indices
+    size_t ncells; // number of cells
+    std::map<face, std::list<index_type>> face_to_cells; // face-to-cell incidence information
+    std::vector<std::pair<face, index_type>> boundary_to_cell; // boundary to cells relationship
+    std::vector<std::pair<face, face>> offset_to_boundary; // offset surface to boundary correspondence
+};
+
+static std::ostream& operator<<(std::ostream& os, const index_type id) {
+    if (id == mesh::invalid_index) {
+        os << "<invalid>";
+    }
+    else {
+        os << id;
+    }
+    return os;
+}
+
+static std::ostream& operator<<(std::ostream& os, const mesh::face& f) {
+    os << "[";
+    if (f.size() == 3) os << "triangle: ";
+    else os << "quad: ";
+    os << f.face_id() << "; ";
+    std::copy(f.begin(), f.end(), std::ostream_iterator<mesh::index_type>(os, ","));
+    os << "]";
+    return os;
+}
+
+static std::ostream& operator<<(std::ostream& os, const mesh::subvector_type& sv) {
+    os << "[";
+    std::copy(sv.begin(), sv.end(), std::ostream_iterator<mesh::index_type>(os, ","));
+    os << "]";
+    return os;
+}
+
+static std::ostream& operator<<(std::ostream& os, const mesh::cell_type c) {
+    std::string cellname;
+    switch (c.first) {
+        case DLRreader::TETRAHEDRON: cellname="tetrahedron"; break;
+        case DLRreader::HEXAHEDRON: cellname="hexahedron"; break;
+        case DLRreader::PYRAMID: cellname="pyramid"; break;
+        case DLRreader::PRISM: cellname="prism"; break;
+        default: cellname="unknown cell";
+    }
+    os << "(" << cellname << "," << c.second << ")";
+    return os;
+}
+
+const std::vector<mesh::face> mesh::_tetrahedron 
+    { { 0, 1, 2,      0,   false },
+      { 1, 3, 2,      1,   false },
+      { 0, 2, 3,      2,   false },
+      { 0, 3, 1,      3,   false } };
+
+const std::vector<mesh::face> mesh::_pyramid 
+    { { 0, 1, 2, 3,   0,   false },
+      { 0, 4, 1,      1,   false },
+      { 1, 4, 2,      2,   false },
+      { 2, 4, 3,      3,   false },
+      { 0, 4, 3,      4,   false } };
+                                  
+const std::vector<mesh::face> mesh::_prism 
+    { { 0, 1, 2,      0,   false },
+      { 3, 4, 5,      1,   false },
+      { 0, 3, 5, 2,   2,   false },
+      { 1, 2, 5, 4,   3,   false },
+      { 0, 3, 4, 1,   4,   false } };
+                                                                           
+const std::vector<mesh::face> mesh::_hexahedron 
+    { { 0, 1, 2, 3,   0,   false },
+      { 4, 5, 6, 7,   1,   false },
+      { 0, 1, 5, 4,   2,   false },
+      { 1, 2, 6, 5,   3,   false },
+      { 3, 2, 6, 7,   4,   false },
+      { 0, 3, 7, 4,   5,   false } }; 
+
+// --- subvector ---
+
+template<typename T>
+subvector<T>::subvector(typename subvector<T>::const_iterator begin, typename subvector<T>::const_iterator end) 
+    : m_begin(begin), m_end(end) {}
+
+template<typename T>
+subvector<T>::subvector(const typename subvector<T>::container_type& c, size_t first, size_t length) 
+    : m_begin(c.begin() + first), m_end(c.end() + first + length) {}
+
+template<typename T>
+const typename subvector<T>::value_type& subvector<T>::operator[](int i) const {
+    return *(m_begin + i);
+}
+
+template<typename T>
+typename subvector<T>::const_iterator subvector<T>::begin() const {
+    return m_begin;
+}
+
+template<typename T>
+typename subvector<T>::const_iterator subvector<T>::end() const {
+    return m_end;
+}
+
+// --- face ---
+
+bool mesh::face::is_valid() const {
+    return (*this)[0]!=invalid_index && 
+           (*this)[1]!=invalid_index && 
+           (*this)[2]!=invalid_index;
+}
+bool mesh::face::is_triangle(bool check) const {
+    return (!check || is_valid()) && (*this)[3]==invalid_index;
+}
+bool mesh::face::is_quad(bool check) const {
+    return (!check || is_valid()) && (*this)[3]!=invalid_index;
+}  
+mesh::face::iterator mesh::face::begin() { return base_type::begin(); }
+mesh::face::const_iterator mesh::face::begin() const { return base_type::begin(); }
+mesh::face::iterator mesh::face::end() { return is_quad() ? base_type::end() : begin()+3; }
+mesh::face::const_iterator mesh::face::end() const { return is_quad() ? base_type::end() : begin()+3; }
+
+size_t mesh::face::size() const { return is_quad() ? 4 : 3; }
+
+mesh::face::face() : base_type({invalid_index, invalid_index, invalid_index, invalid_index}), m_id(-1) {}
+mesh::face::face(const face& other) : base_type(static_cast<base_type>(other)), m_id(other.m_id) {}
+mesh::face::face(index_type i, index_type j, index_type k, int id, bool sort)
+    : base_type({i, j, k, invalid_index}), m_id(id) {
+    if (sort) {
+        std::sort(this->begin(), this->begin()+3);
+    }
+}
+mesh::face::face(index_type i, index_type j, index_type k, index_type l, int id, bool sort) 
+    : base_type({i, j, k, l}), m_id(id) {
+    if (sort) {
+        std::sort(this->begin(), this->end());
+    }
+}
+void mesh::face::sort() { std::sort(begin(), end()); }
+bool mesh::face::operator<(const mesh::face& other) const {
+    for (int i=0; i<size(); ++i) {
+        if ((*this)[i] < other[i]) return true;
+        else if (other[i] < (*this)[i]) return false;
+    }
+    return false; // both faces are equal
+}
+
+int mesh::face::face_id() const { return m_id; } 
+int& mesh::face::face_id() { return m_id; }
+
+// --- mesh ----
+
+void mesh::load_mesh(const std::string& mesh_name) {
+    xavier::DLRreader reader(mesh_name, "");
+    reader.read_mesh(false, vertices, cell_indices, cells);
+    ncells = cells.size()-1; // last entry is not an actual cell
+}
+
+void mesh::load_data(const std::string& data_name) {
+    xavier::DLRreader reader("", data_name);
+    reader.read_vector_data("velocity", velocity);
+}
+
+mesh::cell_type mesh::get_cell(const index_type& id) {
+    cell_kind kind = cells[id].first;
+    auto begin = cell_indices.begin() + cells[id].second;
+    auto end = cell_indices.begin() + cells[id+1].second;
+    return std::make_pair(kind, subvector_type(begin, end));
+}
+
+const std::vector<mesh::face>& mesh::reference_faces(mesh::cell_kind kind) {
+    switch (kind) {
+        case Tetrahedron: return _tetrahedron;
+        case Pyramid: return _pyramid;
+        case Prism: return _prism;
+        case Hexahedron: return _hexahedron;
+        default: throw std::runtime_error("Unknown cell type" + std::to_string(kind));
+    }
+}
+
+void mesh::get_faces(const mesh::cell_type& cell, std::vector<mesh::face>& faces, bool sort) {
+    const std::vector<face>& ref = reference_faces(cell.first);
+    faces.resize(ref.size());
+    for (int n=0; n<ref.size(); ++n) {
+        const face& rf = ref[n];
+        for (int i=0; i<rf.size(); ++i) {
+            faces[n][i] = cell.second[rf[i]];
+        }
+        faces[n].face_id() = rf.face_id();
+        if (sort) faces[n].sort();
+    }
+}
+
+void mesh::get_actual_face(const mesh::cell_type& cell, int id, mesh::face& f) {
+    const std::vector<face>& ref = reference_faces(cell.first);
+    const face& rf = ref[id];
+    for (int i=0; i<rf.size(); ++i) {
+        f[i] = cell.second[rf[i]];
+    }
+    f.face_id() = rf.face_id();
+}
+
+void mesh::extract_boundary() {
+    boundary_to_cell.clear();
+    offset_to_boundary.clear();
+    face_to_cells.clear();
+    xavier::ProgressDisplay progress;
+    progress.fraction_on();
+    progress.start(ncells, "Extracting all cell faces", 1000);
+    for (index_type i=0; i<ncells; ++i) {
+        progress.update(i+1);
+        cell_type cell = get_cell(i);
+        std::vector<face> faces;
+        get_faces(cell, faces);
+        std::for_each(faces.begin(), faces.end(), [&](const face& f) {
+            auto iter = face_to_cells.find(f);
+            if (iter == face_to_cells.end()) {
+                face_to_cells[f] = std::list<long>();
+            }
+            face_to_cells[f].push_back(i);
+        });
+    } // loop over all cells
+    progress.end();
+
+    std::cout << "after processing all cells, there are " 
+              << face_to_cell_index.size() << " faces in this mesh\n";
+
+    size_t ntri_prisms = 0;
+    
+    size_t faceid=0;
+    progress.start(face_to_cells.size(), "Checking all faces", 1000);
+    std::for_each(face_to_cells.begin(), face_to_cells.end(), 
+        [&](const std::pair<face, std::list<long>>& face_to_cell)
+        {
+            ++faceid;
+            progress.update(faceid);
+            if (face_to_cell.second.size() == 1) {
+                // std::cout << "found a boundary face\n";
+                const face& _f = face_to_cell.first;
+                const index_type& cell_id = face_to_cell.second.front();
+                // std::cout << "corresponding cell id is " << cell_id << '\n';
+                cell_type cell = get_cell(cell_id); 
+                // if (cell.first == Prism && _f.face_id()>=0 && _f.face_id()<2) ++ntri_prisms;
+                // std::cout << "cell is " << cell << '\n';
+                // std::cout << "boundary face is " << std::flush;
+                // std::cout << _f << '\n';
+                face f;
+                get_actual_face(cell, _f.face_id(), f);
+                // std::cout << "actual face is " << f << '\n';
+                boundary_to_cell.push_back(std::make_pair(f, cell_id));
+                if (cell.first == Prism && _f.face_id()>=0 && _f.face_id()<2) {
+                    face of;
+                    ++ntri_prisms;
+                    get_actual_face(cell, _f.face_id() == 0 ? 1 : 0, of);
+                    offset_to_boundary.push_back(std::make_pair(of, boundary_to_cell.size()-1);
+                }
+                else if (cell.first == Hexahedron) {
+                    int id=-1;
+                    switch (_f.face_id()) {
+                        case 0: id=1; break;
+                        case 1: id=0; break;
+                        case 2: id=4; break;
+                        case 3: id=5; break;
+                        case 4: id=2; break;
+                        case 5: id=3; break;
+                    }
+                    if (id>=0) {
+                        face of;
+                        get_actual_face(cell, id, of);
+                        offset_to_boundary.push_back(std::make_pair(of, boundary_to_cell.size()-1);
+                    }
+                }
+                // std::cout << "face added to boundary\n";
+            }
+        });
+        progress.end();
+        std::cout << "There are " << ntri_prisms << " triangular faces of prisms on the boundary\n";
+        std::cout << "There are " << offset_to_boundary.size() << " cells on 1-offset surface\n";
+
+} // extract_boundary
+
+std::vector<face> mesh::get_boundary() {
+    if (boundary_to_cell.empty()) extract_boundary();
+    std::vector<face> boundary(boundary_to_cell.size());
+    for (size_t i=0; i<boundary.size(); ++i) {
+        boundary[i]= boundary_to_cell[i].first;
+    }
+    return boundary;
+}
+
+std::vector<face> mesh::get_offset() {
+    if (offset_to_boundary.empty()) extract_boundary();
+    std::vector<face> offset(offset_to_boundary.size());
+    for (size_t i=0; i<offset.size(); ++i) {
+        offset[i] = offset_to_boundary[i].first;
+    }
+    return offset;
+}
+
+void mesh::extract_one_offset_surface(std::vector<mesh::face>& surface, 
+                                std::vector<std::pair<index_type, index_type>>& offset_to_boundary_match) 
+{
+    surface.clear();
+    for (size_t i=0; i<boundary.size(); ++i) {
+        const face& f = boundary[i].first;
+        index_type cell_id = boundary[i].second; // single incident cell along boundary
+        cell_type cell = get_cell(i);
+        face ff; // offset face
+        if (cell.first == DLRreader::PRISM) {
+            if (f.face_id() == 0) {
+                get_actual_face(cell, 1, ff);
+            }
+            else if (f.face_id() == 1) {
+                get_actual_face(cell, 0, ff);
+            }
+            else {
+                continue;
+                // std::cerr << "quadrilateral face of prism found on boundary" << std::endl;
+                // std::cout << "skipping\n";
+                // throw std::runtime_error("quadrilateral face of prism found on boundary");
+            }
+        }
+        else if (cell.first == DLRreader::HEXAHEDRON) {
+            int id; 
+            switch (f.face_id()) {
+                case 0: id=1; break;
+                case 1: id=0; break;
+                case 2: id=4; break;
+                case 3: id=5; break;
+                case 4: id=2; break;
+                case 5: id=3; break;
+                default: {
+                    std::cerr << "Invalid face id for hexahedron: " << f.face_id() << '\n';
+                    throw std::runtime_error("Invalid face id for hexahedron: " + std::to_string(f.face_id()));
+                }
+            }
+            get_actual_face(cell, id, ff);
+        }
+        else {
+            continue;
+            // std::cout << "Unsupported boundary cell type: " << cell << '\n';
+            // std::cout << "skipping.\n";
+            // throw std::runtime_error("Unsupported boundary cell type: " + std::to_string(cell.first));
+        }
+
+        surface.push_back(ff);
+        if (ff.size() == 3) {
+            offset_to_boundary_match.push_back(std::make_pair(ff[0], f[0]));
+            offset_to_boundary_match.push_back(std::make_pair(ff[1], f[1]));
+            offset_to_boundary_match.push_back(std::make_pair(ff[2], f[2]));
+        }
+        else {
+            offset_to_boundary_match.push_back(std::make_pair(ff[0], f[0]));
+            offset_to_boundary_match.push_back(std::make_pair(ff[1], f[1]));
+            offset_to_boundary_match.push_back(std::make_pair(ff[2], f[2]));
+            offset_to_boundary_match.push_back(std::make_pair(ff[3], f[3]));
+        }
+    }
+}
+
+
+
+
+} // namespace xavier
+
+#endif // __XAVIER_GEOMETRY_BOUNDARY_EXTRACTION_HPP__

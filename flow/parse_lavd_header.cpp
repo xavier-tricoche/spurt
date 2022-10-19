@@ -7,14 +7,14 @@
 int main(int argc, char* argv[]) {
     std::string filename = argv[1];
     
-    Nrrd* nin = spurt::readNrrd(filename);
+    Nrrd* nin = xavier::nrrd_utils::readNrrd(filename);
     int nbcomments = nin->cmtArr->len;
     std::cout << nbcomments << " comments in input\n";
     std::cout << std::setprecision(12);
     for (int i=0; i<nbcomments; ++i) {
         std::cout << "comment #" << i << ": " << nin->cmt[i] << '\n';
         std::vector<std::string> strs;
-        spurt::tokenize(strs, nin->cmt[i], " =[],");
+        xavier::tokenize(strs, nin->cmt[i], " =[],");
         if (strs[0] == "input") {
             std::cout << "input file = " << strs[2] << '\n';
         }
@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
         }
         else if (strs[0] == "resolution") {
             std::vector<std::string> _strs;
-            spurt::tokenize(_strs, strs[1], "x");
+            xavier::tokenize(_strs, strs[1], "x");
             std::cout << "resolution = " << std::stoi(_strs[0]) << " by "
                 << std::stoi(_strs[1]) << '\n';
         }

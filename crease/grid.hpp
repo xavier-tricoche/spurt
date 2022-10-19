@@ -11,8 +11,8 @@
 #include <sstream>
 #include <string>
 
-namespace spurt {
-typedef std::pair< vec3, vec3 > Edge;
+namespace xavier {
+typedef std::pair< nvis::vec3, nvis::vec3 > Edge;
 typedef std::pair< unsigned int, unsigned int > EdgeId;
 
 // unique identification of a voxel face
@@ -36,16 +36,16 @@ struct Grid {
     Grid(const Nrrd* nrrd, unsigned int upsampling = 1);
     
     unsigned int id(unsigned int i, unsigned int j, unsigned int k) const;
-    vec3 operator()(unsigned int i, unsigned int j, unsigned int k) const;
-    vec3 operator()(const vec3& p) const;
-    vec3 globalc(const vec3& p) const;
+    nvis::vec3 operator()(unsigned int i, unsigned int j, unsigned int k) const;
+    nvis::vec3 operator()(const nvis::vec3& p) const;
+    nvis::vec3 globalc(const nvis::vec3& p) const;
     
-    void voxel(std::vector< vec3 >& v,
+    void voxel(std::vector< nvis::vec3 >& v,
                unsigned int i, unsigned int j, unsigned int k) const;
                
-    bbox3 bounds;
-    ivec3 size;
-    vec3 d;
+    nvis::bbox3 bounds;
+    nvis::ivec3 size;
+    nvis::vec3 d;
 };
 
 struct Slice {
@@ -53,11 +53,11 @@ struct Slice {
           unsigned int upsampling = 1);
           
     unsigned int id(unsigned int i, unsigned int j) const;
-    vec3 operator()(unsigned int i, unsigned int j) const;
+    nvis::vec3 operator()(unsigned int i, unsigned int j) const;
     
-    bbox3 bounds;
-    ivec3 size;
-    vec3 d;
+    nvis::bbox3 bounds;
+    nvis::ivec3 size;
+    nvis::vec3 d;
     unsigned int dim;
     double z;
 };
@@ -122,7 +122,7 @@ int FaceId::operator==(const FaceId& fid) const
 }
 
 inline
-std::ostream& operator<<(std::ostream& os, const spurt::FaceId& fid)
+std::ostream& operator<<(std::ostream& os, const xavier::FaceId& fid)
 {
     os << "[ " << fid.is[0] << ", " << fid.is[1] << ", "
        << fid.is[2] << ", " << fid.is[3] << "]";
@@ -133,7 +133,7 @@ inline
 Grid::Grid(const Nrrd* nrrd, unsigned int upsample)
 {
     assert(nrrd->dim >= 3);
-    bounds = spurt::bounds<3>(nrrd);
+    bounds = xavier::nrrd_utils::get_bounds<3>(nrrd);
     
     for (unsigned int i = 0 ; i < 3 ; i++) {
         size[i] = nrrd->axis[nrrd->dim-3+i].size * upsample;
@@ -150,23 +150,23 @@ id(unsigned int i, unsigned int j, unsigned int k) const
 }
 
 inline
-vec3
+nvis::vec3
 Grid::
 operator()(unsigned int i, unsigned int j, unsigned int k) const
 {
-    return bounds.min() + vec3(i,j,k)*d;
+    return bounds.min() + nvis::vec3(i,j,k)*d;
 }
 
 inline
-vec3
+nvis::vec3
 Grid::
-operator()(const vec3& p) const
+operator()(const nvis::vec3& p) const
 {
     return bounds.min() + p*d;
 }
 
 inline
-void Grid::voxel(std::vector< vec3 >& v,
+void Grid::voxel(std::vector< nvis::vec3 >& v,
                  unsigned int i, unsigned int j, unsigned int k) const
 {
     v.resize(8);
@@ -190,7 +190,7 @@ Slice::Slice(const Nrrd* nrrd, unsigned int dim, unsigned int pos,
     assert(nrrd->dim >= 3);
     assert(dim < nrrd->dim);
     assert(pos < upsample*nrrd->axis[nrrd->dim-3+dim].size);
-    bounds = spurt::bounds<3>(nrrd);
+    bounds = xavier::nrrd_utils::get_bounds<3>(nrrd);
     
     for (unsigned int j = 0 ; j < 3 ; j++) {
         unsigned int i = idx[dim][j];
@@ -212,13 +212,13 @@ id(unsigned int i, unsigned int j) const
 }
 
 inline
-vec3
+nvis::vec3
 Slice::
 operator()(unsigned int i, unsigned int j) const
 {
     double u = bounds.min()[0] + i * d[0];
     double v = bounds.min()[1] + j * d[1];
-    vec3 p;
+    nvis::vec3 p;
     p[idx[dim][0]] = u;
     p[idx[dim][1]] = v;
     p[idx[dim][2]] = z;

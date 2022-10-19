@@ -1,0 +1,276 @@
+//---------------------------------------------------------------------------
+//
+// Project:   FAnToM
+// Module:    $RCSfile: FBoundingBox.icc,v $
+// Language:  C++
+// Date:      $Date: 2003/11/19 09:21:01 $
+// Author:    $Author: tricoche $
+// Version:   $Revision: 1.14 $
+//
+//--------------------------------------------------------------------------- 
+
+#include "FException.hh"
+
+#include <string>
+#include <cassert>
+//#include <iostream>
+
+#ifdef OUTLINE
+#define inline
+#endif
+
+//---------------------------------------------------------------------------
+
+inline FBoundingBox::FBoundingBox(positive dimension)
+  : epsilon(1.0E-9)
+{
+  dim   = dimension;
+  range = new double[dim*2];
+
+  for (positive i=0; i<dimension; i++)
+    {
+      range[i]=MAX_FANTOM_DOUBLE;
+      range[dimension+i]=MIN_FANTOM_DOUBLE;
+    }
+  
+  //  memset(range, 0, 2*dim*sizeof(double));
+}
+
+//---------------------------------------------------------------------------
+
+inline FBoundingBox::FBoundingBox( const FBoundingBox& bbox )
+  : epsilon(1.0E-9)
+{
+  positive i;
+
+  dim = bbox.dim;
+  range = new double[2*dim];
+  for( i=0; i<2*dim; i++ )
+    range[i] = bbox.range[i];
+}
+
+//---------------------------------------------------------------------------
+
+inline FBoundingBox::FBoundingBox(double minX, double minY,
+                                  double maxX, double maxY) 
+  : epsilon(1.0E-9)
+{
+  dim = 2;
+  range = new double[4];
+  range[0] = std::min(minX, maxX);
+  range[1] = std::min(minY, maxY);
+  range[2] = std::max(minX, maxX);
+  range[3] = std::max(minY, maxY);
+}                   
+
+//---------------------------------------------------------------------------
+
+inline FBoundingBox::FBoundingBox(double minX, double minY, double minZ,
+                                  double maxX, double maxY, double maxZ) 
+  : epsilon(1.0E-9)
+{
+  dim = 3;
+  range = new double[6];
+  range[0] = std::min(minX, maxX);
+  range[1] = std::min(minY, maxY);
+  range[2] = std::min(minZ, maxZ);
+  range[3] = std::max(minX, maxX);
+  range[4] = std::max(minY, maxY);
+  range[5] = std::max(minZ, maxZ);
+}          
+
+//---------------------------------------------------------------------------
+               
+inline void FBoundingBox::setBoundingBox(double minX, double minY,
+                                         double maxX, double maxY) 
+{
+  if( ( range != NULL ) && ( dim!=2 ) )
+    {
+      delete[] range;
+      dim = 2;
+      range = new double[4];
+    }
+
+  range[0] = std::min(minX, maxX);
+  range[1] = std::min(minY, maxY);
+  range[2] = std::max(minX, maxX);
+  range[3] = std::max(minY, maxY);
+}          
+
+//---------------------------------------------------------------------------
+
+inline void FBoundingBox::setBoundingBox(double minX, double minY, double minZ,
+                                         double maxX, double maxY, double maxZ)
+{
+  if( ( range != NULL ) && ( dim!=3 ) )
+    {
+      delete[] range;
+      dim = 3;
+      range = new double[6];
+    }
+
+  range[0] = std::min(minX, maxX);
+  range[1] = std::min(minY, maxY);
+  range[2] = std::min(minZ, maxZ);
+  range[3] = std::max(minX, maxX);
+  range[4] = std::max(minY, maxY);
+  range[5] = std::max(minZ, maxZ);
+}
+
+//---------------------------------------------------------------------------
+
+inline positive FBoundingBox::getDimension() const 
+{
+  return dim;
+}        
+
+//---------------------------------------------------------------------------
+
+inline void FBoundingBox::getRange(std::vector<double>& result) const 
+{
+  result.resize(2*dim);
+  for (positive i=0 ; i<2*dim ; i++)
+    result[i] = range[i];
+}        
+
+//---------------------------------------------------------------------------
+
+inline bool FBoundingBox::fIsInside(const std::vector<double>& inR) const
+{
+  if (dim == 2)
+    return ( ((inR[0] - range[0]) >= -epsilon) &&
+             ((inR[1] - range[1]) >= -epsilon) &&
+             ((range[2] - inR[2]) >= -epsilon) &&
+             ((range[3] - inR[3]) >= -epsilon));
+    else if (dim == 3)
+    return ( ((inR[0] - range[0]) >= -epsilon) &&
+             ((inR[1] - range[1]) >= -epsilon) &&
+             ((inR[2] - range[2]) >= -epsilon) &&
+             ((range[3] - inR[0]) >= -epsilon) &&
+             ((range[4] - inR[1]) >= -epsilon) &&
+             ((range[5] - inR[2]) >= -epsilon));
+  
+  else {  
+      throw FInvalidDimensionException( " bool FBoundingBox::fIsInside( vector )" );
+    assert(0);
+  }
+  return false; // to suppress the warning while compiling
+}
+
+
+//---------------------------------------------------------------------------
+
+inline FBoundingBox& FBoundingBox::operator= (const FBoundingBox &bbox)
+{
+  if( this != &bbox ) {
+    if( dim != bbox.dim ) {
+      dim = bbox.dim;
+      if (range != NULL)
+	delete[] range;
+      range = new double[2*dim];
+    }
+    for (unsigned int i = 0; i<2*dim;i++)
+      range[i] = bbox.range[i];
+  }
+  return *this;
+}
+
+//---------------------------------------------------------------------------
+
+inline void FBoundingBox::computeCenter3D( FVector& center ) const
+{
+  if (dim != 3) 
+    {
+      FInvalidDimensionException e;
+      e.addTraceMessage("FBoundingBox::computeCenter3D: dimension != 3");
+      throw e;
+    }  
+
+  center[0] = (range[1] - range[0]) * 0.5;
+  center[1] = (range[3] - range[2]) * 0.5;
+  center[2] = (range[5] - range[4]) * 0.5;
+}
+
+//---------------------------------------------------------------------------
+
+inline FPosition FBoundingBox::center() const
+{
+     FPosition p(dim);
+     if( dim == 3 )
+	  computeCenter3D(p);
+     else
+     {
+	  if( dim == 2 )
+	  {
+	       p[0] =(range[1] - range[0]) * 0.5;
+	       p[1]= (range[3] - range[2]) * 0.5;
+	  }
+	  else
+	  {
+	       FInvalidDimensionException e;
+	       e.addTraceMessage("FBoundingBox::computeCenter3D: dimension != 3");
+	       throw e;
+	  }
+     }
+     return p;
+}
+
+//---------------------------------------------------------------------------
+
+inline FBoundingBox& FBoundingBox::operator+= (const FBoundingBox& bbox)
+{
+  positive i;
+
+  for( i=0; i<dim; i++ )
+    {
+      range[2*i]   = std::min( range[2*i], bbox.range[2*i] );
+      range[2*i+1] = std::max( range[2*i+1], bbox.range[2*i+1] );
+    }
+
+  return *this;
+}
+
+//---------------------------------------------------------------------------
+
+inline bool FBoundingBox::operator<(const FBoundingBox& otherBBox) const
+{
+  if (otherBBox.getDimension() != getDimension()){
+    FInvalidDimensionException e("ERROR: Dimensions don't match");
+    e.addTraceMessage("bool FBoundingBox::operator<(const FBoundingBox&)");
+    throw e;
+  }
+
+  std::vector<double> oRange(2*getDimension());
+
+  otherBBox.getRange(oRange);
+
+  double volThis=0., volOther=0.;//initialized to avoid warnings
+  if (getDimension() == 2){    
+    volThis  = (range[2] - range[0]) * (range[3] - range[1]);
+    volOther = (oRange[2] - oRange[0]) * (oRange[3] - oRange[1]);
+  } else if (getDimension() == 3){
+    volThis  = (range[3] - range[0]) * (range[4] - range[1]) * (range[5] - range [2]);
+    volOther  = (oRange[3] - oRange[0]) * (oRange[4] - oRange[1]) * (oRange[5] - oRange [2]);
+  }
+
+  return volThis < volOther;
+}
+
+inline bool FBoundingBox::intersects( const FBoundingBox& inBBox ) const
+{
+  for ( positive i=0;i<dim; i++)
+    if ((range[dim+i]<=inBBox.range[i]) || (range[i]>=inBBox.range[dim+i])) return (false); // lies outside...
+  return (1);
+}
+
+inline double FBoundingBox::volume() const 
+{
+    double l=1.;
+    for ( positive i=0 ; i<dim ; ++i )
+	l *= fabs( range[i+dim]-range[i] );
+    return l;
+}
+
+//===========================================================================
+
+#undef inline

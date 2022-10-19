@@ -4,7 +4,7 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 
-namespace spurt {
+namespace xavier {
 template<typename T, int N>
 class metric {
     static T __modulo(T a, T b) {
@@ -28,8 +28,8 @@ class metric {
     
 public:
     typedef T                                   scalar_type;
-    typedef fixed_vector<scalar_type, N>  vec_type;
-    typedef fixed_vector<bool, N>         bvec_type;
+    typedef nvis::fixed_vector<scalar_type, N>  vec_type;
+    typedef nvis::fixed_vector<bool, N>         bvec_type;
     typedef nvis::bounding_box<vec_type>        bounds_type;
     
     metric() :
@@ -82,14 +82,14 @@ public:
     }
     
     scalar_type distance(const vec_type& a, const vec_type& b) const {
-        return norm(displacement(a, b));
+        return nvis::norm(displacement(a, b));
     }
     
 private:
     bounds_type __bounds;
     bvec_type   __periodic;
 };
-} // namespace spurt
+} // namespace xavier
 
 #endif
 

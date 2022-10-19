@@ -1,0 +1,61 @@
+//---------------------------------------------------------------------------
+//
+// Project:   FAnToM
+// Module:    $RCSfile: FLudecomp.icc,v $
+// Language:  C++
+// Date:      $Date: 2003/03/27 08:29:51 $
+// Author:    $Author: garth $
+// Version:   $Revision: 1.4 $
+//
+//--------------------------------------------------------------------------- 
+
+#undef inline
+
+#include "FException.hh"
+
+#include "FMath.hh"
+
+#define SWAP(a,b,c) {c=a;a=b;b=c;}
+#define TINYLUDECOMP 1.0e-15
+
+#ifdef OUTLINE
+#define inline
+#endif
+
+//---------------------------------------------------------------------------
+
+inline FLudecomp::FLudecomp()
+{ }
+
+inline FLudecomp::FLudecomp(const FMatrix& matrix )
+  : FMatrix(matrix)
+{
+#ifndef NODEBUG
+  if( matrix.getDimensionX() != matrix.getDimensionY() )
+    {
+      FException e ("matrix is not square matrix!");
+      throw e;  
+    }
+#endif
+  indx = new positive[matrix.getDimensionX()];
+  // commit LU-decomposition to matrix
+  FMath::Ludecomp(*this, indx, d);
+}
+
+inline FLudecomp::~FLudecomp()
+{
+  delete[] indx;
+}
+
+inline void FLudecomp::solve(FVector& d) const
+{
+  //  FVector result = d;
+
+  FMath::Lubacksb(*this, d, indx);
+  //  return result;
+}
+
+
+//===========================================================================
+#undef SWAP
+#undef inline

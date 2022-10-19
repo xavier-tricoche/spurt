@@ -10,7 +10,7 @@
 
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
-#include <misc/time_helper.hpp>
+#include <util/timer.hpp>
 
 // Boost
 #include <boost/math/special_functions/binomial.hpp>
@@ -19,38 +19,25 @@
 #include <Eigen/Core>
 #include <Eigen/SVD>
 
-#include "rbf_basis.hpp"
+#include "RBFbasis.hpp"
 #include <misc/meta_utils.hpp>
 
-namespace spurt { namespace MLS {
+namespace xavier { namespace MLS {
 
 // number of degrees of freedom for requested polynomial precision
 
-// static size_t factorial(size_t n)
-// {
-//     if (n == 0) {
-//         return 1;
-//     }
-//     return n*factorial(n-1);
-// }
-//
-// static size_t binomial(size_t n, size_t k)
-// {
-//     return factorial(n)/(factorial(n-k)*factorial(k));
-// }
-
-static inline size_t dof(unsigned int dim, unsigned int prec)
+static inline size_t dof(size_t dim, size_t prec)
 {
     size_t n = 1;
-    for (unsigned int k=1 ; k<=prec ; ++k) {
+    for (size_t k=1 ; k<=(prec > dim ? dim : prec) ; ++k) {
         n += boost::math::binomial_coefficient<double>(dim, k);
     }
     return n;
 }
 
-inline unsigned int best_approx_order(int npts, int dim)
+inline size_t best_approx_order(size_t npts, size_t dim)
 {
-    unsigned int prec = 1;
+    size_t prec = 1;
     for (; prec<6 ; ++prec) {
         if (dof(dim, prec) > npts) {
             break;
@@ -243,13 +230,13 @@ inline void set_basis(std::vector<double>& b, const V& p, int dim, int prec)
 template<typename T>
 struct distance_traits {};
 
-template<typename T, size_t N>
-struct distance_traits< spurt::fixed_vector<T, N> > {
+template<typename T, nvis::size_type N>
+struct distance_traits< nvis::fixed_vector<T, N> > {
     typedef double                      value_type;
-    typedef spurt::fixed_vector<T, N>    vec_type;
+    typedef nvis::fixed_vector<T, N>    vec_type;
 
     static value_type dist(const vec_type& v0, const vec_type& v1) {
-        return spurt::norm(v1-v0);
+        return nvis::norm(v1-v0);
     }
 };
 
@@ -264,54 +251,54 @@ struct distance_traits< Eigen::Matrix<T, N, 1> > {
 };
 
 template<typename ValueType, typename PositionType,
-         typename WeightType = spurt::RBF::wendland_function<double>,
+         typename WeightType = xavier::RBF::wendland_function<double>,
          typename DistanceTraits = distance_traits<PositionType> >
 class weighted_least_squares {
-
-
 public:
     typedef ValueType            value_type;
     typedef PositionType         pos_type;
     typedef WeightType           weight_type;
-    typedef DistanceTraits       dtraits;
+    typedef DistanceTraits       traits_type;
 
     weighted_least_squares(int dimension, int precision, int nrhs)
-        : _dim(dimension), _prec(precision), _nrhs(nrhs) {}
+        : m_dim(dimension), m_prec(precision), m_nrhs(nrhs) {}
+    
+    inline double weight(const pos_type& p, const pos_type& x0, double radius) const {
+        traits_type traits;
+        weight_type w(radius);
+        double r = traits.dist(x0, p);
+        return sqrt(w(r));
+    }
 
     int operator()(Eigen::MatrixXd& fitted_coef,
                    const std::vector<pos_type>& points,
                    const std::vector<value_type>& values,
                    const pos_type& x0, double radius) const {
 
-        assert(_prec <= 5);
+        assert(m_prec <= 5);
 
         unsigned int npts = points.size();
-        unsigned int prec = std::min((unsigned int)_prec, (unsigned int)best_approx_order(npts, _dim));
-        unsigned int nbasisfn = dof(_dim, prec);
+        unsigned int prec = std::min((unsigned int)m_prec, (unsigned int)best_approx_order(npts, m_dim));
+        unsigned int nbasisfn = dof(m_dim, prec);
 
         if (!npts) {
             return -1;
         }
 
         std::vector<double> basis(nbasisfn);
-        fitted_coef.resize(nbasisfn, _nrhs);
+        fitted_coef.resize(nbasisfn, m_nrhs);
 
         Eigen::MatrixXd A(npts, nbasisfn);
-        Eigen::MatrixXd rhs(npts, _nrhs);
-
-        distance_traits<spurt::fixed_vector<double, 3> > traits_instance;
-        spurt::data_traits<value_type> wrapper;
-
-        weight_type weight(radius);
+        Eigen::MatrixXd rhs(npts, m_nrhs);
+        xavier::data_traits<value_type> wrapper;
 
         for (int i=0 ; i<npts ; ++i) {
-            double r = traits_instance.dist(x0, points[i]);
-            double w = sqrt(weight(r));
-            MLS::set_basis(basis, points[i], _dim, prec);
+            double w = weight(points[i], x0, radius);
+            MLS::set_basis(basis, points[i], m_dim, prec);
             for (int c=0 ; c<nbasisfn ; ++c) {
                 A(i, c) = w * basis[c];
             }
-            for (int c=0 ; c<_nrhs ; ++c) {
+            for (int c=0 ; c<m_nrhs ; ++c) {
                 rhs(i, c) = w * wrapper.value(values[i], c);
             }
         }
@@ -323,47 +310,47 @@ public:
     }
 
 protected:
-    int _dim, _prec, _nrhs;
+    int m_dim, m_prec, m_nrhs;
 };
 
 template<typename ValType, typename PosType>
 class least_squares {
 public:
+    typedef ValType value_type;
+    typedef PosType pos_type;
+    
     least_squares(int dimension, int precision, int nrhs)
-        : _dim(dimension), _prec(precision), _nrhs(nrhs) {}
+        : m_dim(dimension), m_prec(precision), m_nrhs(nrhs) {}
 
     int operator()(Eigen::MatrixXd& fitted_coef,
-                   const std::vector<PosType>& points,
-                   const std::vector<ValType>& values) const {
+                   const std::vector<pos_type>& points,
+                   const std::vector<value_type>& values) const {
 
-        assert(_prec <= 5);
-
-        typedef ValType         value_type;
-        typedef PosType         pos_type;
+        assert(m_prec <= 5);
 
         unsigned int npts = points.size();
-        unsigned int prec = std::min((unsigned int)_prec, (unsigned int)best_approx_order(npts, _dim));
-        unsigned int nbasisfn = dof(_dim, prec);
+        unsigned int prec = std::min((unsigned int)m_prec, (unsigned int)best_approx_order(npts, m_dim));
+        unsigned int nbasisfn = dof(m_dim, prec);
 
         if (!npts) {
             return -1;
         }
 
         std::vector<double> basis(nbasisfn);
-        fitted_coef.resize(nbasisfn, _nrhs);
+        fitted_coef.resize(nbasisfn, m_nrhs);
 
         Eigen::MatrixXd A(npts, nbasisfn);
-        Eigen::MatrixXd rhs(npts, _nrhs);
+        Eigen::MatrixXd rhs(npts, m_nrhs);
 
-        distance_traits<spurt::fixed_vector<double, 3> > traits_instance;
-        spurt::data_traits<value_type> wrapper;
+        distance_traits<nvis::fixed_vector<double, 3> > traits;
+        xavier::data_traits<value_type> wrapper;
 
         for (int i=0 ; i<npts ; ++i) {
-            MLS::set_basis(basis, points[i], _dim, prec);
+            MLS::set_basis(basis, points[i], m_dim, prec);
             for (int c=0 ; c<nbasisfn ; ++c) {
                 A(i, c) = basis[c];
             }
-            for (int c=0 ; c<_nrhs ; ++c) {
+            for (int c=0 ; c<m_nrhs ; ++c) {
                 rhs(i, c) = wrapper.value(values[i], c);
             }
         }
@@ -375,7 +362,7 @@ public:
     }
 
 protected:
-    int _dim, _prec, _nrhs;
+    int m_dim, m_prec, m_nrhs;
 };
 
 } // MLS

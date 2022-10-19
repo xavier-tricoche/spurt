@@ -11,7 +11,7 @@
 
 #include <data/raster.hpp>
 #include <misc/option_parse.hpp>
-#include <misc/time_helper.hpp>
+#include <misc/progress.hpp>
 
 #include <math/vector_manip.hpp>
 
@@ -28,8 +28,8 @@ typedef double value_t;
 constexpr value_t PI=3.14159265358979323844;
 constexpr value_t TWO_PI=6.28318530717958647688;
 
-typedef spurt::fixed_vector< value_t, 3> state_t;
-typedef spurt::fixed_vector< value_t, 3 > pos_t;
+typedef nvis::fixed_vector< value_t, 3> state_t;
+typedef nvis::fixed_vector< value_t, 3 > pos_t;
 typedef nvis::bounding_box< pos_t > bbox_t;
 
 std::string name_out;
@@ -58,15 +58,15 @@ bbox_t to_bbox(const std::array<value_t, 6>& array) {
 }
 
 template<typename T, size_t N>
-spurt::fixed_vector<T, N> to_vec(const std::array<T, N>& array) {
-    spurt::fixed_vector<T, N> v;
+nvis::fixed_vector<T, N> to_vec(const std::array<T, N>& array) {
+    nvis::fixed_vector<T, N> v;
     for (size_t i=0; i<N; ++i) v[i]=array[i];
     return v;
 }
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = spurt::command_line;
+    namespace xcl = xavier::command_line;
         
     xcl::option_traits 
             required_group(true, false, "Required Options"), 
@@ -115,15 +115,15 @@ void initialize(int argc, const char* argv[])
 
 int main(int argc, const char* argv[])
 {
-    using namespace spurt;
+    using namespace xavier;
     using namespace odeint;
     
     initialize(argc, argv);
     
-    spurt::Catseye<value_t, state_t> rhs(2);
+    xavier::Catseye<value_t, state_t> rhs(2);
     
     if (verbose) std::cout << "Resolution = " << res[0] << "x" << res[1] << "x" << res[2] << std::endl;
-    spurt::raster_grid<3> sampling_grid(to_vec(res), to_bbox(bnds));
+    xavier::raster_grid<3> sampling_grid(to_vec(res), to_bbox(bnds));
           
     size_t npoints = sampling_grid.size();
         
@@ -141,7 +141,7 @@ int main(int argc, const char* argv[])
     runge_kutta_dopri5<state_t> stepper;
     value_t dt = 1.0e-2;
     
-    spurt::progress_display progress(true);
+    xavier::ProgressDisplay progress(true);
     
     progress.start(npoints, "Computing flow map");
     
@@ -160,7 +160,7 @@ int main(int argc, const char* argv[])
 #endif
             if (!thread) progress.update(counter);
             
-            spurt::ivec3 c = sampling_grid.coordinates(n);
+            nvis::ivec3 c = sampling_grid.coordinates(n);
             state_t x = sampling_grid(c);
             
             integrate_adaptive(make_controlled(eps, eps, stepper), rhs, x,
@@ -171,24 +171,24 @@ int main(int argc, const char* argv[])
             fmap[3*n+2]=x[2];
         }
     }
-    progress.stop();
+    progress.end();
         
     std::vector<size_t> size(4);
     std::vector<double> step(4);
-    const spurt::vec3& s = sampling_grid.spacing();
+    const nvis::vec3& s = sampling_grid.spacing();
     step[0] = AIR_NAN;
     for (int i = 0 ; i < 3 ; ++i) {
         size[i+1] = res[i];
         step[i+1] = s[i];
     }
     
-    spurt::nrrd_params<value_t, 4> nrrd_params;
+    xavier::nrrd_utils::nrrd_params<value_t, 4> nrrd_params;
     nrrd_params.mins()[0] = AIR_NAN;
-    spurt::vector::copy(sampling_grid.bounds().min(), nrrd_params.mins(), 0, 1);
+    xavier::vector::copy(sampling_grid.bounds().min(), nrrd_params.mins(), 0, 1);
     nrrd_params.spacings()[0] = AIR_NAN;
-    spurt::vector::copy(sampling_grid.spacing(), nrrd_params.spacings(), 0, 1);
+    xavier::vector::copy(sampling_grid.spacing(), nrrd_params.spacings(), 0, 1);
     nrrd_params.sizes()[0]=3;
-    spurt::vector::copy(sampling_grid.resolution(), nrrd_params.sizes(), 0, 1);
+    xavier::vector::copy(sampling_grid.resolution(), nrrd_params.sizes(), 0, 1);
     nrrd_params.centers().fill(nrrdCenterNode);
     nrrd_params.centers()[0]=nrrdCenterUnknown;
     nrrd_params.labels() = {{"flow map", "x", "y", "z"}};
@@ -200,7 +200,7 @@ int main(int argc, const char* argv[])
     os.str("");
     
     os << name_out << "-flowmap-e=" << eps << "-T=" << t_max << ".nrrd";
-    spurt::writeNrrdFromParams(fmap, os.str(), nrrd_params);
+    xavier::nrrd_utils::writeNrrdFromParams(fmap, os.str(), nrrd_params);
     
     return 0;
 }

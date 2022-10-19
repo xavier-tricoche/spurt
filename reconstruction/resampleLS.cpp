@@ -9,14 +9,15 @@
 #include <algorithm>
 #include <math.h>
 #include <math/fixed_vector.hpp>
+#include <math/fixed_matrix.hpp>
 #include <math/bounding_box.hpp>
-#include <format/dlr_reader.hpp>
+#include <format/DLRreader.hpp>
 #include <teem/nrrd.h>
 #include <image/nrrd_wrapper.hpp>
-#include <math/mls.hpp>
+#include <math/MLS.hpp>
 #include <Eigen/Core>
 #include <Eigen/SVD>
-#include <misc/time_helper.hpp>
+#include <util/timer.hpp>
 #include <vtkDataSetReader.h>
 #include <vtkDataSet.h>
 #include <vtkPointSet.h>
@@ -26,11 +27,9 @@
 #include <map>
 
 // parameters
-spurt::ivec3      resolution;
+nvis::ivec3        resolution;
 std::string        in_name, in_name2, out_name;
-spurt::bbox3        bbox;
-
-typedef Eigen::Matrix<double, 3, 3> matrix_t;
+nvis::bbox3        bbox;
 
 void printUsageAndExit( const std::string& argv0, const std::string& offending="", 
                         bool doExit = true )
@@ -53,12 +52,12 @@ void printUsageAndExit( const std::string& argv0, const std::string& offending="
 }
 
 
-std::vector<spurt::vec3> all_points;
+std::vector<nvis::vec3> all_points;
 // only some of these arrays will be filled
 // depending on the nature of the input data
-std::vector<spurt::vec3> all_vectors;
+std::vector<nvis::vec3> all_vectors;
 std::vector<double>     all_scalars;
-std::vector<matrix_t> all_tensors;
+std::vector<nvis::mat3> all_tensors;
 
 void load_VTK(const std::string& name, const std::string& me) {
     vtkDataSetReader* reader = vtkDataSetReader::New();
@@ -95,7 +94,7 @@ void load_VTK(const std::string& name, const std::string& me) {
             int n=0;
             for (int r=0 ; r<3 ; ++r) {
                 for (int c=0 ; c<3 ; ++c) 
-                    all_tensors[i](r,c) = t[n++];
+                    all_tensors[i][r][c] = t[n++];
             }
         }
         tensors->Delete();
@@ -110,7 +109,7 @@ void load_NRRD(const std::string& name, const std::string& me) {
         printUsageAndExit(me, biffGetDone(NRRD));
     }
     std::vector<double> data;
-    spurt::to_vector<double>(data, nin);
+    xavier::nrrd_utils::to_vector<double>(data, nin);
     // identify data type based on number of columns
     int ncol = nin->axis[0].size;
     int npts = nin->axis[1].size;
@@ -141,15 +140,15 @@ void load_NRRD(const std::string& name, const std::string& me) {
             all_points[i][0]     = data[9*i  ];
             all_points[i][1]     = data[9*i+1];
             all_points[i][2]     = data[9*i+2];
-            all_tensors[i](0,0) = data[9*i+3];
-            all_tensors[i](0,1) = data[9*i+4];
-            all_tensors[i](1,0) = data[9*i+4];
-            all_tensors[i](0,2) = data[9*i+5];
-            all_tensors[i](2,0) = data[9*i+5];
-            all_tensors[i](1,1) = data[9*i+6];
-            all_tensors[i](1,2) = data[9*i+7];
-            all_tensors[i](2,1) = data[9*i+7];
-            all_tensors[i](2,2) = data[9*i+8];
+            all_tensors[i][0][0] = data[9*i+3];
+            all_tensors[i][0][1] = data[9*i+4];
+            all_tensors[i][1][0] = data[9*i+4];
+            all_tensors[i][0][2] = data[9*i+5];
+            all_tensors[i][2][0] = data[9*i+5];
+            all_tensors[i][1][1] = data[9*i+6];
+            all_tensors[i][1][2] = data[9*i+7];
+            all_tensors[i][2][1] = data[9*i+7];
+            all_tensors[i][2][2] = data[9*i+8];
         }
     }
     else if (ncol == 12) {
@@ -159,15 +158,15 @@ void load_NRRD(const std::string& name, const std::string& me) {
             all_points[i][0]     = data[12*i   ];
             all_points[i][1]     = data[12*i+ 1];
             all_points[i][2]     = data[12*i+ 2];
-            all_tensors[i](0,0) = data[12*i+ 3];
-            all_tensors[i](0,1) = data[12*i+ 4];
-            all_tensors[i](0,2) = data[12*i+ 5];
-            all_tensors[i](1,0) = data[12*i+ 6];
-            all_tensors[i](1,1) = data[12*i+ 7];
-            all_tensors[i](1,2) = data[12*i+ 8];
-            all_tensors[i](2,0) = data[12*i+ 9];
-            all_tensors[i](2,1) = data[12*i+10];
-            all_tensors[i](2,1) = data[12*i+11];
+            all_tensors[i][0][0] = data[12*i+ 3];
+            all_tensors[i][0][1] = data[12*i+ 4];
+            all_tensors[i][0][2] = data[12*i+ 5];
+            all_tensors[i][1][0] = data[12*i+ 6];
+            all_tensors[i][1][1] = data[12*i+ 7];
+            all_tensors[i][1][2] = data[12*i+ 8];
+            all_tensors[i][2][0] = data[12*i+ 9];
+            all_tensors[i][2][1] = data[12*i+10];
+            all_tensors[i][2][1] = data[12*i+11];
         }
     }
     else {
@@ -177,10 +176,10 @@ void load_NRRD(const std::string& name, const std::string& me) {
 }
 
 void load_DLR(const std::string& grid_name, const std::string data_name, const std::string& me) {
-    spurt::dlr_reader reader(grid_name, data_name);
-    std::vector<spurt::vec3> vertices;
+    xavier::DLRreader reader(grid_name, data_name);
+    std::vector<nvis::fvec3> vertices;
     std::vector<long int> cell_indices;
-    std::vector<std::pair<spurt::dlr_reader::cell_type, long int> >cell_types;
+    std::vector<std::pair<xavier::DLRreader::cell_type, long int> >cell_types;
     reader.read_mesh(false, vertices, cell_indices, cell_types);
     int npts = vertices.size();
     all_points.resize(npts);
@@ -198,8 +197,8 @@ void load_DLR(const std::string& grid_name, const std::string data_name, const s
     for (int i=0 ; i<npts ; ++i) all_scalars[i] = tmp[i];
 }
 
-spurt::bbox3 bounds() {
-    spurt::bbox3 bb;
+nvis::bbox3 bounds() {
+    nvis::bbox3 bb;
     for (int i=0 ; i<all_points.size() ; ++i) {
         bb.add(all_points[i]);
     }
@@ -220,22 +219,22 @@ struct entry {
     int i, j;
     float value;
 };
-void interpolate(std::vector<entry>& A, int n, const spurt::vec3& index) {
-    const spurt::ivec3& r = resolution;
+void interpolate(std::vector<entry>& A, int n, const nvis::vec3& index) {
+    const nvis::ivec3& r = resolution;
     static const int offset[] = {
-        0, 
-        1, 
-        r[0]+1, 
-        r[0],
-        r[0]*r[1], 
-        1+r[0]*r[1], 
-        1+r[0]*r[1]+r[0],
-        r[0]*r[1]
+        0,                // (0,0,0)
+        1,                // (1,0,0)
+        r[0]+1,           // (1,1,0)
+        r[0],             // (0,1,0)
+        r[0]*r[1],        // (0,0,1)
+        r[0]*r[1]+1,      // (1,0,1)
+        r[0]*r[1]+r[0]+1, // (1,1,1)
+        r[0]*r[1]+r[0]    // (0,1,1)
     };
     
     // vertex local coordinates
-    spurt::ivec3 id(floor(index[0]), floor(index[1]), floor(index[2]));
-    spurt::vec3 pos = index - spurt::vec3(id);
+    nvis::ivec3 id(floor(index[0]), floor(index[1]), floor(index[2]));
+    nvis::vec3 pos = index - nvis::vec3(id);
     const double& u = pos[0];
     const double& v = pos[1];
     const double& w = pos[1];
@@ -264,8 +263,8 @@ int main(int argc, char* argv[]) {
     in_name = "none";
     in_name2 = "none";
     out_name = "none";
-    resolution = spurt::ivec3(0);
-    bbox.min() = bbox.max() = spurt::vec3(0);
+    resolution = nvis::ivec3(0);
+    bbox.min() = bbox.max() = nvis::vec3(0);
     
     for (int i=1; i<argc ; ++i) {
         std::string arg(argv[i]);
@@ -313,7 +312,7 @@ int main(int argc, char* argv[]) {
     
     // user reader appropriate for input file type
     std::string ext = extension(in_name);
-    spurt::timer _timer;
+    nvis::timer _timer;
     if (ext == "vtk") load_VTK(in_name, argv[0]);
     else if (ext == "nrrd") load_NRRD(in_name, argv[0]);
     else if (in_name2 != "none") {
@@ -334,20 +333,20 @@ int main(int argc, char* argv[]) {
     }
     std::cerr << "dataset imported in " << _timer.elapsed() << " seconds\n";
     
-    if (spurt::norm(bbox.size())) {
-        spurt::bbox3 tmp = bounds();
+    if (nvis::norm(bbox.size())) {
+        nvis::bbox3 tmp = bounds();
         for (int i=0 ; i<3 ; ++i) {
             bbox.min()[i] = std::max(tmp.min()[i], bbox.min()[i]);
             bbox.max()[i] = std::min(tmp.max()[i], bbox.max()[i]);
         }
     }
     else bbox = bounds();
-    spurt::vec3 diameter = bbox.size();
+    nvis::vec3 diameter = bbox.size();
     bbox.min() -= 0.001*diameter;
     bbox.max() += 0.001*diameter;
     std::cout << "bounding box = " << bbox << std::endl;
     
-    spurt::vec3 spacing = bbox.size() / spurt::vec3(resolution - spurt::ivec3(1,1,1));
+    nvis::vec3 spacing = bbox.size() / nvis::vec3(resolution - nvis::ivec3(1,1,1));
     std::cout << "spacing = " << spacing << std::endl;
     
     size_t nrhs = 0;
@@ -377,9 +376,9 @@ int main(int argc, char* argv[]) {
         thread_id = omp_get_thread_num();
 #endif
         
-        const spurt::vec3& x = all_points[n];
-        spurt::vec3 y = x - bbox.min();
-        spurt::vec3 u = y / spacing;
+        const nvis::vec3& x = all_points[n];
+        nvis::vec3 y = x - bbox.min();
+        nvis::vec3 u = y / spacing;
         interpolate(ls_mat[thread_id], n, u);
         size_t offset = n*nrhs;
         if (all_scalars.size()) rhs_mat[offset++] = all_scalars[n];

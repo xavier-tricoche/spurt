@@ -13,7 +13,7 @@
 #include <vtkPolyData.h>
 #include <vtkRectilinearGrid.h>
 
-#include <vtk/vtk_utils.hpp>
+#include <VTK/vtk_utils.hpp>
 #include <format/filename.hpp>
 
 
@@ -26,7 +26,7 @@ void usage(const std::string& message="")
     }
     std::cerr << '\n'
               << "DESCRIPTION: Convert a file in VTK legacy format to\n"
-              << "a suitable XML VTK format\n"
+			  << "a suitable XML VTK format\n"
               << "USAGE: " << me << " <input> <output> [options]\n"
               << "PARAMETERS:\n"
               << " <input>          Input VTK legacy filename\n"
@@ -41,13 +41,13 @@ void usage(const std::string& message="")
 
 int main(int argc, char* argv[])
 {
-    bool verbose = false;
+	bool verbose = false;
     me = argv[0];
-    if (argc < 3) usage();
+	if (argc < 3) usage();
 
     std::string in_name="", out_name="";
 
-    int positional_count = 0;
+	int positional_count = 0;
     for (int i=1 ; i<argc ; ++i) {
         std::string arg = argv[i];
         if (arg == "-h" || arg == "--help") {
@@ -57,17 +57,17 @@ int main(int argc, char* argv[])
         } else if (arg[0] == '-') {
             usage("unrecognized option: " + arg);
         }
-        else {
-            if (++positional_count == 1) in_name = arg;
-            else if (++positional_count == 2) out_name = arg;
-            else usage("unexpected positional argument: " + arg);
-        }
+		else {
+			if (++positional_count == 1) in_name = arg;
+			else if (++positional_count == 2) out_name = arg;
+			else usage("unexpected positional argument: " + arg);
+		}
     }
 
-    vtkSmartPointer<vtkDataSetReader> reader = vtkSmartPointer<vtkDataSetReader>::New();
-    reader->SetFileName(in_name.c_str());
-    reader->Update();
-    vtk_utils::saveVTK_XML(reader->GetOutput(), out_name);
+	vtkSmartPointer<vtkDataSetReader> reader = vtkSmartPointer<vtkDataSetReader>::New();
+	reader->SetFileName(in_name.c_str());
+	reader->Update();
+	vtk_utils::saveVTK_XML(reader->GetOutput(), out_name);
 
-    return 0;
+	return 0;
 }

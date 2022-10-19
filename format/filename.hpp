@@ -28,7 +28,7 @@ namespace {
 }
 
 // basic helper functions to manipulate file names
-namespace spurt { namespace filename {
+namespace xavier { namespace filename {
     
 inline std::string parent_path(const std::string& name) {
     return __before_char(name, '/');

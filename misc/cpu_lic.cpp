@@ -8,7 +8,7 @@
 #include <omp.h>
 #endif
 
-typedef integral_curve<2> sl_type;
+typedef nvis::integral_curve<2> sl_type;
 
 template< typename T >
 class image {
@@ -54,8 +54,8 @@ public:
     
     size_t size() const { return _size; }
     
-    ivec2 dimensions() const {
-        return ivec2(_w, _h);
+    nvis::ivec2 dimensions() const {
+        return nvis::ivec2(_w, _h);
     }
     
 private:
@@ -68,9 +68,9 @@ template< typename T1, typename T2 >
 class grid {
 public:
     typedef T1                                   coord_type;
-    typedef typename fixed_vector<T1, 2>   pos_type;
-    typedef ivec2                          index_type;
-    typedef bounding_box<pos_type>         bounds_type;
+    typedef typename nvis::fixed_vector<T1, 2>   pos_type;
+    typedef nvis::ivec2                          index_type;
+    typedef nvis::bounding_box<pos_type>         bounds_type;
     typedef T2                                   value_type;
     typedef array<T2>                            array_type;
 
@@ -176,7 +176,7 @@ void usage(const std::string& msg="") {
 int main(int argc, char* argv[]) {
     
     typedef float                       value_type;
-    typedef fvec2                 vec_type;
+    typedef nvis::fvec2                 vec_type;
     typedef grid<vec_type, vec_type>    grid_type;
     typedef grid_type::bounds_type      bounds_type;
     typedef grid_type::array_type       array_type;
@@ -217,10 +217,10 @@ int main(int argc, char* argv[]) {
     if (in_name.empty()) usage("no input file provided");
     if (out_name.empty()) usage("no output file provided");
     
-    Nrrd* nin = spurt::readNrrd(in_name.c_str());
-    bounds_type bounds = spurt::compute_bounds(nin);
+    Nrrd* nin = xavier::nrrd_utils::readNrrd(in_name.c_str());
+    bounds_type bounds = xavier::compute_bounds(nin);
     std::vector<value_type> data;
-    spurt::to_vector(data, nin);
+    xavier::to_vector(data, nin);
     if (w*h == 0) {
         w = nin->axis[1].size;
         h = nin->axis[2].size;

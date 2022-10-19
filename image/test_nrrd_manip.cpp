@@ -5,18 +5,18 @@
 #include <Eigen/Core>
 #include <Eigen/SVD>
 
-#include <misc/time_helper.hpp>
+#include <util/timer.hpp>
 
 double toverhead;
 
 template<int M, int N>
-double check_same(const Nrrd* nrrd, 
+double check_same(const Nrrd* nrrd,
                   const std::vector<Eigen::Matrix<float, M, N> >& vec,
                   const std::string& what="") {
     typedef Eigen::Matrix<float, M, N> mat_t;
-    
+
     size_t nmats=vec.size();
-    assert(M*N==nrrd->axis[0].size || 
+    assert(M*N==nrrd->axis[0].size ||
            (vec[0].cols()*vec[0].rows()==nrrd->axis[0].size));
     assert(nrrd->dim==4);
     assert(nrrd->axis[1].size*nrrd->axis[2].size*nrrd->axis[3].size==nmats);
@@ -26,7 +26,7 @@ double check_same(const Nrrd* nrrd,
     for (size_t i=0; i<nmats; ++i) {
         err+=(array[i]-vec[i]).norm()/vec[i].norm();
     }
-    std::cout << what << std::setprecision(5) << ": average relative error = " 
+    std::cout << what << std::setprecision(5) << ": average relative error = "
               << 100.*err/(double)nmats << "%\n";
     return err;
 }
@@ -57,12 +57,12 @@ Nrrd* mat2nrrd(const std::vector<Eigen::Matrix<float, Nrows, Ncols> >& mats,
 }
 
 template<int Nrows, int Ncols, int Order>
-void nrrd2mat(const Nrrd* nin, 
+void nrrd2mat(const Nrrd* nin,
               std::vector<Eigen::Matrix<float, Nrows, Ncols, Order> >& mats,
               std::array<size_t, 3>& res) {
 
     assert(Nrows*Ncols==nin->axis[0].size && nin->dim==4);
-    
+
     for (int i=0; i<3; ++i) {
         res[i]=nin->axis[i+1].size;
     }
@@ -70,14 +70,14 @@ void nrrd2mat(const Nrrd* nin,
     size_t N=res[0]*res[1]*res[2];
     int ncoef=Ncols*Nrows;
     mats.resize(N);
-    
+
     float* raster=(float*)nin->data;
-    
+
     for (size_t i=0; i<N; ++i) {
         for (int j=0; j<ncoef; ++j) {
             mats[i].data()[j]=raster[i*ncoef+j];
         }
-    }        
+    }
 }
 
 template<int Nrows, int Ncols, int Order1, int Order2>
@@ -113,7 +113,7 @@ void compute_inverse(std::vector<Eigen::Matrix<float, N, N> >& res,
     res.resize(As.size());
     for (size_t i=0; i<As.size(); ++i) {
         res[i]=As[i].inverse();
-    } 
+    }
 }
 
 template<int Nrows, int Ncols>
@@ -124,7 +124,7 @@ void compute_sum(std::vector<Eigen::Matrix<float, Ncols, Nrows> >& res,
     res.resize(As.size());
     for (size_t i=0; i<As.size(); ++i) {
         res[i]=As[i]+Bs[i];
-    } 
+    }
 }
 
 template<int M, int N, int P>
@@ -154,32 +154,31 @@ void test_transpose(size_t n=50) {
     typedef Eigen::Matrix<float, Nrows, Ncols> mat_t;
     typedef Eigen::Matrix<float, Ncols, Nrows> trans_t;
     size_t N=n*n*n;
-    
+
     // generate random matrices of prescribed size
     std::vector<mat_t> matrices(N);
     // std::cout << "test matrices:\n";
     for (size_t i=0; i<N; ++i) {
         matrices[i]=mat_t::Random();
     }
-    
+
     // convert to Nrrd
     std::array<size_t, 3> dims = {n, n, n};
     Nrrd* nrrd=mat2nrrd(matrices, dims);
-    
+
     // process each matrix individually
     std::vector<trans_t> transposes;
-    
-    spurt::timer timer;
-    timer.start();
+
+    nvis::timer timer;
     compute_transpose<Nrows, Ncols>(transposes, matrices);
     double t1=timer.elapsed();
-    
-    spurt::nrrd_matrix_transpose<float, Nrows, Ncols> trans_op;
+
+    xavier::nrrd_utils::nrrd_matrix_transpose<float, Nrows, Ncols> trans_op;
     toverhead=0;
-    timer.start();
+    timer.restart();
     Nrrd* res=trans_op(nrrd);
     double t2=timer.elapsed()-toverhead;
-    
+
     std::cout << "\n\ntest_transpose<" << Nrows << ", " << Ncols << ">:\n";
     double err=check_same<Ncols, Nrows>(res, transposes, "transpose");
     std::cout << "vec solution took " << t1 << " s. | nrrd solution took " << t2 << " s.\n";
@@ -191,7 +190,7 @@ void test_product(size_t n=50) {
     typedef Eigen::Matrix<float, Ncols1, Ncols2> right_mat_t;
     typedef Eigen::Matrix<float, Nrows, Ncols2> res_mat_t;
     size_t N=n*n*n;
-    
+
     // generate random matrices of prescribed size
     std::vector<left_mat_t> left(N);
     std::vector<right_mat_t> right(N);
@@ -199,7 +198,7 @@ void test_product(size_t n=50) {
         left[i]=left_mat_t::Random();
         right[i]=right_mat_t::Random();
     }
-    
+
     // convert to Nrrd
     std::array<size_t, 3> dims={n, n, n};
     Nrrd* nrrd1=mat2nrrd(left, dims);
@@ -207,18 +206,17 @@ void test_product(size_t n=50) {
     // std::cout << "Checking correctness of conversion from vector to nrrd\n";
     // check_same<Nrows, Ncols1>(nrrd1, left);
     // check_same<Ncols1, Ncols2>(nrrd2, right);
-    
+
     // process each matrix individually
     std::vector<res_mat_t> product;
-    
-    spurt::timer timer;
-    timer.start();
+
+    nvis::timer timer;
     compute_prod<Nrows, Ncols1, Ncols2>(product, left, right);
     double t1=timer.elapsed();
-    
-    spurt::nrrd_matrix_product<float, Nrows, Ncols1, Ncols2> prod_op;
+
+    xavier::nrrd_utils::nrrd_matrix_product<float, Nrows, Ncols1, Ncols2> prod_op;
     toverhead=0;
-    timer.start();
+    timer.restart();
     Nrrd* res=prod_op(nrrd1, nrrd2);
     double t2=timer.elapsed()-toverhead;
     std::cout << "\n\ntest_product<" << Nrows << ", " << Ncols1 << ", " << Ncols2 << ">:\n";
@@ -231,40 +229,39 @@ template<int Nrows, int Ncols>
 void test_SVD(size_t n=50) {
     using boost::static_signed_min;
     constexpr int P=static_signed_min<Nrows, Ncols>::value; // nb. sing values
-    
+
     typedef Eigen::Matrix<float, Nrows, Ncols> mat_t;
     typedef Eigen::Matrix<float, Nrows, Nrows> Lmat_t;
     typedef Eigen::Matrix<float, Ncols, Ncols> Rmat_t;
     typedef Eigen::Matrix<float, P, 1> vec_t;
     size_t N=n*n*n;
-        
+
     // generate random matrices of prescribed size
     std::vector<mat_t> matrices(N);
     for (size_t i=0; i<N; ++i) {
         matrices[i]=mat_t::Random();
     }
-    
+
     // convert to Nrrd
     std::array<size_t, 3> dims={n, n, n};
     Nrrd* nrrd=mat2nrrd(matrices, dims);
-    
+
     // process each matrix individually
     std::vector<vec_t> singvals;
     std::vector<Lmat_t> leftvecs;
     std::vector<Rmat_t> rightvecs;
-    
-    spurt::timer timer;
-    timer.start();
+
+    nvis::timer timer;
     compute_SVD<Nrows, Ncols, P>(singvals, leftvecs, rightvecs, matrices);
     double t1=timer.elapsed();
-    
-    spurt::nrrd_matrix_svd<float, Nrows, Ncols> svd_op;
+
+    xavier::nrrd_utils::nrrd_matrix_svd<float, Nrows, Ncols> svd_op;
     toverhead=0;
-    timer.start();
+    timer.restart();
     Nrrd *snrrd, *lnrrd, *rnrrd;
     svd_op(nrrd, snrrd, lnrrd, rnrrd);
     double t2=timer.elapsed()-toverhead;
-    
+
     std::cout << "\n\ntest_SVD<" << Nrows << ", " << Ncols << ">:\n";
     double err=check_same<P, 1>(snrrd, singvals, "singular values");
     err=check_same<Nrows, Nrows>(lnrrd, leftvecs, "left singular vectors");
@@ -274,8 +271,8 @@ void test_SVD(size_t n=50) {
 
 int main(int argc, char* argv[]) {
     int n=20;
-    if (argc>1) n=atoi(argv[1]); 
-    
+    if (argc>1) n=atoi(argv[1]);
+
     std::cout << "Testing transpose...\n";
     test_transpose<2,2>(n);
     test_transpose<3,2>(n);
@@ -303,6 +300,6 @@ int main(int argc, char* argv[]) {
     test_SVD<4,4>(n);
     test_SVD<5,4>(n);
     test_SVD<4,7>(n);
-    
+
     return 0;
 }

@@ -1,7 +1,7 @@
 #ifndef __XAVIER_FTLE_RHS_HPP__
 #define __XAVIER_FTLE_RHS_HPP__
 
-namespace spurt {
+namespace xavier {
     
 template<typename Value_, typename State_>
 struct Catseye {

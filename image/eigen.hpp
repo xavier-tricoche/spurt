@@ -4,27 +4,27 @@
 #include <math/fixed_vector.hpp>
 #include <complex>
 
-namespace spurt
+namespace xavier
 {
-  void eigensystem( vec2& evec_min, vec2& evec_max,
+  void eigensystem( nvis::vec2& evec_min, nvis::vec2& evec_max,
             double& lmin, double& lmax,
-            const vec3& Hessian );
+            const nvis::vec3& Hessian );
 
-  void eigensystem( vec2& evec_min, vec2& evec_max,
+  void eigensystem( nvis::vec2& evec_min, nvis::vec2& evec_max,
             std::complex< double >& lmin, 
             std::complex< double >& lmax,
-            const vec4& Jacobian );
+            const nvis::vec4& Jacobian );
 
-  vec2 singularsystem( const vec4& M );
+  nvis::vec2 singularsystem( const nvis::vec4& M );
 };
 
 
 inline
-void spurt::eigensystem( vec2& evec_min, vec2& evec_max,
+void xavier::eigensystem( nvis::vec2& evec_min, nvis::vec2& evec_max,
               double& lmin, double& lmax,
-              const vec3& Hessian )
+              const nvis::vec3& Hessian )
 {
-    static vec4 _matrix;
+    static nvis::vec4 _matrix;
     
     const double& hxx = Hessian[0];
     const double& hxy = Hessian[1];
@@ -49,13 +49,13 @@ void spurt::eigensystem( vec2& evec_min, vec2& evec_max,
 
 
 inline
-void spurt::eigensystem( vec2& evec_min, vec2& evec_max,
+void xavier::eigensystem( nvis::vec2& evec_min, nvis::vec2& evec_max,
               std::complex< double >& lmin, 
               std::complex< double >& lmax,
-              const vec4& Jacobian )
+              const nvis::vec4& Jacobian )
 {
     static double tr, det, delta;
-    static vec4 _matrix;
+    static nvis::vec4 _matrix;
     
     tr = Jacobian[0]+Jacobian[3];
     det = Jacobian[0]*Jacobian[3]-Jacobian[1]*Jacobian[2];
@@ -81,9 +81,9 @@ void spurt::eigensystem( vec2& evec_min, vec2& evec_max,
 
 
 inline
-spurt::vec2 spurt::singularsystem( const vec4& M )
+nvis::vec2 xavier::singularsystem( const nvis::vec4& M )
 {
-    static vec2 v;
+    static nvis::vec2 v;
     
     double a = M[0]*M[0] + M[1]*M[1];
     double b = M[2]*M[2] + M[3]*M[3];
@@ -96,7 +96,7 @@ spurt::vec2 spurt::singularsystem( const vec4& M )
         v[1] = M[2];
     }
     
-    double norm = spurt::norm( v );
+    double norm = nvis::norm( v );
     if ( norm>0 ) {
         v /= norm;
     }

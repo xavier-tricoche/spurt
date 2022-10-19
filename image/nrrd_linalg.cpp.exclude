@@ -1,0 +1,168 @@
+#include <teem/ell.h>
+#include <teem/nrrd.h>
+
+#include <iostream>
+#include <string>
+#include <exception>
+#include <vector>
+
+#include <Eigen/Core>
+
+
+char *mulInfo = ("Linear Algebra operations on Nrrd datasets");
+
+std::string name1, name2, name3;
+
+void printUsageAndExit( const std::string& argv0, const std::string& offending="",
+                        bool doExit = true )
+{
+    if (offending != "") {
+        std::cerr << "ERROR: " << offending << std::endl;
+    }
+    std::cerr
+        << "Usage  : " << argv0 << " [parameters] [options]\n"
+        << "Synopsis: Perform linear algebra operations on Nrrd files\n"
+        << "Parameters:\n"
+        << " -i   | --input <string> +      Input file name(s)\n"
+        << " -t   | --kind <string> +       Data kind(s): scalar, vector, matrix/tensor\n"  
+        << " -o   | --output <string>       Output file name\n"
+        << " -op  | --operator <string>     Operator to be applied\n"
+        << std::endl;
+    if (doExit) exit(1);
+}
+
+int collect_parameters(std::vector<std::string>& parameters, const std::vector<std::string>& input, int i) {
+    parameters.clear();
+    for (; i<input.size(); ++i) {
+        if (input[0] == '-') break;
+        else parameters.push_back(input[i]);
+    }
+    return i;
+}
+
+Nrrd* readNrrd(const std::string& filename)
+{
+    Nrrd *nin = nrrdNew();
+    if (nrrdLoad(nin, filename.c_str(), NULL)) {
+        throw std::runtime_error("Error while importing" + filename);
+    }
+    return nin;
+}
+
+int
+main(int argc, const char *argv[]) {
+    
+    std::vector<std::string> input;
+    std::vector<std::string> names;
+    std::vector<std::string> kinds;
+    std::string output;
+    std::string op = "none";
+    for (int i=1; i<argc; ++i) input.push_back(argv[i]);
+    
+    for (int i=0; i<input.size(); ++i) {
+       const std::string& arg = input[i];
+       if (arg == "-i" || arg == "--input") {
+           int j = collect_parameters(names, input, i+1);
+           if (names.empty()) {
+               printUsageAndExit(argv[0], "Missing filenames in input");
+           }
+           i+=names.size()-1;
+       } 
+       else if (arg == "-k" || arg == "--kind") {
+           int j = collect_parameters(kinds, input, i+1);
+           if (kinds.empty()) {
+               printUsageAndExit(argv[0], "Missing kinds in input");
+           }
+           i+=kinds.size()-1;
+       }
+       else if (arg == "-op" || arg == "--operator") {
+           if (i == argc-1) {
+               printUsageAndExit(argv[0], "Missing operator\n");
+           }
+           op = input[++i];
+       }
+       else if (arg == "-o" || arg == "--output") {
+           if (i == argc-1) {
+               printUsageAndExit(argv[0], "Missing output filename\n");
+           }
+           output = input[++i];
+       }
+       else {
+           printUsageAndExit(argv[0], "Unrecognized command line option: " + arg);
+       }
+    }
+    
+    if (kinds.size() != names.size()) {
+        printUsageAndExit(argv[0], "kinds and filenames size mismatch");
+    }
+    else if (op == "none") {
+        printUsageAndExit(argv[0], "Missing operator");
+    }
+    
+    std::vector<Nrrd*> nins(names.size());
+    Nrrd* nout;
+    for (int i=0; i<nins.size(); ++i) {
+        nrrdConvert(nins[i], readNrrd(names[i]), nrrdTypeDouble);
+    }
+    
+    if (op == "x" || op == "product" || op == "*") {
+        if (names.size() < 2) printUsageAndExit("Missing input file for product operation");
+        if (kinds[0] == "matrix" || kinds[0] == "tensor") {
+            if (kinds[1] == "matrix" || kinds[1] == "tensor") {
+                
+            }
+        }
+    }
+    
+    
+    
+  const char *me;
+  char *outS, *err;
+  hestOpt *hopt;
+  hestParm *hparm;
+  airArray *mop;
+  Nrrd *_ninA, *_ninB, *ninA, *ninB, *nmul;
+
+  me = argv[0];
+  mop = airMopNew();
+  hparm = hestParmNew();
+  hopt = NULL;
+  airMopAdd(mop, hparm, (airMopper)hestParmFree, airMopAlways);
+  hestOptAdd(&hopt, NULL, "matrix", airTypeOther, 1, 1, &_ninA, NULL,
+             "first matrix",
+             NULL, NULL, nrrdHestNrrd);
+  hestOptAdd(&hopt, NULL, "matrix", airTypeOther, 1, 1, &_ninB, NULL,
+             "first matrix",
+             NULL, NULL, nrrdHestNrrd);
+  hestOptAdd(&hopt, "o", "filename", airTypeString, 1, 1, &outS, "-",
+             "file to write output nrrd to");
+  hestParseOrDie(hopt, argc-1, argv+1, hparm,
+                 me, mulInfo, AIR_TRUE, AIR_TRUE, AIR_TRUE);
+  airMopAdd(mop, hopt, (airMopper)hestOptFree, airMopAlways);
+  airMopAdd(mop, hopt, (airMopper)hestParseFree, airMopAlways);
+
+  ninA = nrrdNew();
+  airMopAdd(mop, ninA, (airMopper)nrrdNuke, airMopAlways);
+  ninB = nrrdNew();
+  airMopAdd(mop, ninB, (airMopper)nrrdNuke, airMopAlways);
+  nmul = nrrdNew();
+  airMopAdd(mop, nmul, (airMopper)nrrdNuke, airMopAlways);
+
+  nrrdConvert(ninA, _ninA, nrrdTypeDouble);
+  nrrdConvert(ninB, _ninB, nrrdTypeDouble);
+  if (ell_Nm_mul(nmul, ninA, ninB)) {
+    airMopAdd(mop, err = biffGetDone(ELL), airFree, airMopAlways);
+    fprintf(stderr, "%s: problem inverting:\n%s\n", me, err);
+    airMopError(mop); return 1;
+  }
+
+  if (nrrdSave(outS, nmul, NULL)) {
+    airMopAdd(mop, err = biffGetDone(NRRD), airFree, airMopAlways);
+    fprintf(stderr, "%s: problem saving output:\n%s\n", me, err);
+    airMopError(mop); return 1;
+  }
+
+  airMopOkay(mop);
+  exit(0);
+}
+

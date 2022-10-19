@@ -17,10 +17,10 @@ double  eps;
 int     maxiter, solverid;
 
 using namespace div_cleaning;
-typedef spurt::raster_grid<3, double> raster_type;
-typedef spurt::grid<double, 3> grid_type;
-typedef spurt::raster_data<double, 3, double, size_t> sdata_type;
-typedef spurt::raster_data<nvis::vec3, 3, double, size_t> vdata_type;
+typedef xavier::raster_grid<3, double> raster_type;
+typedef xavier::grid<double, 3> grid_type;
+typedef xavier::raster_data<double, 3, double, size_t> sdata_type;
+typedef xavier::raster_data<nvis::vec3, 3, double, size_t> vdata_type;
 typedef double scalar_type;
 
 void initialize(int argc, const char* argv[])
@@ -47,12 +47,12 @@ void initialize(int argc, const char* argv[])
 
 int main(int argc,  const char* argv[])
 {
-    using namespace spurt;
+    using namespace xavier;
     
     initialize(argc, argv);
     
     Nrrd* nin = nrrdNew();
-    nin = spurt::readNrrd(in);
+    nin = xavier::readNrrd(in);
     
     // verify data type
     if (nin->dim != 4 || nin->axis[0].size != 3) {
@@ -61,7 +61,7 @@ int main(int argc,  const char* argv[])
     }
     
     std::vector<scalar_type> __scalar_in;
-    spurt::to_vector(__scalar_in, nin);
+    xavier::to_vector(__scalar_in, nin);
     std::vector<vec_type> __vec_in(__scalar_in.size() / 3);
     for (int i = 0 ; i < __vec_in.size() ; ++i) {
         __vec_in[i] = vec_type(__scalar_in[3*i], __scalar_in[3*i+1], __scalar_in[3*i+2]);

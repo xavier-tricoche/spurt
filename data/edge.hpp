@@ -5,9 +5,9 @@
 #include <functional>
 #include <math/fixed_vector.hpp>
 
-namespace spurt {
+namespace xavier {
 template<typename T, typename Compare = std::less<T> >
-class edge : public fixed_vector<T, 2> {
+class edge : public nvis::fixed_vector<T, 2> {
     void swap(T& t0, T& t1) {
         T tmp = t1;
         t1 = t0;
@@ -17,8 +17,8 @@ class edge : public fixed_vector<T, 2> {
 public:
     typedef edge<T, Compare> self_type;
     
-    edge() : fixed_vector<T, 2>() {}
-    edge(const T& t0, const T& t1) : fixed_vector<T, 2>(t0, t1) {
+    edge() : nvis::fixed_vector<T, 2>() {}
+    edge(const T& t0, const T& t1) : nvis::fixed_vector<T, 2>(t0, t1) {
         Compare Lt;
         if (Lt(t1,t0)) {
             swap((*this)[0], (*this)[1]);

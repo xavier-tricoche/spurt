@@ -8,7 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 
-using namespace spurt;
+using namespace xavier;
 using namespace gage_interface;
 
 std::string in_name, out_name;
@@ -162,29 +162,29 @@ int main( int argc, char* argv[] )
             << biffGetDone( GAGE ) << std::endl;
     }
 
-    vec3 p;
+    nvis::vec3 p;
     unsigned int id;
 
-    spurt::crease::threshold = 0.80;
-    spurt::crease::subdiv = 1;
-    spurt::crease::eps = 0.05;
-    spurt::crease::upsample = up;
-    spurt::crease::extract_lines( nin, do_ridge, aniso );
+    xavier::crease::threshold = 0.80;
+    xavier::crease::subdiv = 1;
+    xavier::crease::eps = 0.05;
+    xavier::crease::upsample = up;
+    xavier::crease::extract_lines( nin, do_ridge, aniso );
 
     std::ostringstream os;
     os << out_name << "-all.vcl";
 
     std::fstream output( os.str().c_str(), std::ios::out );
-    for ( unsigned int i=0 ; i<spurt::crease::all_edges.size() ; i++ )
+    for ( unsigned int i=0 ; i<xavier::crease::all_edges.size() ; i++ )
     {
-        id = spurt::crease::all_edges[i].first;
-        p = spurt::crease::all_face_points[id];
-        double v = spurt::crease::crease_strength[id];
+        id = xavier::crease::all_edges[i].first;
+        p = xavier::crease::all_face_points[id];
+        double v = xavier::crease::crease_strength[id];
         output << "p " << p[0] << " " << p[1] << " " << p[2] << " " << v << std::endl;
 
-        id = spurt::crease::all_edges[i].second;
-        p = spurt::crease::all_face_points[id];
-        v = spurt::crease::crease_strength[id];
+        id = xavier::crease::all_edges[i].second;
+        p = xavier::crease::all_face_points[id];
+        v = xavier::crease::crease_strength[id];
         output << "p " << p[0] << " " << p[1] << " " << p[2] << " " << v << std::endl;
         output << "n" << std::endl;
     }
@@ -194,17 +194,17 @@ int main( int argc, char* argv[] )
     os.str( "" );
     os << out_name << "-wc-connected.vcl";
     output.open( os.str().c_str(), std::ios::out );
-    for ( unsigned int i=0 ; i<spurt::crease::components.size() ; i++ )
+    for ( unsigned int i=0 ; i<xavier::crease::components.size() ; i++ )
     {
         double wc[3];
         unsigned int n=0;
-        for ( unsigned int j=0 ; j<spurt::crease::components[i].size() ; j++ ) 
+        for ( unsigned int j=0 ; j<xavier::crease::components[i].size() ; j++ ) 
         {
             std::cout << n++ << "-" << std::flush;
-            p = spurt::crease::all_face_points[spurt::crease::components[i][j]];
+            p = xavier::crease::all_face_points[xavier::crease::components[i][j]];
             double ic[3] = { p[0], p[1], p[2] };
             gageShapeItoW( shape, wc, ic );
-            double v = spurt::crease::crease_strength[spurt::crease::components[i][j]];
+            double v = xavier::crease::crease_strength[xavier::crease::components[i][j]];
             output << "p " << wc[0] << " " << wc[1] << " " << wc[2] << " " << v << std::endl;
         }
         output << "n" << std::endl;
@@ -216,16 +216,16 @@ int main( int argc, char* argv[] )
     os.str( "" );
     os << out_name << "-connected.vcl";
     output.open( os.str().c_str(), std::ios::out );
-    for ( unsigned int i=0 ; i<spurt::crease::components.size() ; i++ )
+    for ( unsigned int i=0 ; i<xavier::crease::components.size() ; i++ )
     {
         std::cout << "component #" << i << ", length = " 
-            << spurt::crease::components[i].size() << std::endl;
+            << xavier::crease::components[i].size() << std::endl;
         unsigned int n=0;
-        for ( unsigned int j=0 ; j<spurt::crease::components[i].size() ; j++ ) 
+        for ( unsigned int j=0 ; j<xavier::crease::components[i].size() ; j++ ) 
         {
             std::cout << n++ << "-" << std::flush;
-            p = spurt::crease::all_face_points[spurt::crease::components[i][j]];
-            double v = spurt::crease::crease_strength[spurt::crease::components[i][j]];
+            p = xavier::crease::all_face_points[xavier::crease::components[i][j]];
+            double v = xavier::crease::crease_strength[xavier::crease::components[i][j]];
             output << "p " << p[0] << " " << p[1] << " " << p[2] << " " << v << std::endl;
         }
         output << "n" << std::endl;
@@ -237,14 +237,14 @@ int main( int argc, char* argv[] )
     os.str( "" );
     os << out_name << "-connected_dot_vals.vcl";
     output.open( os.str().c_str(), std::ios::out );
-    for ( unsigned int i=0 ; i<spurt::crease::components.size() ; i++ )
+    for ( unsigned int i=0 ; i<xavier::crease::components.size() ; i++ )
     {
-        for ( unsigned int j=0 ; j<spurt::crease::components[i].size() ; j++ ) 
+        for ( unsigned int j=0 ; j<xavier::crease::components[i].size() ; j++ ) 
         {
-            p = spurt::crease::all_face_points[spurt::crease::components[i][j]];
-            double u = spurt::crease::crease_strength[spurt::crease::components[i][j]];
-            double v = spurt::crease::grad_dot_evec[spurt::crease::components[i][j]];
-            double w = spurt::crease::measure_value[spurt::crease::components[i][j]];
+            p = xavier::crease::all_face_points[xavier::crease::components[i][j]];
+            double u = xavier::crease::crease_strength[xavier::crease::components[i][j]];
+            double v = xavier::crease::grad_dot_evec[xavier::crease::components[i][j]];
+            double w = xavier::crease::measure_value[xavier::crease::components[i][j]];
             output << "p " << p[0] << " \t" << p[1] << " \t" << p[2] << " \t dot: " 
                 << v << " \t strength: " << u << " \t value: " << w
                 << std::endl;

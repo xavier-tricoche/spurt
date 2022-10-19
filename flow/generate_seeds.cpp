@@ -4,7 +4,7 @@
 #include <teem/unrrdu.h>
 
 #include <math/fixed_vector.hpp>
-#include <misc/time_helper.hpp>
+#include <util/wall_timer.hpp>
 #include <image/nrrd_field.hpp>
 #include "ftle.hpp"
 #include <tensor/double_point.hpp>
@@ -43,33 +43,33 @@ int main(int argc, const char* argv[])
     hestOpt* hopt;
     initialize(argc, argv, hopt);
     
-    Nrrd* nin = spurt::readNrrd(name_in);
+    Nrrd* nin = xavier::nrrd_utils::readNrrd(name_in);
     if (nin->dim != 2) {
         std::cerr << "Input NRRD has invalid dimension (" << nin->dim << " != 2)\n";
         exit(-1);
     }
     
     std::vector<float> values;
-    spurt::to_vector(values, nin);
+    xavier::nrrd_utils::to_vector(values, nin);
     
     std::cerr << "values contains " << values.size() << " elements\n";
     
     std::cerr << "after conversion to float array: min = " << *std::min_element(values.begin(), values.end())
               << " and max = " << *std::max_element(values.begin(), values.end()) << '\n';
               
-    spurt::vec3 o(origin[0], origin[1], origin[2]);
-    spurt::vec3 b0(e0[0], e0[1], e0[2]);
-    spurt::vec3 b1(e1[0], e1[1], e1[2]);
+    nvis::vec3 o(origin[0], origin[1], origin[2]);
+    nvis::vec3 b0(e0[0], e0[1], e0[2]);
+    nvis::vec3 b1(e1[0], e1[1], e1[2]);
     b0 /= (double)(nin->axis[0].size - 1);
     b1 /= (double)(nin->axis[1].size - 1);
     
     int N = values.size();
-    std::vector<spurt::vec3> seeds;
+    std::vector<nvis::vec3> seeds;
     for (int n = 0 ; n < N ; ++n) {
         if (values[n] != 0) {
             int i = n % nin->axis[0].size;
             int j = n / nin->axis[0].size;
-            spurt::vec3 x = o + (double)i * b0 + (double)j * b1;
+            nvis::vec3 x = o + (double)i * b0 + (double)j * b1;
             seeds.push_back(x);
         }
     }

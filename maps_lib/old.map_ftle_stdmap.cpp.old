@@ -1,0 +1,344 @@
+#include <iostream>
+#include <iomanip>
+
+#include <vector>
+#include <complex>
+#include <sstream>
+#include <math.h>
+
+#include <boost/format.hpp>
+#include <boost/limits.hpp>
+
+// nvis
+#include <math/fixed_vector.hpp>
+#include <math/fixed_matrix.hpp>
+#include <util/wall_timer.hpp>
+
+// xavier
+#include <math/math.hpp>
+
+#include <iostream>
+#include <list>
+
+#include "definitions.hpp"
+#include "xmt_poincare_map.hpp"
+#include <data/grid.hpp>
+#include <data/raster.hpp>
+
+#include <util/wall_timer.hpp>
+
+#include <image/nrrd_wrapper.hpp>
+
+#include <Eigen/Dense>
+#include <Eigen/Eigenvalues>
+
+#include <tbb/parallel_for.h>
+#include <tbb/tbb.h>
+#include <tbb/mutex.h>
+tbb::atomic<size_t> progress_counter;
+
+void write_to_ostream(std::ostream& os, const std::string& str) {
+    {
+        tbb::mutex::scoped_lock lock(output_mutex);
+        os << str << '\n';
+    }
+}
+
+void update_progress(xavier::ProgressDisplay& progress) {
+    {
+        tbb::mutex::scoped_lock lock(progress_mutex);
+        progress.update(progress_counter);
+    }
+}
+
+typedef Eigen::Matrix<double, 2, 2> matrix_t;
+typedef Eigen::Matrix<double, 2, 1> vector_t;
+typedef Eigen::Matrix<int, 2, 1> ivector_t;
+typedef Eigen::SelfAdjointEigenSolver<matrix_t> eigensolver_t;
+
+using namespace nvis;
+using namespace map_analysis;
+
+unsigned int maxp, maxit, it_step, init_step;
+std::string name_out, filename;
+double K=0.5;
+std::array<double, 2> h;
+std::array<int, 2> res({1024, 1024});
+std::array<double, 4> bounds({0, 0, 1, 1});
+
+void initialize(int argc, const char* argv[]) {
+    namespace xcl = xavier::command_line;
+
+    cmdline = "Command line: " + std::string(argv[0]);
+    for (int i=1; i<argc; i++) {
+        cmdline += " " + std::string(argv[i]);
+    }
+
+    xcl::option_traits
+        required(true, false, "Required Options"),
+    optional(false, false, "Optional Group");
+    xcl::option_parser parser(argv[0],
+    "Compute FTLE and ridge strength of standard map");
+
+    try {
+        parser.use_short_symbols(true);
+        parser.use_brackets(true);
+        parser.add_value("output", name_out, "Output base name", required);
+        parser.add_value("K", K, K, "K parameter", optional);
+        parser.add_tuple<2>("res", res, res, "Sampling resolution", optional);
+        parser.add_value("maxit", maxit, maxit, "Max number of iterations", optional);
+        parser.add_value("init", init_step, init_step, "Number of iterations before first output", optional);
+        parser.add_value("step", it_step, it_step, "Number of iterations between outputs", optional);
+        parser.add_value("parallel", in_parallel, in_parallel, "Iterate map in parallel", optional);
+        parser.add_tuple<4>("bounds", bounds, bounds, "Sampling bounds", optional);
+        parser.add_value("verbose", verbose, verbose, "Verbose output", optional);
+        parser.parse(argc, argv);
+    }
+    catch(std::runtime_error& e) {
+        std::cerr << "ERROR: " << argv[0] << " threw exception:\n"
+            << e.what() << "\n"
+                << parser.print_self(false, true, false) << "\n\n\n";
+        exit(1);
+    }
+}
+
+inline double lmax(int n, const std::vector< nvis::vec2 >& pos,
+                   const xavier::default_metric_type& metric)
+{
+    const double& hx = h[0];
+    const double& hy = h[1];
+
+    unsigned int i = n % res[0];
+    unsigned int j = n / res[0];
+    if (i == 0 || i == res[0] - 1 || j == 0 || j == res[1] - 1) {
+        return -1.0;
+    }
+
+    // look for valid neighboring values to compute derivatives
+    nvis::vec2 Jx = 1. / (2.*hx) * metric.displacement(pos[n-1], pos[n+1]);
+    nvis::vec2 Jy = 1. / (2.*hy) * metric.displacement(pos[n-resx], pos[n+resx]);
+    double a = nvis::inner(Jx, Jx);
+    double b = nvis::inner(Jx, Jy);
+    double c = nvis::inner(Jy, Jy);
+
+    double lmaj = 0.5 * (a * a + 2 * b * b + c * c + (a + c) * sqrt((a - c) * (a - c) + 4 * b * b));
+
+    return lmaj;
+}
+
+inline double hlmin(int n, double* values)
+{
+    const double& hx = h[0];
+    const double& hy = h[1];
+
+    unsigned int i = n % resx;
+    unsigned int j = n / resx;
+    if (i == 0 || i == resx - 1 || j == 0 || j == resy - 1) {
+        return -1.0;
+    }
+
+    // 2nd derivative O(h^2): 1/h^2*[1 -2 1]
+    double Hxx = 1./(hx*hx) * (values[n-1] - 2*values[n] + values[n+1]);
+    double Hyy = 1./(hy*hy) * (values[n-resx] - 2*values[n] + values[n+resx]);
+    double Hxy = 1./(4.*hx*hy) * (values[n+resx+1] + values[n-resx-1] -
+                                  values[n-resx+1] - values[n+resx-1]);
+
+    matrix_t H;
+    H(0,0) = Hxx;
+    H(1,1) = Hyy;
+    H(0,1) = H(1,0) = Hxy;
+    eigensolver_t solver;
+    solver.compute(H);
+    return solver.eigenvalues()[0];
+}
+
+using namespace xavier;
+using namespace map_analysis;
+
+namespace {
+double __mod(double a, double b)
+{
+    return a >= 0 ? fmod(a, b) : b + fmod(a, b);
+}
+}
+
+typedef xavier::grid::uniform_grid<double, 3>   grid_type;
+typedef raster_data<nvis::vec3, 3, double>      field_type;
+typedef nvis::ivec3                             ivec_type;
+
+typedef xavier::standard_map map_type;
+
+int main(int argc, char* argv[])
+{
+    initialize(argc, argv);
+    nb_threads = std::thread::hardware_concurrency();
+
+    std::cout << "parameters: max period = " << maxp
+              << ", max iterations = " << maxit << ", resolution = " << resx << " x " << resy
+              << ", eps = " << eps << '\n';
+
+    map_type map(_K);
+
+    nvis::bbox2 default_bounds(nvis::vec2(0,0), nvis::vec2(1,1));
+
+    bool per[2] = {true, true};
+    xavier::default_metric_type metric2d(default_bounds, per);
+
+    minx = std::max(default_bounds.min()[0], minx);
+    maxx = std::min(default_bounds.max()[0], maxx);
+    miny = std::max(default_bounds.min()[1], miny);
+    maxy = std::min(default_bounds.max()[1], maxy);
+
+    assert(minx < maxx && miny < maxy);
+
+    h[0] = (maxx - minx) / (double)res[0];
+    h[1] = (maxy - miny) / (double)res[1];
+    size_t npoints = res[0]*res[1];
+
+    unsigned int blocked = 0;
+    float last_pct = 0.;
+
+    if (it_step == 0) it_step = maxit;
+
+    std::cout << "minx = " << minx << ", miny = " << miny << ", maxx = " << maxx << ", maxy = " << maxy
+              << ", hx = " << hx << ", hy = " << hy << std::endl;
+    std::cout << "it_step = " << it_step << std::endl;
+
+    xavier::ProgressDisplay total_progress, partial_progress;
+
+    std::cout << "initializing coordinates\n";
+    std::vector<nvis::vec2> pos_fwd(res[0]*res[1]), pos_bwd(res[0]*res[1]);
+    for (int n = 0 ; n < res[0]*res[1] ; ++n) {
+        unsigned int i = n % res[0];
+        unsigned int j = n / res[1];
+        nvis::vec2 x(minx + h[0]*(double)i, miny + hy*(double)j);
+        pos_fwd[n] = pos_bwd[n] = x;
+    }
+
+    timer.restart();
+
+    int to=(init_step>0 ? init_step : it_step);
+
+    for (int at=0; to<=maxit; to+=it_step) {
+        std::cout << "\niteration " << to << " from " << maxit << '\n';
+
+        subtimer.restart();
+
+        progress_counter = 0;
+
+        // serial portion of the algorithm ends
+
+        // parallel portion of the algorithm
+        tbb::parallel_for(tbb::blocked_range<int>(0,npoints),
+                           [&](tbb::blocked_range<int> r) {
+            for (int n=r.begin(); n!=r.end(); ++n) {
+                ++progress_counter;
+                update_progress(progress);
+                const map_type* clone = map.clone();
+
+                nvis::vec2 prev = pos_fwd[n];
+
+                try {
+                    pos_fwd[n] = metric2d.modulo(clone->map(pos_fwd[n], to-at));
+                }
+                catch (...) {}
+
+                delete clone;
+            }
+    #ifndef NO_TBB
+        }
+    #endif
+
+    #ifndef NO_TBB
+        tbb::parallel_for(tbb::blocked_range<int>(0,npoints),
+                               [&](tbb::blocked_range<int> r) {
+            for (int n=r.begin(); n!=r.end(); ++n) {
+    #else
+            for (int n=0 ; n<npoints ; ++n) {
+    #endif
+                cont map_type* clone = map.clone();
+                unsigned int i = n % res[0];
+                unsigned int j = n / res[1];
+                nvis::vec2 x(minx + h[0]*(double)i, miny + h[1]*(double)j);
+                try {
+                    pos_bwd[n] = metric2d.modulo(clone->map(pos_bwd[n], at-to));
+                } catch (...) {
+                }
+                delete clone;
+            }
+    #ifndef NO_TBB
+        }
+    #endif
+
+        std::cout << "computing FTLE...\n";
+        float* _ftle = (float*)calloc(2 * res[0] * res[1], sizeof(float));
+        // float* _lmax = (float*)calloc(3 * resx * resy, sizeof(float));
+    #ifndef NO_TBB
+        tbb::parallel_for(tbb::blocked_range<int>(0,npoints),
+                          [&](tbb::blocked_range<int> r) {
+            for (int n=r.begin(); n!=r.end(); ++n) {
+        #else
+            for (int n=0 ; n<npoints ; ++n) {
+        #endif
+                double lmax_f = 0., lmax_b = 0.;
+                double ftle_f = 0., ftle_b = 0.;
+
+                double lm = lmax(n, pos_fwd, metric2d);
+                lmax_f = log(std::max(1., lm));
+                ftle_f = lmax_f;
+
+                lm = lmax(n, pos_bwd, metric2d);
+                lmax_b = log(std::max(1., lm));
+                ftle_b = lmax_b;
+
+                if (!std::isinf(ftle_f) && !std::isnan(ftle_f)) {
+                    _ftle[3*n] = ftle_f;
+                }
+                if (!std::isinf(ftle_b) && !std::isnan(ftle_b)) {
+                    // std::cerr << ftle_b << " in backward\n";
+                    _ftle[3*n+2] = ftle_b;
+                }
+            }
+    #ifndef NO_TBB
+        }
+    #endif
+
+        std::cout << "Last iteration took " << subtimer.elapsed() << " s.\n";
+        std::cout << "Total computation time so far is " << timer.elapsed()
+                  << " s.\n";
+
+        std::ostringstream os;
+        int w=std::to_string(maxit).size();
+        os << outs << "-ftle-p=" << std::setw(w) << std::setfill('0') << to << "_from_" << maxit
+           << "-K=" << _K  << "-res=" << resx << "x" << resy
+           << ".nrrd";
+        Nrrd* nout = nrrdNew();
+        size_t sizes[3] = { 3, resx, resy };
+        if (nrrdWrap_nva(nout, _ftle, nrrdTypeFloat, 3, sizes)) {
+            std::cerr << "ERROR while wrapping data: " << biffGetDone(NRRD)
+                      << std::endl;
+            if (_ftle) {
+                delete[] _ftle;
+            } else {
+                nrrdNuke(nout);
+            }
+            exit(-1);
+        }
+        int kinds[3] = {nrrdKindUnknown, nrrdKindSpace, nrrdKindSpace};
+        nrrdAxisInfoSet_nva(nout, nrrdAxisInfoKind, kinds);
+        int centers[3] = {nrrdCenterUnknown, nrrdCenterCell, nrrdCenterCell};
+        nrrdAxisInfoSet_nva(nout, nrrdAxisInfoCenter, centers);
+        double spc[3] = {AIR_NAN, hx, hy};
+        nrrdAxisInfoSet_nva(nout, nrrdAxisInfoSpacing, spc);
+        if (nrrdSave(os.str().c_str(), nout, NULL)) {
+            std::cerr << "ERROR while exporting file: " << biffGetDone(NRRD)
+                      << std::endl;
+            exit(-1);
+        }
+        nrrdNuke(nout);
+        std::cout << "exported " << os.str() << std::endl;
+        at=to;
+    }
+
+    return 0;
+}

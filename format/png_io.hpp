@@ -16,7 +16,7 @@
 #define PNG_DEBUG 3
 #include <png.h>
 
-namespace spurt {
+namespace xavier {
     
 class PNGWriter {
 public:
@@ -146,4 +146,4 @@ public:
     }
 };
 
-} // namespace spurt
+} // namespace xavier

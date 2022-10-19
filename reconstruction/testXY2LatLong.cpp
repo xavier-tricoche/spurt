@@ -1,7 +1,7 @@
 #include "XY2LatLong.hpp"
 
 int main(int argc, char* argv[]) {
-    spurt::XY2LatLong converter(argv[1]);
+    xavier::XY2LatLong converter(argv[1]);
     
     while(true) {
         std::cout << "Enter Lat/Long: " << '\n';

@@ -1,0 +1,1269 @@
+//---------------------------------------------------------------------------
+//
+// Project:   FAnToM
+// Module:    $RCSfile: FTensor.icc,v $
+// Language:  C++
+// Date:      $Date: 2004/08/10 14:04:32 $
+// Author:    $Author: hlawit $
+// Version:   $Revision: 1.27 $
+//
+//--------------------------------------------------------------------------- 
+
+#ifndef __FTensor_icc_defined
+#define __FTensor_icc_defined
+
+#include <cstdio>
+
+#include "FException.hh"
+
+#include "FMatrix.hh"
+
+#ifdef OUTLINE
+#define inline
+#endif
+
+//---------------------------------------------------------------------------
+
+inline FTensor::FTensor() : FArray()
+{
+  dimension = 0;
+  order = 0;
+  sizeOfArray = 0;
+}
+
+//---------------------------------------------------------------------------
+
+inline int FTensor::pow(int a, int b)
+{
+  if (b<=0) 
+    return 1;
+  else
+    return a*pow(a, b-1);
+}
+
+//---------------------------------------------------------------------------
+
+inline FTensor::FTensor(unsigned char dim, unsigned char order, bool clear) 
+  : FArray()
+{
+  this->dimension = dim;
+  this->order = order;
+  int size = pow (dim, order);
+  FArray::resize(size);
+  if (clear)
+    FArray::clear();
+}
+
+//---------------------------------------------------------------------------
+
+inline FTensor::FTensor(unsigned char dim, unsigned char order, const std::vector<double>& comp) : FArray( comp )
+{
+
+#ifndef NODEBUG
+  unsigned char n = (unsigned char) FTensor::pow(dim, order);
+  
+  if (comp.size() != n)
+    THROW_EXCEPTION(FInvalidDimensionException, "(dim, order) and comp.size() do not match.");
+  
+#endif
+  
+  this->dimension = dim;
+  this->order = order;
+}
+
+//---------------------------------------------------------------------------
+
+inline FTensor::FTensor(const FTensor& T) : FArray(T)
+{
+  dimension = T.dimension;
+  order = T.order;
+}
+
+//---------------------------------------------------------------------------
+
+inline FTensor::FTensor(const FVector& v) : FArray(v)
+{
+  dimension = v.getDimension();
+  order = 1;
+}
+
+//---------------------------------------------------------------------------
+
+inline FTensor::FTensor(const FMatrix& m) : FArray(m)
+{
+#ifndef NODEBUG
+  if (m.getDimensionX() != m.getDimensionY())
+    THROW_EXCEPTION( FException, "FTensor constructor(FMatrix) only works on square matrices");
+#endif
+  dimension = m.getDimensionX();
+  order = 2;
+}
+
+//---------------------------------------------------------------------------
+
+inline unsigned int FTensor::getDimension() const
+{
+  return dimension;
+}
+
+//---------------------------------------------------------------------------
+
+inline unsigned int FTensor::getOrder() const
+{
+  return order;
+}
+
+//---------------------------------------------------------------------------
+
+inline void FTensor::setDimension(unsigned char dim)
+{
+  this->dimension = dim;
+  FArray::resize(pow(this->dimension, this->order));
+}
+
+//---------------------------------------------------------------------------
+
+inline void FTensor::setOrder( unsigned char ord)
+{
+  this->order = ord;
+  FArray::resize(pow(this->dimension, this->order));
+}
+
+//---------------------------------------------------------------------------
+
+inline void FTensor::resizeTensor (unsigned char dim, unsigned char ord)
+{
+  order = ord;
+  dimension = dim;
+  FArray::resize (pow (dim, ord));
+}
+
+
+inline void FTensor::resize(unsigned char dim, unsigned char ord)
+{
+  order = ord;
+  dimension = dim;
+  FArray::resize (pow (dim, ord));
+}
+
+
+
+
+//---------------------------------------------------------------------------
+
+inline FTensor FTensor::operator+(const FTensor& T) const
+{
+  unsigned char i;
+
+#ifndef NODEBUG
+  if ((dimension != T.dimension) || (order != T.order))
+    THROW_EXCEPTION( FException, "ERROR: incompatible dimensions and/or orders!");
+#endif
+  
+  FTensor res(dimension, order);
+  for (i=0 ; i< sizeOfArray ; i++)
+    res.comp[i] = comp[i] + T.comp[i];
+  return res;
+}
+
+//---------------------------------------------------------------------------
+
+inline FTensor FTensor::operator-(const FTensor& T) const
+{
+  unsigned char i;
+
+#ifndef NODEBUG
+  if ((dimension != T.dimension) || (order != T.order)) {
+    THROW_EXCEPTION( FException, "ERROR: incompatible dimensions and/or orders!");
+  }
+#endif
+  FTensor res(dimension, order);
+  for (i=0 ; i< sizeOfArray ; i++)
+    res.comp[i] = comp[i] - T.comp[i];
+  return res;
+}
+
+//---------------------------------------------------------------------------
+
+#if 0 // implemented in FArray
+inline double FTensor::norm(void) const
+{
+  double norm = 0;
+
+  if (dimension) {
+    for (unsigned char i=0 ; i<sizeOfArray ; i++) 
+      norm += comp[i]*comp[i];
+    norm = sqrt(norm);
+  }
+  
+  return norm;
+}
+#endif
+
+//---------------------------------------------------------------------------
+
+inline FTensor& FTensor::operator+=(const FTensor& T)
+{
+  unsigned char i;
+#ifndef NODEBUG
+  if ((dimension != T.dimension) || (order != T.order)) {
+    THROW_EXCEPTION( FException, "ERROR: incompatible dimensions and/or orders!");
+  }
+#endif
+
+  if (dimension) {
+    for (i=0 ; i< sizeOfArray ; i++)
+      comp[i] += T.comp[i];
+  }
+    
+  return *this;
+}
+
+//---------------------------------------------------------------------------
+
+inline FTensor FTensor::operator*(double lambda) const
+{
+  unsigned char i;
+
+#ifndef NODEBUG
+  if (!dimension)
+    THROW_DEFAULT_EXCEPTION(FEmptyObjectException);
+#endif  
+  FTensor res(dimension, order);
+  for (i=0 ; i< sizeOfArray ; i++)
+    res.comp[i] = lambda * comp[i];
+  
+  return res;
+}
+
+//---------------------------------------------------------------------------
+
+inline FTensor operator*(double lambda, const FTensor& T)
+{
+  unsigned char i;
+
+#ifndef NODEBUG
+  if (!T.dimension)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+#endif
+  
+  FTensor res(T.dimension, T.order);
+  for (i=0 ; i< T.sizeOfArray ; i++)
+    res.comp[i] = lambda * T.comp[i];
+  
+  return res;
+}
+
+//---------------------------------------------------------------------------
+
+inline FTensor& FTensor::operator*=(double lambda)
+{
+  unsigned char i;
+
+#ifndef NODEBUG
+  if (!dimension)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+#endif
+
+  for (i=0 ; i< sizeOfArray ; i++)
+    comp[i] *= lambda;
+
+  return *this;
+}
+
+//---------------------------------------------------------------------------
+
+inline FTensor& FTensor::operator=(const FTensor& T)
+{
+  if (this != &T) {
+    dimension = T.dimension;
+    order = T.order;
+//     int size = pow (dimension, order);
+
+//     resize (size);
+//     memcpy( comp, T.comp, size * sizeof(double) );
+    FArray::operator= (T);
+  }
+  
+  return *this ;
+}
+
+//---------------------------------------------------------------------------
+
+inline FTensor& FTensor::operator=(double val)
+{
+//#ifndef NODEBUG
+  if ( dimension == 0 )
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+//#endif
+
+  for (positive i=0 ; i<sizeOfArray ; i++)
+    comp[i] = val;
+  return *this ;
+}
+
+//---------------------------------------------------------------------------
+
+inline bool FTensor::operator==(const FTensor& T) const
+{
+  return ( (T.dimension == dimension) &&
+           (T.order == order) &&
+           FArray::operator==(T));
+}
+
+//---------------------------------------------------------------------------
+
+inline bool FTensor::operator!=(const FTensor& T) const
+{
+  return !operator==(T);
+}
+
+//---------------------------------------------------------------------------
+
+inline const double& FTensor::operator()(void) const
+{
+#ifndef NODEBUG
+  if (order != 0)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order! Order must be 0.");
+
+  if (!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+#endif
+  
+  return comp[0];
+}
+
+//---------------------------------------------------------------------------
+
+inline double& FTensor::operator()(void)
+{
+#ifndef NODEBUG
+  if (order != 0)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order! Order must be 0.");
+
+  if (!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+#endif
+  
+  return comp[0];
+}
+
+//---------------------------------------------------------------------------
+
+inline const double& FTensor::operator()(unsigned char i) const 
+{
+
+#ifndef NODEBUG
+  if (order != 1)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order! Order must be 1.");
+
+  if (!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+
+  if (i>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+#endif
+
+  return (double&)comp[i];
+}
+
+//---------------------------------------------------------------------------
+
+inline double& FTensor::operator()(unsigned char i)
+{
+
+#ifndef NODEBUG
+  if (order != 1)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order! Order must be 1.");
+
+  if (!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+
+  if (i>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+#endif
+
+  return (double&)comp[i];
+}
+
+//---------------------------------------------------------------------------
+
+inline const double& FTensor::operator()(unsigned char i, unsigned char j) const
+{
+#ifndef NODEBUG
+  if (order != 2)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order! Order must be 2.");
+
+  if (!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+
+  if (i>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  
+  if (j>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+#endif
+  return (double&)comp[j*dimension+i];
+}
+
+//---------------------------------------------------------------------------
+
+inline double& FTensor::operator()(unsigned char i, unsigned char j)
+{
+#ifndef NODEBUG
+  if (order != 2)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order! Order must be 2.");
+
+  if (!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+
+  if (i>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  
+  if (j>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+#endif
+  return (double&)comp[j*dimension+i];
+}
+
+//---------------------------------------------------------------------------
+
+inline const double& FTensor::operator()(unsigned char i, unsigned char j, unsigned char k) const
+{
+#ifndef NODEBUG
+
+  if (order != 3)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order! Order must be 3.");
+
+  if (!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+
+  if (i>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  
+  if (j>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  
+  if (k>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+#endif
+  
+  return comp[(k*dimension+j)*dimension+i];
+}
+
+//---------------------------------------------------------------------------
+
+inline double& FTensor::operator()(unsigned char i, unsigned char j, unsigned char k)
+{
+#ifndef NODEBUG
+
+  if (order != 3)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order! Order must be 3.");
+
+  if (!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+
+  if (i>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  
+  if (j>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  
+  if (k>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+
+#endif
+  
+  return comp[(k*dimension+j)*dimension+i];
+}
+
+//---------------------------------------------------------------------------
+
+inline const double& FTensor::operator()(unsigned char i, unsigned char j, unsigned char k, unsigned char l) const
+{
+#ifndef NODEBUG
+
+  if (order != 4)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order! Order must be 4.");
+
+  if (!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+
+  if (i>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  
+  if (j>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  
+  if (k>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+
+  if (l>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+
+#endif
+  
+  return comp[((l*dimension+k)*dimension+j)*dimension+i];
+}
+
+//---------------------------------------------------------------------------
+
+inline double& FTensor::operator()(unsigned char i, unsigned char j, unsigned char k, unsigned char l)
+{
+#ifndef NODEBUG
+
+  if (order != 4)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order! Order must be 4.");
+
+  if (!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+
+  if (i>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  
+  if (j>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  
+  if (k>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+
+  if (l>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+
+#endif
+  
+  return comp[((l*dimension+k)*dimension+j)*dimension+i];
+}
+
+//---------------------------------------------------------------------------
+
+inline void FTensor::getValues(std::vector<double>& c) const
+{
+  c.resize(sizeOfArray);
+  for (unsigned char i=0; i<sizeOfArray ; i++)
+    c[i] = this->comp[i];
+}
+
+//---------------------------------------------------------------------------
+
+inline void FTensor::setValue(double val)
+{
+#ifndef NODEBUG
+  if (order != 0)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order! Order must be 0.");
+
+  if (!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+#endif
+  
+  comp[0] = val;
+}
+
+//---------------------------------------------------------------------------
+
+inline void FTensor::setValue(unsigned char i, double val) 
+{
+#ifndef NODEBUG
+
+  if (order != 1)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order! Order must be 1.");
+
+  if (!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+
+  if (i>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  
+#endif
+  
+  comp[i] = val;
+}
+
+//---------------------------------------------------------------------------
+
+inline void FTensor::setValue(unsigned char i, unsigned char j, double val)
+{
+#ifndef NODEBUG
+
+  if (order != 2)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order! Order must be 2.");
+
+  if (!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+
+  if (i>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  
+  if (j>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+
+#endif
+  comp[j*dimension+i] = val;
+}
+
+//---------------------------------------------------------------------------
+
+inline void FTensor::setValue(unsigned char i, unsigned char j, unsigned char k, double val)
+{
+#ifndef NODEBUG
+
+  if (order != 3)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order! Order must be 3.");
+
+  if (!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+
+  if (i>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  
+  if (j>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+
+  if (k>=dimension)
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  
+#endif
+  comp[k*dimension*dimension+j*dimension+i] = val;
+}
+
+//---------------------------------------------------------------------------
+
+inline void FTensor::setValues(const std::vector<double>& c)
+{
+  unsigned char i;
+
+#ifndef NODEBUG
+  if (!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+  if (!c.size())
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+  if (sizeOfArray != c.size())
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+#endif
+  
+  for (i=0 ; i<sizeOfArray ; i++)
+    this->comp[i] = c[i];
+}
+
+inline void FTensor::setValues(const double* c)
+{
+  unsigned char i;
+#ifndef NODEBUG
+  if(!sizeOfArray)
+    THROW_DEFAULT_EXCEPTION( FEmptyObjectException );
+#endif
+  for(i=0; i< sizeOfArray; ++i)
+    this->comp[i] = c[i];
+}
+
+//---------------------------------------------------------------------------
+
+inline void FTensor::tridiagonalize(FVector& d, FVector& e)
+{
+  unsigned int n=dimension;
+ 
+#ifndef NODEBUG
+  if (order != 2)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order (has to be 2)!");
+  
+  if((d.getDimension()!=n) || (e.getDimension()!=n))
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid Vector dimension!");
+#endif
+  
+  unsigned  int k,j,i,l,c;
+
+  double scale, hh, h, g, f;
+
+  for(i=n; i>=2; i--)
+    {
+      l=i-1;
+      h=scale=0.0;
+      if(l>1)
+	{
+	  for(k=1; k<=l; k++)
+	    scale += fabs((*this)(i-1,k-1));
+	  if(scale == 0.0)
+	    e[i-1]=(*this)(i-1,l-1);
+	  else
+	    {
+	      for(k=1; k<=l; k++)
+		{
+		  setValue(i-1, k-1,(*this)(i-1, k-1) / scale);
+		  h += (*this)(i-1, k-1)*(*this)(i-1, k-1);
+		}
+	      f = (*this)(i-1,l-1);
+	      g = (f >= 0.0 ? -sqrt(h) : sqrt(h));
+	      e[i-1] = scale*g;
+	      h -= f*g;
+	      setValue(i-1, l-1, f-g);
+	      f=0.0;
+	      for(j=1; j<=l; j++)
+		{
+		  setValue(j-1, i-1, (*this)(i-1, j-1)/h);
+		  g=0.0;
+		  for(k=1; k<=j; k++)
+		    g += (*this)(j-1,k-1)*(*this)(i-1,k-1);
+		  for(k=j+1; k<=l; k++)
+		    g += (*this)(k-1,j-1)*(*this)(i-1,k-1);
+		  e[j-1] = g/h;
+		  f += e[j-1] * (*this)(i-1,j-1);
+		}
+	      hh=f/(h+h);
+	      for(j=1; j<=l; j++)
+		{
+		  f=(*this)(i-1,j-1);
+		  e[j-1] = g = e[j-1] - hh*f;
+		  for(k=1; k<=j; k++)
+		    setValue(j-1, k-1, (*this)(j-1,k-1) - (f*e[k-1]+g*(*this)(i-1,k-1)));
+		}
+	    }
+	}
+      else
+	e[i-1] = (*this)(i-1,l-1);
+      d[i-1] = h;
+    }
+
+  d[0] = 0.0;
+  e[0] = 0.0;
+
+  for(i=1; i<=n; i++)
+    {
+      c=i-1;
+      if(d[i-1])
+	{
+	  for(j=1;j <= c; j++)
+	    {
+	      g = 0.0;
+	      for(k=1; k <= c; k++) g+=(*this)(i-1,k-1)*(*this)(k-1,j-1);
+	      for(k=1; k <= c; k++) setValue(k-1, j-1, (*this)(k-1,j-1) - g*(*this)(k-1,i-1));
+	    }
+	}
+      d[i-1]=(*this)(i-1,i-1);
+      setValue(i-1, i-1, 1.0);
+      for(j=1; j <= c; j++) 
+	{
+	  setValue(j-1, i-1, 0.0);
+	  setValue(i-1, j-1, 0.0);
+	}
+    }
+}
+
+//---------------------------------------------------------------------------
+
+#undef SQR
+#define SQR(a) (a == 0.0 ? 0.0 : a*a)
+
+inline double pYthag(double a, double b)
+{
+  double absa,absb;
+  absa=fabs(a);
+  absb=fabs(b);
+  if (absa > absb) return absa*sqrt(1.0+SQR(absb/absa));
+  else return (absb == 0.0 ? 0.0 : absb*sqrt(1.0+SQR(absa/absb)));
+}
+#undef SQR
+
+//---------------------------------------------------------------------------
+
+#undef SIGN
+#define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
+
+inline void FTensor::tQLiAlgorithm(FVector& d, FVector& e)
+{
+  unsigned int n=d.getDimension();
+
+  unsigned int m,l,iter,i,k;
+  double s,r,p,g,f,dd,c,b;
+
+  for(i=2;i<=n;i++) e[i-2]=e[i-1];
+  e[n-1]=0.0;
+
+  for(l=1;l<=n;l++) 
+    {
+      iter=0;
+      do 
+	{
+	  for(m=l;m<=n-1;m++) 
+	    {
+	      dd=fabs(d[m-1])+fabs(d[m]);
+	      if((double)(fabs(e[m-1])+dd) == dd) break;
+	    }
+	  if (m != l) 
+	    {
+	      if (iter++ == 30)
+    		  THROW_DEFAULT_EXCEPTION( FTooManyIterationsException );
+
+	      g=(d[l]-d[l-1])/(2.0*e[l-1]); 
+	      r=pYthag(g,1.0);
+	      g=d[m-1]-d[l-1]+e[l-1]/(g+SIGN(r,g));
+	      s=c=1.0;
+	      p=0.0;
+	      for (i=m-1;i>=l;i--)
+		{
+		  f=s*e[i-1];
+		  b=c*e[i-1];
+		  e[i]=(r=pYthag(f,g));
+		  if (r == 0.0) 
+		    {
+		      d[i] -= p;
+		      e[m-1]=0.0;
+		      break;
+		    }
+		  s=f/r;
+		  c=g/r;
+		  g=d[i]-p;
+		  r=(d[i-1]-g)*s+2.0*c*b;
+		  d[i]=g+(p=s*r);
+		  g=c*r-b;
+
+		  for(k=1;k<=n;k++) 
+		    {
+		      f=(*this)(k-1, i);
+		      setValue(k-1, i, s*(*this)(k-1,i-1)+c*f);
+		      setValue(k-1, i-1, c*(*this)(k-1,i-1)-s*f);
+		    }
+		}
+	      if (r == 0.0 && i >= l) continue;
+	      d[l-1] -= p;
+	      e[l-1]=g;
+	      e[m-1]=0.0;
+	    }
+	} while (m != l);
+    }
+}
+
+#undef SIGN
+
+//---------------------------------------------------------------------------
+
+inline void FTensor::getEigenSystem(FVector& vals, FVector v[3])
+{
+#ifndef NODEBUG
+  if (order != 2)
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order (has to be 2)!");
+  
+#endif
+
+  unsigned int x;
+
+  if(dimension==3)
+  {
+    FVector d(3), e(3);
+    tridiagonalize(d, e);  // First of all transform tensor into tridiagonal form
+
+    tQLiAlgorithm(d, e);   // Now calculate Eigenvectors and -values by QLi alg.
+
+    for(x=0; x<3; x++)
+    {
+      vals[x]=d[x];  // Copy Eigenvalues
+      v[0][x]=(*this)(x,0);  // Copy Eigenvectors;
+      v[1][x]=(*this)(x,1);
+      v[2][x]=(*this)(x,2);
+    }
+  }
+  else
+  {
+    FVector d(2), e(2);	
+    tridiagonalize(d, e);  // First of all transform tensor into tridiagonal form
+
+    tQLiAlgorithm(d, e);   // Now calculate Eigenvectors and -values by QLi alg.
+
+    for(x=0; x<2; x++)
+    {
+      vals[x]=d[x];  // Copy Eigenvalues
+      v[0][x]=(*this)(x,0);  // Copy Eigenvectors;
+      v[1][x]=(*this)(x,1);
+    }
+  }	
+
+  
+}
+
+//---------------------------------------------------------------------------
+
+inline FTensor deviator(const FTensor& tensor)
+{
+#ifndef NODEBUG
+  if (tensor.order != 2)
+      THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order (has to be 2)!");
+  
+  if (tensor.dimension == 2) {
+    if (tensor.comp[1] != tensor.comp[2])
+      THROW_EXCEPTION( FException, "input tensor is not symmetric!");
+  }
+  else if (tensor.dimension == 3) {
+    if (tensor.comp[1] != tensor.comp[3] ||
+	tensor.comp[2] != tensor.comp[6] ||
+	tensor.comp[5] != tensor.comp[7]) {
+      THROW_EXCEPTION(FException, "input tensor is not symmetric!");
+    }
+  }
+#endif
+  
+  double trace = 0.;
+  for (positive i=0 ; i<tensor.dimension ; i++)
+    trace += tensor.comp[i*tensor.dimension+i];
+  trace /= 3.;
+
+  FTensor result = tensor;
+  for (positive i=0 ; i<tensor.dimension ; i++)
+    result.comp[i*tensor.dimension+i] -= trace;
+
+  return result;
+}
+
+//---------------------------------------------------------------------------
+
+inline double operator*(const FTensor& A, const FTensor& B) {
+
+#ifndef NODEBUG
+  if (A.order != 1 || B.order != 1) {
+    THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid order");
+  }
+
+  if (A.dimension != B.dimension) {
+    THROW_DEFAULT_EXCEPTION( FInvalidDimensionException );
+  }
+#endif
+  double tmp = 0.;
+  for (unsigned char i=0 ; i<A.dimension ; i++)
+    tmp += A.comp[i]*B.comp[i];
+
+  return tmp;
+}
+
+inline void FTensor::sortEigenvectors(FVector &eval, FVector *vecs)
+{
+#ifndef NODEBUG
+    if(eval.size() != 2 && eval.size() != 3){
+	THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid number of Eigenvectors");
+    }
+#endif
+    double tmp;
+    FVector vtmp;
+    if(eval.size() == 3){
+    if(eval[0] > eval[1]) {
+      if(eval[0] > eval[2]) {
+        if(eval[1] > eval[2]){
+	// keep it
+        }else{
+	  tmp = eval[1];        vtmp= vecs[1];
+	  eval[1] = eval[2];	vecs[1] = vecs[2];
+	  eval[2] = tmp;	vecs[2] = vtmp;
+        }
+      }else{
+        tmp = eval[0];		vtmp=vecs[0];
+	eval[0]=eval[2];	vecs[0]=vecs[2];
+	eval[2]=eval[1];	vecs[2]=vecs[1];
+	eval[1]=tmp;		vecs[1]=vtmp;
+      }
+    } else { // 0 < 1
+      if(eval[1] > eval[2]){
+        if(eval[0] > eval[2]){
+          tmp = eval[0];	vtmp=vecs[0];
+	  eval[0]=eval[1];	vecs[0]=vecs[1];
+	  eval[1]=tmp;		vecs[1]=vtmp;
+        }else{
+          tmp = eval[0];	vtmp=vecs[0];
+	  eval[0]=eval[1];	vecs[0]=vecs[1];
+	  eval[1]=eval[2];	vecs[1]=vecs[2];
+	  eval[2]=tmp;		vecs[2]=vtmp;
+        }
+      }else{
+        tmp = eval[0];		vtmp=vecs[0];
+	eval[0]=eval[2];	vecs[0]=vecs[2];
+	eval[2]=tmp;		vecs[2]=vtmp;
+      }
+    }
+    }else if(eval.size() == 2){
+      if(eval[0] < eval[1]){
+        tmp = eval[0]; eval[0] = eval[1]; eval[1] = tmp;
+	vtmp= vecs[0]; vecs[0] = vecs[1]; vecs[1] = vtmp;
+      }// else leave untouched
+    }else{
+	THROW_EXCEPTION( FInvalidDimensionException, "ERROR: invalid number of Eigenvectors");
+    }
+}
+
+inline void FTensor::getEigenvalueIndex(unsigned int* ev, const FVector &eval)
+{
+  if(eval.size() == 3){
+    if(eval[0] > eval[1]) { // 0 > 1
+      if(eval[0] > eval[2]) { // 0>1,2
+        ev[0]=0;
+        if(eval[1] > eval[2]){// 0>1>2
+          ev[1]=1; ev[2]=2;
+        }else{			// 0>2>1
+          ev[1]=2; ev[2]=1;
+        }
+      }else{ // 2>0>1
+        ev[0]=2; ev[1]=0; ev[2]=1;
+      }
+    } else { // 1 > 0
+      if(eval[1] > eval[2]){ // 1> 0,2
+        ev[0]=1;
+        if(eval[0] > eval[2]){ // 1>0>2
+          ev[1]=0; ev[2]=2;
+        }else{ // 1>2>0
+          ev[1]=2; ev[2]=0;
+        }
+      }else{ // 2>1>0
+        ev[0]=2; ev[1]=1; ev[2]=0;
+      }
+    }
+  }else if(eval.size() == 2){
+    if(eval[0] < eval[1]){
+      ev[0]=1;
+      ev[1]=0;
+    }else{
+      ev[0]=0;
+  	  ev[1]=1;
+      }
+    }else{
+	THROW_EXCEPTION( FInvalidDimensionException, "Invalid size of EVs");
+    }
+}
+
+//---------------------------------------------------------------------------
+
+inline FTensor contract(const FTensor& tensor, unsigned int index1, unsigned int index2)
+{
+#ifndef NODEBUG
+  if(index1 > tensor.getOrder() || index2 > tensor.getOrder())
+    THROW_EXCEPTION(FInvalidDimensionException, "index larger than tensor order");
+
+  if(tensor.getOrder() <2)
+    THROW_EXCEPTION( FInvalidDimensionException, "Tensor order must be at least 2 to contract" );
+#endif
+  
+  FTensor res( tensor.getDimension(), tensor.getOrder()-2, true);
+  
+//  THROW_DEFAULT_EXCEPTION(FNotImplementedException);
+  
+  FMultiIndex ignore(index1, index2);
+
+  FMultiIndex i(0); i.resize(tensor.getOrder());
+
+  do
+  {
+    double sum=0;
+    for(unsigned int c=0; c<tensor.getDimension(); ++c)
+    {
+      i[index1] = c; i[index2] = c;
+      sum += tensor( i );
+    }
+    FMultiIndex contractedidx( ignore );
+    contractedidx.contract(ignore);
+    res(contractedidx) = sum;
+  }
+  while(i.increment( tensor.getDimension(), ignore ));
+  
+  return res;
+}
+
+inline FTensor tensorProduct(const FTensor& lhs,const FTensor &rhs)
+{
+#ifndef NODEBUG
+  if(lhs.getDimension() != rhs.getDimension())
+    THROW_DEFAULT_EXCEPTION(FInvalidDimensionException);
+#endif
+  FTensor res( lhs.getDimension(), lhs.getOrder()+rhs.getOrder(), true);
+  
+//  THROW_DEFAULT_EXCEPTION(FNotImplementedException);
+
+  FMultiIndex li(0); li.resize(lhs.order);
+  do
+  {
+    FMultiIndex ri(0); ri.resize(rhs.order);
+    do
+    {
+      FMultiIndex comb(li,ri);
+      res( comb ) = lhs(li) * rhs(ri);
+    }
+    while(ri.increment( lhs.dimension ));
+  }
+  while(li.increment( lhs.dimension ));
+  
+  return res;
+}
+
+// i.e. tensor product of two vectors
+inline FTensor dyadicProduct( const FVector& v1, const FVector& v2)
+{
+#ifndef NODEBUG
+  if(v1.getDimension() == v2.getDimension())
+    THROW_DEFAULT_EXCEPTION(FInvalidDimensionException);
+#endif
+  
+  FTensor t(v1.getDimension(), 2, true);
+  THROW_DEFAULT_EXCEPTION(FNotImplementedException);
+  int dim = v1.getDimension();
+  for(int i=0; i< dim; ++i)
+    for(int j=0; j<dim; ++j)
+      t(i,j) = v1[i]*v2[j];
+  return t;
+}
+
+//---------------------------------------------------------------------------
+
+inline FTensor FTensor::tensorFromEigensystem( const FVector& vals, const FVector v[3])
+{
+  FMatrix eigen(3,3);
+  FMatrix D(3,3);
+  FVector nv[3];
+  
+  nv[0] = v[0].normalized();
+  nv[1] = v[1].normalized();
+  nv[2] = v[2].normalized();
+
+  eigen(0,0) = vals[0];
+  eigen(1,1) = vals[1];
+  eigen(2,2) = vals[2];
+  
+  for(unsigned int i=0; i< 3; ++i)
+  {
+    for(unsigned int j=0; j<3; ++j)
+    {
+      D(i,j) = v[i](j);
+    }
+  }
+
+  FMatrix DT = D.transposed();
+  
+  FMatrix t = DT * eigen * D;
+  return FTensor(t);
+}
+
+inline const double& FTensor::operator()(const FMultiIndex& idx) const
+{
+#ifndef NODEBUG
+  if(idx.order() != order)
+    THROW_EXCEPTION( FInvalidDimensionException, "Order of tensor must match size of MultiIndex" );
+#endif
+  unsigned int index=0;
+  for(int i=idx.order()-1; i>= 0; --i)
+  {
+#ifndef NODEBUG
+    if(idx[i] >= dimension)
+      THROW_EXCEPTION( FInvalidDimensionException, "index larger than dimension" );
+#endif
+    index *= dimension;
+    index += idx[i];
+  }
+
+  return comp[index];
+}
+
+inline double& FTensor::operator()(const FMultiIndex& idx)
+{
+#ifndef NODEBUG
+  if(idx.order() != this->order)
+    THROW_EXCEPTION( FInvalidDimensionException, "Order of tensor must match size of MultiIndex" );
+#endif
+  
+  unsigned int index=0;
+  for(int i=idx.order()-1; i>= 0; --i)
+  {
+#ifndef NODEBUG
+    if(idx[i] >= dimension)
+      THROW_EXCEPTION( FInvalidDimensionException, "index larger than dimension" );
+#endif
+    index *= dimension;
+    index += idx[i];
+  }
+
+  return comp[index];
+}
+
+// untested
+// Formula 4.67 of chap 4.3. Tensoren pp 272ff
+// Bronstein
+inline FTensor& FTensor::transform( const FMatrix& A )
+{
+#ifndef NODEBUG
+  if(A.getDimensionX() != A.getDimensionY())
+    THROW_EXCEPTION( FInvalidDimensionException, "Matrix has to be square" );
+  if(A.getDimensionX() != dimension )
+    THROW_EXCEPTION( FInvalidDimensionException, "Matrix dimension has to match dimension of tensor");
+#endif
+  FTensor t(dimension, order, true);
+  FMultiIndex idx(0); idx.resize(order);
+  do
+  {
+    double val =0;
+    FMultiIndex i(0); i.resize(order);
+    do
+    {
+      double prod = 1.;
+      for(int c=0; c< order; ++c)
+        prod *= A(idx[c], i[c]);
+      val += prod * (*this)(i);
+    }
+    while(i.increment( dimension ) );
+    t(idx) = val;
+  }
+  while(idx.increment( dimension ) );
+  return ((*this) = t);
+}
+  
+inline FTensor& FTensor::multAndContract( const FVector& v, unsigned int index )
+{
+#ifndef NODEBUG
+  if(v.getDimension() != dimension)
+    THROW_EXCEPTION( FInvalidDimensionException, "Tensor and vector dimension don't match" );
+  if(order == 0)
+    THROW_EXCEPTION( FInvalidDimensionException, "Tensor order must be at least 1");
+  if(index >= order)
+    THROW_EXCEPTION( FInvalidDimensionException, "index to contract must not be larger than tensor order" );
+#endif
+  FTensor res( dimension, order-1 );
+#ifndef NODEBUG
+  try{
+#endif
+  FMultiIndex ignore( index );
+  FMultiIndex idx(0); idx.resize( order );
+  FMultiIndex ctx(0); ctx.resize( order-1 );
+  do
+  {
+    double sum = 0;
+    for(int i=0; i< dimension; ++i)
+    {
+      idx[index] = i;
+      sum += v[i] * (*this)(idx);
+    }
+    res(ctx) = sum;
+    ctx.increment( dimension );
+  }
+  while(idx.increment( dimension, ignore ));
+#ifndef NODEBUG
+  }CATCH_N_RETHROW(FException);
+#endif
+
+  return ((*this) = res );
+}
+
+inline double innerProduct(const FTensor& t1, const FTensor& t2)
+{
+#ifndef NODEBUG
+  if(t1.dimension != t2.dimension)
+    THROW_EXCEPTION( FInvalidDimensionException, "Tensor and Tensor dimension don't match" );
+  if(t1.order != t2.order)
+    THROW_EXCEPTION( FInvalidDimensionException, "Tensor and Tensor order don't match" );
+#endif
+  return t1.FArray::operator*( FArray(t2) );
+}
+
+
+inline double& FTensor::getComp(unsigned int i)
+{
+  return FArray::operator()(i);
+}
+
+inline const double& FTensor::getComp(unsigned int i) const
+{
+  return FArray::operator()(i);
+}
+
+#undef inline
+
+#endif // __FTensor_icc_defined

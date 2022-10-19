@@ -7,7 +7,7 @@
 #include <vector>
 #include <list>
 
-namespace spurt {
+namespace xavier {
 namespace crease {
 // this parameter controls the subdivision going on in the
 // detection of crease points on provided edges.
@@ -17,32 +17,32 @@ unsigned int nsub;
 bool find_intersection(double* x0, double* x1, double* inter,
                        gage_interface::scalar_wrapper& gH_wrapper,
                        bool ridge);
-bool find_intersection(const vec2& x0, const vec2& x1,
-                       vec2& inter,
+bool find_intersection(const nvis::vec2& x0, const nvis::vec2& x1,
+                       nvis::vec2& inter,
                        gage_interface::scalar_wrapper& gH_wrapper,
                        bool ridge);
                        
-bool find_intersection(const vec2& x0, const vec2& x1,
-                       vec2& inter,
+bool find_intersection(const nvis::vec2& x0, const nvis::vec2& x1,
+                       nvis::vec2& inter,
                        gage_interface::scalar_wrapper& gH_wrapper,
                        bool ridge, double& strength);
                        
 bool quick_search(double* x0, double* x1, double* inter,
                   gage_interface::scalar_wrapper& gH,
                   bool ridge);
-bool quick_search(const vec2& x0, const vec2& x1,
-                  vec2& inter,
+bool quick_search(const nvis::vec2& x0, const nvis::vec2& x1,
+                  nvis::vec2& inter,
                   gage_interface::scalar_wrapper& gH,
                   bool ridge);
                   
 bool eigen(double* emin, double& lmin, double* H,
            bool ridge);
-bool eigen(vec2& emin, double& lmin, const vec3& H,
+bool eigen(nvis::vec2& emin, double& lmin, const nvis::vec3& H,
            bool ridge);
 };
 };
 
-bool spurt::crease::
+bool xavier::crease::
 find_intersection(double* x0, double* x1, double* inter,
                   gage_interface::scalar_wrapper& gH_wrapper,
                   bool ridge)
@@ -132,7 +132,7 @@ find_intersection(double* x0, double* x1, double* inter,
     else return false;
 }
 
-bool spurt::crease::
+bool xavier::crease::
 quick_search(double* x0, double* x1, double* inter,
              gage_interface::scalar_wrapper& gH,
              bool ridge)
@@ -177,18 +177,18 @@ quick_search(double* x0, double* x1, double* inter,
     return false;
 }
 
-bool spurt::crease::
+bool xavier::crease::
 eigen(double* evec, double& lambda, double* H, bool ridge)
 {
-    static vec3 Hessian;
-    static vec2 emin, emax;
+    static nvis::vec3 Hessian;
+    static nvis::vec2 emin, emax;
     double lmin, lmax;
 
     Hessian[0] = H[0];
     Hessian[1] = H[1];
     Hessian[2] = H[2];
 
-    spurt::eigensystem(emin, emax, lmin, lmax, Hessian);
+    xavier::eigensystem(emin, emax, lmin, lmax, Hessian);
     if (ridge) {
         lambda = lmin;
         evec[0] = emin[0];
@@ -203,31 +203,31 @@ eigen(double* evec, double& lambda, double* H, bool ridge)
     }
 }
 
-bool spurt::crease::
-find_intersection(const vec2& x0, const vec2& x1,
-                  vec2& inter,
+bool xavier::crease::
+find_intersection(const nvis::vec2& x0, const nvis::vec2& x1,
+                  nvis::vec2& inter,
                   gage_interface::scalar_wrapper& gH_wrapper,
                   bool ridge, double& strength)
 {
     strength = 0;
     if (find_intersection(x0, x1, inter, gH_wrapper, ridge)) {
-        vec2 evec;
+        nvis::vec2 evec;
         double eval;
-        vec3 H;
-        vec3 p(inter[0], inter[1], 0.5);
+        nvis::vec3 H;
+        nvis::vec3 p(inter[0], inter[1], 0.5);
         gH_wrapper.hessian(inter, H);
 
 //       std::cout << "Hessian at " << inter << " is " << H << std::endl;
 
         if (eigen(evec, eval, H, ridge)) {
 //       std::cout << "checking lambda (" << eval << ")" << std::endl;
-//       vec2 He( H[0]*evec[0]+H[1]*evec[1],
+//       nvis::vec2 He( H[0]*evec[0]+H[1]*evec[1],
 //              H[1]*evec[0]+H[2]*evec[1] );
-//       std::cout << "cross product: " << fabs( cross( He, evec ) )
-//             << ", lambda test: " << norm( He-eval*evec )
+//       std::cout << "cross product: " << fabs( nvis::cross( He, evec ) )
+//             << ", lambda test: " << nvis::norm( He-eval*evec )
 //             << std::endl;
 
-//       vec3 evals;
+//       nvis::vec3 evals;
 //       gH_wrapper.hess_evals( p, evals );
 //       if ( ridge )
 //         std::cout << "min Hess_Eval = " << evals[2] << std::endl;
@@ -243,9 +243,9 @@ find_intersection(const vec2& x0, const vec2& x1,
     return false;
 }
 
-bool spurt::crease::
-find_intersection(const vec2& x0, const vec2& x1,
-                  vec2& inter,
+bool xavier::crease::
+find_intersection(const nvis::vec2& x0, const nvis::vec2& x1,
+                  nvis::vec2& inter,
                   gage_interface::scalar_wrapper& gH_wrapper,
                   bool ridge)
 {
@@ -253,18 +253,18 @@ find_intersection(const vec2& x0, const vec2& x1,
         return quick_search(x0, x1, inter, gH_wrapper, ridge);
 
     // subdivide edge
-    std::vector< vec2 > x(nsub + 2);
+    std::vector< nvis::vec2 > x(nsub + 2);
     for (unsigned int i = 0 ; i < nsub + 2 ; i++) {
         double a = (double)i / (double)(nsub + 1);
         x[i] = (1. - a) * x0 + a * x1;
     }
 
     // check Hessian's eigenvalues at end vertices
-    std::vector< vec2 > evec(nsub + 2);
-    vec3 H;
-    vec2 g;
+    std::vector< nvis::vec2 > evec(nsub + 2);
+    nvis::vec3 H;
+    nvis::vec2 g;
     double lambda;
-    std::vector< vec2 > roots;
+    std::vector< nvis::vec2 > roots;
     if (!gH_wrapper.hessian(x[0], H) ||
         !eigen(evec[0], lambda, H, ridge))
         return false;
@@ -281,16 +281,16 @@ find_intersection(const vec2& x0, const vec2& x1,
     return false;
 }
 
-bool spurt::crease::
-quick_search(const vec2& x0, const vec2& x1, vec2& inter,
+bool xavier::crease::
+quick_search(const nvis::vec2& x0, const nvis::vec2& x1, nvis::vec2& inter,
              gage_interface::scalar_wrapper& gH,
              bool ridge)
 {
     // compute gradient and reference eigenvector at one vertex
-    std::vector< vec2 > evec(2);
+    std::vector< nvis::vec2 > evec(2);
     double dot0, dot1;
-    vec3 H;
-    vec2 g;
+    nvis::vec3 H;
+    nvis::vec2 g;
     double lambda;
     // get relevant eigenvectors and check eigenvalues
     if (!gH.hessian(x0, H) ||
@@ -300,15 +300,15 @@ quick_search(const vec2& x0, const vec2& x1, vec2& inter,
         return false;
 
     // enforce orientation consistency across eigenvectors
-    if (inner(evec[0], evec[1]) < 0) {
+    if (nvis::inner(evec[0], evec[1]) < 0) {
         evec[1] *= -1;
     }
 
     // check for zero crossing of dot product with gradient
     if (!gH.gradient(x0, g)) return false;
-    dot0 = inner(evec[0], g);
+    dot0 = nvis::inner(evec[0], g);
     if (!gH.gradient(x1, g)) return false;
-    dot1 = inner(evec[1], g);
+    dot1 = nvis::inner(evec[1], g);
 
     if (dot0*dot1 <= 0) {
         if (dot0 == dot1) {
@@ -324,13 +324,13 @@ quick_search(const vec2& x0, const vec2& x1, vec2& inter,
     return false;
 }
 
-bool spurt::crease::
-eigen(vec2& evec, double& lambda, const vec3& H, bool ridge)
+bool xavier::crease::
+eigen(nvis::vec2& evec, double& lambda, const nvis::vec3& H, bool ridge)
 {
-    vec2 emin, emax;
+    nvis::vec2 emin, emax;
     double lmin, lmax;
 
-    spurt::eigensystem(emin, emax, lmin, lmax, H);
+    xavier::eigensystem(emin, emax, lmin, lmax, H);
 
     /*
     // checking results
@@ -341,12 +341,12 @@ eigen(vec2& evec, double& lambda, const vec3& H, bool ridge)
     det = ( H[0]-lmax )*( H[2]-lmax )-H[1]*H[1];
     std::cout << "det( H - lmax*I )/||H|| = " << det/Hnorm << std::endl;
 
-    vec2 Hemin( ( H[0]-lmin )*emin[0]+H[1]*emin[1],
+    nvis::vec2 Hemin( ( H[0]-lmin )*emin[0]+H[1]*emin[1],
               H[1]*emin[0]+( H[2]-lmin )*emin[1] );
-    std::cout << "||( H-lmin*I )emin|| = " << norm( Hemin ) << std::endl;
-    vec2 Hemax( ( H[0]-lmax )*emax[0]+H[1]*emax[1],
+    std::cout << "||( H-lmin*I )emin|| = " << nvis::norm( Hemin ) << std::endl;
+    nvis::vec2 Hemax( ( H[0]-lmax )*emax[0]+H[1]*emax[1],
               H[1]*emax[0]+( H[2]-lmax )*emax[1] );
-    std::cout << "||( H-lmax*I )emax|| = " << norm( Hemax ) << std::endl;
+    std::cout << "||( H-lmax*I )emax|| = " << nvis::norm( Hemax ) << std::endl;
 
     */
 

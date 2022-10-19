@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <boost/static_assert.hpp>
 
-namespace spurt
+namespace xavier
 {
 
 /// legacy wrapper for raster_data<>
@@ -16,7 +16,7 @@ class raster_data
 {
 public:
     typedef T1                                  data_type;
-    typedef fixed_vector<data_type, N>    derivative_type;
+    typedef nvis::fixed_vector<data_type, N>    derivative_type;
     typedef T2                                  scalar_type;
     typedef grid<scalar_type, N>                grid_type;
     typedef typename grid_type::vec_type        vec_type;
@@ -167,7 +167,7 @@ private:
     mutable bool            __verbose;
 };
 
-} // namespace spurt
+} // namespace xavier
 
 #endif
 

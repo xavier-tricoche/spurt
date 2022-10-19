@@ -1,12 +1,12 @@
 #include "math/matrix.hpp"
 #include "math/math.hpp"
 
-bool spurt::display_eigen_stuff;
+bool xavier::display_eigen_stuff;
 
 // ---------------------------------------------------------------------------
 
-void spurt::mat3::eigensystem( std::vector< double >& evals,
-                                std::vector< vec3 >& evecs ) const
+void xavier::mat3::eigensystem( std::vector< double >& evals,
+                                std::vector< nvis::vec3 >& evecs ) const
 {
     // coefficients of characteristic polynomial
     double coef[4] = { -1, __mat[0]+__mat[4]+__mat[8],
@@ -34,8 +34,8 @@ void spurt::mat3::eigensystem( std::vector< double >& evals,
         }
         
         double lambda = __evals[i].real();
-        vec3 ev = eigenvector( *this, lambda );
-        if ( display_eigen_stuff && norm( ev )==0 ) {
+        nvis::vec3 ev = eigenvector( *this, lambda );
+        if ( display_eigen_stuff && nvis::norm( ev )==0 ) {
             std::cout << "unable to find an eigenvector for eigenvalue "
                       << lambda << std::endl;
             continue;
@@ -58,12 +58,12 @@ void spurt::mat3::eigensystem( std::vector< double >& evals,
             std::cout << det(__M) << std::endl;
             
             std::cout << "checking eigenvector #" << i << ": " << ev << std::endl;
-            vec3 Me = __M*ev;
+            nvis::vec3 Me = __M*ev;
             std::cout << "(M-lambda I_3)*ev = " << Me << std::endl;
             Me = (*this)*ev;
             std::cout << "< M*ev, ev >/lambda = "
-                      << inner( Me, ev )/lambda << std::endl;
-            std::cout << "(M*ev) x ev = " << cross( Me, ev )
+                      << nvis::inner( Me, ev )/lambda << std::endl;
+            std::cout << "(M*ev) x ev = " << nvis::cross( Me, ev )
                       << std::endl;
         }
     }
@@ -71,7 +71,7 @@ void spurt::mat3::eigensystem( std::vector< double >& evals,
 
 // ---------------------------------------------------------------------------
 
-void spurt::check_eigen( const mat3& M )
+void xavier::check_eigen( const mat3& M )
 {
     if ( true || !display_eigen_stuff ) {
         return;
@@ -89,10 +89,10 @@ void spurt::check_eigen( const mat3& M )
     ell_3m_eigensolve_d( val, vec, m, 0 );
     
     std::vector< double > vals(3);
-    std::vector< vec3 > vecs(3);
+    std::vector< nvis::vec3 > vecs(3);
     for ( unsigned int i=0 ; i<3 ; i++ ) {
         vals[i] = val[i];
-        vecs[i] = vec3( vec[3*i], vec[3*i+1], vec[3*i+2] );
+        vecs[i] = nvis::vec3( vec[3*i], vec[3*i+1], vec[3*i+2] );
     }
     
     if ( vals[0] == vals[1] || vals[1] == vals[2] ) {
@@ -112,18 +112,18 @@ void spurt::check_eigen( const mat3& M )
                   << " (det M = " << det(M) << ")" << std::endl;
                   
         std::cout << "checking eigenvector #" << i << ": " << vecs[i] << std::endl;
-        vec3 zero = tmp*vecs[i];
+        nvis::vec3 zero = tmp*vecs[i];
         std::cout << "( M-lambda I3 )*ev = " << zero << std::endl;
         
         std::cout << "M-lambda I_3 = " << tmp << std::endl;
-        vec3 row0( tmp(0,0), tmp(0,1), tmp(0,2) );
-        vec3 row1( tmp(1,0), tmp(1,1), tmp(1,2) );
-        vec3 row2( tmp(2,0), tmp(2,1), tmp(2,2) );
+        nvis::vec3 row0( tmp(0,0), tmp(0,1), tmp(0,2) );
+        nvis::vec3 row1( tmp(1,0), tmp(1,1), tmp(1,2) );
+        nvis::vec3 row2( tmp(2,0), tmp(2,1), tmp(2,2) );
         
         std::cout << "checking colinearity" << std::endl;
-        double dot01 = fabs( inner( row0, row1 ) )/norm( row0 )/norm( row1 );
-        double dot02 = fabs( inner( row0, row2 ) )/norm( row0 )/norm( row2 );
-        double dot12 = fabs( inner( row1, row2 ) )/norm( row1 )/norm( row2 );
+        double dot01 = fabs( nvis::inner( row0, row1 ) )/nvis::norm( row0 )/nvis::norm( row1 );
+        double dot02 = fabs( nvis::inner( row0, row2 ) )/nvis::norm( row0 )/nvis::norm( row2 );
+        double dot12 = fabs( nvis::inner( row1, row2 ) )/nvis::norm( row1 )/nvis::norm( row2 );
         std::cout << "0-1: " << dot01 << std::endl;
         std::cout << "0-2: " << dot02 << std::endl;
         std::cout << "1-2: " << dot12 << std::endl;
@@ -147,7 +147,7 @@ void spurt::check_eigen( const mat3& M )
         }
         
         std::cout << "local coordinates are: (" << s << ", " << t << ")" << std::endl;
-        vec3 q( s, t, 1 );
+        nvis::vec3 q( s, t, 1 );
         q = tmp*q;
         std::cout << "( M-lambda I3 )*(s, t, 1)^T = " << q << std::endl;
     }
@@ -155,7 +155,7 @@ void spurt::check_eigen( const mat3& M )
 
 // ---------------------------------------------------------------------------
 
-spurt::vec3 spurt::eigenvector( const mat3& M, const double lambda )
+nvis::vec3 xavier::eigenvector( const mat3& M, const double lambda )
 {
     static unsigned int indices[3][2]= { {1,2}, {0,2}, {0,1} };
     static const double epsilon = 1.0e-6;
@@ -200,7 +200,7 @@ spurt::vec3 spurt::eigenvector( const mat3& M, const double lambda )
         row = indices[maxi];
         det[maxi] = 1./det[maxi];
         
-        vec3 evec;
+        nvis::vec3 evec;
         evec[col[0]] = det[maxi]*
                        ( -matrix( row[0], j )*matrix( row[1], col[1] )+
                          matrix( row[1], j )*matrix( row[0], col[1] ) );
@@ -208,10 +208,10 @@ spurt::vec3 spurt::eigenvector( const mat3& M, const double lambda )
                        ( -matrix( row[0], col[0] )*matrix( row[1], j )+
                          matrix( row[1], col[0] )*matrix( row[0], j ) );
         evec[j] = 1.;
-        evec *= 1/norm( evec );
+        evec *= 1/nvis::norm( evec );
         
         return evec;
     }
     
-    return vec3( 0, 0, 0 );
+    return nvis::vec3( 0, 0, 0 );
 }

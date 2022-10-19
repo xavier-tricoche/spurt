@@ -9,31 +9,30 @@
 #include <algorithm>
 #include <math.h>
 #include <math/fixed_vector.hpp>
+#include <math/fixed_matrix.hpp>
 #include <math/bounding_box.hpp>
-#include <format/dlr_reader.hpp>
+#include <format/DLRreader.hpp>
 #include <teem/nrrd.h>
 #include <image/nrrd_wrapper.hpp>
-#include <math/mls.hpp>
-#include <math/rbf_basis.hpp>
+#include <math/MLS.hpp>
+#include <math/RBFbasis.hpp>
 #include <Eigen/Core>
 #include <Eigen/SVD>
-#include <misc/time_helper.hpp>
+#include <util/timer.hpp>
 #include <vtkDataSetReader.h>
 #include <vtkDataSet.h>
 #include <vtkPointSet.h>
 #include <vtkDataArray.h>
 #include <vtkPointData.h>
 #include <sfcnn.hpp>
-#include <math/rbf.hpp>
-
-typedef Eigen::Matrix<double, 3, 3> matrix_t;
+#include <math/RBF.hpp>
 
 // parameters
-spurt::fixed_vector<size_t, 3>  resolution;
-std::string  in_name, in_name2, out_name;
-int  degree;
-double  radius;
-spurt::bbox3  bbox;
+nvis::fixed_vector<size_t, 3>        resolution;
+std::string        in_name, in_name2, out_name;
+int             degree;
+double            radius;
+nvis::bbox3        bbox;
 
 void printUsageAndExit( const std::string& argv0, const std::string& offending="",
                         bool doExit = true )
@@ -57,12 +56,12 @@ void printUsageAndExit( const std::string& argv0, const std::string& offending="
 }
 
 
-std::vector<spurt::vec3> all_points;
+std::vector<nvis::vec3> all_points;
 // only some of these arrays will be filled
 // depending on the nature of the input data
-std::vector<spurt::vec3> all_vectors;
-std::vector<double>       all_scalars;
-std::vector<matrix_t>     all_tensors;
+std::vector<nvis::vec3> all_vectors;
+std::vector<double>     all_scalars;
+std::vector<nvis::mat3> all_tensors;
 
 void load_VTK(const std::string& name, const std::string& me) {
     vtkDataSetReader* reader = vtkDataSetReader::New();
@@ -99,7 +98,7 @@ void load_VTK(const std::string& name, const std::string& me) {
             int n=0;
             for (int r=0 ; r<3 ; ++r) {
                 for (int c=0 ; c<3 ; ++c)
-                    all_tensors[i](r,c) = t[n++];
+                    all_tensors[i][r][c] = t[n++];
             }
         }
         tensors->Delete();
@@ -114,7 +113,7 @@ void load_NRRD(const std::string& name, const std::string& me) {
         printUsageAndExit(me, biffGetDone(NRRD));
     }
     std::vector<double> data;
-    spurt::to_vector<double>(data, nin);
+    xavier::nrrd_utils::to_vector<double>(data, nin);
     // identify data type based on number of columns
     int ncol = nin->axis[0].size;
     int npts = nin->axis[1].size;
@@ -145,15 +144,15 @@ void load_NRRD(const std::string& name, const std::string& me) {
             all_points[i][0]     = data[9*i  ];
             all_points[i][1]     = data[9*i+1];
             all_points[i][2]     = data[9*i+2];
-            all_tensors[i](0,0) = data[9*i+3];
-            all_tensors[i](0,1) = data[9*i+4];
-            all_tensors[i](1,0) = data[9*i+4];
-            all_tensors[i](0,2) = data[9*i+5];
-            all_tensors[i](2,0) = data[9*i+5];
-            all_tensors[i](1,1) = data[9*i+6];
-            all_tensors[i](1,2) = data[9*i+7];
-            all_tensors[i](2,1) = data[9*i+7];
-            all_tensors[i](2,2) = data[9*i+8];
+            all_tensors[i][0][0] = data[9*i+3];
+            all_tensors[i][0][1] = data[9*i+4];
+            all_tensors[i][1][0] = data[9*i+4];
+            all_tensors[i][0][2] = data[9*i+5];
+            all_tensors[i][2][0] = data[9*i+5];
+            all_tensors[i][1][1] = data[9*i+6];
+            all_tensors[i][1][2] = data[9*i+7];
+            all_tensors[i][2][1] = data[9*i+7];
+            all_tensors[i][2][2] = data[9*i+8];
         }
     }
     else if (ncol == 12) {
@@ -163,15 +162,15 @@ void load_NRRD(const std::string& name, const std::string& me) {
             all_points[i][0]     = data[12*i   ];
             all_points[i][1]     = data[12*i+ 1];
             all_points[i][2]     = data[12*i+ 2];
-            all_tensors[i](0,0) = data[12*i+ 3];
-            all_tensors[i](0,1) = data[12*i+ 4];
-            all_tensors[i](0,2) = data[12*i+ 5];
-            all_tensors[i](1,0) = data[12*i+ 6];
-            all_tensors[i](1,1) = data[12*i+ 7];
-            all_tensors[i](1,2) = data[12*i+ 8];
-            all_tensors[i](2,0) = data[12*i+ 9];
-            all_tensors[i](2,1) = data[12*i+10];
-            all_tensors[i](2,1) = data[12*i+11];
+            all_tensors[i][0][0] = data[12*i+ 3];
+            all_tensors[i][0][1] = data[12*i+ 4];
+            all_tensors[i][0][2] = data[12*i+ 5];
+            all_tensors[i][1][0] = data[12*i+ 6];
+            all_tensors[i][1][1] = data[12*i+ 7];
+            all_tensors[i][1][2] = data[12*i+ 8];
+            all_tensors[i][2][0] = data[12*i+ 9];
+            all_tensors[i][2][1] = data[12*i+10];
+            all_tensors[i][2][1] = data[12*i+11];
         }
     }
     else {
@@ -181,10 +180,10 @@ void load_NRRD(const std::string& name, const std::string& me) {
 }
 
 void load_DLR(const std::string& grid_name, const std::string data_name, const std::string& me) {
-    spurt::dlr_reader reader(grid_name, data_name);
-    std::vector<spurt::vec3> vertices;
+    xavier::DLRreader reader(grid_name, data_name);
+    std::vector<nvis::fvec3> vertices;
     std::vector<long int> cell_indices;
-    std::vector<std::pair<spurt::dlr_reader::cell_type, long int> >cell_types;
+    std::vector<std::pair<xavier::DLRreader::cell_type, long int> >cell_types;
     reader.read_mesh(false, vertices, cell_indices, cell_types);
     int npts = vertices.size();
     all_points.resize(npts);
@@ -202,8 +201,8 @@ void load_DLR(const std::string& grid_name, const std::string data_name, const s
     for (int i=0 ; i<npts ; ++i) all_scalars[i] = tmp[i];
 }
 
-spurt::bbox3 bounds() {
-    spurt::bbox3 bb;
+nvis::bbox3 bounds() {
+    nvis::bbox3 bb;
     for (int i=0 ; i<all_points.size() ; ++i) {
         bb.add(all_points[i]);
     }
@@ -211,7 +210,7 @@ spurt::bbox3 bounds() {
 }
 
 template<typename Locator>
-double what_radius(const spurt::vec3& x0, int N, Locator& nnl) {
+double what_radius(const nvis::vec3& x0, int N, Locator& nnl) {
     std::vector<unsigned long> ids;
     std::vector<double> dist;
     nnl.ksearch(x0, N+1, ids, dist);
@@ -232,7 +231,7 @@ struct myRBF {
     double _R;
     myRBF(double radius) : _R(radius) {}
     double radius() const { return _R; }
-    double operator()(double r) const { return spurt::RBF::wendland(r, _R); }
+    double operator()(double r) const { return xavier::RBF::wendland(r, _R); }
 };
 
 int main(int argc, char* argv[]) {
@@ -241,8 +240,8 @@ int main(int argc, char* argv[]) {
     out_name = "none";
     radius = 0;
     degree = 0;
-    resolution = spurt::fixed_vector<size_t, 3>(0);
-    bbox.min() = bbox.max() = spurt::vec3(0);
+    resolution = nvis::fixed_vector<size_t, 3>(0);
+    bbox.min() = bbox.max() = nvis::vec3(0);
 
     for (int i=1; i<argc ; ++i) {
         std::string arg(argv[i]);
@@ -299,7 +298,7 @@ int main(int argc, char* argv[]) {
 
     // user reader appropriate for input file type
     std::string ext = extension(in_name);
-    spurt::timer _timer;
+    nvis::timer _timer;
     if (ext == "vtk") load_VTK(in_name, argv[0]);
     else if (ext == "nrrd") load_NRRD(in_name, argv[0]);
     else if (in_name2 != "none") {
@@ -320,8 +319,8 @@ int main(int argc, char* argv[]) {
     }
     std::cerr << "dataset imported in " << _timer.elapsed() << " seconds\n";
 
-    if (spurt::norm(bbox.size())) {
-        spurt::bbox3 tmp = bounds();
+    if (nvis::norm(bbox.size())) {
+        nvis::bbox3 tmp = bounds();
         for (int i=0 ; i<3 ; ++i) {
             bbox.min()[i] = std::max(tmp.min()[i], bbox.min()[i]);
             bbox.max()[i] = std::min(tmp.max()[i], bbox.max()[i]);
@@ -330,10 +329,10 @@ int main(int argc, char* argv[]) {
     else bbox = bounds();
     std::cout << "bounding box = " << bbox << std::endl;
 
-    spurt::vec3 spacing = bbox.size() / spurt::vec3(resolution);
+    nvis::vec3 spacing = bbox.size() / nvis::vec3(resolution);
     std::cout << "spacing = " << spacing << std::endl;
 
-    typedef sfcnn<spurt::vec3, 3, float>            NNlocator_type;
+    typedef sfcnn<nvis::fvec3, 3, float>            NNlocator_type;
 
     size_t nrhs = 0;
     if (all_scalars.size()) nrhs++;
@@ -345,8 +344,8 @@ int main(int argc, char* argv[]) {
     int r01 = resolution[0]*resolution[1];
     const int& r0 = resolution[0];
 
-    _timer.start();
-    spurt::vec3 *__all_points = (spurt::vec3 *)calloc(npts, sizeof(spurt::vec3));
+    _timer.restart();
+    nvis::fvec3 *__all_points = (nvis::fvec3 *)calloc(npts, sizeof(nvis::fvec3));
     for (int i=0 ; i<npts ; ++i) __all_points[i] = all_points[i];
     NNlocator_type nnl(__all_points, npts);
     std::cout << "nearest neighbor search data structure created in " << _timer.elapsed() << " seconds\n";
@@ -358,11 +357,11 @@ int main(int argc, char* argv[]) {
     std::cout << omp_get_max_threads() << " threads available\n";
 #endif
 
-    _timer.start();
+    _timer.restart();
     std::cout << "\nDetermining needed radius at each vertex...\n";
     std::vector<float> radii(npts, 0);
 
-    const int nneeded = spurt::MLS::dof(3, 2);
+    const int nneeded = xavier::MLS::dof(3, 2);
 
 #pragma omp parallel
     {
@@ -377,8 +376,8 @@ int main(int argc, char* argv[]) {
             int m = n%r01;
             int j = m/r0;
             int i = m%r0;
-            spurt::vec3 x = bbox.min() + spurt::vec3(i,j,k)*spacing;
-            spurt::timer rad_t;
+            nvis::vec3 x = bbox.min() + nvis::vec3(i,j,k)*spacing;
+            nvis::timer rad_t;
             radii[n] = what_radius(x, nneeded, nnl);
             double dt = rad_t.elapsed();
     
@@ -412,10 +411,10 @@ int main(int argc, char* argv[]) {
     }
     myRBF phi(R);
     std::cout << "Solving RBF system...\n";
-    _timer.start();
+    _timer.restart();
 
     typedef Eigen::VectorXd     data_type;
-    spurt::RBF::CompactSupportRBFInterpolator<data_type, double, 3, myRBF>
+    xavier::RBF::CompactSupportRBFInterpolator<data_type, double, 3, myRBF>
         interpolator(all_points, all_values, phi);
     std::cout << "RBF solution computed in " << _timer.elapsed() << " seconds\n";
 
@@ -431,7 +430,7 @@ int main(int argc, char* argv[]) {
         int m = n%r01;
         int j = m/r0;
         int i = m%r0;
-        spurt::vec3 x = bbox.min() + spurt::vec3(i,j,k)*spacing;
+        nvis::vec3 x = bbox.min() + nvis::vec3(i,j,k)*spacing;
         if (!thread_id) {
             std::cout << "\rProgress: sampled " << std::setw(7) << std::setfill(' ') << n << " vertices ("
             << std::setw(3) << std::setfill(' ') << 100*n/npts << "%) in "

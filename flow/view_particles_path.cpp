@@ -6,24 +6,25 @@
 #include <vtkTextActor.h>
 #include <vtkTextProperty.h>
 
-#include <vtk/vtk_utils.hpp>
+#include <VTK/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <misc/option_parse.hpp>
-#include <misc/time_helper.hpp>
+#include <misc/progress.hpp>
 #include <math/stat.hpp>
 #include <graphics/colors.hpp>
+#include <format/filename.hpp>
 
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 
 #include <boost/filesystem.hpp>
 
-typedef spurt::fixed_vector< double, 2 > vec2d;
-typedef spurt::fixed_vector< double, 3 > vec3d;
-typedef spurt::fixed_vector< int, 2 >    vec2i;
-typedef spurt::fixed_vector< int, 3 >    vec3i;
+typedef nvis::fixed_vector< double, 2 > vec2d;
+typedef nvis::fixed_vector< double, 3 > vec3d;
+typedef nvis::fixed_vector< int, 2 >    vec2i;
+typedef nvis::fixed_vector< int, 3 >    vec3i;
 typedef nvis::bounding_box< vec2d >    bbox2d;
-typedef spurt::vec4                       vec4;
+typedef nvis::vec4                       vec4;
 
 typedef vec4                            pos_t;
 typedef std::vector<pos_t>       trajectory_t;
@@ -48,11 +49,12 @@ double radius=0.1;
 double scale=0.001;
 int color_method=0; // constant
 size_t nframes=10;
-spurt::vec2 range(0, -1);
-spurt::ivec2 start(0, 0);
+nvis::vec2 range(0, -1);
+nvis::ivec2 start(0, 0);
 float point_size = 2;
 bool do_colorbar = false;
 bool normalize = false;
+int quality = 75;
 
 constexpr double invalid=-30000;
 
@@ -60,7 +62,7 @@ constexpr double invalid=-30000;
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = spurt::command_line;
+    namespace xcl = xavier::command_line;
 
     xcl::option_traits
             required_group(true, false, "Required Options"),
@@ -114,7 +116,7 @@ void initialize(int argc, const char* argv[])
 
 template<typename T = double>
 inline double nrrd_value(const Nrrd* nin, size_t n) {
-    return spurt::nrrd_data_wrapper<T>(nin)[n];
+    return xavier::nrrd_utils::nrrd_data_wrapper<T>(nin)[n];
 }
 
 inline vec2d pos(const vec2i& c, const vec2i& res) {
@@ -147,14 +149,14 @@ vtkSmartPointer<vtkColorTransferFunction> create_ctf(const std::vector<double>& 
     VTK_CREATE(vtkColorTransferFunction, ctf);
 
     if (name_cmap.empty()) {
-        std::vector<spurt::fvec3> scale;
+        std::vector<nvis::fvec3> scale;
 
         // heat map:
-        std::vector<spurt::fvec3> heat_scale;
-        heat_scale.push_back(spurt::black);
-        heat_scale.push_back(spurt::red);
-        heat_scale.push_back(spurt::yellow);
-        heat_scale.push_back(spurt::white);
+        std::vector<nvis::fvec3> heat_scale;
+        heat_scale.push_back(xavier::black);
+        heat_scale.push_back(xavier::red);
+        heat_scale.push_back(xavier::yellow);
+        heat_scale.push_back(xavier::white);
 
         if (verbose) std::cout << "heat_scale created\n";
 
@@ -166,7 +168,7 @@ vtkSmartPointer<vtkColorTransferFunction> create_ctf(const std::vector<double>& 
             }
         }
 
-        spurt::adaptive_color_map<double> cmap(copy, heat_scale, true, 20);
+        xavier::adaptive_color_map<double> cmap(copy, heat_scale, true, 20);
 
         if (verbose) std::cout << "heat color map created\n";
         for (int i=0; i<cmap.t.size() ; ++i) {
@@ -258,7 +260,7 @@ int main(int argc, char* argv[]) {
 
 
     if (!name_mask.empty()) {
-        mask = spurt::readNrrd(name_mask);
+        mask = xavier::nrrd_utils::readNrrd(name_mask);
         if (verbose) std::cout << "mask has been imported\n";
     }
 
@@ -275,7 +277,7 @@ int main(int argc, char* argv[]) {
         input >> name;
         if (input.fail()) break;
         if (n>=skip) {
-            datasets.push_back(spurt::readNrrd(parent_dir + '/' + name));
+            datasets.push_back(xavier::nrrd_utils::readNrrd(parent_dir + '/' + name));
             if (verbose) std::cout << "just imported: " << name << '\n';
             if (std::regex_search(name, time_match, time_regex)) {
                 int t = std::stoi(time_match[1].str());
@@ -287,10 +289,12 @@ int main(int argc, char* argv[]) {
     }
     input.close();
 
+    std::string extension;
     if (!name_out.empty()) {
         boost::filesystem::path p(name_out);
         name_out =
          p.parent_path().string() + '/' + p.stem().string();
+        extension = p.extension().string();
         if (verbose) std::cout << "name_out = " << name_out << '\n';
     }
 
@@ -310,7 +314,7 @@ int main(int argc, char* argv[]) {
     std::vector<trajectory_t> trajectories;
     std::map<int, size_t> id2pos;
     int natt = datasets[0]->axis[0].size;
-    spurt::bbox2 bounds;
+    nvis::bbox2 bounds;
     size_t total_npts=0;
     std::vector<double> timesteps;
 
@@ -365,7 +369,7 @@ int main(int argc, char* argv[]) {
                 }
             }
 
-            bounds.add(spurt::subv<0,2,double>(pt));
+            bounds.add(nvis::subv<0,2,double>(pt));
 
             timesteps.push_back(pt[2]);
 
@@ -482,10 +486,12 @@ int main(int argc, char* argv[]) {
             interactor->Start();
         }
         else {
+            if (extension == "") extension = ".jpeg";
+            std::cout << "extension=" << extension << '\n';
             window->Render();
             std::ostringstream os;
-            os << name_out << std::setfill('0') << std::setw(6) << i+start[1] << ".tiff";
-            vtk_utils::save_frame(window, os.str());
+            os << name_out << std::setfill('0') << std::setw(6) << i+start[1] << extension;
+            vtk_utils::save_frame(window, os.str(), quality);
             std::cout << "just saved " << os.str() << '\n';
         }
 
