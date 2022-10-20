@@ -18,9 +18,9 @@ set( FORMAT_VTK_SRC
 )
 
 if( NetCDF_FOUND )
-    add_library( xavier_nek5000 ${LIBMODE} avtNek5000FileFormat.cpp )
-    target_link_libraries( xavier_nek5000 ${NetCDF_LIBRARIES} )
-    install( TARGETS xavier_nek5000
+    add_library( spurt_nek5000 ${LIBMODE} avtNek5000FileFormat.cpp )
+    target_link_libraries( spurt_nek5000 ${NetCDF_LIBRARIES} )
+    install( TARGETS spurt_nek5000
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
     )
@@ -30,7 +30,7 @@ if( NetCDF_FOUND )
         add_executable( ${src} ${src}.cpp )
         target_link_libraries( ${src} ${NetCDF_LIBRARIES} ${Teem_LIBRARIES}
 		                       ${VTK_NETCDF_LIBRARY} ${VTK_LIBRARIES}
-                               xavier_nek5000)
+                               spurt_nek5000)
         install( TARGETS ${src} RUNTIME DESTINATION bin )
     endforeach()
 else()

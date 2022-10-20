@@ -3,7 +3,7 @@
 #include "convert.hpp"
 #include "probe.hpp"
 
-using namespace xavier;
+using namespace spurt;
 using namespace gage_interface;
 
 int main( int argc, char* argv[] )

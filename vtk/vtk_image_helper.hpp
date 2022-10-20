@@ -266,7 +266,7 @@ inline void save_image_in_given_format<vtkTIFFWriter>(const vtkImageData* data,
 
 inline vtkImageData* load_image(const std::string& filename)
 {
-    std::string ext = xavier::filename::extension(filename);
+    std::string ext = spurt::filename::extension(filename);
     if (ext == "png") {
         return load_image_of_given_format<vtkPNGReader>(filename);
     } else if (ext == "tif" || ext == "tiff") {
@@ -289,7 +289,7 @@ inline vtkImageData* load_image(const std::string& filename)
 
 inline void save_image(const vtkImageData* data, const std::string& filename, int quality=100)
 {
-    std::string ext = xavier::filename::extension(filename);
+    std::string ext = spurt::filename::extension(filename);
     if (ext == "png") {
         VTK_CREATE(vtkImageShiftScale, cast);
         VTK_CONNECT(cast, const_cast<vtkImageData*>(data));

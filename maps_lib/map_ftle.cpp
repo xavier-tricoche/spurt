@@ -11,7 +11,7 @@
 #include <math/fixed_matrix.hpp>
 #include <util/wall_timer.hpp>
 
-// xavier
+// spurt
 #include <math/math.hpp>
 
 #include <iostream>
@@ -71,7 +71,7 @@ void initialize(int argc, char* argv[])
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
 }
 
-inline double lmax(int n, const std::vector< nvis::vec2 >& pos, const xavier::default_metric_type& metric)
+inline double lmax(int n, const std::vector< nvis::vec2 >& pos, const spurt::default_metric_type& metric)
 {
     static double hx = (maxx - minx) / (double)resx;
     static double hy = (maxy - miny) / (double)resy;
@@ -100,7 +100,7 @@ inline double lmax(int n, const std::vector< nvis::vec2 >& pos, const xavier::de
 
     return lmaj;
 }
-using namespace xavier;
+using namespace spurt;
 using namespace map_analysis;
 
 namespace {
@@ -111,7 +111,7 @@ double _mod(double a, double b)
 }
 
 typedef image<nvis::vec3, 3, double, size_t>  field_type;
-typedef xavier::grid::uniform_grid<double, 3>         grid_type;
+typedef spurt::grid::uniform_grid<double, 3>         grid_type;
 typedef nvis::ivec3                           ivec_type;
 
 struct wrapper {
@@ -180,7 +180,7 @@ int main(int argc, char* argv[])
               << ", eps = " << eps << '\n';
 
     Nrrd* nin = nrrdNew();
-    nin = xavier::nrrd_utils::readNrrd(file);
+    nin = spurt::nrrd_utils::readNrrd(file);
 
     // verify data type
     if (nin->dim != 4 || nin->axis[0].size != 3) {
@@ -189,7 +189,7 @@ int main(int argc, char* argv[])
     }
 
     std::vector<double> _array;
-    xavier::nrrd_utils::to_vector(_array, nin);
+    spurt::nrrd_utils::to_vector(_array, nin);
     ivec_type dims(nin->axis[1].size, nin->axis[2].size, nin->axis[3].size);
     nvis::vec3 spc(nin->axis[1].spacing, nin->axis[2].spacing, nin->axis[3].spacing);
     grid_type domain(dims, spc, nvis::fixed_vector<bool, 3>(false, true, true));
@@ -211,7 +211,7 @@ int main(int argc, char* argv[])
     std::cerr << "bounding box = " << _bounds << '\n';
 
     bool per[2] = {true, false};
-    xavier::default_metric_type metric2d(_bounds, per);
+    spurt::default_metric_type metric2d(_bounds, per);
 
     _minx = _bounds.min()[0];
     _miny = _bounds.min()[1];

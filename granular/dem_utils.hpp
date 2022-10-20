@@ -4,7 +4,7 @@
 #include <math.h>
 #include <algorithm>
 
-namespace xavier {
+namespace spurt {
 namespace granular {
 namespace dem {
 namespace utils {
@@ -84,4 +84,4 @@ namespace utils {
 } // utils
 } // dem
 } // granular
-} // xavier
+} // spurt

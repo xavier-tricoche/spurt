@@ -10,12 +10,12 @@
 #include <poincare/chains.hpp>
 #include <tokamak/map2d.hpp>
 
-namespace xavier {
+namespace spurt {
 struct MarkedPos {
     MarkedPos(double eps) : _eps(eps) {}
     bool known(nvis::vec2& x, unsigned int p) const {
         for (unsigned int i = 0 ; i < _pos.size() ; ++i) {
-            double d = xavier::__default_metric.distance(x, _pos[i]);
+            double d = spurt::__default_metric.distance(x, _pos[i]);
             if (d < _eps && ((_per[i] % p == 0) || (p % _per[i] == 0))) {
                 return true;
             }
@@ -44,7 +44,7 @@ bool compute_iterates(const Map& map, const Jacobian& jacobian,
         nvis::vec2 y(x);
         nvis::vec2 f;
         for (unsigned int i = 0 ; i < period ; ++i) {
-            bool found = xavier::newton(map, jacobian, y, f, eps, niter);
+            bool found = spurt::newton(map, jacobian, y, f, eps, niter);
             if (!found) {
                 WARNING_MACRO(0, "unable to converge from iterated position" << std::endl);
                 return false;
@@ -74,7 +74,7 @@ void find_fixed_points(const Map& map_coarse, const Map& map_fine,
                        unsigned int p, unsigned int pmax, double maxnorm,
                        double dx0, double dy0, double eps0, // coarse Newton
                        double dx1, double dy1, double eps1, // fine Newton
-                       std::vector< std::vector< xavier::fixpoint > >& chains)
+                       std::vector< std::vector< spurt::fixpoint > >& chains)
 {
     chains.clear();
     // we keep a local list of marked positions to prevent conflicts
@@ -95,7 +95,7 @@ void find_fixed_points(const Map& map_coarse, const Map& map_fine,
     integral_jacobian< map_from_last_wrapper<Map> > jacobian_fine(pmap_fine);
     
     // temporary storage of fixed points prior to uniqueness filtering
-    std::set< xavier::fixpoint > fixpoints;
+    std::set< spurt::fixpoint > fixpoints;
     nvis::vec2 f;
     
     for (unsigned int n = 0 ; n < seeds.size() ; ++n) {
@@ -133,7 +133,7 @@ void find_fixed_points(const Map& map_coarse, const Map& map_fine,
         if (normf < eps0) {
             found = true;
         } else {
-            found = xavier::newton(pmap_coarse, jacobian_coarse, x, f, eps0, 15);
+            found = spurt::newton(pmap_coarse, jacobian_coarse, x, f, eps0, 15);
         }
         if (!found) {
             WARNING_MACRO(0, "Coarse Newton search did not converge at " << x << '\n');
@@ -151,7 +151,7 @@ void find_fixed_points(const Map& map_coarse, const Map& map_fine,
         }
         
         // verify that estimated period remains valid at newly reached location
-        unsigned int q = xavier::period(map_coarse, x, pmax, eps0);
+        unsigned int q = spurt::period(map_coarse, x, pmax, eps0);
         if (q == 0) {
             WARNING_MACRO(0, "unable to determine actual period at " << x << '\n');
             continue;
@@ -166,7 +166,7 @@ void find_fixed_points(const Map& map_coarse, const Map& map_fine,
         if (normf < eps1) {
             found = true;
         } else {
-            found = xavier::newton(pmap_fine, jacobian_fine, x, f, eps1, 50);
+            found = spurt::newton(pmap_fine, jacobian_fine, x, f, eps1, 50);
         }
         if (!found) {
             WARNING_MACRO(0, "WARNING: initially found fixpoint was lost after period correction!\n");
@@ -185,16 +185,16 @@ void find_fixed_points(const Map& map_coarse, const Map& map_fine,
         // chain extraction and linear analysis
         std::vector< nvis::vec2 > iterates;
         WARNING_MACRO(0, "computing iterates from " << x << '\n');
-        chains.push_back(std::vector< xavier::fixpoint >());
-        std::vector< xavier::fixpoint >& chain = chains.back();
-        if (!xavier::compute_iterates(pmap_fine, jacobian_fine, p, x, iterates, eps1, 50)) {
+        chains.push_back(std::vector< spurt::fixpoint >());
+        std::vector< spurt::fixpoint >& chain = chains.back();
+        if (!spurt::compute_iterates(pmap_fine, jacobian_fine, p, x, iterates, eps1, 50)) {
             WARNING_MACRO(0, "unable to recover complete " << p << "-chain. skipping\n");
             chains.pop_back();
             continue;
         }
         map_wrapper<Map> one_map(map_fine, 1);
         integral_jacobian< map_wrapper<Map> > jacobian_one_fine(one_map);
-        if (!xavier::linear_chain_analysis(jacobian_one_fine, iterates, chain)) {
+        if (!spurt::linear_chain_analysis(jacobian_one_fine, iterates, chain)) {
             chain.clear();
             WARNING_MACRO(0, "unable to determine consistent linear type\n");
             chains.pop_back();
@@ -230,10 +230,10 @@ void find_fixed_points(const Map& map,
                        const std::vector< nvis::vec2 >& seeds,
                        unsigned int p, unsigned int pmax, double maxnorm,
                        double eps,
-                       std::vector< std::vector< xavier::fixpoint > >& chains,
+                       std::vector< std::vector< spurt::fixpoint > >& chains,
                        unsigned int verbose_level = 0)
 {
-    xavier::map_debug::verbose_level = verbose_level;
+    spurt::map_debug::verbose_level = verbose_level;
     
     chains.clear();
     // we keep a local list of marked positions to prevent conflicts
@@ -247,7 +247,7 @@ void find_fixed_points(const Map& map,
     integral_jacobian< map_from_last_wrapper<Map> > jacobian(pmap);
     
     // temporary storage of fixed points prior to uniqueness filtering
-    std::set< xavier::fixpoint > fixpoints;
+    std::set< spurt::fixpoint > fixpoints;
     nvis::vec2 f;
     
     for (unsigned int n = 0 ; n < seeds.size() ; ++n) {
@@ -321,7 +321,7 @@ void find_fixed_points(const Map& map,
         if (normf < eps) {
             found = true;
         } else {
-            found = xavier::newton(pmap, jacobian, x, f, eps, 50);
+            found = spurt::newton(pmap, jacobian, x, f, eps, 50);
         }
         if (!found) {
             WARNING_MACRO(0, "Newton search did not converge at " << x << '\n');
@@ -339,7 +339,7 @@ void find_fixed_points(const Map& map,
         }
         
         // verify that estimated period remains valid at newly reached location
-        unsigned int q = xavier::period(map, x, pmax, eps);
+        unsigned int q = spurt::period(map, x, pmax, eps);
         if (q == 0) {
             WARNING_MACRO(0, "unable to determine actual period at " << x << '\n');
             continue;
@@ -352,16 +352,16 @@ void find_fixed_points(const Map& map,
         // chain extraction and linear analysis
         std::vector< nvis::vec2 > iterates;
         WARNING_MACRO(0, "computing iterates from " << x << '\n');
-        chains.push_back(std::vector< xavier::fixpoint >());
-        std::vector< xavier::fixpoint >& chain = chains.back();
-        if (!xavier::compute_iterates(pmap, jacobian, p, x, iterates, eps, 50)) {
+        chains.push_back(std::vector< spurt::fixpoint >());
+        std::vector< spurt::fixpoint >& chain = chains.back();
+        if (!spurt::compute_iterates(pmap, jacobian, p, x, iterates, eps, 50)) {
             WARNING_MACRO(0, "unable to recover complete " << p << "-chain. skipping\n");
             chains.pop_back();
             continue;
         }
         map_wrapper<Map> one_map(map, 1);
         integral_jacobian< map_wrapper<Map> > jacobian_one(one_map);
-        if (!xavier::linear_chain_analysis(jacobian_one, iterates, chain)) {
+        if (!spurt::linear_chain_analysis(jacobian_one, iterates, chain)) {
             chain.clear();
             WARNING_MACRO(0, "unable to determine consistent linear type\n");
             chains.pop_back();

@@ -31,7 +31,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <set>
 #include <sstream>
@@ -158,12 +158,12 @@ int main(int argc, char* argv[])
     vtkStructuredPoints* field = field_reader->GetOutput();
     std::cerr << info.dfield_norm << " loaded.\n";
     
-    Nrrd* __ids = xavier::nrrd_utils::readNrrd(info.id_to_tags);
-    xavier::nrrd_utils::nrrd_data_wrapper<int> ids(__ids);
+    Nrrd* __ids = spurt::nrrd_utils::readNrrd(info.id_to_tags);
+    spurt::nrrd_utils::nrrd_data_wrapper<int> ids(__ids);
     std::cerr << info.id_to_tags << " loaded.\n";
     
-    Nrrd* __span = xavier::nrrd_utils::readNrrd(info.dfield_span);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> grain_field(__span);
+    Nrrd* __span = spurt::nrrd_utils::readNrrd(info.dfield_span);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> grain_field(__span);
     std::cerr << info.dfield_span << " loaded.\n";
     int nb_grains = __span->axis[1].size;
     

@@ -20,7 +20,7 @@
 
 #define PARALLEL
 
-namespace xavier {
+namespace spurt {
 
 namespace map_debug {
 extern int verbose_level;
@@ -86,7 +86,7 @@ public:
         : _map(map), _p(p) {}
         
     nvis::vec2 operator()(const nvis::vec2& x, int n = 1) const {
-        return xavier::__default_metric.displacement(x, _map.map(x, n*_p));
+        return spurt::__default_metric.displacement(x, _map.map(x, n*_p));
     }
     
     nvis::mat2 derivative(const nvis::vec2& x, int n = 1) const {
@@ -118,7 +118,7 @@ public:
         : _map(map), _x0(x0), _p(p) {}
         
     nvis::vec2 operator()(const nvis::vec2& x, int n = 1) const {
-        return xavier::__default_metric.displacement(_x0, _map.map(x, n*_p));
+        return spurt::__default_metric.displacement(_x0, _map.map(x, n*_p));
     }
     
     nvis::mat2 derivative(const nvis::vec2& x, int n = 1) const {
@@ -155,10 +155,10 @@ public:
         
     nvis::mat2 operator()(const nvis::vec2& x) const {
         nvis::mat2 J;
-        nvis::vec2 y[] = { xavier::__default_metric.modulo(x - nvis::vec2(_dx, 0)),
-                           xavier::__default_metric.modulo(x + nvis::vec2(_dx, 0)),
-                           xavier::__default_metric.modulo(x - nvis::vec2(0, _dy)),
-                           xavier::__default_metric.modulo(x + nvis::vec2(0, _dy))
+        nvis::vec2 y[] = { spurt::__default_metric.modulo(x - nvis::vec2(_dx, 0)),
+                           spurt::__default_metric.modulo(x + nvis::vec2(_dx, 0)),
+                           spurt::__default_metric.modulo(x - nvis::vec2(0, _dy)),
+                           spurt::__default_metric.modulo(x + nvis::vec2(0, _dy))
                          };
                          
         // std::cerr << "central difference Jacobian at " << x
@@ -203,7 +203,7 @@ public:
         
         try {
             for (unsigned int i = 0 ; i < 8 ; ++i) {
-                pos[i] = xavier::__default_metric.modulo(x + p[i]);
+                pos[i] = spurt::__default_metric.modulo(x + p[i]);
                 vec[i] = _map(pos[i]);
             }
         } catch (...) {
@@ -309,7 +309,7 @@ unsigned int period(const Map& map, const nvis::vec2& x, unsigned int pmax,
     }
     for (p = 0 ; p < pmax ; ++p) {
         const nvis::vec2& y = hits[p];
-        double d = xavier::__default_metric.distance(x, y);
+        double d = spurt::__default_metric.distance(x, y);
         if (d < tolerance) {
             return p + 1;
         } else if (d < dmin) {
@@ -346,13 +346,13 @@ public:
         return _p;
     }
     
-    const xavier::default_metric_type& metric() const {
+    const spurt::default_metric_type& metric() const {
         return __metric;
     }
     
 private:
     double _dt;
-    xavier::default_metric_type __metric;
+    spurt::default_metric_type __metric;
 };
 
 class StandardMap
@@ -376,14 +376,14 @@ class StandardMap
 		else
 			backward(y[0], y[1]);
 		if (is_periodic) {
-			y = xavier::__default_metric.modulo(y);
+			y = spurt::__default_metric.modulo(y);
 		}
 		return y;
 	}
 
 
 public:
-    typedef xavier::default_metric_type metric_type;
+    typedef spurt::default_metric_type metric_type;
     
     StandardMap(double k) : _k(k), __metric() {
         is_periodic = true;
@@ -432,7 +432,7 @@ private:
 
 class Tokamap {
 public:
-    typedef xavier::default_metric_type metric_type;
+    typedef spurt::default_metric_type metric_type;
     
     Tokamap(const double l) : _l(l), __metric() {
         __metric.periodic(0) = true;

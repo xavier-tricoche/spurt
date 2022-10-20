@@ -1,7 +1,7 @@
 #ifndef __XAVIER_MISC_HELPER_HPP__
 #define __XAVIER_MISC_HELPER_HPP__
 
-namespace xavier {
+namespace spurt {
 
 template<typename T>
 inline T sign(T a)
@@ -59,6 +59,6 @@ inline T maximum(const std::vector<T>& ts) {
     return *std::max_element(ts.begin(), ts.end());
 }
 
-} // namespace xavier
+} // namespace spurt
 
 #endif

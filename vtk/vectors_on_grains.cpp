@@ -31,7 +31,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <set>
 #include <sstream>
@@ -131,8 +131,8 @@ int main(int argc, char* argv[])
     vertex_tag_name.append("-point-attributes.txt");
     point_coord_name.append("-init_coords.nrrd");
     
-    Nrrd* __coords = xavier::nrrd_utils::readNrrd(point_coord_name);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> coords(__coords);
+    Nrrd* __coords = spurt::nrrd_utils::readNrrd(point_coord_name);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> coords(__coords);
     
     vtkSmartPointer<vtkDataSetReader> mesh_reader = vtkSmartPointer<vtkDataSetReader>::New();
     mesh_reader->SetFileName(mesh_name.c_str());
@@ -154,16 +154,16 @@ int main(int argc, char* argv[])
     edge_reader->Delete();
     std::cerr << edge_name << " loaded.\n";
     
-    typedef xavier::nrrd_data_traits<Nrrd*>  nrrd_data_traits;
-    Nrrd* __val = xavier::nrrd_utils::readNrrd(param_val);
+    typedef spurt::nrrd_data_traits<Nrrd*>  nrrd_data_traits;
+    Nrrd* __val = spurt::nrrd_utils::readNrrd(param_val);
     boost::shared_ptr<nrrd_data_traits> scalar_field =
         boost::shared_ptr<nrrd_data_traits>(new nrrd_data_traits(__val));
         
-    Nrrd* __span = xavier::nrrd_utils::readNrrd(param_span);
+    Nrrd* __span = spurt::nrrd_utils::readNrrd(param_span);
     std::map<int, std::pair<float, float> > span;
     std::vector<float> all_values;
     {
-        xavier::nrrd_utils::nrrd_data_wrapper<float> tmp(__span);
+        spurt::nrrd_utils::nrrd_data_wrapper<float> tmp(__span);
         for (int i = 0 ; i < __span->axis[1].size ; ++i) {
             span[tmp[3*i]] = std::pair<float, float>(tmp[3*i+1], tmp[3*i+2]);
             all_values.push_back(tmp[3*i+1]);

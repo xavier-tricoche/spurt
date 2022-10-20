@@ -18,8 +18,8 @@
 #include <misc/log_helper.hpp>
 #include <misc/progress.hpp>
 #include <data/raster.hpp>
-#include <VTK/vtk_data_helper.hpp>
-#include <VTK/vtk_io_helper.hpp>
+#include <vtk/vtk_data_helper.hpp>
+#include <vtk/vtk_io_helper.hpp>
 
 
 namespace {
@@ -37,7 +37,7 @@ namespace {
 } // anonymous
 
 
-namespace xavier { namespace topology { namespace scalar {
+namespace spurt { namespace topology { namespace scalar {
 
 template<typename Matrix_, typename Vector_>
 struct naive_solver {
@@ -73,7 +73,7 @@ struct SmoothScalarField {
     typedef Vector_ pos_t;
     typedef Vector_ gradient_t;
     typedef Matrix_ hessian_t;
-    typedef xavier::gage_interface::scalar_wrapper wrapper_t;
+    typedef spurt::gage_interface::scalar_wrapper wrapper_t;
     typedef std::pair<pos_t, pos_t> bounds_t;
     typedef Solver_ solver_t;
     
@@ -89,7 +89,7 @@ struct SmoothScalarField {
 
     SmoothScalarField(Nrrd* nin, const std::string& name="anonymous") 
         : m_wrapper(nrrd_utils::make3d<value_t>(nin, true), 
-                    xavier::gage_interface::BSPL3_INTERP, 
+                    spurt::gage_interface::BSPL3_INTERP, 
                     true, true, true, true), m_name(name) {
         m_wrapper.use_world();
         std::vector< std::pair< double, double > > bounds;
@@ -169,7 +169,7 @@ struct PWLScalarField {
     typedef Vector_ pos_t;
     typedef Vector_ gradient_t;
     typedef Matrix_ hessian_t;
-    typedef xavier::nrrd_field<value_t, N, value_t> field_t;
+    typedef spurt::nrrd_field<value_t, N, value_t> field_t;
     typedef std::pair<pos_t, pos_t> bounds_t;
     typedef Solver_ solver_t;
     
@@ -296,7 +296,7 @@ struct planar_topology {
         current_samples.push_back(std::make_pair(x1, v1));
         
         // easy cases first
-        double theta = xavier::signed_angle(v0, v1);
+        double theta = spurt::signed_angle(v0, v1);
         if (std::abs(theta) < std::max(large_angle, dtheta)) {
             return theta;
         }
@@ -319,8 +319,8 @@ struct planar_topology {
         else {
             // use linear model to pick next sample
             // solve for v(x).v0 = 0
-            double v0sq = xavier::vector::normsq(v0);
-            double u = v0sq / (v0sq - xavier::vector::dot(v0, v1));
+            double v0sq = spurt::vector::normsq(v0);
+            double u = v0sq / (v0sq - spurt::vector::dot(v0, v1));
             pos_t x = (1 - u) * x0 + u * x1;
             return edge_rotation(
                        x0, x, dtheta, max_depth, depth + 1) +
@@ -372,7 +372,7 @@ struct planar_topology {
             if (inside(to)) {
                 return to;
             }
-            // std::cerr << "from = " << from << ", to = " << to << " (" << xavier::vector::norm(from-to) << ")" << std::endl;
+            // std::cerr << "from = " << from << ", to = " << to << " (" << spurt::vector::norm(from-to) << ")" << std::endl;
             // std::cerr << "box = " << flatten(m_box.first) << " -> " << flatten(m_box.second) << std::endl;
             return clip(from, to);
         }
@@ -390,17 +390,17 @@ struct planar_topology {
         const double alpha = 1e-4;
     
         pos_t x0=x, xsave = x, f0=f, fsave = f;
-        pos_t d = ( xavier::vector::norm(dd) > maxlength )
-            ? dd * maxlength / xavier::vector::norm(dd) 
+        pos_t d = ( spurt::vector::norm(dd) > maxlength )
+            ? dd * maxlength / spurt::vector::norm(dd) 
             : dd;
-        value_t v0 = xavier::vector::norm(f);
+        value_t v0 = spurt::vector::norm(f);
         value_t vsave = v0;
         
         for (unsigned int i = 0; i < 7; ++i) {
             x = x0 + lambda * d;
             f = m_field.gradient(x);
             
-            if (xavier::vector::norm(f) < (1 - alpha*lambda)*xavier::vector::norm(fsave)) {
+            if (spurt::vector::norm(f) < (1 - alpha*lambda)*spurt::vector::norm(fsave)) {
                 return true;
             }
         
@@ -434,19 +434,19 @@ struct planar_topology {
         unsigned int k;
         try {
             f = m_field.gradient(x);
-            double dinit = xavier::vector::norm(f);
+            double dinit = spurt::vector::norm(f);
             std::cout << "newton: seeding, norm(f(" << flatten(x) << ")) = " << dinit << '\n';
             minnorm = dinit;
             for (k = 0; k < maxiter; k++) {
                 polyline.push_back(x);
                 if (verbose) {
-                    os << "newton: k = " << k << ", norm(f(" << flatten(x) << ")) = " << xavier::vector::norm(f)
+                    os << "newton: k = " << k << ", norm(f(" << flatten(x) << ")) = " << spurt::vector::norm(f)
                        << std::endl;
                     std::cerr << os.str();
                     os.clear();
                     os.str("");
                 }
-                double _norm = xavier::vector::norm(f);
+                double _norm = spurt::vector::norm(f);
                 if (_norm < eps) return true;
                 if (_norm < minnorm) {
                     minnorm = _norm;
@@ -557,7 +557,7 @@ struct planar_topology {
                             for (int l=0; l<(res+1); ++l) {
                                 for (int k=0; k<(res+1); ++k) {
                                     pos_t p = pos[0] + pos_t(l*dx[0], k*dx[1]);
-                                    value_t v = xavier::vector::norm(m_field.gradient(p));
+                                    value_t v = spurt::vector::norm(m_field.gradient(p));
                                     if (v < bestv) {
                                         bestv = v;
                                         best = p;
@@ -582,7 +582,7 @@ struct planar_topology {
                             std::cout << "\temin: " << flatten(cp.emin) << '\n';
                             gradient_t f = m_field.gradient(cp.x);
                             std::cout << "\tvalue: " << flatten(f) << '\n';
-                            std::cout << "\tnorm: " << xavier::vector::norm(f) << '\n';
+                            std::cout << "\tnorm: " << spurt::vector::norm(f) << '\n';
                             cpts.push_back(cp);
                         }
                     }
@@ -670,7 +670,7 @@ struct planar_topology {
 
 } // scalar 
 } // topology
-} // xavier
+} // spurt
 
 
 

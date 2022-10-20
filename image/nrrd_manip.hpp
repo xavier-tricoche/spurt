@@ -21,7 +21,7 @@ bool is_ok(double v)
 }
 }
 
-namespace xavier { 
+namespace spurt { 
 namespace nrrd_utils {
 
     size_t nrrd_size(const Nrrd* A, bool is_scalar=true) {
@@ -55,7 +55,7 @@ namespace nrrd_utils {
             if (nin->axis[0].size!=Nrows*Ncols) {
                 throw std::runtime_error("matrix dimensions mismatch");
             }
-            xavier::nrrd_utils::to_vector<value_t>(_val_array, nin);
+            spurt::nrrd_utils::to_vector<value_t>(_val_array, nin);
             _mat_array=reinterpret_cast<matrix_t*>(&_val_array[0]);
         }
         
@@ -409,6 +409,6 @@ namespace nrrd_utils {
     
 } // nrrd_utils
 
-} // xavier
+} // spurt
 
 #endif

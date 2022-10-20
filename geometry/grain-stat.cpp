@@ -57,9 +57,9 @@ int main(int argc, const char* argv[])
 	initialize(argc, argv);
 	std::string basename(outs);
 
-	Nrrd* nin = xavier::nrrd_utils::readNrrd(file);
+	Nrrd* nin = spurt::nrrd_utils::readNrrd(file);
 	std::vector<int> tags;
-	xavier::nrrd_utils::to_vector(tags, nin);
+	spurt::nrrd_utils::to_vector(tags, nin);
 	nvis::fixed_vector<size_t, 3> size;
 	nvis::vec3 step;
 	for (int i = 0 ; i < 3 ; ++i) {
@@ -74,8 +74,8 @@ int main(int argc, const char* argv[])
 	std::vector<float> attributes;
 	if (strcmp(att, "none")) {
 		use_attributes = true;
-		Nrrd *tmp = xavier::nrrd_utils::readNrrd(att);
-		xavier::nrrd_utils::to_vector(attributes, tmp);
+		Nrrd *tmp = spurt::nrrd_utils::readNrrd(att);
+		spurt::nrrd_utils::to_vector(attributes, tmp);
 	}
 
 	// basic objects of the processing
@@ -244,20 +244,20 @@ int main(int argc, const char* argv[])
 		}
 		center /= (float)tag_to_voxel.count(tag);
 
-		xavier::mat3 A;
+		spurt::mat3 A;
 		for (iterator_type i = range.first ; i != range.second ; ++i) {
 			nvis::vec3 x = coord(i->second, size, step) - center;
-			A += xavier::outer<nvis::vec3, xavier::mat3>(x, x);
+			A += spurt::outer<nvis::vec3, spurt::mat3>(x, x);
 		}
 		int id = tag_to_id[tag];
-		voxel_fa[id] = xavier::FA(A);
+		voxel_fa[id] = spurt::FA(A);
 		if (std::isnan(voxel_fa[id]) || std::isinf(voxel_fa[id])) voxel_fa[id] = 0;
-		nvis::vec3 aniso = xavier::westin_aniso(A);
+		nvis::vec3 aniso = spurt::westin_aniso(A);
 		for (int j = 0 ; j < 3 ; ++j) voxel_aniso[3*id+j] = aniso[j];
 
 		std::vector<double> evals;
 		std::vector<nvis::vec3> evecs;
-		int roots = xavier::eigensystem(evecs, evals, A);
+		int roots = spurt::eigensystem(evecs, evals, A);
 		if (evals[0] > evals[1]) {
 			for (int j = 0 ; j < 3 ; ++j) voxel_dir[3*id+j] = evecs[0][j];
 		}

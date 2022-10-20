@@ -12,7 +12,7 @@ int pct_step = 10;
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
             required_group(true, false, "Required Options"),
@@ -46,12 +46,12 @@ double percentile(const std::vector<double>& values, double pct) {
 int main(int argc, const char* argv[]) {
 	initialize(argc, argv);
 
-	Nrrd* nin = xavier::nrrd_utils::readNrrd(filename);
+	Nrrd* nin = spurt::nrrd_utils::readNrrd(filename);
 	std::vector<double> values;
-	xavier::nrrd_utils::to_vector<double>(values, nin);
+	spurt::nrrd_utils::to_vector<double>(values, nin);
 
 	std::sort(values.begin(), values.end());
-	std::pair<double, double> meanvar = xavier::meanvariance(values);
+	std::pair<double, double> meanvar = spurt::meanvariance(values);
 	std::cout << "mean: " << meanvar.first << '\n';
 	std::cout << "variance: " << meanvar.second << '\n';
 	std::cout << "percentiles:\n";

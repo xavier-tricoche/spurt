@@ -14,8 +14,8 @@ int main(int argc, char* argv[]) {
     name_ids = argv[1];
     name_coef = argv[2];
     
-    Nrrd* nin_ids = xavier::nrrd_utils::readNrrd(name_ids);
-    Nrrd* nin_coef = xavier::nrrd_utils::readNrrd(name_ids);
+    Nrrd* nin_ids = spurt::nrrd_utils::readNrrd(name_ids);
+    Nrrd* nin_coef = spurt::nrrd_utils::readNrrd(name_ids);
     
     int *ids = static_cast<int *>(nin_ids->data);
     size_t n_ids = nin_ids->axis[0].size;

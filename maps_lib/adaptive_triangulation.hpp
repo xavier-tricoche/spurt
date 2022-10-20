@@ -57,7 +57,7 @@ inline bool refine(T& triangles, const PtInsert& inserter, const TriEval& evalua
     typedef typename triangulation_type::index_type             index_type;
     typedef typename triangulation_type::triangle_type          triangle_type;
     typedef typename triangulation_type::bounds_type            bounds_type;
-    typedef xavier::priority_queue<triangle_info, Gt_triangle_priority>     priority_queue_type;
+    typedef spurt::priority_queue<triangle_info, Gt_triangle_priority>     priority_queue_type;
     
     size_t nb_triangles = triangles.get_nb_triangles();
     std::vector<size_t> current_version(nb_triangles, 0);

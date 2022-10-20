@@ -5,7 +5,7 @@
 #include <vector>
 #include <set>
 
-namespace xavier {
+namespace spurt {
 struct triangle_info {
     triangle_info(int idx, double p, size_t v = 0)
         : index(idx), priority(p), version(v) {}

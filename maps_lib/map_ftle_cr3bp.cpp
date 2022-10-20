@@ -13,8 +13,8 @@
 #include <misc/progress.hpp>
 #include <data/raster.hpp>
 #include <format/filename.hpp>
-#include <VTK/vtk_io_helper.hpp>
-#include <VTK/vtk_data_helper.hpp>
+#include <vtk/vtk_io_helper.hpp>
+#include <vtk/vtk_data_helper.hpp>
 
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
@@ -51,7 +51,7 @@ void write_to_ostream(std::ostream& os, const std::string& str) {
     }
 }
 
-void update_progress(xavier::ProgressDisplay& progress) {
+void update_progress(spurt::ProgressDisplay& progress) {
     {
     #ifndef  NO_TBB
         tbb::mutex::scoped_lock lock(progress_mutex);
@@ -82,12 +82,12 @@ struct value_traits {
     typedef Eigen::Matrix<value_type, 2, 2>                   matrix_type;
 
     // sampling grid for Poincare section
-    typedef xavier::raster_grid<2, value_type>                grid_type;
+    typedef spurt::raster_grid<2, value_type>                grid_type;
     typedef typename grid_type::point_type                    position_type;
     typedef nvis::bounding_box< position_type >               bounds_type;
     typedef typename grid_type::coord_type                    coordinates_type;
     typedef typename grid_type::point_type                    point_type;
-    typedef xavier::raster_data<column_type, 2, value_type>   vector_raster_type;
+    typedef spurt::raster_data<column_type, 2, value_type>   vector_raster_type;
 };
 //]
 
@@ -145,8 +145,8 @@ inline value_t yd(value_t x, value_t xd) {
 template<typename T, typename Vector = Eigen::Matrix<T, 2, 1> >
 struct raster_wrapper {
     typedef T                                      scalar_type;
-    typedef xavier::raster_grid<2, T>              grid_type;
-    typedef xavier::raster_data<Vector, 2, T>      raster_type;
+    typedef spurt::raster_grid<2, T>              grid_type;
+    typedef spurt::raster_data<Vector, 2, T>      raster_type;
     typedef Vector                                 value_type;
     typedef typename grid_type::coord_type         coord_type;
 
@@ -165,7 +165,7 @@ struct raster_wrapper {
 
 
 template<typename T, size_t N, typename Vector=Eigen::Matrix<T, 2, 1>, typename Matrix=Eigen::Matrix<T, 2, 2> >
-void gradient(const xavier::raster_data<Vector, 2, T>& fmap,
+void gradient(const spurt::raster_data<Vector, 2, T>& fmap,
               const std::array<T, N>& kernel,
               std::vector<Matrix>& grad,
               std::vector<T>& ftle)
@@ -186,7 +186,7 @@ void gradient(const xavier::raster_data<Vector, 2, T>& fmap,
     std::cout << omp_get_max_threads() << " threads available\n";
 #endif
 
-    xavier::ProgressDisplay progress(true);
+    spurt::ProgressDisplay progress(true);
 
     progress_counter = 0;
     progress.fraction_on();
@@ -252,7 +252,7 @@ void write(const std::string& filename, const std::vector<Value_>& data,
     os << "NRRD0001\n"
        << "# Complete NRRD file format specification at:\n"
        << "# http://teem.sourceforge.net/nrrd/format.html\n"
-       << "type: " << xavier::type2string<value_t>::type_name() << "\n"
+       << "type: " << spurt::type2string<value_t>::type_name() << "\n"
        << "dimension: " << (valsize > 1 ? 3 : 2) << '\n';
     os << "sizes:";
     if (valsize > 1) os << " " << valsize;
@@ -591,8 +591,8 @@ void run(const size_t niterations) {
     typedef nvis::fixed_vector<value_type, 2>                 position_type;
     typedef Eigen::Matrix<value_type, 2, 1>                   column_type;
     typedef Eigen::Matrix<value_type, 2, 2>                   matrix_type;
-    typedef xavier::raster_grid<2, value_type>                grid_type;
-    typedef xavier::raster_data<position_type, 2, value_type> vector_raster_type;
+    typedef spurt::raster_grid<2, value_type>                grid_type;
+    typedef spurt::raster_data<position_type, 2, value_type> vector_raster_type;
     typedef nvis::bounding_box<position_type>                 bounds_type;
     typedef typename grid_type::coord_type                    coordinates_type;
 
@@ -634,7 +634,7 @@ void run(const size_t niterations) {
     rhs_type rhs(C, mu);
     std::vector<bool> stopped(n_valid, false);
 
-    xavier::ProgressDisplay progress(true);
+    spurt::ProgressDisplay progress(true);
 
     size_t last_iteration = 0;
 
@@ -763,7 +763,7 @@ void run(const size_t niterations) {
                     vals[x+y*res[0]] = d;
                 }
             }
-            xavier::nrrd_utils::writeNrrd(vals, name + "-orbits.nrrd", nrrdTypeFloat, 2, &res[0], false);
+            spurt::nrrd_utils::writeNrrd(vals, name + "-orbits.nrrd", nrrdTypeFloat, 2, &res[0], false);
 
             std::vector<position_type> all_pos;
             std::vector<value_type> values;
@@ -788,7 +788,7 @@ int main( int argc , const char **argv )
 {
     using namespace std;
 
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
             required_group(true, false, "Required Options"),
@@ -839,7 +839,7 @@ int main( int argc , const char **argv )
         xdmax = _bounds[3];
     }
 
-    filename=xavier::filename::remove_extension(filename);
+    filename=spurt::filename::remove_extension(filename);
 
     if (double_prec) run< double >(nb_iterations);
     else run< float >(nb_iterations);

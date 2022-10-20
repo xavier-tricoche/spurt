@@ -6,7 +6,7 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 
-typedef xavier::triangulation<double>       mesh_type;
+typedef spurt::triangulation<double>       mesh_type;
 typedef mesh_type::triangle_type            ids_type;
 
 // export triangulation to file

@@ -31,7 +31,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <math/bounding_box.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <teem/hest_helper.hpp>
@@ -140,7 +140,7 @@ struct i2x {
             step[i] = nrrd->axis[nrrd->dim-3+i].spacing;
             size[i] = nrrd->axis[nrrd->dim-3+i].size;
         }
-        bounds = xavier::nrrd_utils::get_bounds<3>(nrrd);
+        bounds = spurt::nrrd_utils::get_bounds<3>(nrrd);
     }
     
     nvis::vec3 operator()(int id) const {
@@ -229,7 +229,7 @@ to_tubes(const std::list<nvis::vec3>& all_verts,
 }
 
 typedef nvis::vec3                              value_type;
-typedef xavier::nrrd_data_traits<Nrrd*>              nrrd_data_traits;
+typedef spurt::nrrd_data_traits<Nrrd*>              nrrd_data_traits;
 
 struct my_rhs {
     my_rhs(const nrrd_data_traits& field) : _field(field) {}
@@ -299,7 +299,7 @@ int main(int argc, char* argv[])
     Nrrd* nin_vec = 0, *nin_scl = 0;
     if (name.substr(name.find_last_of(".") + 1) == "nrrd") {
         std::cerr << "NRRD file extension recognized.\n";
-        nin_vec = xavier::nrrd_utils::readNrrd(file);
+        nin_vec = spurt::nrrd_utils::readNrrd(file);
         if (nin_vec->dim != 4) {
             throw;
         }
@@ -313,7 +313,7 @@ int main(int argc, char* argv[])
     
     bool use_norm = !strcmp(scalar, "none");
     if (!use_norm) {
-        nin_scl = xavier::nrrd_utils::readNrrd(scalar);
+        nin_scl = spurt::nrrd_utils::readNrrd(scalar);
         if (nin_scl->dim != 3) {
             throw;
         }
@@ -323,17 +323,17 @@ int main(int argc, char* argv[])
     std::vector<double> scalars;
     if (use_norm) {
         std::vector<double> tmp_scl;
-        xavier::to_vector(tmp_scl, nin_vec);
+        spurt::to_vector(tmp_scl, nin_vec);
         scalars.resize(tmp_scl.size() / 3);
         for (int i = 0 ; i < tmp_scl.size() / 3 ; ++i) {
             nvis::vec3 v(tmp_scl[3*i], tmp_scl[3*i+1], tmp_scl[3*i+2]);
             scalars[i] = nvis::norm(v);
         }
     } else {
-        xavier::to_vector(scalars, nin_scl);
+        spurt::to_vector(scalars, nin_scl);
     }
     
-    xavier::inverse_transform_sampling<double> itf(scalars);
+    spurt::inverse_transform_sampling<double> itf(scalars);
     
     typedef Garcia_vis_helper::color_map<double>    color_map;
     typedef color_map::color_type                   color_type;
@@ -377,7 +377,7 @@ int main(int argc, char* argv[])
     vtkSmartPointer<vtkRenderWindowInteractor> iren = vtkSmartPointer<vtkRenderWindowInteractor>::New();
     iren->SetRenderWindow(ren_win);
     
-    nvis::bbox3 bounds = xavier::nrrd_utils::get_bounds<3>(nin_vec);
+    nvis::bbox3 bounds = spurt::nrrd_utils::get_bounds<3>(nin_vec);
     vtkSmartPointer<vtkActor> frame_actor = Garcia_vis_helper::draw_frame(bounds);
     ren->AddActor(frame_actor);
     

@@ -20,7 +20,7 @@
 #include <util/wall_timer.hpp>
 #include <math/bounding_box.hpp>
 
-// xavier
+// spurt
 #include <math/math.hpp>
 #include <poincare/metric.hpp>
 
@@ -48,7 +48,7 @@ char* outs, *file, *ts;
 double h, max_diff, min_area, max_area, max_ratio;
 
 struct point_counter {
-    typedef xavier::quadtree<int, nvis::vec2>   quadtree_type;
+    typedef spurt::quadtree<int, nvis::vec2>   quadtree_type;
     
     point_counter() : n(0) {}
     
@@ -60,7 +60,7 @@ struct point_counter {
 };
 
 struct leaf_display {
-    typedef xavier::quadtree<int, nvis::vec2>   quadtree_type;
+    typedef spurt::quadtree<int, nvis::vec2>   quadtree_type;
     
     leaf_display() : os() {}
     void operator()(const quadtree_type& q) {
@@ -77,7 +77,7 @@ struct leaf_display {
 
 struct point_locator {
 
-    typedef xavier::quadtree<int, nvis::vec2>   quadtree_type;
+    typedef spurt::quadtree<int, nvis::vec2>   quadtree_type;
     typedef quadtree_type::data_type            data_type;
     
     point_locator(const nvis::bbox2& bounds, size_t max_depth, size_t max_nb_pts)
@@ -153,7 +153,7 @@ struct Chain {
 typedef std::pair<double, double>                                       pair_type;
 typedef std::pair<nvis::vec2, double>                                   value_type;
 typedef std::vector<nvis::vec2>::const_iterator                         const_iter_type;
-typedef xavier::triangulation<double, point_locator>                    mesh_type;
+typedef spurt::triangulation<double, point_locator>                    mesh_type;
 typedef mesh_type::index_type                                           index_type;
 typedef mesh_type::triangle_type                                        triangle_type;
 typedef mesh_type::point_type                                           point_type;
@@ -281,7 +281,7 @@ triangle_priority priority(const mesh_type& mesh, index_type id, int version = 0
 }
 
 double period(const nvis::vec2& x0, std::vector<nvis::vec2>& steps,
-              const poincare_map& __pmap, const xavier::map_metric& metric)
+              const poincare_map& __pmap, const spurt::map_metric& metric)
 {
     const poincare_map* pmap = __pmap.clone();
     try {
@@ -290,9 +290,9 @@ double period(const nvis::vec2& x0, std::vector<nvis::vec2>& steps,
         return -1;
     }
     
-    pair_type sf = xavier::period_x_periodic(steps, x0, metric);
+    pair_type sf = spurt::period_x_periodic(steps, x0, metric);
     
-    // double check = xavier::period_x_periodic_fourier(steps, x0, metric).first;
+    // double check = spurt::period_x_periodic_fourier(steps, x0, metric).first;
     // std::cerr << "standard method found " << sf.first << " while fourier found " << check
     // << std::endl;
     
@@ -308,7 +308,7 @@ int main(int argc, char* argv[])
     field->periodic_coordinates(false);
     
     bool per[2] = {true, false};
-    xavier::map_metric metric(field->bounds(), per);
+    spurt::map_metric metric(field->bounds(), per);
     
     poincare_map pmap(field);
     pmap.precision(h);
@@ -445,7 +445,7 @@ int main(int argc, char* argv[])
                 continue;
             }
             
-            pair_type sf = xavier::period_x_periodic(steps, seed, metric);
+            pair_type sf = spurt::period_x_periodic(steps, seed, metric);
             
             double val = sf.first;
             if (val <= 0) {

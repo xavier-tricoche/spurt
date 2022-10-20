@@ -318,13 +318,13 @@ int main(int argc, const char* argv[])
         
 #ifdef __EXPORT_ENDPOINT__
         size[0] = 3;
-        xavier::nrrd_utils::writeNrrd(endpt_f, name.make("endpoints_f.nrrd", frame_id, next_length), nrrdTypeFloat, size, step);
-        xavier::nrrd_utils::writeNrrd(endpt_b, name.make("endpoints_b.nrrd", frame_id, next_length), nrrdTypeFloat, size, step);
+        spurt::nrrd_utils::writeNrrd(endpt_f, name.make("endpoints_f.nrrd", frame_id, next_length), nrrdTypeFloat, size, step);
+        spurt::nrrd_utils::writeNrrd(endpt_b, name.make("endpoints_b.nrrd", frame_id, next_length), nrrdTypeFloat, size, step);
 #endif
         
 #ifdef __EXPORT_ERROR__
         size[0] = 3;
-        xavier::nrrd_utils::writeNrrd(err, name.make("error.nrrd", frame_id, next_length), nrrdTypeInt, size, step);
+        spurt::nrrd_utils::writeNrrd(err, name.make("error.nrrd", frame_id, next_length), nrrdTypeInt, size, step);
 #endif
         
 #ifdef __EXPORT_LENGTH__
@@ -335,7 +335,7 @@ int main(int argc, const char* argv[])
                 _size[k] = size[k+1];
                 _spac[k] = step[k+1];
             }
-            xavier::nrrd_utils::writeNrrd(len, name.make("length.nrrd", frame_id, next_length), nrrdTypeInt, _size, _spac);
+            spurt::nrrd_utils::writeNrrd(len, name.make("length.nrrd", frame_id, next_length), nrrdTypeInt, _size, _spac);
         }
 #endif
         
@@ -359,7 +359,7 @@ int main(int argc, const char* argv[])
         }
         std::cout << "total computation time for ftle was " << timer.elapsed() << '\n';
         
-        xavier::nrrd_utils::writeNrrd(ftle, name.make("ftle", frame_id, next_length), nrrdTypeFloat, size3, step3);
+        spurt::nrrd_utils::writeNrrd(ftle, name.make("ftle", frame_id, next_length), nrrdTypeFloat, size3, step3);
 #endif
         
         current_length = next_length;

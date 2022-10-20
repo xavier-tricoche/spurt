@@ -40,7 +40,7 @@
 #endif
 
 
-using namespace xavier;
+using namespace spurt;
 
 const double invalid_double = std::numeric_limits<double>::max();
 
@@ -55,7 +55,7 @@ typedef grid<double, 3>                                     volume_type;
 typedef grid<double, 2>                                     plane_type;
 typedef raster_data<nvis::vec3, double, 3>                  field_type;
 typedef raster_data<orbit_data, double, 2>                  dataset_type;
-typedef xmt_poincare_map<xavier::map::wrapper<field_type> > map_type;
+typedef xmt_poincare_map<spurt::map::wrapper<field_type> > map_type;
 
 map_metric  orbit_data::metric;
 int         orbit_data::max_period;
@@ -69,7 +69,7 @@ nvis::vec3                  _volume_spacing;
 plane_type*                 _plane;
 nvis::ivec2                 _plane_res;
 nvis::bbox2                 _plane_bounds;
-xavier::map_metric          _plane_metric;
+spurt::map_metric          _plane_metric;
 nvis::vec2                  _plane_spacing;
 dataset_type*               _dataset;
 
@@ -188,9 +188,9 @@ std::vector<std::vector<separatrix> >           _separatrices;
 //
 // -------------------------
 std::vector<std::vector<nvis::vec2> >           _orbits;
-xavier::discrete_color_map<int>*                _cmap;
-xavier::logical2physical*                       _converter;
-xavier::map_analysis_param                      _params;
+spurt::discrete_color_map<int>*                _cmap;
+spurt::logical2physical*                       _converter;
+spurt::map_analysis_param                      _params;
 std::vector<nvis::ivec2>                        _saddle_cells, _center_cells;
 nvis::vec2                                      _last;
 std::vector<nvis::vec2>                         _problematic_seeds;
@@ -228,7 +228,7 @@ static void init()
 #endif
     
     Nrrd* nin = nrrdNew();
-    nin = xavier::readNrrd(in);
+    nin = spurt::readNrrd(in);
     
     // verify data type
     if(nin->dim != 4 || nin->axis[0].size != 3) {
@@ -237,7 +237,7 @@ static void init()
     }
     
     std::vector<double> _array;
-    xavier::to_vector(_array, nin);
+    spurt::to_vector(_array, nin);
     _volume_res = nvis::ivec3(nin->axis[1].size,
                               nin->axis[2].size,
                               nin->axis[3].size);
@@ -414,12 +414,12 @@ void draw(void)
     }
     
     // draw newton steps
-    // std::cerr << xavier::newton_steps.size() << " newton steps\n";
-    draw_curve(xavier::newton_steps, nvis::fvec3(0,1,1), 1);
+    // std::cerr << spurt::newton_steps.size() << " newton steps\n";
+    draw_curve(spurt::newton_steps, nvis::fvec3(0,1,1), 1);
     
     // draw search steps
-    // std::cerr << xavier::search_steps.size() << " search steps\n";
-    draw_vectors(xavier::search_steps, nvis::fvec3(1,1,0), 1);
+    // std::cerr << spurt::search_steps.size() << " search steps\n";
+    draw_vectors(spurt::search_steps, nvis::fvec3(1,1,0), 1);
 }
 
 void display(void)
@@ -645,8 +645,8 @@ int main(int argc, char** argv)
 {
     _last = nvis::vec2(-1,-1);
     
-    xavier::record_newton_steps = true;
-    xavier::record_search_steps = true;
+    spurt::record_newton_steps = true;
+    spurt::record_search_steps = true;
     
     width = 800;
     height = 800;

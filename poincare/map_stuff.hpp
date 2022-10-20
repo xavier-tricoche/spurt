@@ -9,7 +9,7 @@
 #include <poincare/ls.hpp>
 
 
-namespace xavier {
+namespace spurt {
 struct fixpoint {
     fixpoint() : isolated(true) {}
     nvis::vec2 pos;
@@ -110,7 +110,7 @@ inline double vec_align(const nvis::vec2& v0, const nvis::vec2& v1, const nvis::
     double c = cross(f0, e0);
     
     std::complex<double> x[2];
-    int nb_roots = xavier::quadratic_equation(a, b, c, x);
+    int nb_roots = spurt::quadratic_equation(a, b, c, x);
     switch (nb_roots) {
         case - 1:
             return -1;
@@ -231,7 +231,7 @@ unsigned int best_period(const Map& map, const nvis::vec2& x, unsigned int pmax,
         dist[p] = avg_dist(hits, p + 1);
     }
     std::vector< unsigned int > sorted;
-    xavier::sort_ids(sorted, dist, true);
+    spurt::sort_ids(sorted, dist, true);
     
     // std::cout << "best_period returns " << sorted[0] + 1 << std::endl;
     // std::cout << "corresponding avg distance is " << dist[sorted[0]] << std::endl;
@@ -239,10 +239,10 @@ unsigned int best_period(const Map& map, const nvis::vec2& x, unsigned int pmax,
     return sorted[0] + 1;
 }
 
-bool known(const std::vector< xavier::fixpoint >& fps, const nvis::vec2 x,
+bool known(const std::vector< spurt::fixpoint >& fps, const nvis::vec2 x,
            unsigned int period, double tol = 1.0e-5)
 {
-    typedef std::vector< xavier::fixpoint >::const_iterator cst_it_type;
+    typedef std::vector< spurt::fixpoint >::const_iterator cst_it_type;
     for (cst_it_type it = fps.begin() ; it != fps.end() ; ++it) {
         double d = map_metric::distance(it->pos, x);
         if (d < tol && !(period % it->K)) {
@@ -315,7 +315,7 @@ bool eigen(nvis::vec2 evecs[2], const nvis::vec4& J)
 
 template< typename Jacobian >
 void linear_analysis(const Jacobian& jac, unsigned int period,
-                     const nvis::vec2& x, xavier::fixpoint& fp)
+                     const nvis::vec2& x, spurt::fixpoint& fp)
 {
     nvis::vec4 J = jac(x);
     fp.pos = x;
@@ -331,7 +331,7 @@ void linear_analysis(const Jacobian& jac, unsigned int period,
 template< typename Jacobian >
 bool linear_chain_analysis(const Jacobian& jac,
                            const std::vector< nvis::vec2 >& pos,
-                           std::vector< xavier::fixpoint >& fps)
+                           std::vector< spurt::fixpoint >& fps)
 {
     unsigned int period = pos.size();
     fps.resize(period);
@@ -376,7 +376,7 @@ bool compute_iterates(const Map& map, const RHS& rhs, unsigned int period,
         chain.reserve(period);
         nvis::vec2 y = x;
         for (unsigned int i = 0 ; i < period ; ++i) {
-            bool found = xavier::Map::meta_newton(rhs, y, eps, 1.0e-9, hx, hy, niter);
+            bool found = spurt::Map::meta_newton(rhs, y, eps, 1.0e-9, hx, hy, niter);
             if (!found) {
                 std::cout << "unable to converge from iterated position" << std::endl;
                 return false;
@@ -415,13 +415,13 @@ void transport_eigenvector(const Map& map, unsigned int period,
 template< typename PMap, typename Map >
 bool robust_linear_chain_analysis(const PMap& pmap, const Map& map,
                                   const std::vector< nvis::vec2 >& pos,
-                                  std::vector< xavier::fixpoint >& fps,
+                                  std::vector< spurt::fixpoint >& fps,
                                   double dx, double dy)
 {
     // static MLS::CLAPACK_helper helper(500, 2, 1, 2, true);
     
-    xavier::Map::jacobian_sample_pos.clear();
-    xavier::Map::jacobian_sample_vals.clear();
+    spurt::Map::jacobian_sample_pos.clear();
+    spurt::Map::jacobian_sample_vals.clear();
     
     const double eps = 0.01;
     
@@ -436,7 +436,7 @@ bool robust_linear_chain_analysis(const PMap& pmap, const Map& map,
         int idx = 0;
         unsigned int ref_id = 0;
         for (; ref_id < period ; ++ref_id) {
-            idx = xavier::Map::poincare_index(samples, pmap, pos[ref_id], radius, M_PI / 6., 100);
+            idx = spurt::Map::poincare_index(samples, pmap, pos[ref_id], radius, M_PI / 6., 100);
             if (fabs(idx) == 1) {
                 break;
             }
@@ -467,9 +467,9 @@ bool robust_linear_chain_analysis(const PMap& pmap, const Map& map,
             
             // nvis::vec4 J;
             // nvis::vec2 zero;
-            // xavier::ls_linear_fit(zero, J, ps, fs, x, helper);
+            // spurt::ls_linear_fit(zero, J, ps, fs, x, helper);
             
-            nvis::vec4 J = xavier::ls_jacobian(ps, fs, x);
+            nvis::vec4 J = spurt::ls_jacobian(ps, fs, x);
             nvis::vec2 evecs[2];
             bool saddle = eigen(evecs, J);
             bool passed = false;

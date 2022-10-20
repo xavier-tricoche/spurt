@@ -39,7 +39,7 @@
 #endif
 
 
-using namespace xavier;
+using namespace spurt;
 
 const double invalid_double = std::numeric_limits<double>::max();
 
@@ -54,7 +54,7 @@ typedef grid<double, 3>                                     volume_type;
 typedef grid<double, 2>                                     plane_type;
 typedef raster_data<nvis::vec3, double, 3>                  field_type;
 typedef raster_data<orbit_data, double, 2>                  dataset_type;
-typedef xmt_poincare_map<xavier::map::wrapper<field_type> > map_type;
+typedef xmt_poincare_map<spurt::map::wrapper<field_type> > map_type;
 
 map_metric  orbit_data::metric;
 int         orbit_data::max_period;
@@ -68,7 +68,7 @@ nvis::vec3                  _volume_spacing;
 plane_type*                 _plane;
 nvis::ivec2                 _plane_res;
 nvis::bbox2                 _plane_bounds;
-xavier::map_metric          _plane_metric;
+spurt::map_metric          _plane_metric;
 nvis::vec2                  _plane_spacing;
 dataset_type*               _dataset;
 
@@ -84,7 +84,7 @@ double  eps;
 float   pt_sz, ups;
 bool    logical;
 
-std::vector<std::vector<nvis::vec2> > xavier::broken_manifolds;
+std::vector<std::vector<nvis::vec2> > spurt::broken_manifolds;
 
 void initialize(int argc, char* argv[])
 {
@@ -221,9 +221,9 @@ std::vector<std::vector<separatrix> >           _separatrices;
 //
 // -------------------------
 std::vector<color_orbit_type>                   _orbits;
-xavier::discrete_color_map<int>*                _cmap;
-xavier::logical2physical*                       _converter;
-xavier::map_analysis_param                      _params, _debug_params;
+spurt::discrete_color_map<int>*                _cmap;
+spurt::logical2physical*                       _converter;
+spurt::map_analysis_param                      _params, _debug_params;
 std::vector<nvis::ivec2>                        _saddle_cells, _center_cells;
 nvis::vec2                                      _last;
 std::vector<nvis::vec2>                         _problematic_seeds;
@@ -256,7 +256,7 @@ static void init()
 #endif
     
     Nrrd* nin = nrrdNew();
-    nin = xavier::readNrrd(in);
+    nin = spurt::readNrrd(in);
     
     // verify data type
     if(nin->dim != 4 || nin->axis[0].size != 3) {
@@ -265,7 +265,7 @@ static void init()
     }
     
     std::vector<double> _array;
-    xavier::to_vector(_array, nin);
+    spurt::to_vector(_array, nin);
     _volume_res = nvis::ivec3(nin->axis[1].size,
                               nin->axis[2].size,
                               nin->axis[3].size);
@@ -2123,7 +2123,7 @@ int main(int argc, char** argv)
     
     if(strcmp(phys, "none")) {
         logical = false;
-        _converter = new xavier::logical2physical(phys);
+        _converter = new spurt::logical2physical(phys);
     } else {
         logical = true;
     }
@@ -2151,12 +2151,12 @@ int main(int argc, char** argv)
     }
     
     std::vector<nvis::fvec3> colors;
-    xavier::spiral_scale(colors, maxp, 1);
+    spurt::spiral_scale(colors, maxp, 1);
     std::vector<int> reference_values(maxp);
     for (int i=1 ; i<=maxp ; ++i) {
         reference_values[i-1] = i;
     }
-    _cmap = new xavier::discrete_color_map<int>(reference_values, colors);
+    _cmap = new spurt::discrete_color_map<int>(reference_values, colors);
     
     init();
     

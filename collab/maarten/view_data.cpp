@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
         throw;
     }
     std::vector<float> __array;
-    xavier::to_vector(__array, nin);
+    spurt::to_vector(__array, nin);
     size_t nb_pts = __array.size()/5;
 
     set_type unique_src, unique_rec;

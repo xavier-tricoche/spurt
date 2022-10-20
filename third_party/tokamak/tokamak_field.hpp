@@ -42,4 +42,3 @@ public:
 };
 
 #endif // __tokamak_base_hpp
-

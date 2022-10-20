@@ -1,7 +1,7 @@
 #ifndef __VTK_INTERPOLATOR_HPP__
 #define __VTK_INTERPOLATOR_HPP__
 
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 
 #include <vtkGenericCell.h>
 #include <vtkCellLocator.h>
@@ -165,7 +165,7 @@ namespace {
     template<typename vec>
     inline std::string to_str(const vec& p) {
         std::ostringstream os;
-        if (xavier::data_traits<vec>::size() == 3)
+        if (spurt::data_traits<vec>::size() == 3)
             os << "[" << p(0) << ", " << p(1) << ", " << p(2) << "]";
         else
             os << "[" << p(0) << ", " << p(1) << "]";

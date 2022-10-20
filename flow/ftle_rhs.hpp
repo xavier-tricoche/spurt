@@ -1,7 +1,7 @@
 #ifndef __XAVIER_FTLE_RHS_HPP__
 #define __XAVIER_FTLE_RHS_HPP__
 
-namespace xavier {
+namespace spurt {
     
 template<typename Value_, typename State_>
 struct Catseye {
@@ -60,6 +60,6 @@ struct DoubleGyre {
 };
     
     
-} // xavier
+} // spurt
 
 #endif

@@ -41,7 +41,7 @@ class QAction;
 // Forward Qt class declarations
 class Ui_ControlWidget;
 
-namespace xavier { namespace gmig {
+namespace spurt { namespace gmig {
 
 class mantle_vis_control : public QWidget
 {    
@@ -81,7 +81,7 @@ public:
 };
 
 } // gmig
-} // xavier
+} // spurt
 
 #endif // _MANTLE_VIS_CONTROL_HPP_
 

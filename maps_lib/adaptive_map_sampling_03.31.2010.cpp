@@ -18,7 +18,7 @@
 #include <util/wall_timer.hpp>
 #include <math/bounding_box.hpp>
 
-// xavier's math stuff
+// spurt's math stuff
 #include <math/math.hpp>
 
 // poincare lib
@@ -66,11 +66,11 @@
 using namespace map_analysis;
 
 mesh_type* sampling_mesh;
-std::vector< std::vector< xavier::fixpoint > > all_chains;
+std::vector< std::vector< spurt::fixpoint > > all_chains;
 
 std::vector<rational_type> ref_values;
 
-typedef xavier::point_locator<double, int, 2>       point_locator_type;
+typedef spurt::point_locator<double, int, 2>       point_locator_type;
 
 template<typename T, typename F>
 struct Lt_point_norm {
@@ -147,7 +147,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
     typedef std::pair<nvis::vec2, data_type>            data_point_type;
     typedef poincare_index<mesh_type, poincare_map>     poincare_index_type;
     typedef mesh_type::triangle_type                    triangle_type;
-    typedef xavier::Edge                                edge_index_type;
+    typedef spurt::Edge                                edge_index_type;
     
     output.p_orbits.clear();
     output.p_meshes.clear();
@@ -242,7 +242,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
     _timer.restart();
     for (int i = 0 ; i < static_data::central_map_orbits.size() ; ++i) {
         orbit& obt = static_data::central_map_orbits[i];
-        // double q = (xavier::period_x_periodic(obt.points(), metric)).first;
+        // double q = (spurt::period_x_periodic(obt.points(), metric)).first;
         double q = dist_based_x_period(obt.points(), metric);
         for (int j = 0 ; j < obt.size() ; ++j) {
             obt[j] = metric.modulo(obt[j]);
@@ -275,7 +275,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
     }
     base_mesh.set_tolerance(1.0e-7);
     
-    xavier::map_debug::verbose_level = 1;
+    spurt::map_debug::verbose_level = 1;
     
     typedef newton::cached_map<poincare_map>    cached_map_type;
     typedef newton::rhs_map<cached_map_type>    rhs_type;
@@ -318,7 +318,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
         
         std::vector<double> valid_qs;
         for (std::set<rational_type>::iterator it = rationals.begin() ; it != rationals.end() ; ++it) {
-            valid_qs.push_back(xavier::value(*it));
+            valid_qs.push_back(spurt::value(*it));
         }
         
         std::cerr << "there are " << valid_qs.size() << " interesting rational periods:\n";
@@ -625,11 +625,11 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
         }
         
         
-        typedef xavier::fixpoint                    fixpoint_type;
+        typedef spurt::fixpoint                    fixpoint_type;
         typedef std::list<fixpoint_type>            chain_type;
         
-        xavier::map_debug::verbose_level = 1;
-        xavier::__default_metric = metric;
+        spurt::map_debug::verbose_level = 1;
+        spurt::__default_metric = metric;
         
         std::vector<std::list<chain_type> > __chains(nb_threads);
         
@@ -697,10 +697,10 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
         *
         *********************************************************************/
         
-        std::vector<std::vector<xavier::fixpoint> > all_p_chains;
+        std::vector<std::vector<spurt::fixpoint> > all_p_chains;
         for (std::list<chain_type>::iterator it = output.p_chains[period-1].begin() ;
                 it != output.p_chains[period-1].end(); ++it) {
-            all_p_chains.push_back(std::vector<xavier::fixpoint>(it->begin(), it->end()));
+            all_p_chains.push_back(std::vector<spurt::fixpoint>(it->begin(), it->end()));
         }
         
         std::vector<bool> invalid(all_p_chains.size(), false);

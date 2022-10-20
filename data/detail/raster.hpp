@@ -32,7 +32,7 @@ struct eps_compare {
 };
 }
 
-namespace xavier {
+namespace spurt {
 
 template< typename CoordArray_, typename SizeArray_ >
 long coord_to_index(const CoordArray_& coord, const SizeArray_& size) {
@@ -350,7 +350,7 @@ raster_grid<Dim_, Scalar_, Size_>::locate(const point_type& x) const
         else {
             std::ostringstream os;
             os << std::setprecision(16)
-            << "invalid " << xavier::number_to_rank(i+1) << " coordinate in raster_grid::locate()\n"
+            << "invalid " << spurt::number_to_rank(i+1) << " coordinate in raster_grid::locate()\n"
             << "coordinate mapped from " << x[i] << " to " << y[i]
             << " was tested against: [0, " << _max << "]\n";
             throw std::runtime_error(os.str());
@@ -418,8 +418,8 @@ template<typename Value_, size_t Dim_, typename Scalar_, typename Size_>
 void raster_data<Value_, Dim_, Scalar_, Size_>::
 save_as_nrrd(const std::string& filename) const
 {
-    std::string type_string = xavier::type2string<Scalar_>::type_name();
-    size_t ncomp = xavier::data_traits<Value_>::size();
+    std::string type_string = spurt::type2string<Scalar_>::type_name();
+    size_t ncomp = spurt::data_traits<Value_>::size();
 
     std::ostringstream os;
     os << "NRRD0001\n";
@@ -817,4 +817,4 @@ derivative(const coord_type& id) const
     }
     return r;
 }
-} // namespace xavier
+} // namespace spurt

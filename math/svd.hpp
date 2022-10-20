@@ -6,7 +6,7 @@
 #include <Eigen/Dense>
 #include <float.h>
 
-namespace xavier {
+namespace spurt {
 template<typename T, int M, int N>
 nvis::fixed_matrix<T, N, M> pseudo_inv_diag(const nvis::fixed_matrix<T, M, N>& Sigma)
 {

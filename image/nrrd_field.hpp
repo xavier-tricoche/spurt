@@ -10,7 +10,7 @@
 #include <misc/meta_utils.hpp>
 
 
-namespace xavier {
+namespace spurt {
 
 template< typename Value_, int N, typename Scalar_=double >
 class nrrd_field {
@@ -19,7 +19,7 @@ public:
     static const size_t valsize = data_traits<Value_>::size();
     typedef Scalar_                          scalar_type; // a number
     typedef Value_                           value_type;  // an attribute
-    typedef xavier::image<value_type, N>     field_type;  // a continuous function
+    typedef spurt::image<value_type, N>     field_type;  // a continuous function
     typedef typename field_type::grid_type   grid_type;   // a spatial data structure
     typedef typename field_type::point_type  point_type;  // a position in space
     typedef typename field_type::coord_type  coord_type;  // discrete coordinates
@@ -103,7 +103,7 @@ private:
     bounds_type  m_bounds;
 };
 
-} // namespace xavier
+} // namespace spurt
 
 #endif
 

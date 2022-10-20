@@ -46,7 +46,7 @@ struct pvo_solution {
 
 int main(int argc, char* argv[])
 {
-    using namespace xavier::crease;
+    using namespace spurt::crease;
     is_ridge = true;
     crease_kind = 2;
     upsample = 1;
@@ -397,7 +397,7 @@ int main(int argc, char* argv[])
                 vals[n] = the_wrapper->value(all_face_points[fpids[n]]);
             }
             std::vector< unsigned int > sorted(np);
-            xavier::sort(vals, sorted);
+            spurt::sort(vals, sorted);
             unsigned int id0, id1;
             if (is_ridge) {
                 id0 = sorted[np-1];
@@ -532,7 +532,7 @@ int main(int argc, char* argv[])
                     vals[n] = the_wrapper->value(all_face_points[fpids[n]]);
                 }
                 std::vector< unsigned int > sorted(np);
-                xavier::sort(vals, sorted);
+                spurt::sort(vals, sorted);
                 unsigned int id0, id1;
                 if (is_ridge) {
                     id0 = sorted[np-1];
@@ -651,7 +651,7 @@ int main(int argc, char* argv[])
                         std::cout << "we are about to scrutinize the right face" << std::endl;
                     }
                     const unsigned int* ids = faces[first_guess.first];
-                    face_type face(vert[ids[0]], vert[ids[1]], vert[ids[2]], vert[ids[3]], *xavier::crease::the_wrapper);
+                    face_type face(vert[ids[0]], vert[ids[1]], vert[ids[2]], vert[ids[3]], *spurt::crease::the_wrapper);
                     
                     if (crease_kind == 2) {
                         face_type out;
@@ -671,17 +671,17 @@ int main(int argc, char* argv[])
                                 if (display_debug_info) {
                                     std::cout << "first attempt: bold approach" << std::endl;
                                 }
-                                xavier::crease::speedup = true;
+                                spurt::crease::speedup = true;
                             } else if (n == 1) {
                                 if (display_debug_info) {
                                     std::cout << "first attempt failed: cautious approach on second attempt" << std::endl;
                                 }
-                                xavier::crease::speedup = false;
+                                spurt::crease::speedup = false;
                             } else {
                                 if (display_debug_info) {
                                     std::cout << "everything we tried so far failed. using a smaller area" << std::endl;
                                 }
-                                xavier::crease::speedup = false;
+                                spurt::crease::speedup = false;
                                 h *= 0.5;
                                 refine_face(out, face, first_guess.second, h);
                             }
@@ -701,7 +701,7 @@ int main(int argc, char* argv[])
                                       << face.p[0] << ", " << face.p[1] << ", " << face.p[2] << ", " << face.p[3]
                                       << std::endl;
                                       
-                        xavier::crease::speedup = false;
+                        spurt::crease::speedup = false;
                         current_vertices.clear();
                         current_face_info.set_info(face.p[0], face.p[1], face.p[2], face.p[3]);
                         found = search_face(points, face.p[0], face.p[1], face.p[2], face.p[3], max_depth_fix,
@@ -724,8 +724,8 @@ int main(int argc, char* argv[])
                 {
                     __d = max_depth_fix;
                     crease::max_int_error /= 5;
-                    xavier::crease::speedup = false;
-                    xavier::crease::fixing_voxel = true;
+                    spurt::crease::speedup = false;
+                    spurt::crease::fixing_voxel = true;
                     for (unsigned int vf = 0 ; vf < 6 && !found && !found_something; vf++) {
                         if (vf == point_face[0] || // skip position that we already know
                                 (crease_kind < 2 && // or face we have already ruled out
@@ -872,7 +872,7 @@ int main(int argc, char* argv[])
               << "number of failed convergences: " << failed_conv << std::endl
               << "percentage of faces containing several zero crossing: "
               << 100*(double)nb_several / (double)all_face_points.size() << std::endl
-              << "number of PVO computations performed: " << xavier::crease::nb_pvo << std::endl;
+              << "number of PVO computations performed: " << spurt::crease::nb_pvo << std::endl;
               
     std::cout << "number of segments = " << all_edges.size()
               << ", number of connected components: " << creases.size()

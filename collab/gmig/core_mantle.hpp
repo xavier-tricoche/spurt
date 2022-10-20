@@ -12,10 +12,10 @@
 // nvis
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
-// xavier
+// spurt
 #include "typedefs.hpp"
 
-namespace xavier { namespace gmig { namespace core_mantle {
+namespace spurt { namespace gmig { namespace core_mantle {
     
 template<typename Scalar_, typename Index_=int>
 struct Vertex {
@@ -312,6 +312,6 @@ public:
 
 } // namespace core_mantle
 } // namespace gmig
-} // namespace xavier
+} // namespace spurt
 
 #endif

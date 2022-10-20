@@ -14,7 +14,7 @@
 #include <misc/meta_utils.hpp>
 
 
-namespace xavier { namespace nrrd_utils {
+namespace spurt { namespace nrrd_utils {
 
 #define LIST_OF_NRRD_DATA_TYPES \
     X(void,           nrrdTypeUnknown); \
@@ -683,6 +683,6 @@ inline void writeNrrdFromParams(void* data, const std::string& filename,
 
 } // nrrd_utils
 
-} // xavier
+} // spurt
 
 #endif

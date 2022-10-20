@@ -13,7 +13,7 @@
 #include <set>
 #include <teem/nrrd.h>
 
-namespace xavier {
+namespace spurt {
 namespace crease {
 
 extern std::vector< double > crease_strength;
@@ -42,7 +42,7 @@ unsigned int cellid(unsigned int i, unsigned int j,
 };
 };
 
-inline int xavier::crease::
+inline int spurt::crease::
 next(const std::pair< int, int >& choices, unsigned int cur)
 {
     // choices.first < 0 => choices.second < 0
@@ -50,36 +50,36 @@ next(const std::pair< int, int >& choices, unsigned int cur)
     else return choices.second;
 }
 
-inline int xavier::crease::
-right(unsigned int i, unsigned int j, const xavier::raster_grid<2>& grid)
+inline int spurt::crease::
+right(unsigned int i, unsigned int j, const spurt::raster_grid<2>& grid)
 {
     if (i < grid.resolution()[0] - 2) return i + 1 + j*(grid.resolution()[0] - 1);
     else return -1;
 }
 
-inline int xavier::crease::
-top(unsigned int i, unsigned int j, const xavier::raster_grid<2>& grid)
+inline int spurt::crease::
+top(unsigned int i, unsigned int j, const spurt::raster_grid<2>& grid)
 {
     if (j < grid.resolution()[1] - 2) return i + (j + 1)*(grid.resolution()[0] - 1);
     else return -1;
 }
 
-inline int xavier::crease::
-left(unsigned int i, unsigned int, const xavier::raster_grid<2>&)
+inline int spurt::crease::
+left(unsigned int i, unsigned int, const spurt::raster_grid<2>&)
 {
     if (i > 0) return i -1;
     else return -1;
 }
 
-inline int xavier::crease::
-down(unsigned int i, unsigned int j, const xavier::raster_grid<2>& grid)
+inline int spurt::crease::
+down(unsigned int i, unsigned int j, const spurt::raster_grid<2>& grid)
 {
     if (j > 0) return i + (j - 1)*(grid.resolution()[0] - 1);
     else return -1;
 }
 
-inline unsigned int xavier::crease::
-cellid(unsigned int i, unsigned int j, const xavier::raster_grid<2>& grid)
+inline unsigned int spurt::crease::
+cellid(unsigned int i, unsigned int j, const spurt::raster_grid<2>& grid)
 {
     return i + j*(grid.resolution()[0] - 1);
 }

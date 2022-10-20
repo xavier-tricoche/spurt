@@ -1,10 +1,10 @@
 // stl
 #include <sstream>
-// xavier
+// spurt
 #include <image/nrrd_wrapper.hpp>
 #include "dataIO.hpp"
 
-nvis::bbox2 xavier::gmig::
+nvis::bbox2 spurt::gmig::
 read_nrrd(std::vector<nvis::vec2>& points, 
           std::vector<nvis::vec1>& times,
           std::vector<nvis::vec1>& weights,
@@ -19,7 +19,7 @@ read_nrrd(std::vector<nvis::vec2>& points,
         throw;
     }
     std::vector<double> data;
-    xavier::to_vector(data, nin);
+    spurt::to_vector(data, nin);
     size_t N = nin->axis[0].size;
     bool has_weights = (N == 4);
     size_t nb_pts = data.size()/N;
@@ -40,7 +40,7 @@ read_nrrd(std::vector<nvis::vec2>& points,
     return _bounds;
 }
 
-void xavier::gmig::
+void spurt::gmig::
 save_rbf(const std::vector<nvis::vec2>& points,
          const std::vector<nvis::vec1>& times,
          const std::vector<nvis::vec1>& weights,
@@ -57,7 +57,7 @@ save_rbf(const std::vector<nvis::vec2>& points,
         data[4*i+2] = values[i][0];
         data[4*i+3] = weights[i][0];
     }
-    xavier::nrrd_params<double, 2> params;
+    spurt::nrrd_params<double, 2> params;
     params.sizes()[0] = 4;
     params.sizes()[1] = npts;
     std::ostringstream os;
@@ -67,6 +67,6 @@ save_rbf(const std::vector<nvis::vec2>& points,
     params.description() = os.str();
     params.labels()[0] = "x_rec;y_rec;time;weight";
     params.labels()[1] = "RBF centers";
-    xavier::writeNrrd(data, filename, params);
+    spurt::writeNrrd(data, filename, params);
     if (verbose) std::cout << filename << " has been exported\n";
 }

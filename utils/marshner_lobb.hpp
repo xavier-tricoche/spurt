@@ -1,7 +1,7 @@
 #ifndef __XAVIER_MARSHNER_LOBB__
 #define __XAVIER_MARSHNER_LOBB__
 
-namespace xavier {
+namespace spurt {
 
 template<typename T>
 struct marshner_lobb{

@@ -1,4 +1,4 @@
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
@@ -24,7 +24,7 @@ float quality=100;
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 	
 	srand48(123456);
         

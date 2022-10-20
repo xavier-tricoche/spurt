@@ -36,7 +36,7 @@
 #endif
 
 
-using namespace xavier;
+using namespace spurt;
 
 // -------------------------
 //
@@ -51,7 +51,7 @@ typedef standard_map                                        map_type;
 plane_type*                 _plane;
 nvis::ivec2                 _plane_res;
 nvis::bbox2                 _plane_bounds;
-xavier::map_metric          _plane_metric;
+spurt::map_metric          _plane_metric;
 nvis::vec2                  _plane_spacing;
 dataset_type*               _dataset;
 
@@ -119,9 +119,9 @@ typedef std::vector<nvis::vec2>                 orbit_type;
 typedef std::pair<orbit_type, nvis::fvec3>      color_orbit_type;
 
 std::vector<color_orbit_type>           _orbits;
-xavier::discrete_color_map<int>*        _cmap;
-xavier::logical2physical*               _converter;
-xavier::map_analysis_param              _params;
+spurt::discrete_color_map<int>*        _cmap;
+spurt::logical2physical*               _converter;
+spurt::map_analysis_param              _params;
 std::vector<nvis::ivec2>                _saddle_cells, _center_cells;
 nvis::vec2                              _last;
 std::vector<nvis::vec2>                 _problematic_seeds;

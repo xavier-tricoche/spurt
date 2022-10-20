@@ -3,7 +3,7 @@
 
 #include <reconstruction/definitions.hpp>
 
-namespace xavier { namespace reconstruction {
+namespace spurt { namespace reconstruction {
 
 // template<typename _Kernel, size_t _Dim>
 // struct reconstruction_kernel {
@@ -298,6 +298,6 @@ namespace franke_base {
     }
 
 } // reconstruction
-} // xavier
+} // spurt
 
 #endif

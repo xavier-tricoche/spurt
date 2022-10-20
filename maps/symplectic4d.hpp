@@ -2,7 +2,7 @@
 #include <math/bounding_box.hpp>
 #include <vector>
 
-namespace xavier {
+namespace spurt {
 
 class symplectic4D {
 public:
@@ -217,4 +217,4 @@ private:
     }
 };
 
-} // namespace xavier
+} // namespace spurt

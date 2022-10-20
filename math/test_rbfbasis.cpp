@@ -43,7 +43,7 @@ inline T dquintic(T x) {
     return 5*x*x*x*x;
 }
 
-namespace xrbf = xavier::RBF;
+namespace xrbf = spurt::RBF;
 
 template<typename T>
 struct type_traits {};

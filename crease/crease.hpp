@@ -9,7 +9,7 @@ typedef nvis::fixed_vector<double, 6>   vec6;
 typedef nvis::fixed_vector<double, 4>   vec4;
 }
 
-namespace xavier {
+namespace spurt {
 class MeasureWrapper;
 
 namespace crease {
@@ -58,7 +58,7 @@ extern bool read_info;
 
 extern unsigned int nb_crossings;
 
-extern xavier::MeasureWrapper* the_wrapper;
+extern spurt::MeasureWrapper* the_wrapper;
 
 inline bool is_ok(double val, double str)
 {

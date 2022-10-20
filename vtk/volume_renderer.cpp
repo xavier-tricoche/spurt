@@ -4,8 +4,8 @@
 #include <memory>
 #include <ctime>
 
-#include <VTK/vtk_utils.hpp>
-#include <VTK/vtk_camera_helper.hpp>
+#include <vtk/vtk_utils.hpp>
+#include <vtk/vtk_camera_helper.hpp>
 #include <misc/option_parse.hpp>
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
@@ -170,8 +170,8 @@ double measure() {
         }
     }
 	if (verbose) std::cout << "sampling (" << all_values.size() << ") done\n";
-	std::pair<double, double> mv = xavier::meanvariance(selected_values);
-	std::pair<double, double> mv_total = xavier::meanvariance(all_values);
+	std::pair<double, double> mv = spurt::meanvariance(selected_values);
+	std::pair<double, double> mv_total = spurt::meanvariance(all_values);
 	if (verbose) {
 		std::cout << all_values.size() << " total samples\n";
 		std::cout << selected_values.size() << " selected samples ("
@@ -591,7 +591,7 @@ nvis::bbox3 str_to_bbox(const std::string& str) {
 }
 
 void initialize(int argc, char* argv[]) {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
             required_group(true, false, "Required Options"),
@@ -793,7 +793,7 @@ void set_parameters() {
 }
 
 void raycast() {
-	std::string ext = xavier::filename::extension(input_name);
+	std::string ext = spurt::filename::extension(input_name);
 	if (ext == "vtk") {
     	VTK_CREATE(vtkDataSetReader, reader);
     	reader->SetFileName(input_name.c_str());

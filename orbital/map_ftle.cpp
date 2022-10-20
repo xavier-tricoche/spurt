@@ -56,7 +56,7 @@ void write_to_ostream(std::ostream& os, const std::string& str) {
     }
 }
 
-void update_progress(xavier::ProgressDisplay& progress) {
+void update_progress(spurt::ProgressDisplay& progress) {
     {
     #ifndef  NO_TBB
         tbb::mutex::scoped_lock lock(progress_mutex);
@@ -85,11 +85,11 @@ nvis::bounding_box<nvis::vec2> bounds;
 bool extract_tangent_curves = false;
 
 typedef nvis::fixed_vector<double, 6>    vec6;
-typedef xavier::raster_grid<2, double> grid_t;
+typedef spurt::raster_grid<2, double> grid_t;
 typedef grid_t::coord_type coord_t;
 
 template<typename Data_>
-using raster_t=xavier::raster_data<Data_, 2>;
+using raster_t=spurt::raster_data<Data_, 2>;
 
 inline double distance(const nvis::vec2& p0, const nvis::vec2& p1)
 {
@@ -221,13 +221,13 @@ double lmax(size_t n, const raster_t<vec6>& pos, const raster_t<bool>& _valid, c
 
 template<typename T>
 void output(const std::string& name, const raster_t<T>& data) {
-    typedef typename xavier::data_traits<T>::value_type value_t;
+    typedef typename spurt::data_traits<T>::value_type value_t;
 
     std::cout << "exporting " << name << std::endl;
     std::ofstream outf(name.c_str(), std::ofstream::binary);
     std::ostringstream os;
     std::string sizestr, spacingstr, minstr;
-    size_t sz=xavier::data_traits<T>::size();
+    size_t sz=spurt::data_traits<T>::size();
     if (sz>1) os << sz << " ";
     os << data.grid().resolution()[0] << " "
        << data.grid().resolution()[1];
@@ -246,7 +246,7 @@ void output(const std::string& name, const raster_t<T>& data) {
     os << "NRRD0001\n"
         << "# Complete NRRD file format specification at:\n"
         << "# http://teem.sourceforge.net/nrrd/format.html\n"
-        << "type: " << xavier::type2string<value_t>::type_name() << "\n"
+        << "type: " << spurt::type2string<value_t>::type_name() << "\n"
         << "dimension: " << (sz>1 ? 3 : 2) << "\n"
         << "sizes: " << sizestr << '\n'
         << "spacings: " << spacingstr << '\n'
@@ -266,7 +266,7 @@ int main(int argc, char* argv[])
 
     if (sys != NULL) {
         std::string name(sys);
-        name = xavier::lower_case(name);
+        name = spurt::lower_case(name);
         if (name=="earth" || name=="earth_moon" || name=="earth-moon")
             mu=Earth_Moon_mu;
         else if (name=="jupiter" || name=="jupiter_europa" ||
@@ -317,7 +317,7 @@ int main(int argc, char* argv[])
     dp[2]=-1*dp[0];
     dp[3]=-1*dp[1];
 
-    xavier::ProgressDisplay progress(true);
+    spurt::ProgressDisplay progress(true);
     progress.fraction_on();
     progress_counter = 0;
     progress.begin(nx*ny, "Checking initial conditions");
@@ -470,7 +470,7 @@ int main(int argc, char* argv[])
         std::cout << progress << '\n';
 
         std::ostringstream os;
-        os << xavier::filename::remove_extension(outs)
+        os << spurt::filename::remove_extension(outs)
            << "-ftle-C=" << C
            << "-bounds=[" << minx << "," << maxx
            << "]x[" << miny << "," << maxy << "]"

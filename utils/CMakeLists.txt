@@ -6,6 +6,6 @@ set(SRC
 
 foreach( target ${SRC} )
     add_executable( ${target} ${target}.cpp )
-    target_link_libraries( ${target} ${Teem_LIBRARIES} ${MatIO_LIBRARIES} xavier_image ${Boost_LIBRARIES})
+    target_link_libraries( ${target} ${Teem_LIBRARIES} ${MatIO_LIBRARIES} spurt_image ${Boost_LIBRARIES})
     install( TARGETS ${target} RUNTIME DESTINATION bin )
-endforeach() 
+endforeach()

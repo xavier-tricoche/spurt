@@ -3,7 +3,7 @@
 
 #include <granular/dem_utils.hpp>
 
-namespace xavier {
+namespace spurt {
 namespace granular {
 namespace dem {
 
@@ -243,4 +243,4 @@ inline double leapfrog_step(const _Index& i, _ParticleContainer& particles,
     
 } // dem
 } // granular
-} // xavier
+} // spurt

@@ -43,7 +43,7 @@ namespace odeint = boost::numeric::odeint;
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
             required(true, false, "Required Options"),
@@ -84,7 +84,7 @@ void initialize(int argc, const char* argv[])
     }
 }
 
-using namespace xavier;
+using namespace spurt;
 
 typedef gage_vector_field                         interpolator_type;   // single thread steady 3D vector field
 typedef time_dependent_field< interpolator_type > unsteady_field_type; // single thread unsteady (3+1D) vector field
@@ -114,7 +114,7 @@ typedef RHS rhs_type;
 
 int main(int argc, const char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     using namespace odeint;
 
     initialize(argc, argv);
@@ -143,9 +143,9 @@ int main(int argc, const char* argv[])
     }
     in.close();
 
-    Nrrd* nin = xavier::nrrd_utils::readNrrd(data_files.begin()->second);
+    Nrrd* nin = spurt::nrrd_utils::readNrrd(data_files.begin()->second);
     std::cerr << "Resolution = " << res[0] << " x " << res[1] << " x " << res[2] << std::endl;
-    xavier::raster_grid<3> sampling_grid(res, xavier::nrrd_utils::get_bounds<3>(nin));
+    spurt::raster_grid<3> sampling_grid(res, spurt::nrrd_utils::get_bounds<3>(nin));
     nrrdNuke(nin);
 
     std::cout << "sampling grid bounds are: " << sampling_grid.bounds().min()
@@ -155,9 +155,9 @@ int main(int argc, const char* argv[])
     const double min_time = T > 0 ? t0 : t0+T;
     const double max_time = T > 0 ? t0+T : t0;
 
-    std::vector< std::shared_ptr<xavier::nrrd_utils::nrrd_wrapper> > input_nrrds;
+    std::vector< std::shared_ptr<spurt::nrrd_utils::nrrd_wrapper> > input_nrrds;
     for (auto name : data_files) {
-        input_nrrds.push_back(std::make_shared<xavier::nrrd_utils::nrrd_wrapper>(name.second));
+        input_nrrds.push_back(std::make_shared<spurt::nrrd_utils::nrrd_wrapper>(name.second));
     }
     const size_t nb_steps = input_nrrds.size();
     
@@ -203,7 +203,7 @@ int main(int argc, const char* argv[])
     int incr = (T > 0) ? +1 : -1;
 
    size_t nbcomputed=0;
-   xavier::ProgressDisplay progress(true);
+   spurt::ProgressDisplay progress(true);
 
    size_t nb_lost = 0;
    progress.start(npoints);
@@ -272,7 +272,7 @@ int main(int argc, const char* argv[])
 
    std::ostringstream os;
    os << name_out << "-flowmap-t0=" << t0 << "-T=" << T << ".nrrd";
-   xavier::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step, mins);
+   spurt::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step, mins);
 
    std::cout << "done (5)\n";
 

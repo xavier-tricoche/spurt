@@ -9,7 +9,7 @@
 #include <math/bounding_box.hpp>
 #include <image/nrrd_wrapper.hpp>
 
-namespace xavier
+namespace spurt
 {
 template<typename _Format> class data_traits {};
 
@@ -25,10 +25,10 @@ public:
 		if (nin->dim < 3)
 			throw std::runtime_error("data_traits<Nrrd*>: invalid dimension");
 		for (int i = 0 ; i < 3 ; ++i) __size[i] = nin->axis[nin->dim-3+i].size;
-		__bounds = xavier::bounds<3>(nin);
+		__bounds = spurt::bounds<3>(nin);
 		std::cerr << "bounds are " << __bounds << "\n";
 		__step = __bounds.size() / point_type(__size - nvis::ivec3(1, 1, 1));
-		__scalar_values = xavier::to_array<scalar_type>(nin);
+		__scalar_values = spurt::to_array<scalar_type>(nin);
 		__offset[0] = 0;
 		__offset[1] = 1;
 		__offset[2] = 1+__size[0];

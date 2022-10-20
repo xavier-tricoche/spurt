@@ -6,7 +6,7 @@
 #include <map>
 #include <cassert>
 
-namespace xavier {
+namespace spurt {
 template<typename T>
 inline double luminosity(const nvis::fixed_vector<T,3>& color, double gamma=2.2) {
     return 0.2126 * pow(color[0], gamma) + 
@@ -242,6 +242,6 @@ struct band_color_map {
     std::vector<nvis::fvec3>     colors;
 };
 
-} // xavier
+} // spurt
 
 #endif

@@ -15,7 +15,7 @@
 #include <util/timer.hpp>
 
 #include <format/filename.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 
 // celltree
 #include <celltree.hpp>
@@ -357,7 +357,7 @@ int main(int argc, char* argv[]) {
     }
     else {
         // NRRD file storage
-        xavier::nrrd_utils::nrrd_params<float, 4> params;
+        spurt::nrrd_utils::nrrd_params<float, 4> params;
         params.mins()[0] = 0;
         params.mins()[1] = bounds.min()[0];
         params.mins()[2] = bounds.min()[1];
@@ -375,7 +375,7 @@ int main(int argc, char* argv[]) {
         params.labels()[2] = "y";
         params.labels()[3] = "z";
 
-        xavier::nrrd_utils::writeNrrdFromParams(data, out_name, params);
+        spurt::nrrd_utils::writeNrrdFromParams(data, out_name, params);
     }
     delete[] data;
     delete m;

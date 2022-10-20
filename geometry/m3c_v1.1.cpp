@@ -1271,9 +1271,9 @@ int main(int argc, const char* argv[])
         std::cerr.rdbuf(alt_buf);
     }
 
-    Nrrd* nin = xavier::nrrd_utils::readNrrd(file);
+    Nrrd* nin = spurt::nrrd_utils::readNrrd(file);
     std::vector<float> values;
-    xavier::nrrd_utils::to_vector(values, nin);
+    spurt::nrrd_utils::to_vector(values, nin);
     nvis::fixed_vector<size_t, 3> size;
     nvis::vec3 step;
     for (int i = 0 ; i < 3 ; ++i) {

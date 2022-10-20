@@ -34,7 +34,7 @@
 #include <graphics/colors.hpp>
 
 
-using namespace xavier;
+using namespace spurt;
 using namespace map_analysis;
 using namespace map_display;
 // using namespace div_cleaning;
@@ -67,7 +67,7 @@ public:
     }
     
 private:
-    xavier::map_metric    _metric;
+    spurt::map_metric    _metric;
     mutable bool          _verbose;
 };
 
@@ -76,9 +76,9 @@ typedef grid<double, 3>                         grid_type;
 typedef legacy_wrapper<nvis::vec3>              trilinear_field_type;
 typedef nvis::ivec3                             ivec_type;
 
-xavier::map_metric  metric2d;
+spurt::map_metric  metric2d;
 
-typedef xmt_poincare_map<xavier::map::wrapper<trilinear_field_type> >   trilinear_map_type;
+typedef xmt_poincare_map<spurt::map::wrapper<trilinear_field_type> >   trilinear_map_type;
 
 trilinear_field_type*   _field;
 std::vector<nvis::vec3> _vectors;
@@ -121,7 +121,7 @@ std::vector<nvis::vec2> mesh_edges;
 static void init()
 {
     Nrrd* nin = nrrdNew();
-    nin = xavier::readNrrd(in);
+    nin = spurt::readNrrd(in);
     
     // verify data type
     if(nin->dim != 4 || nin->axis[0].size != 3) {
@@ -130,7 +130,7 @@ static void init()
     }
     
     std::vector<double> _array;
-    xavier::to_vector(_array, nin);
+    spurt::to_vector(_array, nin);
     ivec_type dims(nin->axis[1].size, nin->axis[2].size, nin->axis[3].size);
     nvis::vec3 spc(nin->axis[1].spacing, nin->axis[2].spacing, nin->axis[3].spacing);
     _domain = new grid_type(dims, spc, nvis::fixed_vector<bool, 3>(false, true, true));
@@ -232,7 +232,7 @@ void guiCallback(int)
 
 std::pair<double, double>
 period(const nvis::vec2& x0, std::vector<nvis::vec2>& steps,
-       const xavier::map_metric& metric, int n)
+       const spurt::map_metric& metric, int n)
 {
     trilinear_map_type _map(*_field);
     _map.precision(eps);

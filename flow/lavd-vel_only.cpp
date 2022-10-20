@@ -23,7 +23,7 @@
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
 #include <misc/log_helper.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 
 #include <Eigen/Core>
 #include <Eigen/SVD>
@@ -40,7 +40,7 @@
 
 namespace odeint = boost::numeric::odeint;
 
-using namespace xavier::lavd;
+using namespace spurt::lavd;
 
 std::string name_in, name_out;
 std::vector<std::string> t_init_str(1, "0");
@@ -53,13 +53,13 @@ std::string log_name = "log.txt";
 std::string start_time_str;
 std::ofstream log_file;
 
-xavier::log::dual_ostream xavier::lavd::_log_(log_file, std::cout, 1, 0, 0, true);
+spurt::log::dual_ostream spurt::lavd::_log_(log_file, std::cout, 1, 0, 0, true);
 
-value_t t_max=2*xavier::lavd::DAY;
+value_t t_max=2*spurt::lavd::DAY;
 value_t t_init=0;
 value_t t_skip=0;
-value_t t_export_step=3*xavier::lavd::HOUR;
-value_t t_between_files=3*xavier::lavd::HOUR;
+value_t t_export_step=3*spurt::lavd::HOUR;
+value_t t_between_files=3*spurt::lavd::HOUR;
 value_t eps=1.0e-8;
 value_t dt=30;
 std::array<size_t, 2> res( { 512, 512 } );
@@ -106,7 +106,7 @@ void set_verbose_values() {
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
         
     xcl::option_traits 
             required_group(true, false, "Required Options"), 
@@ -256,14 +256,14 @@ void import_data(const std::vector< std::string >& vel_filenames,
     std::vector< Nrrd* > vel_tsteps(n_used);
     size_t first = ( start_id >= support_radius ? start_id-support_radius : static_cast<size_t>(0) );
     for (size_t i=first; i<first+n_used; ++i) {
-        vel_tsteps[i-first]=xavier::nrrd_utils::readNrrd(vel_filenames[i]);
+        vel_tsteps[i-first]=spurt::nrrd_utils::readNrrd(vel_filenames[i]);
         _log_(1) << "Read " << vel_filenames[i] << std::endl;
         print(vel_tsteps[i-first]);
     }
     last_time_step = first + n_used - 1;
     value_t outer_tmin = /*t_init +*/ first*t_between_files;
     _log_(2) << "outer_tmin=" << outer_tmin << std::endl;
-    current_velocity_volume = xavier::lavd::create_nrrd_volume(vel_tsteps, outer_tmin, t_between_files);
+    current_velocity_volume = spurt::lavd::create_nrrd_volume(vel_tsteps, outer_tmin, t_between_files);
     _log_(2) << "after velocity volume creation:" << std::endl;
     print(current_velocity_volume);
     
@@ -332,7 +332,7 @@ void import_data(const std::vector< std::string >& vel_filenames,
         vfs[i]=std::shared_ptr< NrrdVectorField >(new NrrdVectorField(current_velocity_volume));
     }
     
-    xavier::ProgressDisplay progress(false);
+    spurt::ProgressDisplay progress(false);
     progress.set_active(true);
     progress.start(n_used*nsamples, "avg. vort.");
     size_t base_n=0;
@@ -370,7 +370,7 @@ void import_data(const std::vector< std::string >& vel_filenames,
                 vel_array[3*k+1] = vel[1];
                 vel_array[3*k+2] = vel[2];
                 
-                xavier::lavd::NrrdVectorField::deriv_t J;
+                spurt::lavd::NrrdVectorField::deriv_t J;
                 vfs[thread]->jacobian(vec3(x,y,t), J);
                 jac_array[9*k+0] = J(0,0);
                 jac_array[9*k+1] = J(0,1);
@@ -393,9 +393,9 @@ void import_data(const std::vector< std::string >& vel_filenames,
         {
             size_t _sz[2] = { maxi-mini+1, maxj-minj+1 };
             Nrrd* nout=nrrdNew();
-            if (nrrdWrap_nva(nout, vort_array, xavier::nrrd_utils::nrrd_value_traits_from_type<value_t>::index, 
+            if (nrrdWrap_nva(nout, vort_array, spurt::nrrd_utils::nrrd_value_traits_from_type<value_t>::index, 
                              2, _sz)) {
-                throw std::runtime_error(xavier::nrrd_utils::error_msg("unable to create 2D vorticity nrrd"));
+                throw std::runtime_error(spurt::nrrd_utils::error_msg("unable to create 2D vorticity nrrd"));
             }
             // Per-axis info
             int center = nrrdCenterNode;
@@ -407,7 +407,7 @@ void import_data(const std::vector< std::string >& vel_filenames,
             nrrdAxisInfoSet_nva(nout, nrrdAxisInfoCenter, _center);
             
             std::ostringstream os;
-            os << name_out << "_vorticity_" << t/xavier::lavd::HOUR << "h.nrrd";
+            os << name_out << "_vorticity_" << t/spurt::lavd::HOUR << "h.nrrd";
             nrrdSave(os.str().c_str(), nout, NULL);
     
             // clean up
@@ -418,9 +418,9 @@ void import_data(const std::vector< std::string >& vel_filenames,
         {
             size_t _sz[3] = { 3, maxi-mini+1, maxj-minj+1 };
             Nrrd* nout=nrrdNew();
-            if (nrrdWrap_nva(nout, vel_array, xavier::nrrd_utils::nrrd_value_traits_from_type<value_t>::index, 
+            if (nrrdWrap_nva(nout, vel_array, spurt::nrrd_utils::nrrd_value_traits_from_type<value_t>::index, 
                              3, _sz)) {
-                throw std::runtime_error(xavier::nrrd_utils::error_msg("unable to create velocity nrrd"));
+                throw std::runtime_error(spurt::nrrd_utils::error_msg("unable to create velocity nrrd"));
             }
             // Per-axis info
             int center = nrrdCenterNode;
@@ -432,7 +432,7 @@ void import_data(const std::vector< std::string >& vel_filenames,
             nrrdAxisInfoSet_nva(nout, nrrdAxisInfoCenter, _center);
             
             std::ostringstream os;
-            os << name_out << "_velocity_" << t/xavier::lavd::HOUR << "h.nrrd";
+            os << name_out << "_velocity_" << t/spurt::lavd::HOUR << "h.nrrd";
             nrrdSave(os.str().c_str(), nout, NULL);
     
             // clean up
@@ -443,9 +443,9 @@ void import_data(const std::vector< std::string >& vel_filenames,
         {
             size_t _sz[3] = { 9, maxi-mini+1, maxj-minj+1 };
             Nrrd* nout=nrrdNew();
-            if (nrrdWrap_nva(nout, jac_array, xavier::nrrd_utils::nrrd_value_traits_from_type<value_t>::index, 
+            if (nrrdWrap_nva(nout, jac_array, spurt::nrrd_utils::nrrd_value_traits_from_type<value_t>::index, 
                              3, _sz)) {
-                throw std::runtime_error(xavier::nrrd_utils::error_msg("unable to create jacobian nrrd"));
+                throw std::runtime_error(spurt::nrrd_utils::error_msg("unable to create jacobian nrrd"));
             }
             // Per-axis info
             int center = nrrdCenterNode;
@@ -457,7 +457,7 @@ void import_data(const std::vector< std::string >& vel_filenames,
             nrrdAxisInfoSet_nva(nout, nrrdAxisInfoCenter, _center);
             
             std::ostringstream os;
-            os << name_out << "_jacobian_" << t/xavier::lavd::HOUR << "h.nrrd";
+            os << name_out << "_jacobian_" << t/spurt::lavd::HOUR << "h.nrrd";
             nrrdSave(os.str().c_str(), nout, NULL);
     
             // clean up
@@ -468,9 +468,9 @@ void import_data(const std::vector< std::string >& vel_filenames,
     progress.end();
         
     Nrrd* av=nrrdNew();
-    if (nrrdWrap_nva(av, av_array, xavier::nrrd_utils::nrrd_value_traits_from_type<value_t>::index, 
+    if (nrrdWrap_nva(av, av_array, spurt::nrrd_utils::nrrd_value_traits_from_type<value_t>::index, 
                      1, &n_used)) {
-        throw std::runtime_error(xavier::nrrd_utils::error_msg("unable to create 1D average vorticity nrrd"));
+        throw std::runtime_error(spurt::nrrd_utils::error_msg("unable to create 1D average vorticity nrrd"));
     }
     // Per-axis info
     int center = nrrdCenterNode;
@@ -515,7 +515,7 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
     os << "kernel size=" << support_radius << '\n';
     std::string comment = os.str();
     
-    xavier::lavd::export_results(
+    spurt::lavd::export_results(
         current_time, 
         wall_time, cpu_time, 
         final,
@@ -533,7 +533,7 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
 
 int main(int argc, const char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     using namespace odeint;
     
     me=argv[0];
@@ -564,7 +564,7 @@ int main(int argc, const char* argv[])
     
     nb_samples = res[0]*res[1];
     
-    name_out=xavier::filename::remove_extension(name_out);
+    name_out=spurt::filename::remove_extension(name_out);
     
     std::vector<std::string> velocity_filenames;
     
@@ -609,7 +609,7 @@ int main(int argc, const char* argv[])
     all_trajectories.resize(nb_samples);
     all_states.resize(nb_samples);
     
-    support_radius = xavier::lavd::compute_support_radius();
+    support_radius = spurt::lavd::compute_support_radius();
     _log_(1) << "support radius = " << support_radius << std::endl;
     
     // initialize velocity and vorticity volumes
@@ -624,7 +624,7 @@ int main(int argc, const char* argv[])
     _log_(1) << "bounds=" << region << std::endl;
     
     if (export_region) 
-        xavier::lavd::export_mask(velocity_filenames[0], region, false);
+        spurt::lavd::export_mask(velocity_filenames[0], region, false);
     
     std::vector<size_t> sample_counter(nb_threads);
     std::vector< shared_ptr< NrrdODERHS > > rhs_copies(nb_threads);
@@ -639,7 +639,7 @@ int main(int argc, const char* argv[])
                  [](char& c) { if (c==' ') c='_'; });
     _log_(1) << "start_time_string=" << start_time_str << std::endl;
     
-    xavier::ProgressDisplay progress(false);
+    spurt::ProgressDisplay progress(false);
     
     std::clock_t clock_begin=std::clock();
     auto timer_start = std::chrono::high_resolution_clock::now();

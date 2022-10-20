@@ -9,7 +9,7 @@
 
 #define CHECK_POINTS
 
-namespace xavier {
+namespace spurt {
 
 class logical2physical {
     int index(int i, int j) const {

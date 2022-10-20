@@ -5,7 +5,7 @@
 #include <math/bounding_box.hpp>
 #include <tokamak/poincare_map.hpp>
 
-namespace xavier {
+namespace spurt {
 void sample_along_line(const nvis::bbox2& bounds, const poincare_map& pmap,
                        double x0, int niter, int nprobes, double dx = 0)
 {
@@ -16,7 +16,7 @@ void sample_along_line(const nvis::bbox2& bounds, const poincare_map& pmap,
     double max = bounds.max()[1];
     double length = max - min;
     double spacing = length / (double)(nprobes - 1);
-    std::vector<xavier::orbit> orbits;
+    std::vector<spurt::orbit> orbits;
     
     orbits.reserve(nprobes);
     for (int i = 0 ; i < nprobes ; ++i) {
@@ -39,10 +39,10 @@ void sample_along_line(const nvis::bbox2& bounds, const poincare_map& pmap,
             continue;
         }
         steps.push_back(seed);
-        orbits.push_back(xavier::orbit(steps, 0));
+        orbits.push_back(spurt::orbit(steps, 0));
     }
     
-    std::copy(orbits.begin(), orbits.end(), std::back_inserter(xavier::__map_orbits));
+    std::copy(orbits.begin(), orbits.end(), std::back_inserter(spurt::__map_orbits));
     std::cout << "1D sampling at x=" << x0 << " resulted in " << orbits.size() << " new orbits\n";
 }
 
@@ -64,7 +64,7 @@ void sample_on_raster(const nvis::bbox2& bounds, const poincare_map& pmap,
     du = std::min(du, spacing[0]);
     dv = std::min(dv, spacing[1]);
     
-    std::vector<xavier::orbit> orbits;
+    std::vector<spurt::orbit> orbits;
     orbits.reserve(nprobes[0]*nprobes[1]);
     for (int i = 0 ; i < nprobes[0] ; ++i) {
         for (int j = 0 ; j < nprobes[1] ; ++j) {
@@ -86,11 +86,11 @@ void sample_on_raster(const nvis::bbox2& bounds, const poincare_map& pmap,
                 continue;
             }
             steps.push_back(seed);
-            orbits.push_back(xavier::orbit(steps, 0));
+            orbits.push_back(spurt::orbit(steps, 0));
         }
     }
     
-    std::copy(orbits.begin(), orbits.end(), std::back_inserter(xavier::__map_orbits));
+    std::copy(orbits.begin(), orbits.end(), std::back_inserter(spurt::__map_orbits));
     std::cout << "2D sampling in " << bounds << " resulted in " << orbits.size() << " new orbits\n";
 }
 

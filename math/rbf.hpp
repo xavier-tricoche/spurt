@@ -25,7 +25,7 @@
 #define EIGEN_YES_I_KNOW_SPARSE_MODULE_IS_NOT_STABLE_YET
 #include <Eigen/Sparse>
 
-namespace xavier {
+namespace spurt {
 
 namespace RBF {
 
@@ -47,7 +47,7 @@ public:
     typedef Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>  rhs_type;
     typedef Eigen::Triplet<T>                                 triplet_type;
     typedef Eigen::Matrix<T, Eigen::Dynamic, 1>               vector_type;
-    typedef xavier::point_locator<T, int, Dim>                locator_type;
+    typedef spurt::point_locator<T, int, Dim>                locator_type;
     typedef typename locator_type::point_type                 source_type;
     typedef typename polynomial::polynomial_basis<T, Dim>     polynomial_basis;
     typedef typename polynomial_basis::monomial_type          monomial_type;
@@ -474,7 +474,7 @@ private:
 
 } // namespace RBF
 
-} // namespace xavier
+} // namespace spurt
 
 
 #endif

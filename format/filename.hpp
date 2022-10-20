@@ -28,7 +28,7 @@ namespace {
 }
 
 // basic helper functions to manipulate file names
-namespace xavier { namespace filename {
+namespace spurt { namespace filename {
     
 inline std::string parent_path(const std::string& name) {
     return __before_char(name, '/');
@@ -54,6 +54,6 @@ inline std::string replace_extension(const std::string& name, const std::string&
 }
 
 } // filename 
-} // xavier
+} // spurt
 
 #endif

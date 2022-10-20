@@ -5,7 +5,7 @@
 #include <math/fixed_vector.hpp>
 #include <math/fixed_matrix.hpp>
 
-namespace xavier {
+namespace spurt {
 
 namespace peikert_sadlo_criterion {
 
@@ -33,7 +33,7 @@ void compute_surface_criterion(std::vector<double>& vals,
 
 } // peikert_sadlo_criterion
 
-} // xavier
+} // spurt
 
 
 #endif // __PEIKERT_SADLO_HPP__

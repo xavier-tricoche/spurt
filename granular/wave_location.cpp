@@ -45,10 +45,10 @@ int main(int argc, char* argv[])
 {
     initialize(argc, argv);
     
-    Nrrd* nin = xavier::readNrrd(in);
+    Nrrd* nin = spurt::readNrrd(in);
     
     std::vector<float> data;
-    xavier::to_vector<float>(data, nin);
+    spurt::to_vector<float>(data, nin);
     
     std::cout << std::distance(data.begin(), std::min_element(data.begin()+range[0], data.begin()+range[1]+1));
     

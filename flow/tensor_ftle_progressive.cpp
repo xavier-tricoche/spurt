@@ -288,24 +288,24 @@ int main(int argc, const char* argv[])
         
 #ifdef __EXPORT_ENDPOINT__
         size_4d[0] = 3;
-        xavier::nrrd_utils::writeNrrd(endpt_f, name.make("endpoints-fwd", nlengths, length), nrrdTypeFloat, size_4d, step_4d);
+        spurt::nrrd_utils::writeNrrd(endpt_f, name.make("endpoints-fwd", nlengths, length), nrrdTypeFloat, size_4d, step_4d);
         delete[] endpt_f;
-        xavier::nrrd_utils::writeNrrd(endpt_b, name.make("endpoints-bwd", nlengths, length), nrrdTypeFloat, size_4d, step_4d);
+        spurt::nrrd_utils::writeNrrd(endpt_b, name.make("endpoints-bwd", nlengths, length), nrrdTypeFloat, size_4d, step_4d);
         delete[] endpt_b;
 #endif
         
 #ifdef __EXPORT_ERROR__
         size_4d[0] = 3;
-        xavier::nrrd_utils::writeNrrd(err_f, name.make("error-fwd", nlengths, length), nrrdTypeInt, size_4d, step_4d);
+        spurt::nrrd_utils::writeNrrd(err_f, name.make("error-fwd", nlengths, length), nrrdTypeInt, size_4d, step_4d);
         delete[] err_f;
-        xavier::nrrd_utils::writeNrrd(err_b, name.make("error-bwd", nlengths, length), nrrdTypeInt, size_4d, step_4d);
+        spurt::nrrd_utils::writeNrrd(err_b, name.make("error-bwd", nlengths, length), nrrdTypeInt, size_4d, step_4d);
         delete[] err_b;
 #endif
         
 #ifdef __EXPORT_LENGTH__
-        xavier::nrrd_utils::writeNrrd(len_f, name.make("length-fwd", nlengths, length), nrrdTypeFloat, size_3d, step_3d);
+        spurt::nrrd_utils::writeNrrd(len_f, name.make("length-fwd", nlengths, length), nrrdTypeFloat, size_3d, step_3d);
         delete[] len_f;
-        xavier::nrrd_utils::writeNrrd(len_b, name.make("length-bwd", nlengths, length), nrrdTypeFloat, size_3d, step_3d);
+        spurt::nrrd_utils::writeNrrd(len_b, name.make("length-bwd", nlengths, length), nrrdTypeFloat, size_3d, step_3d);
         delete[] len_b;
 #endif
         
@@ -328,7 +328,7 @@ int main(int argc, const char* argv[])
             ftle[n] = std::max(ans[0], ans[1]);
         }
         std::cout << "total computation time for ftle was " << timer.elapsed() << '\n';
-        xavier::nrrd_utils::writeNrrd(ftle, name.make("ftle", nlengths, length), nrrdTypeFloat, size_3d, step_3d);
+        spurt::nrrd_utils::writeNrrd(ftle, name.make("ftle", nlengths, length), nrrdTypeFloat, size_3d, step_3d);
         delete[] ftle;
 #endif
         

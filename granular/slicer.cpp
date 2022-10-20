@@ -12,7 +12,7 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-// xavier
+// spurt
 #include <image/nrrd_wrapper.hpp>
 
 inline double cubed(double x)
@@ -178,7 +178,7 @@ int main(int argc, char* argv[])
         if (nrrdLoad(nin, in_name.c_str(), NULL)) {
             printUsageAndExit(biffGetDone(NRRD));
         }
-        xavier::to_vector<float>(data, nin);
+        spurt::to_vector<float>(data, nin);
         isnrrd = true;
         nbdim = nin->dim;
         nrrdNuke(nin);

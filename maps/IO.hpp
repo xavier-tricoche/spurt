@@ -8,7 +8,7 @@
 #include <map>
 
 
-namespace xavier {
+namespace spurt {
 
 template<typename T>
 inline void export_VTK(const T& mesh, const std::string& filename,
@@ -25,7 +25,7 @@ inline void export_submesh_VTK(const T& mesh, const std::string& filename,
 }
 
 template<typename T>
-inline void xavier::export_VTK(const T& mesh, const std::string& filename,
+inline void spurt::export_VTK(const T& mesh, const std::string& filename,
                                const std::string& comment, bool geometry_only, bool binary)
 {
     typedef T                                               triangulation_type;
@@ -77,7 +77,7 @@ inline void xavier::export_VTK(const T& mesh, const std::string& filename,
 }
 
 template<typename T, typename Func>
-inline void xavier::export_VTK(const T& mesh, const std::string& filename,
+inline void spurt::export_VTK(const T& mesh, const std::string& filename,
                                const std::string& comment, const Func& value_func, bool select)
 {
     typedef T                                               triangulation_type;
@@ -168,7 +168,7 @@ inline void xavier::export_VTK(const T& mesh, const std::string& filename,
 }
 
 template<typename T, typename Func>
-inline void xavier::export_submesh_VTK(const T& mesh, const std::string& filename,
+inline void spurt::export_submesh_VTK(const T& mesh, const std::string& filename,
                                        const std::string& comment, const Func& value_func,
                                        const std::vector<unsigned int>& ids, bool select)
 {

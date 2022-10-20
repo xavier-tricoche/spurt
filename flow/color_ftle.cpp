@@ -34,7 +34,7 @@ void initialize(int argc, char* argv[])
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
 }
 
-typedef xavier::nrrd_data_traits<Nrrd*>  field_type;
+typedef spurt::nrrd_data_traits<Nrrd*>  field_type;
 
 inline nvis::vec3 color(double f, double b, double min, double max)
 {
@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
 {
     initialize(argc, argv);
     
-    Nrrd* nin = xavier::nrrd_utils::readNrrd(name_in);
+    Nrrd* nin = spurt::nrrd_utils::readNrrd(name_in);
     std::vector<size_t> size(nin->dim);
     for (int i=0 ; i<size.size() ; ++i) {
         size[i] = nin->axis[i].size;
@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
     
     double max;
     std::vector<float> vals;
-    xavier::nrrd_utils::to_vector<float>(vals, nin);
+    spurt::nrrd_utils::to_vector<float>(vals, nin);
     max = *std::max_element(vals.begin(), vals.end());
     std::cerr << "max = " << max << std::endl;
     
@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
     for (int i=1 ; i<size.size() ; ++i) {
         spc[i] = nin->axis[i].spacing;
     }
-    xavier::nrrd_utils::writeNrrdFromContainers(out, name_out, /*nrrdTypeFloat,*/ size, spc);
+    spurt::nrrd_utils::writeNrrdFromContainers(out, name_out, /*nrrdTypeFloat,*/ size, spc);
     
     return 0;
 }

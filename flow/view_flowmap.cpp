@@ -1,4 +1,4 @@
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
@@ -33,7 +33,7 @@ constexpr double invalid = -30000;
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
 	srand48(123456);
 
@@ -81,7 +81,7 @@ void initialize(int argc, const char* argv[])
 
 template<typename T = double>
 inline double nrrd_value(const Nrrd* nin, size_t n) {
-    return xavier::nrrd_utils::nrrd_data_wrapper<T>(nin)[n];
+    return spurt::nrrd_utils::nrrd_data_wrapper<T>(nin)[n];
 }
 
 inline vec2d pos(const vec2i& c, const vec2i& res) {
@@ -249,25 +249,25 @@ vtkSmartPointer<vtkActor> create_points() {
 
 		/*
 		// heat map:
-		scale.push_back(xavier::black);
-		scale.push_back(xavier::red);
-		// scale.push_back(xavier::orange);
-		scale.push_back(xavier::yellow);
-		scale.push_back(xavier::white);
+		scale.push_back(spurt::black);
+		scale.push_back(spurt::red);
+		// scale.push_back(spurt::orange);
+		scale.push_back(spurt::yellow);
+		scale.push_back(spurt::white);
 		// scale.push_back(nvis::fvec3(0.5, 0.5, 1));
-		// scale.push_back(xavier::blue);
+		// scale.push_back(spurt::blue);
 		*/
 		// better(?) heat map: Scoville scale
-		scale.push_back(0.25*xavier::green);
-		scale.push_back(xavier::yellow);
-		scale.push_back(xavier::orange);
-		scale.push_back(xavier::red);
-		scale.push_back(xavier::white);
+		scale.push_back(0.25*spurt::green);
+		scale.push_back(spurt::yellow);
+		scale.push_back(spurt::orange);
+		scale.push_back(spurt::red);
+		scale.push_back(spurt::white);
 
 
 		std::cout << "color scale created\n";
 
-    	xavier::adaptive_color_map<float> cmap(values, scale, true, 20);
+    	spurt::adaptive_color_map<float> cmap(values, scale, true, 20);
 
 		std::cout << "color map created\n";
 
@@ -302,9 +302,9 @@ int main(int argc, char* argv[]) {
     initialize(argc, (const char**)argv);
 
 	if (!name_mask.empty()) {
-		mask = xavier::nrrd_utils::readNrrd( name_mask );
+		mask = spurt::nrrd_utils::readNrrd( name_mask );
 	}
-    fmap = xavier::nrrd_utils::readNrrd( name_in );
+    fmap = spurt::nrrd_utils::readNrrd( name_in );
     data_res[0] = fmap->axis[1].size;
     data_res[1] = fmap->axis[2].size;
     npts = data_res[0]*data_res[1];
@@ -373,7 +373,7 @@ int main(int argc, char* argv[]) {
     _min[1] = gbounds.min()[1];
     _dim[0] = data_res[0];
     _dim[1] = data_res[1];
-    xavier::nrrd_utils::writeNrrd((int*)(&raster[0]), name_out, nrrdTypeInt, _dim, _spc, _min);
+    spurt::nrrd_utils::writeNrrd((int*)(&raster[0]), name_out, nrrdTypeInt, _dim, _spc, _min);
 
     vtkSmartPointer<vtkStructuredPoints> data = vtkSmartPointer<vtkStructuredPoints>::New();
     data->SetDimensions(data_res[0], data_res[1], 1);

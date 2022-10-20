@@ -38,7 +38,7 @@ namespace odeint = boost::numeric::odeint;
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
             required(true, false, "Required Options"),
@@ -76,7 +76,7 @@ void initialize(int argc, const char* argv[])
     }
 }
 
-using namespace xavier;
+using namespace spurt;
 
 typedef vtk_field                 field_type;  // steady 3D vector field
 typedef field_type::point_type    point_type;  // position in 3D space
@@ -116,7 +116,7 @@ typedef Observer observer_t;
 
 int main(int argc, const char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     using namespace odeint;
 
     initialize(argc, argv);
@@ -131,7 +131,7 @@ int main(int argc, const char* argv[])
     RHS rhs(field);
     
     std::cerr << "Resolution = " << res[0] << " x " << res[1] << " x " << res[2] << std::endl;
-    xavier::raster_grid<3> sampling_grid(res, field.bounds());
+    spurt::raster_grid<3> sampling_grid(res, field.bounds());
 
     std::cout << "sampling grid bounds are: " << sampling_grid.bounds().min()
     << " -> " << sampling_grid.bounds().max() << '\n';
@@ -156,7 +156,7 @@ int main(int argc, const char* argv[])
     int incr = (T > 0) ? +1 : -1;
 
    size_t nbcomputed=0;
-   xavier::ProgressDisplay progress(true);
+   spurt::ProgressDisplay progress(true);
 
    size_t nb_lost = 0;
    progress.start(npoints);
@@ -228,7 +228,7 @@ int main(int argc, const char* argv[])
 
    std::ostringstream os;
    os << name_out << "-flowmap-deltaT=" << T << ".nrrd";
-   xavier::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step, mins);
+   spurt::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step, mins);
 
    std::cout << "done (5)\n";
 

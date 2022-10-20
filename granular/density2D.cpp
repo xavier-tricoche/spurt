@@ -67,9 +67,9 @@ void initialize(int argc, char* argv[])
 
 double read(kdtree_type& tree, const std::string& name, std::vector<double>& density)
 {
-    Nrrd* nin = xavier::readNrrd(name);
+    Nrrd* nin = spurt::readNrrd(name);
     std::vector<double> data;
-    xavier::to_vector<double>(data, nin);
+    spurt::to_vector<double>(data, nin);
     int N = nin->axis[1].size;
     std::cerr << "there are " << N << " points\n";
     density.resize(n_indices);
@@ -167,7 +167,7 @@ int main(int argc, char* argv[])
     std::vector<double> spacing(2);
     spacing[0] = dz;
     spacing[1] = dy;
-    xavier::writeNrrdFromContainers(img, name_out, /*nrrdTypeFloat, */size, spacing);
+    spurt::writeNrrdFromContainers(img, name_out, /*nrrdTypeFloat, */size, spacing);
     
     exit(0);
 }

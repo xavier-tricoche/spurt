@@ -35,7 +35,7 @@
 #include <omp.h>
 #endif
 
-using namespace xavier;
+using namespace spurt;
 using namespace map_analysis;
 using namespace map_display;
 // using namespace div_cleaning;
@@ -56,7 +56,7 @@ double __mod(double a, double b)
 
 std::vector<std::pair<nvis::vec2, nvis::fvec3> > seeds;
 
-typedef xavier::grid::uniform_grid<double, 3>  grid_type;
+typedef spurt::grid::uniform_grid<double, 3>  grid_type;
 
 template<typename Val_> 
 using image_type = image<Val_, 3, double, size_t>;
@@ -86,7 +86,7 @@ public:
     }
     
 private:
-    xavier::default_metric_type    _metric;
+    spurt::default_metric_type    _metric;
     mutable bool          _verbose;
 };
 
@@ -94,10 +94,10 @@ typedef legacy_wrapper<nvis::vec3>              trilinear_field_type;
 typedef divfree_field<trilinear_field_type>     divfree_field_type;
 typedef nvis::ivec3                             ivec_type;
 
-typedef xmt_poincare_map<xavier::map::wrapper<trilinear_field_type> > trilinear_map_type;
-typedef xmt_poincare_map<xavier::map::wrapper<divfree_field_type> >   divfree_map_type;
+typedef xmt_poincare_map<spurt::map::wrapper<trilinear_field_type> > trilinear_map_type;
+typedef xmt_poincare_map<spurt::map::wrapper<divfree_field_type> >   divfree_map_type;
 
-xavier::default_metric_type  metric2d;
+spurt::default_metric_type  metric2d;
 nvis::bbox2 _bounds;
 
 char*    in, *seed_l, *seed_s, *out;
@@ -114,8 +114,8 @@ struct vertex_data {
     int chain_id, id, next, prev;
 };
 
-typedef xavier::point_locator<double, vertex_data, 2>   point_locator_type;
-typedef xavier::data_point<double, vertex_data, 2>      data_point_type;
+typedef spurt::point_locator<double, vertex_data, 2>   point_locator_type;
+typedef spurt::data_point<double, vertex_data, 2>      data_point_type;
 point_locator_type locator;
 
 void initialize(int argc, char* argv[])
@@ -554,7 +554,7 @@ void poincare_plot(std::list<colored_orbit_type>& points, const M& pmap,
 static void init()
 {
     Nrrd* nin = nrrdNew();
-    nin = xavier::nrrd_utils::readNrrd(in);
+    nin = spurt::nrrd_utils::readNrrd(in);
     
     // verify data type
     if(nin->dim != 4 || nin->axis[0].size != 3) {
@@ -563,7 +563,7 @@ static void init()
     }
     
     std::vector<double> __array;
-    xavier::nrrd_utils::to_vector(__array, nin);
+    spurt::nrrd_utils::to_vector(__array, nin);
     ivec_type dims(nin->axis[1].size, nin->axis[2].size, nin->axis[3].size);
     nvis::vec3 spc(nin->axis[1].spacing, nin->axis[2].spacing, nin->axis[3].spacing);
     grid_type domain(dims, spc, nvis::fixed_vector<bool, 3>(false, true, true));

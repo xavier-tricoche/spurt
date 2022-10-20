@@ -31,7 +31,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <teem/hest_helper.hpp>
 #include <set>
@@ -156,12 +156,12 @@ int main(int argc, char* argv[])
     // vtkStructuredPoints *field = field_reader->GetOutput();
     // std::cerr << info.dfield_norm << " loaded.\n";
     
-    Nrrd* __id = xavier::nrrd_utils::readNrrd(info.id_to_tags);
-    xavier::nrrd_utils::nrrd_data_wrapper<int> id(__id);
+    Nrrd* __id = spurt::nrrd_utils::readNrrd(info.id_to_tags);
+    spurt::nrrd_utils::nrrd_data_wrapper<int> id(__id);
     std::cerr << info.id_to_tags << " loaded.\n";
     
-    // Nrrd *__span = xavier::nrrd_utils::readNrrd(info.dfield_span);
-    // xavier::nrrd_utils::nrrd_data_wrapper<float> grain_field(__span);
+    // Nrrd *__span = spurt::nrrd_utils::readNrrd(info.dfield_span);
+    // spurt::nrrd_utils::nrrd_data_wrapper<float> grain_field(__span);
     // std::cerr << info.dfield_span << " loaded.\n";
     // int nb_grains = __span->axis[1].size;
     
@@ -174,25 +174,25 @@ int main(int argc, char* argv[])
     westin_name.append("-westin.nrrd");
     dir_name.append("-direction.nrrd");
     
-    // Nrrd *__fa = xavier::nrrd_utils::readNrrd(fa_name);
-    // xavier::nrrd_utils::nrrd_data_wrapper<float> fa(__fa);
+    // Nrrd *__fa = spurt::nrrd_utils::readNrrd(fa_name);
+    // spurt::nrrd_utils::nrrd_data_wrapper<float> fa(__fa);
     // std::cerr << fa_name << " loaded.\n";
     
-    Nrrd* __size = xavier::nrrd_utils::readNrrd(size_name);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> size(__size);
+    Nrrd* __size = spurt::nrrd_utils::readNrrd(size_name);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> size(__size);
     std::cerr << size_name << " loaded.\n";
     int nb_grains = __size->axis[0].size;
     
-    // Nrrd *__gstress = xavier::nrrd_utils::readNrrd(info.stress_span);
-    // xavier::nrrd_utils::nrrd_data_wrapper<float> grain_stress(__gstress);
+    // Nrrd *__gstress = spurt::nrrd_utils::readNrrd(info.stress_span);
+    // spurt::nrrd_utils::nrrd_data_wrapper<float> grain_stress(__gstress);
     // std::cerr << info.stress_span << " loaded.\n";
     
-    Nrrd* __westin = xavier::nrrd_utils::readNrrd(westin_name);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> westin(__westin);
+    Nrrd* __westin = spurt::nrrd_utils::readNrrd(westin_name);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> westin(__westin);
     std::cerr << westin_name << " loaded.\n";
     
-    Nrrd* __dir = xavier::nrrd_utils::readNrrd(dir_name);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> dir(__dir);
+    Nrrd* __dir = spurt::nrrd_utils::readNrrd(dir_name);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> dir(__dir);
     std::cerr << dir_name << " loaded.\n";
     
     std::map<int, uchar_color_type> colors;

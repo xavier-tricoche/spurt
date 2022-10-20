@@ -7,7 +7,7 @@
 #include <iostream>
 #include <stdexcept>
 
-namespace xavier {
+namespace spurt {
 // defines a data point associating a spatial coordinate with a value
 template<typename T, typename V, int N>
 class data_point {

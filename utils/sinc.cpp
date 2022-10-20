@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
     size_t n = std::atoi(argv[1]);
     std::string filename = argv[2];
     
-    filename = xavier::filename::remove_extension(filename);
+    filename = spurt::filename::remove_extension(filename);
     
     double step = 15/(double)(n-1);
     
@@ -48,9 +48,9 @@ int main(int argc, char* argv[]) {
     std::array<size_t, 2> dims({n, n});
     std::array<double, 2> spcs({step, step});
     std::array<double, 2> mins({-15, -15});
-    xavier::writeNrrdFromContainers(reinterpret_cast<double *>(&z[0]), filename + ".nrrd", dims, spcs, mins);
-    xavier::writeNrrdFromContainers(reinterpret_cast<double *>(&re[0]), filename + "-real.nrrd", dims, spcs, mins);
-    xavier::writeNrrdFromContainers(reinterpret_cast<double *>(&im[0]), filename + "-imag.nrrd", dims, spcs, mins);
+    spurt::writeNrrdFromContainers(reinterpret_cast<double *>(&z[0]), filename + ".nrrd", dims, spcs, mins);
+    spurt::writeNrrdFromContainers(reinterpret_cast<double *>(&re[0]), filename + "-real.nrrd", dims, spcs, mins);
+    spurt::writeNrrdFromContainers(reinterpret_cast<double *>(&im[0]), filename + "-imag.nrrd", dims, spcs, mins);
     
     std::vector<std::array<double, 3>> vertices(n*n), real(n*n), imag(n*n);
     srand48(time(0));

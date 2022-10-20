@@ -4,7 +4,7 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 
-namespace xavier {
+namespace spurt {
 template<typename T, int N>
 class metric {
     static T __modulo(T a, T b) {
@@ -89,7 +89,7 @@ private:
     bounds_type __bounds;
     bvec_type   __periodic;
 };
-} // namespace xavier
+} // namespace spurt
 
 #endif
 

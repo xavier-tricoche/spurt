@@ -1,19 +1,19 @@
 #include "boundary_extraction.hpp"
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <misc/option_parse.hpp>
 
 std::string grid_name, data_name;
 std::string bound_name, offset_name;
 bool verbose = false;
 
-typedef xavier::mesh mesh_type;
+typedef spurt::mesh mesh_type;
 typedef mesh_type::face face_type;
 typedef mesh_type::index_type index_type;
 typedef mesh_type::vertex_type vertex_type;
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     std::string cmdline = "Command line: " + std::string(argv[0]);
     for (int i=1; i<argc; i++) {
@@ -111,7 +111,7 @@ int main(int argc, const char* argv[]) {
     std::vector<mesh_type::face> boundary_cells = m.get_boundary();
     VTK_CREATE(vtkCellArray, cells);
     std::for_each(boundary_cells.begin(), boundary_cells.end(), [&]
-        (const xavier::mesh::face& f) {
+        (const spurt::mesh::face& f) {
             cells->InsertNextCell(f.size());
             std::for_each(f.begin(), f.end(), [&](index_type i) {
                cells->InsertCellPoint(i);

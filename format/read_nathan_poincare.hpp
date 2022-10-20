@@ -8,7 +8,7 @@
 #include <iostream>
 #include <math/bounding_box.hpp>
 
-namespace xavier {
+namespace spurt {
 
 inline nvis::bbox3 read_nathan_poincare(std::vector<std::vector<nvis::vec3> >& orbits,
                                         const std::string& name)
@@ -51,7 +51,7 @@ inline nvis::bbox3 read_nathan_poincare(std::vector<std::vector<nvis::vec3> >& o
     return bounds;
 }
 
-} // namespace xavier
+} // namespace spurt
 
 #endif
 

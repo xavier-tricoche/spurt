@@ -2,7 +2,7 @@
 #define __XAVIER_GRANULAR_PARTICLES_HPP__
 
 
-namespace xavier {
+namespace spurt {
 namespace granular {
 namespace dem {
 
@@ -203,6 +203,6 @@ private:
     
 } // dem
 } // granular
-} // xavier
+} // spurt
 
 #endif

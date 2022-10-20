@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
     Nrrd* _dist = readNrrd(argv[2]);
     float* dist = (float*)_dist->data;
     
-    xavier::Raster::Grid grid;
+    spurt::Raster::Grid grid;
     grid.nx = nin->axis[0].size;
     grid.ny = nin->axis[1].size;
     grid.minx = grid.miny = 0;
@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
     nrrdWrap_va(_nin, _data, nrrdTypeFloat, 3, nin->axis[0].size, nin->axis[1].size, 2);
     nrrdAxisInfoSet_va(_nin, nrrdAxisInfoCenter, nrrdCenterCell, nrrdCenterCell, nrrdCenterCell);
     nrrdAxisInfoSet_va(_nin, nrrdAxisInfoSpacing, 1.0, 1.0, 1.0);
-    xavier::crease::extract(_nin, grid, -1000000, true, points, ridges);
+    spurt::crease::extract(_nin, grid, -1000000, true, points, ridges);
     
     unsigned int pmax = _dist->axis[2].size;
     float* data = (float*)calloc(3 * pmax * N, sizeof(float));
@@ -91,13 +91,13 @@ int main(int argc, char* argv[])
         
         double str = 0;
         for (it = ridges[n].begin() ; it != ridges[n].end() ; ++it) {
-            str += fabs(xavier::crease::crease_strength[*it]);
+            str += fabs(spurt::crease::crease_strength[*it]);
         }
         ridge_strength[n] = str / (double)ridges[n].size();
     }
     std::vector< double > _tmp(ridge_strength.begin(), ridge_strength.end());
     std::vector< unsigned int > sorted;
-    xavier::sort(_tmp, sorted);
+    spurt::sort(_tmp, sorted);
     double threshold = _tmp[sorted[_tmp.size()/2]];
     
     for (unsigned int p = 0 ; p < pmax ; ++p) {

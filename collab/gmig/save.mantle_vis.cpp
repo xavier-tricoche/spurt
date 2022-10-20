@@ -6,7 +6,7 @@
 #include "core_mantle_io.hpp"
 #include "utils.hpp"
 
-// xavier's utilities
+// spurt's utilities
 #include <format/format.hpp>
 #include <misc/option_parse.hpp>
 
@@ -47,7 +47,7 @@
 
 std::string home_directory;
 
-using namespace xavier::gmig;
+using namespace spurt::gmig;
 
 typedef float  scalar_t;
 typedef int    integer_t;
@@ -101,7 +101,7 @@ std::vector<interface_t> interfaces_;
 typedef std::list<point_t> neighborhood_t;
 std::vector<neighborhood_t> neighbors_;
 
-typedef xavier::point_locator<scalar_t, integer_t, 3> locator_t;
+typedef spurt::point_locator<scalar_t, integer_t, 3> locator_t;
 typedef locator_t::point_type point_t;
 typedef locator_t::coord_type coord_t;
 typedef nvis::lexicographical_order order_t;
@@ -279,7 +279,7 @@ bbox_t import_vertices(const std::string& data_name) {
 
 void compute_connectivity(boost::graph& graph, 
                           const std::vector<integer_t>& verts) {
-    xavier::locator_t locator;
+    spurt::locator_t locator;
     for (integer_t i=0 ; i<verts.size() ; ++i) {
         integer_t id = verts[i];
         const vertex_t& v = vertices_[id];
@@ -347,7 +347,7 @@ create_color_transfer_function(const std::vector<scalar_t>& values) {
     
     // adaptive color map with spiral color scale
     std::vector<color_t> colors(20);
-    xavier::spiral_scale(colors, 20, 0.2);
+    spurt::spiral_scale(colors, 20, 0.2);
     scalar_t minval=*std::min_element(values.begin(), values.end());
     scalar_t maxval=*std::max_element(values.begin(), values.end());
     scalar_t dval=(maxval-minval)/19;
@@ -397,7 +397,7 @@ update_geometry(vtkSmartPointer<vtkPolyData>& pd,
 }
 
 bool init(int argc, char** argv) {
-    namespace xcl=xavier::command_line;
+    namespace xcl=spurt::command_line;
     
     xcl::option_traits 
         required_group("Required parameters", true, false),
@@ -471,8 +471,8 @@ vtkSmartPointer<vtkActor> points_actor, edges_actor, faces_actor;
 
 vtkSmartPointer<vtkOrientationMarkerWidget> coordinate_axes_widget() {
     color_t text_color = 
-        xavier::luminosity(params::bg_color) > 0.5 ?
-        xavier::black : xavier::white;
+        spurt::luminosity(params::bg_color) > 0.5 ?
+        spurt::black : spurt::white;
     color_t text_bg_color = 0.5*(text_color + params::bg_color);
     vtkSmartPointer<vtkAxesActor> axes=
         vtkSmartPointer<vtkAxesActor>::New();
@@ -716,8 +716,8 @@ int internal_main(const std::string& filename) {
                             params::bg_color[1],
                             params::bg_color[2]);
     color_t text_color = 
-        xavier::luminosity(params::bg_color) > 0.5 ?
-        xavier::black : xavier::white;
+        spurt::luminosity(params::bg_color) > 0.5 ?
+        spurt::black : spurt::white;
     color_t text_bg_color = 0.5*(text_color + params::bg_color);
     
     vtkSmartPointer<vtkAxesActor> axes=
@@ -942,7 +942,7 @@ int main(int argc, char* argv[])
     {
         // adaptive color map with spiral color scale
         std::vector<color_t> colors(20);
-        xavier::spiral_scale(colors, 20, 0.2);
+        spurt::spiral_scale(colors, 20, 0.2);
         scalar_t minval=*std::min_element(values.begin(), values.end());
         scalar_t maxval=*std::max_element(values.begin(), values.end());
         scalar_t dval=(maxval-minval)/19;

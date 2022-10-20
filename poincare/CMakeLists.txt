@@ -3,9 +3,9 @@ set(POINCARE_SRC
     newton.cpp
     map.cpp
 )
-add_library( xavier_poincare ${LIBMODE} ${POINCARE_SRC} )
-target_link_libraries( xavier_poincare ${Boost_LIBRARIES} )
-install( TARGETS xavier_poincare
+add_library( spurt_poincare ${LIBMODE} ${POINCARE_SRC} )
+target_link_libraries( spurt_poincare ${Boost_LIBRARIES} )
+install( TARGETS spurt_poincare
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )

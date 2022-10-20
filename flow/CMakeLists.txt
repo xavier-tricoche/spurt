@@ -38,7 +38,7 @@ if( ${VTK_FOUND} )
     foreach( name ${FLOW_EXEC_SRC} )
         add_executable( ${name} ${EXECUTABLE_FLAG} ${name}.cpp )
 		target_link_libraries( ${name} ${VTK_LIBRARIES} ${Teem_LIBRARIES} BARG
-			xavier_math xavier_image ${Boost_LIBRARIES} ${TBB_LIBRARY_RELEASE} #${TBB_IMPORTED_TARGETS}
+			spurt_math spurt_image ${Boost_LIBRARIES} ${TBB_LIBRARY_RELEASE} #${TBB_IMPORTED_TARGETS}
 			${TBB_LIBRARIES} ${NetCDF_LIBRARIES} )
         install( TARGETS ${name} RUNTIME DESTINATION bin )
     endforeach()

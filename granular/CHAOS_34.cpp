@@ -37,7 +37,7 @@
 #include <string>
 #include <sstream>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <math/bounding_box.hpp>
 #include <set>
 #include <sstream>
@@ -93,9 +93,9 @@ void redraw()
     }
     my_actors.clear();
     my_mappers.clear();
-    
+
     std::cerr << "redraw: " << all_orbits.size() << " orbits to draw\n";
-    
+
     typedef std::list<vtkSmartPointer<vtkPolyData> > poly_list;
     typedef poly_list::const_iterator iterator_type;
     for (iterator_type it=all_orbits.begin() ; it!=all_orbits.end() ; ++it) {
@@ -109,18 +109,18 @@ void redraw()
         mask->SetOnRatio(1);
         mask->GenerateVerticesOn();
         mask->Update();
-        
+
         std::cerr << "current orbit contains " << mask->GetOutput()->GetNumberOfPoints()
                   << " points and " << mask->GetOutput()->GetNumberOfCells() << " cells\n";
-                  
-                  
+
+
         my_mappers.push_back(vtkSmartPointer<vtkPolyDataMapper>::New());
         my_mappers.back()->SetInputConnection(mask->GetOutputPort());
-        
+
         my_actors.push_back(vtkSmartPointer<vtkActor>::New());
         my_actors.back()->SetMapper(my_mappers.back());
         my_actors.back()->GetProperty()->SetColor(drand48(), drand48(), drand48());
-        
+
         double* _dx, *_dy, *_dz, *_c;
         _dx = my_actors.back()->GetXRange();
         _dy = my_actors.back()->GetYRange();
@@ -130,12 +130,12 @@ void redraw()
         nvis::vec2 dy(_dy[0], _dy[1]);
         nvis::vec2 dz(_dz[0], _dz[1]);
         nvis::vec2  c( _c[0],  _c[1]);
-        
+
         std::cerr << "created actor has xrange " << dx << ", yrange " << dy << ", zrange" << dz << ", center " << c << '\n';
-        
+
         renderer->AddActor(my_actors.back());
     }
-    
+
     // force rerender
     renderer->ResetCamera();
     window->Render();
@@ -147,7 +147,7 @@ void recompute()
     // recompute model parameters
     __gstar = g/(double)__N;
     __w     = sqrt(__g*__gstar/(2.*__a*(1.+__r)));
-    
+
     all_orbits.clear();
     for (int i=0 ; i<seeds.size() ; ++i) {
         std::list<nvis::vec2> curve;
@@ -209,7 +209,7 @@ void printUsageAndExit( const std::string& argv0, std::string what = "", bool do
             << "    N       = " << __N << '\n'
             << "    nseeds  = " << nseeds << '\n'
             << std::endl;
-            
+
     if (doExit) {
         exit(1);
     }
@@ -233,7 +233,7 @@ inline vtkSmartPointer<vtkPolyData> to_polydata(const Iterator& _begin, const It
         vtkIdType ids[] = { i, i + 1 };
         lines->InsertNextCell(n, ids);
     }
-    
+
     vtkSmartPointer<vtkPolyData> pd = vtkSmartPointer<vtkPolyData>::New();
     pd->SetPoints(pts);
     pd->SetLines(lines);
@@ -283,7 +283,7 @@ public:
         ren->GetActiveCamera()->GetFocalPoint(foc);
         ren->GetActiveCamera()->GetViewUp(up);
         ren->GetActiveCamera()->GetClippingRange(clip);
-        
+
         std::cout << "camera position:       " << tovec(pos) << '\n';
         std::cout << "camera focal point:    " << tovec(foc) << '\n';
         std::cout << "camera up vector:      " << tovec(up) << '\n';
@@ -298,7 +298,7 @@ public:
     static Callback_Seeds* New() {
         return new Callback_Seeds();
     }
-    
+
     virtual void Execute(vtkObject* caller, unsigned long, void*) {
         vtkSliderWidget* slider = reinterpret_cast<vtkSliderWidget*>(caller);
         nseeds = (int)static_cast<vtkSliderRepresentation*>(slider->GetRepresentation())->GetValue();
@@ -311,7 +311,7 @@ public:
     static Callback_N* New() {
         return new Callback_N();
     }
-    
+
     virtual void Execute(vtkObject* caller, unsigned long, void*) {
         vtkSliderWidget* slider = reinterpret_cast<vtkSliderWidget*>(caller);
         __N = (int)static_cast<vtkSliderRepresentation*>(slider->GetRepresentation())->GetValue();
@@ -324,7 +324,7 @@ public:
     static Callback_Gamma* New() {
         return new Callback_Gamma();
     }
-    
+
     virtual void Execute(vtkObject* caller, unsigned long, void*) {
         vtkSliderWidget* slider = reinterpret_cast<vtkSliderWidget*>(caller);
         __g = static_cast<vtkSliderRepresentation*>(slider->GetRepresentation())->GetValue();
@@ -337,7 +337,7 @@ public:
     static Callback_Amplitude* New() {
         return new Callback_Amplitude();
     }
-    
+
     virtual void Execute(vtkObject* caller, unsigned long, void*) {
         vtkSliderWidget* slider = reinterpret_cast<vtkSliderWidget*>(caller);
         __a = static_cast<vtkSliderRepresentation*>(slider->GetRepresentation())->GetValue();
@@ -391,9 +391,9 @@ make_slider_widget(const std::string& text, double v, int id, int ntotal, double
     double spc = 0.05;
     double len = (1.-(ntotal+1)*spc)/(double)ntotal;
     double x = spc + id*(spc + len);
-    
+
     std::cerr << "slider anchored at " << x << ", length = " << len << '\n';
-    
+
     vtkSmartPointer<vtkSliderRepresentation2D> rep = make_rep(text, v, x, 0.07, len, min, max, prec);
     vtkSmartPointer<vtkSliderWidget> widget = vtkSmartPointer<vtkSliderWidget>::New();
     widget->SetInteractor(interactor);
@@ -407,14 +407,14 @@ make_slider_widget(const std::string& text, double v, int id, int ntotal, double
 int main(int argc, char* argv[])
 {
     bool bounds_set = false;
-    
+
     nseeds  = 200;
     __N     = 20;
     __T     = 0.5;
     __a     = 0.1;
     __r     = 0.8;
     __g     = 0.1;
-    
+
     for (int i=1; i<argc ; ++i) {
         std::string arg(argv[i]);
         if (arg == "-h" || arg == "--help") {
@@ -446,30 +446,30 @@ int main(int argc, char* argv[])
             __T = atof(argv[++i]);
         }
     }
-    
+
     renderer = vtkRenderer::New();
     renderer->SetBackground(0, 0, 0);
-    
+
     window = vtkRenderWindow::New();
     window->PointSmoothingOn();
     window->LineSmoothingOn();
     window->PolygonSmoothingOn();
     window->AddRenderer(renderer);
     window->SetSize(1200, 800);
-    
+
     srand48(time(0));
     nvis::bbox2 bounds;
     bounds.min() = nvis::vec2(-1,-1);
     bounds.max() = nvis::vec2(1,1);
     reseed();
-    
+
     // set interactor first
     vtkSmartPointer<vtkInteractorStyleImage> style = vtkSmartPointer<vtkInteractorStyleImage>::New();
     interactor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
     interactor->SetRenderWindow(window);
     interactor->SetInteractorStyle(style);
     interactor->Initialize();
-    
+
     // add widgets
     vtkSmartPointer<vtkSliderWidget> w1 = make_slider_widget<Callback_Seeds>("# seeds", nseeds, 0, 3, 100, 1000, 0);
     vtkSmartPointer<vtkSliderWidget> w2 = make_slider_widget<Callback_Gamma>("Gamma", __g, 1, 3, 0, 1, 5);
@@ -477,10 +477,10 @@ int main(int argc, char* argv[])
     w1->EnabledOn();
     w2->EnabledOn();
     w3->EnabledOn();
-    
+
     // start interactor
     window->Render();
     interactor->Start();
-    
+
     return 0;
 }

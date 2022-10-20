@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <math/fixed_vector.hpp>
 
-namespace xavier {
+namespace spurt {
 template< typename T >
 bool LtIndexed(const T& v1, const T& v2)
 {

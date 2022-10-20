@@ -3,7 +3,7 @@
 
 using namespace std;
 using namespace nvis;
-using namespace xavier;
+using namespace spurt;
 using namespace gage_interface;
 
 /*
@@ -18,10 +18,10 @@ comments:
 */
 
 
-double xavier::crease::threshold;
-double xavier::crease::eps;
-unsigned int xavier::crease::subdiv;
-unsigned int xavier::crease::upsample=1;
+double spurt::crease::threshold;
+double spurt::crease::eps;
+unsigned int spurt::crease::subdiv;
+unsigned int spurt::crease::upsample=1;
 
 vector< crease::Edge > crease::problematic_edges;
 vector< vec3 > crease::all_face_points;
@@ -29,7 +29,7 @@ vector< double > crease::crease_strength;
 vector< double > crease::grad_dot_evec;
 vector< double > crease::measure_value;
 
-vector< vector< vector< xavier::crease::value > > > crease::nonorientable_faces;
+vector< vector< vector< spurt::crease::value > > > crease::nonorientable_faces;
 vector< vector< vec3 > > crease::nonorientable_face_points;
 
 vector< pair< unsigned int, unsigned int > > crease::all_edges;
@@ -61,7 +61,7 @@ inline bool eval_ok( double eval, double threshold, bool ridge )
 }
 
 template< typename T >
-void xavier::display_stats( const std::vector< T >& data, const std::string& msg )
+void spurt::display_stats( const std::vector< T >& data, const std::string& msg )
 {
     // examine the value distribution of the considered scalar quantity
     std::vector< T > vals( data.begin(), data.end() );
@@ -437,7 +437,7 @@ void crease::next_evec( vec3& out, const vec3& in,
         out *= -1;
 }
 
-bool track_evec_on_edge( std::vector< xavier::crease::value >& evecs,
+bool track_evec_on_edge( std::vector< spurt::crease::value >& evecs,
     const crease::Edge& edge, unsigned int idx )
 {
     using namespace crease;

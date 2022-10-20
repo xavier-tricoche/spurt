@@ -58,33 +58,33 @@ void initialize(int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     
     initialize(argc, argv);
     
-    xavier::crease::speedup = true;
-    xavier::crease::read_info = true;
-    xavier::crease::flag_file_name = flag_name;
-    xavier::crease::bold_move = true;
-    xavier::crease::display_debug_info = false;
-    xavier::crease::crease_kind = measure;
+    spurt::crease::speedup = true;
+    spurt::crease::read_info = true;
+    spurt::crease::flag_file_name = flag_name;
+    spurt::crease::bold_move = true;
+    spurt::crease::display_debug_info = false;
+    spurt::crease::crease_kind = measure;
     
     switch (ex_method) {
         case 0: {
-            xavier::crease::ext_meth = xavier::crease::PVO;
+            spurt::crease::ext_meth = spurt::crease::PVO;
             break;
         }
         case 1: {
-            xavier::crease::ext_meth = xavier::crease::MC;
+            spurt::crease::ext_meth = spurt::crease::MC;
             break;
         }
         case 2: {
-            xavier::crease::ext_meth = xavier::crease::ZG;
+            spurt::crease::ext_meth = spurt::crease::ZG;
             break;
         }
     }
     
-    xavier::crease::upsample = upsampling;
+    spurt::crease::upsample = upsampling;
     
     Nrrd* nin = nrrdNew();
     if (nrrdLoad(nin, in_name, NULL)) {
@@ -93,20 +93,20 @@ int main(int argc, char* argv[])
     }
     crease::the_wrapper = new MeasureWrapper(nin, crease::crease_kind);
     
-    std::vector< xavier::crease::line > lines;
-    xavier::crease::vertices.clear();
-    xavier::crease::value_threshold = v_thresh;
-    xavier::crease::strength_threshold = s_thresh;
-    xavier::crease::value_threshold_select = v_thresh_select;
-    xavier::crease::strength_threshold_select = s_thresh_select;
-    xavier::crease::confidence_threshold = 0.5;
-    xavier::crease::max_depth = maxdepth;
-    xavier::crease::max_depth_fix = maxdepthfix;
-    xavier::crease::max_int_error = tolerance;
-    xavier::crease::is_ridge = ridge;
-    xavier::crease::upsample = upsampling;
+    std::vector< spurt::crease::line > lines;
+    spurt::crease::vertices.clear();
+    spurt::crease::value_threshold = v_thresh;
+    spurt::crease::strength_threshold = s_thresh;
+    spurt::crease::value_threshold_select = v_thresh_select;
+    spurt::crease::strength_threshold_select = s_thresh_select;
+    spurt::crease::confidence_threshold = 0.5;
+    spurt::crease::max_depth = maxdepth;
+    spurt::crease::max_depth_fix = maxdepthfix;
+    spurt::crease::max_int_error = tolerance;
+    spurt::crease::is_ridge = ridge;
+    spurt::crease::upsample = upsampling;
     
-    xavier::crease::extract_lines(lines, nin);
+    spurt::crease::extract_lines(lines, nin);
     
     // export results for reuse
     std::ostringstream os;
@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
     if (output) {
         for (unsigned int l = 0 ; l < lines.size() ; l++) {
             for (unsigned int i = 0 ; i < lines[l].size() ; i++) {
-                const nvis::vec3& p = xavier::crease::all_face_points[lines[l][i]];
+                const nvis::vec3& p = spurt::crease::all_face_points[lines[l][i]];
                 output << "p " << p[0] << " " << p[1] << " " << p[2] << std::endl;
             }
             output << "n" << std::endl;

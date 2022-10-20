@@ -11,7 +11,7 @@
 #include <tokamak/map2d.hpp>
 #include <data/kdtree.hpp>
 
-using namespace xavier;
+using namespace spurt;
 
 namespace map_analysis {
 
@@ -19,10 +19,10 @@ class orbit;
 class point_data;
 
 typedef boost::rational<int>                                    rational_type;
-typedef xavier::interval<double>                                interval_type;
-typedef xavier::point_locator<double, int, 2>                   locator_type;
-typedef xavier::triangulation<point_data, locator_type>         mesh_type;
-typedef xavier::default_metric_type                             metric_type;
+typedef spurt::interval<double>                                interval_type;
+typedef spurt::point_locator<double, int, 2>                   locator_type;
+typedef spurt::triangulation<point_data, locator_type>         mesh_type;
+typedef spurt::default_metric_type                             metric_type;
 
 namespace static_data {
 

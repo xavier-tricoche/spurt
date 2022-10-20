@@ -12,7 +12,7 @@
 
 #include "nek5000reader.hpp"
 #include "ncio.hpp"
-#include "VTK/vtk_utils.hpp"
+#include "vtk/vtk_utils.hpp"
 
 char *metafile, *outfile;
 int timestep;
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 {
 	initialize(argc, argv);
 
-    xavier::nek5000reader reader(metafile);
+    spurt::nek5000reader reader(metafile);
 
 	std::vector<unsigned int> hexind; // hexahedra vertices' indices
 	std::vector<float>        hexpts; // vertices' coordinates

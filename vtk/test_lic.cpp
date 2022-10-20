@@ -7,7 +7,7 @@
 #include <string>
 
 int main(int argc, const char* argv[]) {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     std::string ofname, ifname;
     std::string expr;
@@ -76,7 +76,7 @@ int main(int argc, const char* argv[]) {
         ifname=expr.substr(1);
     }
     else {
-        xavier::tokenize(exprs, expr, ";");
+        spurt::tokenize(exprs, expr, ";");
 
         if (ifname.empty() && exprs.size()!=1 && exprs.size()!=2) {
             std::cerr << "ERROR: " << argv[0] << ": invalid number of terms: "
@@ -97,7 +97,7 @@ int main(int argc, const char* argv[]) {
         }
     }
 
-    ofname = xavier::filename::remove_extension(ofname) + ".png";
+    ofname = spurt::filename::remove_extension(ofname) + ".png";
     if (verbose) {
         std::cout << "name of exported image will be "
                   << ofname << '\n';

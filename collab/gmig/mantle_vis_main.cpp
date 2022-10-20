@@ -33,7 +33,7 @@ int main(int argc, char** argv)
 {
     QVTKApplication app(argc, argv);
     
-    xavier::gmig::mantle_vis_renderer widget(argc, argv);
+    spurt::gmig::mantle_vis_renderer widget(argc, argv);
     
     widget.show();
     return app.exec();

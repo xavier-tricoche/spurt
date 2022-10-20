@@ -1,5 +1,5 @@
 #include "maps/basic_definitions.hpp"
 
-namespace xavier {
+namespace spurt {
 std::vector<orbit> __map_orbits;
 }

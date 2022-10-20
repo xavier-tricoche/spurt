@@ -4,7 +4,7 @@
 #include <math/fixed_vector.hpp>
 #include <math/fixed_matrix.hpp>
 
-namespace xavier {
+namespace spurt {
 
 template<typename T>
 nvis::mat2 to_matrix(const nvis::fixed_vector<T, 3>& t)

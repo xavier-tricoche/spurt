@@ -9,7 +9,7 @@
 #include "period.hpp"
 #include "tokamak/map2d.hpp"
 
-namespace xavier {
+namespace spurt {
 class orbit {
 public:
     orbit() : __points(), __q(-1.) {}
@@ -236,12 +236,12 @@ struct orbit_integrator {
     typedef I   integrator_type;
     
     orbit_integrator(integrator_type& integrator, size_t nsteps,
-                     const xavier::map_metric& metric)
+                     const spurt::map_metric& metric)
         : __nsteps(nsteps), __integ(integrator), __metric(metric) {}
         
     void operator()(const nvis::vec2& x0,
                     std::vector<nvis::vec2>& points,
-                    std::vector<xavier::point_data>& data) const {
+                    std::vector<spurt::point_data>& data) const {
                     
         const integrator_type* pmap = __integ.clone();
         std::vector<typename map2d::value_type> returned_values;
@@ -267,14 +267,14 @@ struct orbit_integrator {
         }
         
         // period computation is done prior to applying congruence relation to coordinates
-        double q = xavier::dist_based_x_period(points, __metric);
+        double q = spurt::dist_based_x_period(points, __metric);
         
-        size_t orbit_id = xavier::__map_orbits.size();
+        size_t orbit_id = spurt::__map_orbits.size();
         for (int i = 0 ; i < points.size() ; ++i) {
             points[i] = __metric.modulo(points[i]);
-            data[i] = xavier::point_data(orbit_id, i);
+            data[i] = spurt::point_data(orbit_id, i);
         }
-        xavier::__map_orbits.push_back(xavier::orbit(points, errors, q));
+        spurt::__map_orbits.push_back(spurt::orbit(points, errors, q));
     }
     
     void precision(double h) {
@@ -283,7 +283,7 @@ struct orbit_integrator {
     
     size_t                  __nsteps;
     integrator_type&        __integ;
-    xavier::map_metric      __metric;
+    spurt::map_metric      __metric;
 };
 
 template<typename T>

@@ -25,7 +25,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <set>
 #include <sstream>
@@ -186,25 +186,25 @@ int main(int argc, char* argv[])
     westin_name.append("-westin.nrrd");
     dir_name.append("-direction.nrrd");
 
-    Nrrd* __ids = xavier::nrrd_utils::readNrrd(id_name);
-    xavier::nrrd_utils::nrrd_data_wrapper<int> ids(__ids);
+    Nrrd* __ids = spurt::nrrd_utils::readNrrd(id_name);
+    spurt::nrrd_utils::nrrd_data_wrapper<int> ids(__ids);
     std::cerr << id_name << " loaded.\n";
 
-    Nrrd* __fa = xavier::nrrd_utils::readNrrd(fa_name);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> fa(__fa);
+    Nrrd* __fa = spurt::nrrd_utils::readNrrd(fa_name);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> fa(__fa);
     std::cerr << fa_name << " loaded.\n";
     int nb_grains = __fa->axis[0].size;
 
-    Nrrd* __size = xavier::nrrd_utils::readNrrd(size_name);
-    xavier::nrrd_utils::nrrd_data_wrapper<int> size(__size);
+    Nrrd* __size = spurt::nrrd_utils::readNrrd(size_name);
+    spurt::nrrd_utils::nrrd_data_wrapper<int> size(__size);
     std::cerr << size_name << " loaded.\n";
 
-    Nrrd* __westin = xavier::nrrd_utils::readNrrd(westin_name);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> westin(__westin);
+    Nrrd* __westin = spurt::nrrd_utils::readNrrd(westin_name);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> westin(__westin);
     std::cerr << westin_name << " loaded.\n";
 
-    Nrrd* __dir = xavier::nrrd_utils::readNrrd(dir_name);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> dir(__dir);
+    Nrrd* __dir = spurt::nrrd_utils::readNrrd(dir_name);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> dir(__dir);
     std::cerr << dir_name << " loaded.\n";
 
     std::map<int, color_type> colors;

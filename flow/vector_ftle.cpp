@@ -45,7 +45,7 @@ void initialize(int argc, const char* argv[])
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
 }
 
-typedef xavier::nrrd_data_traits<Nrrd*>  field_type;
+typedef spurt::nrrd_data_traits<Nrrd*>  field_type;
 
 struct field_wrapper {
     field_wrapper(const field_type& field) : __field(field) {}
@@ -164,20 +164,20 @@ std::ostream& operator<<(std::ostream& os, const integration_monitor& monitor)
 
 int main(int argc, const char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     
     initialize(argc, argv);
     
-    Nrrd* nin = xavier::nrrd_utils::readNrrd(name_in);
+    Nrrd* nin = spurt::nrrd_utils::readNrrd(name_in);
     field_type vf(nin);
     field_wrapper wrapper(vf);
     
     nvis::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
     std::cerr << "Resolution = " << res << std::endl;
-    xavier::raster_grid<3> sampling_grid(res, wrapper.bounds());
-    xavier::image<nvis::vec3, 3> flowmaps[2]
-        = { xavier::image<nvis::vec3, 3>(sampling_grid),
-            xavier::image<nvis::vec3, 3>(sampling_grid)
+    spurt::raster_grid<3> sampling_grid(res, wrapper.bounds());
+    spurt::image<nvis::vec3, 3> flowmaps[2]
+        = { spurt::image<nvis::vec3, 3>(sampling_grid),
+            spurt::image<nvis::vec3, 3>(sampling_grid)
           };
           
     nvis::timer timer;
@@ -295,7 +295,7 @@ int main(int argc, const char* argv[])
             __ftle[2*n+1] = ftle::ftle(n, flowmaps[1], length);
         } catch (...) {
         }
-        if (xavier::nrrd_utils::invalid(__ftle[2*n]) || xavier::nrrd_utils::invalid(__ftle[2*n+1])) {
+        if (spurt::nrrd_utils::invalid(__ftle[2*n]) || spurt::nrrd_utils::invalid(__ftle[2*n+1])) {
             // std::cerr << "skipping invalid value #" << n << std::endl;
             continue;
         }
@@ -304,24 +304,24 @@ int main(int argc, const char* argv[])
     
     std::ostringstream os;
     os << name_out << "-ftle-T=" << length << ".nrrd";
-    xavier::nrrd_utils::writeNrrdFromContainers(__ftle, os.str(), /*nrrdTypeFloat,*/ size, step);
+    spurt::nrrd_utils::writeNrrdFromContainers(__ftle, os.str(), /*nrrdTypeFloat,*/ size, step);
     
     os.clear();
     os.str("");
     os << name_out << "-length-T=" << length << ".nrrd";
-    xavier::nrrd_utils::writeNrrdFromContainers(__length, os.str(), /*nrrdTypeFloat,*/ size, step);
+    spurt::nrrd_utils::writeNrrdFromContainers(__length, os.str(), /*nrrdTypeFloat,*/ size, step);
     
     os.clear();
     os.str("");
     os << name_out << "-states-T=" << length << ".nrrd";
     size[0] = 4;
-    xavier::nrrd_utils::writeNrrdFromContainers(__states, os.str(), /*nrrdTypeInt,*/ size, step);
+    spurt::nrrd_utils::writeNrrdFromContainers(__states, os.str(), /*nrrdTypeInt,*/ size, step);
     
     size[0] = 6;
     os.clear();
     os.str("");
     os << name_out << "-flowmap-T=" << length << ".nrrd";
-    xavier::nrrd_utils::writeNrrdFromContainers(__fmap, os.str(), /*nrrdTypeFloat,*/ size, step);
+    spurt::nrrd_utils::writeNrrdFromContainers(__fmap, os.str(), /*nrrdTypeFloat,*/ size, step);
     
     return 0;
 }

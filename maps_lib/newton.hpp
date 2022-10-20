@@ -9,7 +9,7 @@
 #include <sstream>
 #include <poincare/metric.hpp>
 
-namespace xavier {
+namespace spurt {
 template<typename Func>
 inline nvis::vec2 cdd(const Func& f, const nvis::vec2& x, double h,  int dim)
 {

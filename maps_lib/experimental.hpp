@@ -157,7 +157,7 @@ triangle_check(const typename Mesh::data_type& ground_truth, const Mesh& mesh, i
         p[n] = mesh.get_vertex(verts[n]);
         d[n] = mesh.get_data(verts[n]);
     }
-    nvis::vec3 beta = xavier::barycentric(x, p);
+    nvis::vec3 beta = spurt::barycentric(x, p);
     return error(ground_truth, beta, d);
 }
 

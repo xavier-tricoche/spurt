@@ -66,8 +66,8 @@ struct adaptive_map_sampling_output {
     std::vector<std::list<unsigned int> >                   p_sing_tris;
     std::vector<std::list<unsigned int> >                   p_prob_tris;
     std::vector<std::list<step_type> >                      p_index_vectors;
-    std::vector<std::list<std::list<xavier::fixpoint> > >   p_chains;
-    std::vector<std::list<xavier::Edge> >                   p_prob_edges;
+    std::vector<std::list<std::list<spurt::fixpoint> > >   p_chains;
+    std::vector<std::list<spurt::Edge> >                   p_prob_edges;
     std::vector<std::list<nvis::vec2> >                     p_degenerate_points;
     std::vector<std::list<separatrix_connection_type> >     p_separatrices;
     std::vector<std::list<separatrix_type> >                p_rejected_separatrices;

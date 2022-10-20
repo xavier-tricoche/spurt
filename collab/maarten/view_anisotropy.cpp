@@ -174,7 +174,7 @@ int main(int argc, char* argv[]) {
         throw;
     }
     std::vector<float> __array;
-    xavier::to_vector(__array, nin);
+    spurt::to_vector(__array, nin);
     size_t res_x = nin->axis[1].size;
     size_t res_y = nin->axis[2].size;
     size_t nbuckets = nin->axis[0].size;

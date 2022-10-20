@@ -23,7 +23,7 @@
 #include <vtkRenderWindowInteractor.h>
 
 // VTK helper functions and macros
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <graphics/colors.hpp>
 
 #include <util/timer.hpp>
@@ -110,7 +110,7 @@ void check_connectivity(std::vector<int>& cc_ids,
         }
     }
 
-    size_t ncc=xavier::connected_components(cc_ids, graph);
+    size_t ncc=spurt::connected_components(cc_ids, graph);
     std::cout << "There are " << ncc << " connected components\n";
 }
 
@@ -154,7 +154,7 @@ struct kernel_callback {
 };
 
 bool init(int argc, const char* argv[]) {
-    namespace xcl=xavier::command_line;
+    namespace xcl=spurt::command_line;
 
     xcl::option_traits
         required_group(true, false, "Required parameters"),

@@ -7,7 +7,7 @@ set( MISC_SRC
 )
 foreach( src ${MISC_SRC} )
     add_executable( ${src} ${src}.cpp )
-    target_link_libraries( ${src} ${TEEM_LIBRARIES} xavier_crease)
+    target_link_libraries( ${src} ${TEEM_LIBRARIES} spurt_crease)
     install( TARGETS ${src} RUNTIME DESTINATION bin )
 endforeach()
 

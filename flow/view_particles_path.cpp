@@ -6,7 +6,7 @@
 #include <vtkTextActor.h>
 #include <vtkTextProperty.h>
 
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
@@ -62,7 +62,7 @@ constexpr double invalid=-30000;
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
             required_group(true, false, "Required Options"),
@@ -116,7 +116,7 @@ void initialize(int argc, const char* argv[])
 
 template<typename T = double>
 inline double nrrd_value(const Nrrd* nin, size_t n) {
-    return xavier::nrrd_utils::nrrd_data_wrapper<T>(nin)[n];
+    return spurt::nrrd_utils::nrrd_data_wrapper<T>(nin)[n];
 }
 
 inline vec2d pos(const vec2i& c, const vec2i& res) {
@@ -153,10 +153,10 @@ vtkSmartPointer<vtkColorTransferFunction> create_ctf(const std::vector<double>& 
 
         // heat map:
         std::vector<nvis::fvec3> heat_scale;
-        heat_scale.push_back(xavier::black);
-        heat_scale.push_back(xavier::red);
-        heat_scale.push_back(xavier::yellow);
-        heat_scale.push_back(xavier::white);
+        heat_scale.push_back(spurt::black);
+        heat_scale.push_back(spurt::red);
+        heat_scale.push_back(spurt::yellow);
+        heat_scale.push_back(spurt::white);
 
         if (verbose) std::cout << "heat_scale created\n";
 
@@ -168,7 +168,7 @@ vtkSmartPointer<vtkColorTransferFunction> create_ctf(const std::vector<double>& 
             }
         }
 
-        xavier::adaptive_color_map<double> cmap(copy, heat_scale, true, 20);
+        spurt::adaptive_color_map<double> cmap(copy, heat_scale, true, 20);
 
         if (verbose) std::cout << "heat color map created\n";
         for (int i=0; i<cmap.t.size() ; ++i) {
@@ -260,7 +260,7 @@ int main(int argc, char* argv[]) {
 
 
     if (!name_mask.empty()) {
-        mask = xavier::nrrd_utils::readNrrd(name_mask);
+        mask = spurt::nrrd_utils::readNrrd(name_mask);
         if (verbose) std::cout << "mask has been imported\n";
     }
 
@@ -277,7 +277,7 @@ int main(int argc, char* argv[]) {
         input >> name;
         if (input.fail()) break;
         if (n>=skip) {
-            datasets.push_back(xavier::nrrd_utils::readNrrd(parent_dir + '/' + name));
+            datasets.push_back(spurt::nrrd_utils::readNrrd(parent_dir + '/' + name));
             if (verbose) std::cout << "just imported: " << name << '\n';
             if (std::regex_search(name, time_match, time_regex)) {
                 int t = std::stoi(time_match[1].str());

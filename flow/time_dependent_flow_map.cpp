@@ -21,7 +21,7 @@
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
 #include <misc/strings.hpp>
-#include <VTK/vtk_interpolator.hpp>
+#include <vtk/vtk_interpolator.hpp>
 
 // #define NO_TBB
 
@@ -68,7 +68,7 @@ struct is_one_of_those_types< T, T1, T2, T3,
                 std::is_same<T, T3>::value >::type > : public std::true_type {};
 
 void initialize(int argc, const char* argv[]) {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     cmdline = "Command line: " + std::string(argv[0]);
     for (int i=1; i<argc; i++) {
@@ -119,7 +119,7 @@ void initialize(int argc, const char* argv[]) {
     }
 }
 
-using namespace xavier;
+using namespace spurt;
 using namespace vtk_utils;
 
 struct vec3 : public Eigen::Vector3d
@@ -171,7 +171,7 @@ inline std::string to_str(const vec3& p) {
     return os.str();
 }
 
-namespace xavier {
+namespace spurt {
 template<>
 struct data_traits< vec3 > {
     typedef vec3::value_type value_type;
@@ -190,7 +190,7 @@ struct data_traits< vec3 > {
         return v.norm();
     }
 };
-} // xavier
+} // spurt
 
 typedef vec3 point_type;
 typedef vec3 vector_type;
@@ -202,7 +202,7 @@ typedef interpolator<vtkUnstructuredGrid, double, 3, vector_type> unst_intp_t;
 typedef interpolator<vtkStructuredGrid, double, 3, vector_type> curv_intp_t;
 
 typedef vtk_utils::point_locator<vtkUnstructuredGrid, double, 3, vec3> locator_type;
-typedef xavier::fixed_mesh_time_dependent_field<locator_type, std::vector<vec3> > field_type;
+typedef spurt::fixed_mesh_time_dependent_field<locator_type, std::vector<vec3> > field_type;
 
 struct RKDOPRI5 {
     typedef nvis::vec3 vec_t; // vector type required by nvis::dopri5
@@ -385,7 +385,7 @@ int runTBB(shared_ptr<field_type> field) {
 
     the_bounds = bnds;
     int npoints;
-    xavier::raster_grid<3> sampling_grid(res, bnds);
+    spurt::raster_grid<3> sampling_grid(res, bnds);
 
     if (seed_name.empty()) {
         std::cout << "Resolution = " << res[0] << " x " << res[1] << " x " << res[2] << std::endl;
@@ -436,7 +436,7 @@ int runTBB(shared_ptr<field_type> field) {
 #endif
 
     size_t nbcomputed=0;
-    xavier::ProgressDisplay progress(true);
+    spurt::ProgressDisplay progress(true);
     progress.fraction_on();
 
     size_t nb_lost = 0;
@@ -579,13 +579,13 @@ int runTBB(shared_ptr<field_type> field) {
 
         std::ostringstream os;
         os << name_out << (T>0 ? "-fwd_" : "-bwd_") << "flowmap-deltaT=" << fabs(T) << "_t0=" << t0 << ".nrrd";
-        xavier::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step, mins, ctrs, cmdline);
+        spurt::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step, mins, ctrs, cmdline);
 
         size[0] = 1;
         os.clear();
         os.str("");
         os << name_out << (T>0 ? "-fwd_" : "-bwd_") << "flowtime-deltaT=" << fabs(T) << "_t0=" << t0 << ".nrrd";
-        xavier::nrrd_utils::writeNrrdFromContainers(flowtimes, os.str(), size, step, mins, ctrs, cmdline);
+        spurt::nrrd_utils::writeNrrdFromContainers(flowtimes, os.str(), size, step, mins, ctrs, cmdline);
     }
 
     delete[] flowmap;
@@ -622,7 +622,7 @@ shared_ptr<field_type> load_DLR_time_steps() {
     }
     info_file.close();
 
-    xavier::DLRreader reader(mesh_name, "");
+    spurt::DLRreader reader(mesh_name, "");
     std::vector<nvis::fvec3> vertices;
     std::vector<long> cell_indices;
     std::vector<std::pair<DLRreader::cell_type, long> > cell_types;
@@ -681,14 +681,14 @@ shared_ptr<field_type> load_DLR_time_steps() {
 
     std::vector< std::shared_ptr<std::vector<vector_type> > > data(steps.size());
     for (int i=0; i<steps.size(); i++) {
-        const std::string ext = xavier::filename::extension(steps[i]);
+        const std::string ext = spurt::filename::extension(steps[i]);
         data[i] = std::shared_ptr< std::vector< vector_type > >(new std::vector< vector_type >());
         if (ext == "nrrd" || ext == "nhdr") {
-            Nrrd* nin = xavier::nrrd_utils::readNrrd(steps[i]);
+            Nrrd* nin = spurt::nrrd_utils::readNrrd(steps[i]);
             data[i]->resize(nin->axis[1].size);
             // std::cout << "nin->axis[1].size=" << nin->axis[1].size << '\n';
             // std::cout << "data[i]->size()=" << data[i]->size() << '\n';
-            xavier::nrrd_utils::to_vector<vector_type,float>(*data[i], nin->data, data[i]->size());
+            spurt::nrrd_utils::to_vector<vector_type,float>(*data[i], nin->data, data[i]->size());
         }
         else {
             std::vector<double> vx, vy, vz;
@@ -708,7 +708,7 @@ shared_ptr<field_type> load_DLR_time_steps() {
 
 int main(int argc, const char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     using namespace odeint;
 
     initialize(argc, argv);

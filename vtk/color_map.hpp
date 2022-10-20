@@ -5,7 +5,7 @@
 #include <vector>
 #include <math/fixed_vector.hpp>
 
-namespace xavier {
+namespace spurt {
 struct color_map_bwr {
     typedef nvis::fvec3             color_type;
     

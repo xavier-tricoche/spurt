@@ -14,7 +14,7 @@
 // nvis
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
-// xavier
+// spurt
 #include <math/RBF.hpp>
 #include <math/RBFbasis.hpp>
 #include <image/nrrd_wrapper.hpp>
@@ -22,7 +22,7 @@
 #include <maarten/data_IO.hpp>
 #include <maarten/typedefs.hpp>
 
-namespace xavier { namespace maarten {
+namespace spurt { namespace maarten {
 
 inline double deg2rad(double deg) {
     static const double k = M_PI/180.;
@@ -88,5 +88,5 @@ public:
 
 } // maarten
 
-} // xavier
+} // spurt
 #endif

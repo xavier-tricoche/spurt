@@ -3,7 +3,7 @@
 #include <vtkArrowSource.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 
 #include <format/filename.hpp>
 
@@ -146,7 +146,7 @@ int main(int argc, char* argv[]) {
     window->LineSmoothingOn();
     window->PolygonSmoothingOn();
     window->AddRenderer(renderer);
-    window->SetSize(800, 800); // xavier's laptop likes 800x800
+    window->SetSize(800, 800); // spurt's laptop likes 800x800
 
     VTK_CREATE(vtkRenderWindowInteractor, interactor);
     interactor->SetRenderWindow(window);

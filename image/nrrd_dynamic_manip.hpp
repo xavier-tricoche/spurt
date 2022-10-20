@@ -11,7 +11,7 @@
 #include <misc/progress.hpp>
 
 
-namespace xavier { namespace nrrd_manip {
+namespace spurt { namespace nrrd_manip {
     
 template<typename T>
 using mat_t=Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
@@ -29,7 +29,7 @@ Nrrd* mat2nrrd(const std::vector< mat_t<T> >& mats,
     int ncoef=Ncols*Nrows;
     assert(N==mats.size());
     T* raster=(T*)calloc(ncoef*N, sizeof(T));
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     progress.start(N, "Matrices to Raster");
     for (size_t i=0; i<N; ++i) {
         for (int j=0; j<ncoef; ++j) {
@@ -60,7 +60,7 @@ Nrrd* vec2nrrd(const std::vector< col_t<T> >& vecs,
     int ncoef=Nrows;
     assert(N==vecs.size());
     T* raster=(T*)calloc(ncoef*N, sizeof(T));
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     progress.start(N, "Vectors to Raster");
     for (size_t i=0; i<N; ++i) {
         for (int j=0; j<ncoef; ++j) {
@@ -99,7 +99,7 @@ void nrrd2mat(const Nrrd* nin, std::vector< mat_t<T> >& mats,
     mats.resize(N, refval);
     
     nrrd_data_wrapper<T> raster(nin);
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     progress.start(N, "Raster to Matrices");
     for (size_t i=0; i<N; ++i) {
         mats[i].resize(Nrows, Ncols); // does nothing if already set
@@ -117,7 +117,7 @@ void compute_transpose(std::vector< mat_t<T> >& res,
     assert(!As.empty());
     mat_t<T> refval(As[0].cols(), As[0].rows());
     res.resize(As.size(), refval);
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     progress.start(As.size(), "Transpose");
     for (size_t i=0; i<As.size(); ++i) {
         res[i]=As[i].transpose();
@@ -131,7 +131,7 @@ void compute_transpose_no_copy(T* out_ptr, T1* in_ptr,
                                size_t N, int Nrows, int Ncols, 
                                bool show_progress=false) {
     assert(N>0);
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     progress.start(N, "Transpose no alloc");
     int nterms=Nrows*Ncols;
     T* out_arr=out_ptr;
@@ -161,7 +161,7 @@ void compute_transpose_map(T* out_ptr, T1* in_ptr,
     typedef Eigen::Map< mat_t<T1> > in_map_t;                           
                                
     assert(N>0);
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     progress.start(N, "Transpose no alloc");
     int nterms=Nrows*Ncols;
     out_map_t out_matrix(out_ptr, Ncols, Nrows);
@@ -191,7 +191,7 @@ void compute_SVD(std::vector< col_t<T> >& values,
     leftvs.resize(As.size(), leftref);
     rightvs.resize(As.size(), rightref);
     typedef Eigen::JacobiSVD< mat_t<T> > svd_t;
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     progress.start(As.size(), "Singular Value Decomposition");
     for (size_t i=0; i<As.size(); ++i) {
         svd_t svd(As[i], Eigen::ComputeFullU | Eigen::ComputeFullV);
@@ -213,7 +213,7 @@ void compute_SVD_map(T* svals_ptr, T* left_ptr, T* right_ptr, T1* in_ptr,
                          
     int Ndiag=std::min(Nrows, Ncols);
     typedef Eigen::JacobiSVD< mat_t<T1> > svd_t;
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     
     out_matrix_map_t left(left_ptr, Nrows, Ndiag);
     out_matrix_map_t right(right_ptr, Ncols, Ndiag);
@@ -247,7 +247,7 @@ void compute_inverse(std::vector< mat_t<T> >& res,
                      const std::vector<mat_t<T> >& As, bool show_progress=false) {
     assert(!As.empty() && As[0].rows()==As[0].cols());
     res.resize(As.size(), As[0]);
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     progress.start(As.size(), "Inverse");
     
     for (size_t i=0; i<As.size(); ++i) {
@@ -262,7 +262,7 @@ void compute_inverse_map(T* out_ptr, T1* in_ptr, size_t N, int Nrows, bool show_
     typedef Eigen::Map< mat_t<T> > out_map_t;
     typedef Eigen::Map< mat_t<T1> > in_map_t;
 
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     
     int ncoef=Nrows*Nrows;
     out_map_t inv(out_ptr, Nrows, Nrows);
@@ -284,7 +284,7 @@ void compute_sum(std::vector< mat_t<T> >& res,
                  const std::vector< mat_t<T> >& Bs, bool show_progress=false) {
     assert(!As.empty() && As.size()==Bs.size());
     res.resize(As.size(), As[0]);
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     progress.start(As.size(), "Sum");
     for (size_t i=0; i<As.size(); ++i) {
         res[i]=As[i]+Bs[i];
@@ -305,7 +305,7 @@ void compute_sum_map(T* out_ptr, T1* a_ptr, T2* b_ptr,
     a_map_t A(a_ptr, Nrows, Ncols);
     b_map_t B(b_ptr, Nrows, Ncols);
     
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     progress.start(N, "Sum");
     
     for (size_t i=0; i<N ; ++i, out_ptr+=ncoef, a_ptr+=ncoef, b_ptr+=ncoef) {
@@ -326,7 +326,7 @@ void compute_product(std::vector< mat_t<T> >& res,
                  const std::vector< mat_t<T> >& Bs, bool show_progress=false) {
     assert(As.size()==Bs.size());
     res.resize(As.size(), mat_t<T>(As[0].rows(), Bs[0].cols()));
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     progress.start(As.size(), "Product");
     for (size_t i=0; i<As.size(); ++i) {
         res[i]=As[i]*Bs[i];
@@ -340,7 +340,7 @@ void compute_product_no_conversion(T* out_ptr, T1* a_ptr, T2* b_ptr, size_t N,
                                    int Nrows, int Ncols1, int Ncols2, bool show_progress=false) {
     // assert(As.size()==Bs.size());
     // res.resize(As.size(), mat_t<T>(As[0].rows(), Bs[0].cols()));
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     progress.start(N, "Product");
     int ncoef_out=Nrows*Ncols2;
     int ncoef_a=Nrows*Ncols1;
@@ -375,7 +375,7 @@ void compute_product_map(T* out_ptr, T1* a_ptr, T2* b_ptr, size_t N,
     a_map_t A(a_ptr, Nrows, Ncols1);
     b_map_t B(b_ptr, Ncols1, Ncols2);
                              
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     progress.start(N, "Product");
     for (size_t i=0; i<N; ++i, out_ptr+=ncoef_out, a_ptr+=ncoef_a, b_ptr+=ncoef_b) {
         new (&res) out_map_t(out_ptr, Nrows, Ncols2);
@@ -394,7 +394,7 @@ void compute_tprod(std::vector< mat_t<T> >& res,
                    const std::vector< mat_t<T> >& Bs, bool show_progress) {
     assert(As.size()==Bs.size());
     res.resize(As.size(), mat_t<T>(As[0].cols(), Bs[0].cols()));
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     progress.start(As.size(), "Transpose+Product");
     for (size_t i=0; i<As.size(); ++i) {
         res[i]=As[i].transpose()*Bs[i];
@@ -418,7 +418,7 @@ void compute_tprod_map(T* out_ptr, T1* a_ptr, T2* b_ptr,
     a_map_t A(a_ptr, Nrows, Ncols1);
     b_map_t B(b_ptr, Ncols1, Ncols2);
 
-    xavier::ProgressDisplay progress(show_progress);
+    spurt::ProgressDisplay progress(show_progress);
     progress.start(N, "Transpose+Product");
     for (size_t i=0; i<N; ++i, out_ptr+=ncoef_out, a_ptr+=ncoef_a, b_ptr+=ncoef_b) {
         new (&tprod) out_map_t(out_ptr, Ncols1, Ncols2);
@@ -435,7 +435,7 @@ void compute_tprod_map(T* out_ptr, T1* a_ptr, T2* b_ptr,
 template<typename T>
 Nrrd* transpose(const Nrrd* nin, int Nrows, int Ncols, bool show_progress=false) {
 
-    size_t N=xavier::nrrd_size(nin, true);
+    size_t N=spurt::nrrd_size(nin, true);
     std::vector< mat_t<T> > mats;
     std::array<size_t, 3> dims;
     nrrd2mat<T>(nin, mats, dims, Nrows, Ncols, show_progress);
@@ -449,7 +449,7 @@ Nrrd* transpose(const Nrrd* nin, int Nrows, int Ncols, bool show_progress=false)
 template<typename T>
 Nrrd* transpose_no_conversion(const Nrrd* nin, int Nrows, int Ncols, bool show_progress=false) {
 
-    size_t N=xavier::nrrd_size(nin, true);
+    size_t N=spurt::nrrd_size(nin, true);
     T* out_array=(T*)malloc(N*Ncols*Nrows*sizeof(T));
     
     if (nin->type==nrrdTypeFloat) 
@@ -475,7 +475,7 @@ Nrrd* transpose_no_conversion(const Nrrd* nin, int Nrows, int Ncols, bool show_p
 template<typename T>
 Nrrd* transpose_map(const Nrrd* nin, int Nrows, int Ncols, bool show_progress=false) {
 
-    size_t N=xavier::nrrd_size(nin, true);
+    size_t N=spurt::nrrd_size(nin, true);
     T* out_array=(T*)malloc(N*Ncols*Nrows*sizeof(T));
     
     if (nin->type==nrrdTypeFloat) 
@@ -513,7 +513,7 @@ Nrrd* product(const Nrrd* nin1, const Nrrd* nin2, int Nrows, int Ncols1, int Nco
 
 template<typename T>
 Nrrd* product_no_conversion(const Nrrd* nin1, const Nrrd* nin2, int Nrows, int Ncols1, int Ncols2, bool show_progress=false) {
-    size_t N=xavier::nrrd_size(nin1, true);
+    size_t N=spurt::nrrd_size(nin1, true);
     T* out_array=(T*)malloc(N*Ncols2*Nrows*sizeof(T));
     
     if (nin1->type==nrrdTypeFloat && nin2->type==nrrdTypeFloat) 
@@ -542,7 +542,7 @@ Nrrd* product_no_conversion(const Nrrd* nin1, const Nrrd* nin2, int Nrows, int N
 
 template<typename T>
 Nrrd* product_map(const Nrrd* nin1, const Nrrd* nin2, int Nrows, int Ncols1, int Ncols2, bool show_progress=false) {
-    size_t N=xavier::nrrd_size(nin1, true);
+    size_t N=spurt::nrrd_size(nin1, true);
     T* out_array=(T*)malloc(N*Ncols2*Nrows*sizeof(T));
     
     if (nin1->type==nrrdTypeFloat && nin2->type==nrrdTypeFloat) 
@@ -571,7 +571,7 @@ Nrrd* product_map(const Nrrd* nin1, const Nrrd* nin2, int Nrows, int Ncols1, int
 
 template<typename T>
 Nrrd* sum_map(const Nrrd* nin1, const Nrrd* nin2, int Nrows, int Ncols, bool show_progress=false) {
-    size_t N=xavier::nrrd_size(nin1, true);
+    size_t N=spurt::nrrd_size(nin1, true);
     T* out_array=(T*)malloc(N*Nrows*Ncols*sizeof(T));
     
     if (nin1->type==nrrdTypeFloat && nin2->type==nrrdTypeFloat) 
@@ -615,7 +615,7 @@ Nrrd* trans_product(const Nrrd* nin1, const Nrrd* nin2, int Nrows, int Ncols1, i
 template<typename T>
 Nrrd* trans_product_map(const Nrrd* nin1, const Nrrd* nin2, 
                         int Nrows, int Ncols1, int Ncols2, bool show_progress=false) {
-    size_t N=xavier::nrrd_size(nin1, true);
+    size_t N=spurt::nrrd_size(nin1, true);
     T* out_array=(T*)malloc(N*Ncols1*Ncols2*sizeof(T));
     
     if (nin1->type==nrrdTypeFloat && nin2->type==nrrdTypeFloat) 
@@ -656,7 +656,7 @@ Nrrd* invert(const Nrrd* nin, int N, bool show_progress=false) {
 
 template<typename T>
 Nrrd* invert_map(const Nrrd* nin, int Nrows, bool show_progress=false) {
-    size_t N=xavier::nrrd_size(nin, true);
+    size_t N=spurt::nrrd_size(nin, true);
     T* out_array=(T*)malloc(N*Nrows*Nrows*sizeof(T));
     
     if (nin->type==nrrdTypeFloat) 
@@ -702,7 +702,7 @@ void SVD(Nrrd*& sings, Nrrd*& left, Nrrd*& right,
 template<typename T>
 void SVD_map(Nrrd*& sings, Nrrd*& left, Nrrd*& right, 
              const Nrrd* nin, int Nrows, int Ncols, bool show_progress=false) {
-    size_t N=xavier::nrrd_size(nin, true);
+    size_t N=spurt::nrrd_size(nin, true);
     int Ndiag=std::min(Nrows, Ncols);
     
     T* svals_array=(T*)malloc(N*Ndiag*sizeof(T));
@@ -747,4 +747,4 @@ void SVD_map(Nrrd*& sings, Nrrd*& left, Nrrd*& right,
     }
 }
 } // nrrd_manip 
-} // namespace xavier
+} // namespace spurt

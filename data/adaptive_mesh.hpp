@@ -4,7 +4,7 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 
-namespace xavier {
+namespace spurt {
 template<typename T, typename PD, typename CD>
 struct AMR_quad {
     typedef nvis::fixed_vector<T, 2>        pos_type;

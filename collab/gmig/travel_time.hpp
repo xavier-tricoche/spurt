@@ -8,7 +8,7 @@
 #include "typedefs.hpp"
 #include "utils.hpp"
 
-namespace xavier { namespace gmig { namespace traveltime {
+namespace spurt { namespace gmig { namespace traveltime {
     
 /** \struct travel_time_data
   * \brief Information needed to define the RBF based smooth reconstruction
@@ -136,6 +136,6 @@ struct interpolator {
 
 } // namespace traveltime
 } // namespace gmig
-} // namespace xavier
+} // namespace spurt
 
 #endif

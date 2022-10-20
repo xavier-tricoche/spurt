@@ -12,11 +12,11 @@
 // nvis
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
-// xavier
+// spurt
 #include "typedefs.hpp"
 #include "core_mantle.hpp"
 
-namespace xavier { namespace gmig { namespace core_mantle {
+namespace spurt { namespace gmig { namespace core_mantle {
     
 /** \fn read_text
   * \brief Custom reader for core mantle text files (XYZ.txt)
@@ -43,7 +43,7 @@ read_text(std::vector<Vertex<Scalar_,Index_> >& data,
           bool verbose = false);
 } // namespace core_mantle
 } // namespace gmig
-} // namespace xavier
+} // namespace spurt
 
 #include "detail/core_mantle_io.hpp"
 

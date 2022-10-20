@@ -18,7 +18,7 @@
 #include <util/wall_timer.hpp>
 // teem
 #include <teem/nrrd.h>
-// xavier
+// spurt
 #include <data/grid.hpp>
 #include <data/kdtree.hpp>
 #include <data/raster_data.hpp>
@@ -40,7 +40,7 @@ inline T _sign(T x)
 #define SECANT_METHOD
 
 
-namespace xavier {
+namespace spurt {
 
 const double MAX_ANGLE_VARIATION = M_PI/2.;
 
@@ -49,9 +49,9 @@ int best_period(const std::vector<nvis::vec2>& steps, int maxp,
 double safety_factor(const std::vector<nvis::vec2>& steps,
                      const map_metric& metric);
 double safety_factor_bounded(const std::vector<nvis::fixed_vector<double, 2ul> >&, 
-                             const xavier::map_metric&);
+                             const spurt::map_metric&);
 double safety_factor_stdmap(const std::vector<nvis::fixed_vector<double, 2ul> >&, 
-                             const xavier::map_metric&);
+                             const spurt::map_metric&);
 
 struct orbit_data {
     static map_metric   metric;
@@ -232,7 +232,7 @@ process_cell(std::vector<std::pair<int, int> >& pids,
              map_analysis_param& params);
 }
 
-inline double xavier::average_distance(const std::vector<nvis::vec2>& steps, int p,
+inline double spurt::average_distance(const std::vector<nvis::vec2>& steps, int p,
                                        const map_metric& metric)
 {
     if (steps.size() < p) {
@@ -253,7 +253,7 @@ inline double xavier::average_distance(const std::vector<nvis::vec2>& steps, int
     return d/(double)count;
 }
 
-inline void xavier::period_range(std::vector<int>& ps,
+inline void spurt::period_range(std::vector<int>& ps,
                                  const raster_data<orbit_data, double, 2>& dataset,
                                  const nvis::ivec2& cell_id,
                                  const std::vector<boost::rational<int> >& valid_rationals)
@@ -306,7 +306,7 @@ inline void xavier::period_range(std::vector<int>& ps,
     std::copy(nums.begin(), nums.end(), std::back_inserter(ps));
 }
 
-inline void xavier::best_periods(std::vector<int>& ps,
+inline void spurt::best_periods(std::vector<int>& ps,
                                  const raster_data<orbit_data, double, 2>& dataset,
                                  const nvis::ivec2& cell_id, const map_metric& metric,
                                  int maxperiod, int nbperiods)
@@ -345,7 +345,7 @@ inline void xavier::best_periods(std::vector<int>& ps,
 }
 
 
-inline double xavier::safety_factor(const std::vector<nvis::vec2>& steps,
+inline double spurt::safety_factor(const std::vector<nvis::vec2>& steps,
                                     const map_metric& metric)
 {
     if (steps.size()<2) {
@@ -381,7 +381,7 @@ inline double xavier::safety_factor(const std::vector<nvis::vec2>& steps,
     return total_q/total_w;
 }
 
-inline double xavier::safety_factor_bounded(const std::vector<nvis::vec2>& steps,
+inline double spurt::safety_factor_bounded(const std::vector<nvis::vec2>& steps,
         const map_metric& metric)
 {
     if (steps.size()<2) {
@@ -396,13 +396,13 @@ inline double xavier::safety_factor_bounded(const std::vector<nvis::vec2>& steps
     }
     center /= steps.size();
     
-    double last_theta = xavier::positive_angle(steps[0]-center);
+    double last_theta = spurt::positive_angle(steps[0]-center);
     double dtheta = 0;
     
     std::vector< double > q(steps.size()-1);
     std::vector< double > d(steps.size()-1);
     for (int i=1 ; i<steps.size() ; ++i) {
-        double theta = xavier::positive_angle(steps[i]-center);
+        double theta = spurt::positive_angle(steps[i]-center);
         double dt = theta - last_theta;
         if (dt > M_PI) {
             dt = 2.*M_PI - dt;
@@ -426,7 +426,7 @@ inline double xavier::safety_factor_bounded(const std::vector<nvis::vec2>& steps
     return total_q/total_w;
 }
 
-inline double xavier::safety_factor_stdmap(const std::vector<nvis::vec2>& steps,
+inline double spurt::safety_factor_stdmap(const std::vector<nvis::vec2>& steps,
         const map_metric& metric)
 {
     if (steps.size()<2) {
@@ -456,7 +456,7 @@ inline double xavier::safety_factor_stdmap(const std::vector<nvis::vec2>& steps,
 }
 
 
-inline int xavier::best_period(const std::vector<nvis::vec2>& steps, int maxp,
+inline int spurt::best_period(const std::vector<nvis::vec2>& steps, int maxp,
                                const map_metric& metric)
 {
     std::map<double, int> dist_to_period;
@@ -467,7 +467,7 @@ inline int xavier::best_period(const std::vector<nvis::vec2>& steps, int maxp,
 }
 
 template<typename MAP>
-void xavier::iterate(const nvis::vec2& x0, std::vector<nvis::vec2>& steps,
+void spurt::iterate(const nvis::vec2& x0, std::vector<nvis::vec2>& steps,
                      const MAP& pmap, int niter)
 {
     MAP* amap = pmap.clone();
@@ -483,7 +483,7 @@ void xavier::iterate(const nvis::vec2& x0, std::vector<nvis::vec2>& steps,
 }
 
 template<typename MAP>
-nvis::vec2 xavier::rhs(const nvis::vec2& x0, const MAP& pmap, int period,
+nvis::vec2 spurt::rhs(const nvis::vec2& x0, const MAP& pmap, int period,
                        const map_metric& metric)
 {
     MAP* amap = pmap.clone();
@@ -502,7 +502,7 @@ nvis::vec2 xavier::rhs(const nvis::vec2& x0, const MAP& pmap, int period,
 }
 
 template<typename MAP>
-nvis::vec2 xavier::rhs(const nvis::vec2& x0, const MAP& pmap, int period,
+nvis::vec2 spurt::rhs(const nvis::vec2& x0, const MAP& pmap, int period,
                        map_analysis_param& params)
 {
     MAP* amap = pmap.clone();
@@ -526,7 +526,7 @@ nvis::vec2 xavier::rhs(const nvis::vec2& x0, const MAP& pmap, int period,
 }
 
 template<typename MAP>
-void xavier::sample_raster(raster_data<orbit_data, double, 2>& dataset,
+void spurt::sample_raster(raster_data<orbit_data, double, 2>& dataset,
                            const grid<double, 2>& mesh, const MAP& pmap,
                            map_analysis_param& params, bool compute_sf)
 {
@@ -615,7 +615,7 @@ void xavier::sample_raster(raster_data<orbit_data, double, 2>& dataset,
 }
 
 template<typename MAP>
-double xavier::adaptive_rotation_angle(const nvis::vec2& x0, const nvis::vec2& v0,
+double spurt::adaptive_rotation_angle(const nvis::vec2& x0, const nvis::vec2& v0,
                                        const nvis::vec2& x1, const nvis::vec2& v1,
                                        const MAP& pmap, unsigned int period,
                                        double dx, map_analysis_param& params)
@@ -627,7 +627,7 @@ double xavier::adaptive_rotation_angle(const nvis::vec2& x0, const nvis::vec2& v
         throw e;
     }
     
-    double theta = xavier::signed_angle(v0, v1);
+    double theta = spurt::signed_angle(v0, v1);
     
     bool verbose = params.verbose;
     
@@ -678,12 +678,12 @@ double xavier::adaptive_rotation_angle(const nvis::vec2& x0, const nvis::vec2& v
 }
 
 template<typename MAP>
-double xavier::robust_rotation_angle(const nvis::vec2& x0, const nvis::vec2& v0,
+double spurt::robust_rotation_angle(const nvis::vec2& x0, const nvis::vec2& v0,
                                      const nvis::vec2& x1, const nvis::vec2& v1,
                                      const MAP& pmap, unsigned int period,
                                      double dx, map_analysis_param& params)
 {
-    double theta = xavier::signed_angle(v0, v1);
+    double theta = spurt::signed_angle(v0, v1);
     
     if (fabs(theta) <= MAX_ANGLE_VARIATION) {
         return theta;
@@ -708,7 +708,7 @@ double xavier::robust_rotation_angle(const nvis::vec2& x0, const nvis::vec2& v0,
 }
 
 template<typename MAP>
-int xavier::__poincare_index(const grid<double, 2>& mesh,
+int spurt::__poincare_index(const grid<double, 2>& mesh,
                              const nvis::ivec2& cell_id,
                              const raster_data<orbit_data, double, 2>& dataset,
                              const MAP& pmap, int period, double lmin,
@@ -783,7 +783,7 @@ int xavier::__poincare_index(const grid<double, 2>& mesh,
 }
 
 template<typename MAP>
-int xavier::__fast_poincare_index(const grid<double, 2>& mesh,
+int spurt::__fast_poincare_index(const grid<double, 2>& mesh,
                                   const nvis::ivec2& cell_id,
                                   const raster_data<orbit_data, double, 2>& dataset,
                                   const MAP& pmap, int period, double lmin,
@@ -847,7 +847,7 @@ int xavier::__fast_poincare_index(const grid<double, 2>& mesh,
 }
 
 template<typename MAP>
-int xavier::poincare_index(const grid<double, 2>& mesh, const nvis::ivec2& cell_id,
+int spurt::poincare_index(const grid<double, 2>& mesh, const nvis::ivec2& cell_id,
                            const raster_data<orbit_data, double, 2>& dataset,
                            const MAP& pmap, int period, double lmin,
                            map_analysis_param& params)
@@ -961,7 +961,7 @@ int xavier::poincare_index(const grid<double, 2>& mesh, const nvis::ivec2& cell_
 
 template<typename MAP>
 void
-xavier::process_cell(std::vector<std::pair<int, int> >& pids,
+spurt::process_cell(std::vector<std::pair<int, int> >& pids,
                      const raster_data<orbit_data, double, 2>& dataset,
                      const grid<double, 2>& mesh,
                      const nvis::ivec2& cell_id, const MAP& pmap, double dx,

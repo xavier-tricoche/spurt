@@ -7,7 +7,7 @@
 #include "crease.hpp"
 
 
-namespace xavier {
+namespace spurt {
 namespace crease {
 
 // sample points in local coordinates
@@ -99,8 +99,8 @@ struct face_type {
         l1 = nvis::norm(e1);
         
         for (unsigned int i = 0 ; i < 4 ; i++) {
-            g[i] = xavier::crease::the_wrapper->gradient(p[i]);
-            Hg[i] = xavier::crease::the_wrapper->Hgradient(p[i]);
+            g[i] = spurt::crease::the_wrapper->gradient(p[i]);
+            Hg[i] = spurt::crease::the_wrapper->Hgradient(p[i]);
         }
         
         basis_set = true;
@@ -201,7 +201,7 @@ inline nvis::vec3 gradient(unsigned int pid, const face_type& face, bool interpo
         face(coef[pid][0], coef[pid][1], face.g);
     } else {
         nvis::vec3 p = position(pid, face);
-        g = xavier::crease::the_wrapper->gradient(p);
+        g = spurt::crease::the_wrapper->gradient(p);
     }
     
     return g;
@@ -216,12 +216,12 @@ inline nvis::vec3 Hgradient(unsigned int pid, const face_type& face, bool interp
         face(coef[pid][0], coef[pid][1], face.Hg);
     } else {
         nvis::vec3 p = position(pid, face);
-        Hg = xavier::crease::the_wrapper->Hgradient(p);
+        Hg = spurt::crease::the_wrapper->Hgradient(p);
     }
     
     return Hg;
 }
-} // namespace xavier
+} // namespace spurt
 } // namespace crease
 
 #endif

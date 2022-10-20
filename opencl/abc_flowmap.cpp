@@ -53,11 +53,11 @@ struct value_traits {
 	typedef Eigen::Matrix<value_type, 3, 1>                   vector_type;
 	typedef Eigen::Matrix<value_type, 3, 1>                   state_type;
 	typedef Eigen::Matrix<value_type, 3, 3>                   matrix_type;
-	typedef xavier::raster_grid<3, value_type>                grid_type;
+	typedef spurt::raster_grid<3, value_type>                grid_type;
 	typedef typename grid_type::point_type                    position_type;
 	typedef nvis::bounding_box< position_type >               bounds_type;
 	typedef typename grid_type::coord_type                    coordinates_type;
-	typedef xavier::raster_data<vector_type, 3, value_type>   vector_raster_type;
+	typedef spurt::raster_data<vector_type, 3, value_type>   vector_raster_type;
 };
 //]
 
@@ -218,7 +218,7 @@ void write(const std::string& filename, const std::vector<Value_>& data,
     os << "NRRD0001\n"
        << "# Complete NRRD file format specification at:\n"
        << "# http://teem.sourceforge.net/nrrd/format.html\n"
-       << "type: " << xavier::type2string<value_t>::type_name() << "\n"
+       << "type: " << spurt::type2string<value_t>::type_name() << "\n"
        << "dimension: " << (valsize > 1 ? 4 : 3) << '\n';
 	os << "sizes:";
 	if (valsize > 1) os << " " << valsize;
@@ -406,7 +406,7 @@ int main( int argc , const char **argv )
     using namespace std;
     using namespace odeint;
 
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
             required_group(true, false, "Required Options"),
@@ -436,7 +436,7 @@ int main( int argc , const char **argv )
         exit(1);
     }
 
-    filename=xavier::filename::remove_extension(filename);
+    filename=spurt::filename::remove_extension(filename);
 
     //[ vexcl_main
     // setup the opencl context

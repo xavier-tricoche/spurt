@@ -54,7 +54,7 @@ inline nvis::vec2 center(const Mesh& mesh, unsigned int tri)
 }
 }
 
-namespace xavier {
+namespace spurt {
 namespace experimental {
 template<typename Map>
 void sample_on_raster(std::vector<orbit>& orbits,
@@ -83,7 +83,7 @@ void sample_on_raster(std::vector<orbit>& orbits,
     nbthreads = omp_get_max_threads();
 #endif
     
-    std::vector<std::vector<xavier::orbit> > __orbits(nbthreads);
+    std::vector<std::vector<spurt::orbit> > __orbits(nbthreads);
     
     #pragma omp parallel
     {
@@ -157,7 +157,7 @@ triangle_check(const typename Mesh::data_type& ground_truth, const Mesh& mesh, i
         p[n] = mesh.get_vertex(verts[n]);
         d[n] = mesh.get_data(verts[n]);
     }
-    nvis::vec3 beta = xavier::barycentric(x, p);
+    nvis::vec3 beta = spurt::barycentric(x, p);
     return error(ground_truth, beta, d);
 }
 
@@ -297,7 +297,7 @@ bool refine_map(Mesh& triangles, const Sampler& sampler,
     return seed_triangles.empty(); // all triangles now meet the set criteria
 }
 } // experimental
-} // xavier
+} // spurt
 
 
 

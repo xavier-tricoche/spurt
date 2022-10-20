@@ -4,11 +4,11 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <vtkCellTreeLocator.h>
 #include <vtkGenericCell.h>
 
-namespace xavier {
+namespace spurt {
 
 class vtk_field {
     
@@ -121,7 +121,7 @@ private:
     mutable vtkSmartPointer<vtkGenericCell> m_cell;
 };
 
-} // xavier
+} // spurt
 
 
 #endif

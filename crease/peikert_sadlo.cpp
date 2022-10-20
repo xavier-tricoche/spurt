@@ -1,6 +1,6 @@
 // #include <crease/peikert_sadlo.hpp>
-#include <VTK/vtk_utils.hpp>
-#include <VTK/vtk_interpolator.hpp>
+#include <vtk/vtk_utils.hpp>
+#include <vtk/vtk_interpolator.hpp>
 #include <boundary-aware-rectgrid/boundaryAwareRectGrid.h>
 
 #include <misc/option_parse.hpp>
@@ -23,10 +23,10 @@ inline bool is_bad_value(value_type v) {
     return v == invalid_value;
 }
 
-typedef xavier::fixed_sorted_vector<long int, 2> edge_index_type;
-typedef xavier::fixed_sorted_vector<long int, 3> triangle_index_type;
-typedef xavier::fixed_sorted_vector<long int, 4> quad_index_type;
-typedef xavier::fixed_sorted_vector<long int, 4> face_index_type;
+typedef spurt::fixed_sorted_vector<long int, 2> edge_index_type;
+typedef spurt::fixed_sorted_vector<long int, 3> triangle_index_type;
+typedef spurt::fixed_sorted_vector<long int, 4> quad_index_type;
+typedef spurt::fixed_sorted_vector<long int, 4> face_index_type;
 
 typedef vtk_utils::interpolator<vtkUnstructuredGrid, double, 3, vector_type, matrix_type> unstructured_interpolator_type;
 typedef vtk_utils::interpolator<vtkStructuredGrid, double, 3, vector_type, matrix_type> curvilinear_interpolator_type;
@@ -48,12 +48,12 @@ bool do_ridge_lines, do_ridge_surfaces, do_valley_lines, do_valley_surfaces;
 bool do_omega, do_l2, do_l, do_h;
 
 void initialize(int argc, char* argv[]) {
-    namespace xcl = xavier::command_line;
+    namespace scl = spurt::command_line;
 
-    xcl::option_traits
+    scl::option_traits
             required(true, false, "Required Options"),
             optional(false, false, "Optional Group");
-    xcl::option_parser parser(argv[0],
+    scl::option_parser parser(argv[0],
             "Extract ridges of scalar field using Peikert and Sadlo's method");
 
     verbose = false;
@@ -928,7 +928,7 @@ VTK_SMART(vtkDoubleArray) compute_determinant(Interpolator& intp) {
     determinant->SetName("PS Determinant");
     intp.set_max_order(2);
 
-    xavier::ProgressDisplay progress(true);
+    spurt::ProgressDisplay progress(true);
     progress.begin(npoints, "Computing determinant");
     for (size_t i=0; i<npoints; ++i) {
         vector_type g;
@@ -1049,7 +1049,7 @@ void compute_crease_strength(Interpolator& intp) {
     }
     intp.set_max_order(2);
 
-    xavier::ProgressDisplay progress(true);
+    spurt::ProgressDisplay progress(true);
     progress.begin(npoints, "Computing crease strength");
     for (size_t i=0; i<npoints; ++i) {
         // vector_type g;

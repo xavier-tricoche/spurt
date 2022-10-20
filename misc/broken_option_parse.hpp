@@ -15,7 +15,7 @@
 // Add validator-level support for fixed-size arrays to boost::program_options
 #include <misc/option_parse_array.hpp>
 
-namespace xavier { namespace command_line {
+namespace spurt { namespace command_line {
 
 namespace po = boost::program_options;
     
@@ -241,9 +241,9 @@ private:
 };
 
 } // command_line
-} // xavier
+} // spurt
 
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 register_positional(const std::string& name, int N) {
     if (_M_current_position == -1) {
         throw std::runtime_error("Invalid sequence of positional arguments");
@@ -270,7 +270,7 @@ register_positional(const std::string& name, int N) {
 //    * "<sym> <sym> "..." <sym>" (n times) if n-tuple
 //    * "<sym> ..." if open-ended sequence
 
-inline std::string xavier::command_line::option_parser::
+inline std::string spurt::command_line::option_parser::
 usage(const std::string& filename) const { 
     std::string out;
     out = filename + " " + _M_flags_string + " ";
@@ -280,7 +280,7 @@ usage(const std::string& filename) const {
 }
 
 // <short>
-inline std::string xavier::command_line::option_parser::
+inline std::string spurt::command_line::option_parser::
 short_form(const std::string& name, bool with_dash) {
     size_t n = name.find(',');
     std::string s;
@@ -301,7 +301,7 @@ short_form(const std::string& name, bool with_dash) {
 }
 
 // VAL(<sym>)
-inline std::string xavier::command_line::option_parser::
+inline std::string spurt::command_line::option_parser::
 parameter_string(const std::string& s, int N) {
     if (N < 0) {
         return s + "...";
@@ -320,7 +320,7 @@ parameter_string(const std::string& s, int N) {
 }
 
 template<typename _Type, int N>
-inline std::string xavier::command_line::option_parser::
+inline std::string spurt::command_line::option_parser::
 parameter_string(const std::string& s) {
     if (!s.empty()) return s;
     else if (_M_use_default_symbol) 
@@ -332,14 +332,14 @@ parameter_string(const std::string& s) {
     }
 }
 
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_flag_to_usage_string(const std::string& name) {
     std::string s = short_form(name, false);
     if (s.size() == 1) _M_flags_string += s;
     else _M_options_string += "[" + short_form(name, true) + "] ";
 }
 
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_option_to_usage_string(const std::string& name, 
                            const std::string& val_str,
                            size_t N, bool required, bool positional) {
@@ -354,8 +354,8 @@ add_option_to_usage_string(const std::string& name,
     else _M_options_string += usage_str + " ";
 }
 
-inline xavier::command_line::option_parser::group_ptr 
-xavier::command_line::option_parser::
+inline spurt::command_line::option_parser::group_ptr 
+spurt::command_line::option_parser::
 get_group(const option_traits& traits) {
     const std::string& name = traits.group_name();
     if (!name.empty()) {
@@ -380,7 +380,7 @@ get_group(const option_traits& traits) {
 }
 
 template<typename _Type>
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_value(const std::string& name, _Type& variable, 
           const std::string& description,
           const option_traits& traits,
@@ -399,7 +399,7 @@ add_value(const std::string& name, _Type& variable,
 }
 
 template<typename _Type, typename _CompatibleType>
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_value(const std::string& name, _Type& variable, 
           const _CompatibleType& value, const std::string& description,
           const option_traits& traits,
@@ -417,7 +417,7 @@ add_value(const std::string& name, _Type& variable,
     if (traits.positional()) register_positional(name);
 }
 
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_flag(const std::string& name, bool& variable, 
          const std::string& description,
          const option_traits& traits) {
@@ -430,7 +430,7 @@ add_flag(const std::string& name, bool& variable,
 }
 
 template<size_t N, typename _Tuple, typename _Type, typename _CompatibleTuple>
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_tuple(const std::string& name, _Tuple& variable, 
           const _CompatibleTuple& value, const std::string& description,
           const option_traits& traits,
@@ -463,7 +463,7 @@ add_tuple(const std::string& name, _Tuple& variable,
 }
 
 template<size_t N, typename _Tuple, typename _Type>
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_tuple(const std::string& name, _Tuple& variable, 
           const std::string& description,
           const option_traits& traits,
@@ -481,7 +481,7 @@ add_tuple(const std::string& name, _Tuple& variable,
 }
 
 template<typename _Type>
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_sequence(const std::string& name, std::vector<_Type>& variable, 
              const std::string& description,
              const option_traits& traits,
@@ -499,7 +499,7 @@ add_sequence(const std::string& name, std::vector<_Type>& variable,
 }
 
 template<typename _Type, int N>
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_custom(const std::string& name, _Type& variable,
            const std::string& description,
            typename custom_parser<_Type>::parser_type parser,
@@ -521,7 +521,7 @@ add_custom(const std::string& name, _Type& variable,
     if (traits.positional()) register_positional(name, N);
 }
 
-inline void xavier::command_line::
+inline void spurt::command_line::
 option_parser::parse(int argc, char* argv[]) {
     // merge the various option groups together
     for (size_t i=0 ; i<_M_groups.size() ; ++i) {

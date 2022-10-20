@@ -27,7 +27,7 @@
 #include <vtkPointData.h>
 #include <sfcnn.hpp>
 
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 
 // parameters
 nvis::fixed_vector<size_t, 3>  resolution;
@@ -58,7 +58,7 @@ void printUsageAndExit( const std::string& argv0, const std::string& offending="
     if (doExit) exit(1);
 }
 
-typedef xavier::point_locator<double, int, 3>   locator_type;
+typedef spurt::point_locator<double, int, 3>   locator_type;
 typedef locator_type::point_type                point_type;
 
 std::vector<nvis::vec3> all_points;
@@ -110,7 +110,7 @@ void load_NRRD(const std::string& name, const std::string& me) {
         printUsageAndExit(me, biffGetDone(NRRD));
     }
     std::vector<double> data;
-    xavier::nrrd_utils::to_vector<double>(data, nin);
+    spurt::nrrd_utils::to_vector<double>(data, nin);
     // identify data type based on number of columns
     int ncol = nin->axis[0].size;
     int npts = nin->axis[1].size;
@@ -177,10 +177,10 @@ void load_NRRD(const std::string& name, const std::string& me) {
 }
 
 void load_DLR(const std::string& grid_name, const std::string data_name, const std::string& me) {
-    xavier::DLRreader reader(grid_name, data_name);
+    spurt::DLRreader reader(grid_name, data_name);
     std::vector<nvis::fvec3> vertices;
     std::vector<long int> cell_indices;
-    std::vector<std::pair<xavier::DLRreader::cell_type, long int> >cell_types;
+    std::vector<std::pair<spurt::DLRreader::cell_type, long int> >cell_types;
     reader.read_mesh(false, vertices, cell_indices, cell_types);
     int npts = vertices.size();
     all_points.resize(npts);
@@ -212,7 +212,7 @@ Eigen::VectorXd do_fit(const nvis::vec3& x0,
 
     typedef nvis::fixed_vector<double, N>                     val_type;
     typedef Eigen::VectorXd                                   res_type;
-    typedef xavier::MLS::weighted_least_squares<val_type, nvis::vec3> fit_type;
+    typedef spurt::MLS::weighted_least_squares<val_type, nvis::vec3> fit_type;
 
     std::vector<nvis::vec3> points(neighs.size());
     std::vector<val_type>   values(neighs.size());
@@ -508,7 +508,7 @@ int main(int argc, char* argv[]) {
     nvis::vec3 spacing = bbox.size() / nvis::vec3(resolution);
     std::cout << "spacing = " << spacing << std::endl;
 
-    typedef xavier::point_locator<double, int, 3>     locator_type;
+    typedef spurt::point_locator<double, int, 3>     locator_type;
     typedef locator_type::point_type                  point_type;
     typedef locator_type::region_type                 region_type;
     typedef sfcnn<nvis::fvec3, 3, float>              NNlocator_type;
@@ -527,7 +527,7 @@ int main(int argc, char* argv[]) {
     if (all_scalars.size()) nrhs++;
     if (all_vectors.size()) nrhs += 3;
     if (all_tensors.size()) nrhs += 9;
-    int ndof = xavier::MLS::dof(3, degree);
+    int ndof = spurt::MLS::dof(3, degree);
     std::cout << "there are " << ndof << " DOF per scalar attribute for polynomial order " << degree << '\n';
 
     size_t npts = resolution[0]*resolution[1]*resolution[2];

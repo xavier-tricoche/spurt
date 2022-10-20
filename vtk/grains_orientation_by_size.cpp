@@ -31,7 +31,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <teem/hest_helper.hpp>
 #include <set>
@@ -198,8 +198,8 @@ int main(int argc, char* argv[])
     edge_reader->Delete();
     std::cerr << edge_name << " loaded.\n";
     
-    Nrrd* __id = xavier::nrrd_utils::readNrrd(info.id_to_tags);
-    xavier::nrrd_utils::nrrd_data_wrapper<int> id(__id);
+    Nrrd* __id = spurt::nrrd_utils::readNrrd(info.id_to_tags);
+    spurt::nrrd_utils::nrrd_data_wrapper<int> id(__id);
     std::cerr << info.id_to_tags << " loaded.\n";
     
     std::string stat_base(info.stat_base);
@@ -207,15 +207,15 @@ int main(int argc, char* argv[])
     size_name.append("-size.nrrd");
     id_name.append("-ids_to_tags.nrrd");
     
-    Nrrd* __size = xavier::nrrd_utils::readNrrd(size_name);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> size(__size);
+    Nrrd* __size = spurt::nrrd_utils::readNrrd(size_name);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> size(__size);
     std::cerr << size_name << " loaded.\n";
     int nb_grains = __size->axis[0].size;
     
     std::cerr << "there are " << nb_grains << " grains\n";
     
-    Nrrd* __orient = xavier::nrrd_utils::readNrrd(info.orientation);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> orient(__orient);
+    Nrrd* __orient = spurt::nrrd_utils::readNrrd(info.orientation);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> orient(__orient);
     std::cerr << info.orientation << " loaded.\n";
     
     std::map<int, uchar_color_type> colors;

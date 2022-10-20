@@ -10,8 +10,8 @@
 #include <string>
 #include <memory>
 
-#include <VTK/vtk_utils.hpp>
-#include <VTK/vtk_interpolator.hpp>
+#include <vtk/vtk_utils.hpp>
+#include <vtk/vtk_interpolator.hpp>
 #include <vtkGenericCell.h>
 
 #include "math/fixed_vector.hpp"
@@ -36,7 +36,7 @@ namespace {
     }
 }
 
-namespace xavier {
+namespace spurt {
 
     template<typename Field_>
     class arbitrary_time_dependent_field {
@@ -546,6 +546,6 @@ namespace xavier {
     };
 
 
-} // xavier
+} // spurt
 
 #endif

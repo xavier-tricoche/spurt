@@ -9,7 +9,7 @@
 #include <math/bounding_box.hpp>
 
 
-namespace xavier {
+namespace spurt {
 
 inline double area(const nvis::vec2 p[3])
 {
@@ -142,7 +142,7 @@ inline interval<double> span(const double v[3])
 }
 
 struct triangle_area_controller {
-    typedef xavier::point_data  data_type;
+    typedef spurt::point_data  data_type;
     
     triangle_area_controller(double max) : __max_area(max) {}
     
@@ -154,7 +154,7 @@ struct triangle_area_controller {
 };
 
 struct triangle_aspect_ratio_controller {
-    typedef xavier::point_data  data_type;
+    typedef spurt::point_data  data_type;
     
     triangle_aspect_ratio_controller(double max_r) : __max_ratio(max_r) {}
     
@@ -166,7 +166,7 @@ struct triangle_aspect_ratio_controller {
 };
 
 struct triangle_edge_length_controller {
-    typedef xavier::point_data  data_type;
+    typedef spurt::point_data  data_type;
     
     triangle_edge_length_controller(double max) : __max_length(max) {
         std::cerr << "initializing edge_length_controller with threshold = " << max << std::endl;
@@ -180,7 +180,7 @@ struct triangle_edge_length_controller {
 };
 
 struct triangle_shape_controller {
-    typedef xavier::point_data  data_type;
+    typedef spurt::point_data  data_type;
     typedef nvis::bbox2         bounds_type;
     
     triangle_shape_controller(double max_a, double max_r)
@@ -207,7 +207,7 @@ struct triangle_shape_controller {
 };
 
 struct triangle_multiple_orbits_controller {
-    typedef xavier::point_data  data_type;
+    typedef spurt::point_data  data_type;
     
     triangle_multiple_orbits_controller(double min_a)
         : __min_area(min_a) {}
@@ -226,7 +226,7 @@ struct triangle_multiple_orbits_controller {
 };
 
 struct triangle_value_inclusion_controller {
-    typedef xavier::point_data  data_type;
+    typedef spurt::point_data  data_type;
     typedef interval<double>    interval_type;
     
     triangle_value_inclusion_controller(double val, double min_a)
@@ -250,7 +250,7 @@ struct triangle_value_inclusion_controller {
 };
 
 struct triangle_interval_inclusion_controller {
-    typedef xavier::point_data  data_type;
+    typedef spurt::point_data  data_type;
     typedef interval<double>    interval_type;
     
     triangle_interval_inclusion_controller(const interval_type& valid, double min_a)
@@ -275,7 +275,7 @@ struct triangle_interval_inclusion_controller {
 };
 
 struct triangle_value_span_controller {
-    typedef xavier::point_data  data_type;
+    typedef spurt::point_data  data_type;
     typedef interval<double>    interval_type;
     
     triangle_value_span_controller(double max_s, double min_a)
@@ -295,7 +295,7 @@ struct triangle_value_span_controller {
 };
 
 struct triangle_contains_fixed_point_controller {
-    typedef xavier::point_data  data_type;
+    typedef spurt::point_data  data_type;
     
     triangle_contains_fixed_point_controller(double min_a, int period,
             const map_metric& metric)

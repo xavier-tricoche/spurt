@@ -9,7 +9,7 @@
 #include <math/bounding_box.hpp>
 #include <image/nrrd_wrapper.hpp>
 
-namespace xavier {
+namespace spurt {
 template<typename _Format> class nrrd_data_traits {};
 
 template<>
@@ -26,10 +26,10 @@ public:
         for (int i = 0 ; i < 3 ; ++i) {
             __size[i] = nin->axis[nin->dim-3+i].size;
         }
-        __bounds = xavier::nrrd_utils::get_bounds<3>(nin);
+        __bounds = spurt::nrrd_utils::get_bounds<3>(nin);
 //      std::cerr << "bounds are " << __bounds << "\n";
         __step = __bounds.size() / point_type(__size - nvis::ivec3(1, 1, 1));
-        __scalar_values = xavier::nrrd_utils::to_array<scalar_type>(nin);
+        __scalar_values = spurt::nrrd_utils::to_array<scalar_type>(nin);
         __offset[0] = 0;
         __offset[1] = 1;
         __offset[2] = 1+__size[0];

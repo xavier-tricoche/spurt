@@ -58,7 +58,7 @@ struct matrix_wrapper {
 }
 
 
-namespace xavier {
+namespace spurt {
 
 template<typename Scalar_, typename Graph_>
 class Isomap {
@@ -167,6 +167,6 @@ private:
     matrix_t distances;
 };
 
-} // namespace xavier
+} // namespace spurt
 
 #endif

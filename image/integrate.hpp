@@ -37,7 +37,7 @@
 
 #define __QUIET__
 
-namespace xavier {
+namespace spurt {
 
 namespace ten_interface {
 

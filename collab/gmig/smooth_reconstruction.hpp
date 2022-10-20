@@ -12,7 +12,7 @@
 #include <util/timer.hpp>
 // teem
 #include <teem/nrrd.h>
-// xavier
+// spurt
 #include <math/RBF.hpp>
 #include <math/RBFbasis.hpp>
 #include <image/nrrd_wrapper.hpp>
@@ -31,10 +31,10 @@ nvis::bbox2 bounds;
 bool verbose = false;
 std::string kernel_name = "r3";
 
-namespace xrbf = xavier::RBF;
+namespace xrbf = spurt::RBF;
 
 template<typename _Interpolator>
-void xavier::gmig::check_solution(const _Interpolator& f) {
+void spurt::gmig::check_solution(const _Interpolator& f) {
     typedef typename _Interpolator::point_type   point_type;
     typedef typename _Interpolator::data_type    data_type;
     
@@ -136,7 +136,7 @@ float* _reconstruct(const _Interpolator& interpolator,
 }
 
 template<typename Int_>
-float* xavier::gmig::
+float* spurt::gmig::
 reconstruct(const std::vector<nvis::vec2>& points,
             const std::vector<nvis::vec1>& times,
             const std::vector<nvis::vec1>& weights,

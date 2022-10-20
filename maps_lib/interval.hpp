@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-namespace xavier {
+namespace spurt {
 template<typename T>
 struct interval {
     interval() : __min(T(0)), __max(T(0)) {}
@@ -27,14 +27,14 @@ struct interval {
 }
 
 template<typename T>
-inline xavier::interval<T> intersect(const xavier::interval<T>& i0, const xavier::interval<T>& i1)
+inline spurt::interval<T> intersect(const spurt::interval<T>& i0, const spurt::interval<T>& i1)
 {
-    return xavier::interval<T>(std::max(i0.__min, i1.__min),
+    return spurt::interval<T>(std::max(i0.__min, i1.__min),
                                std::min(i0.__max, i1.__max));
 }
 
 template<typename T>
-std::ostream& operator<<(std::ostream& os, const xavier::interval<T>& i)
+std::ostream& operator<<(std::ostream& os, const spurt::interval<T>& i)
 {
     os << "[ " << i.__min << ", " << i.__max << " ]";
     return os;

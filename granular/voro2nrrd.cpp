@@ -53,9 +53,9 @@ int main(int argc, char* argv[])
     size_t sz[] = {2, npart+1};
     
     
-    xavier::readNrrd(in_name);
+    spurt::readNrrd(in_name);
     std::vector<float> data;
-    xavier::to_vector<float>(data, nin);
+    spurt::to_vector<float>(data, nin);
     nrrdNuke(nin);
     
     int npart = data.size()/3;

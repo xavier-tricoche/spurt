@@ -12,7 +12,7 @@
 #include <util/timer.hpp>
 // teem
 #include <teem/nrrd.h>
-// xavier
+// spurt
 #include <data/raster.hpp>
 #include <math/RBF.hpp>
 #include <math/RBFbasis.hpp>
@@ -30,16 +30,16 @@ bool        __verbose = false;
 std::string __kernel_name = "r3";
 size_t      __number_of_bins = 36;
 
-using namespace xavier::maarten;
+using namespace spurt::maarten;
 
 typedef std::vector<double> bins;
 
-class raster_helper : private xavier::raster2d<bins>
+class raster_helper : private spurt::raster2d<bins>
 {
 public:
     typedef bins                               value_type;
     typedef typename bins::value_type          scalar_type;
-    typedef xavier::raster2d<bins>             base_type;
+    typedef spurt::raster2d<bins>             base_type;
     typedef typename base_type::grid_type      grid_type;
     typedef typename grid_type::size_type      size_type;
     typedef typename grid_type::vec_type       vec_type;
@@ -160,7 +160,7 @@ nvis::vec2 read_nrrd(std::vector<nvis::vec2>& points,
         throw;
     }
     std::vector<double> data;
-    xavier::to_vector(data, nin);
+    spurt::to_vector(data, nin);
     size_t N = nin->axis[0].size;
     bool has_weights = (N == 4);
     if (!has_weights) {
@@ -386,7 +386,7 @@ int main(int argc, char* argv[])
         usage("Unrecognized kernel type: " + kernel_name);
     }
     
-    xavier::nrrd_params<float, 3> params;
+    spurt::nrrd_params<float, 3> params;
     params.sizes()[0] = number_of_bins;
     params.sizes()[1] = __resolution[0];
     params.sizes()[2] = __resolution[1];
@@ -397,7 +397,7 @@ int main(int argc, char* argv[])
     params.spacings()[0] = TWO_PI/(double)number_of_bins;
     params.spacings()[1] = spacing[0];
     params.spacings()[2] = spacing[1];
-    xavier::writeNrrd(raster.get_data(), output_name, params);
+    spurt::writeNrrd(raster.get_data(), output_name, params);
     std::cout << output_name << " has been exported\n";
     
     return 0;

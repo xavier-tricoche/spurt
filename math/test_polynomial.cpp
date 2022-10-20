@@ -24,10 +24,10 @@ template<typename T, size_t Dim, size_t Order>
 void compare(size_t n) {
     typedef T                                                       val_t;
     typedef nvis::fixed_vector<T, Dim>                              vec_t;
-    typedef xavier::polynomial::polynomial_basis<T, Dim>            poly_t;
+    typedef spurt::polynomial::polynomial_basis<T, Dim>            poly_t;
     typedef typename poly_t::monomial_type                          mono_t;
     typedef typename poly_t::derivative_type                        deriv_t;
-    typedef xavier::polynomial::alt_polynomial_basis<T, Dim, Order> alt_poly_t;
+    typedef spurt::polynomial::alt_polynomial_basis<T, Dim, Order> alt_poly_t;
     
     const val_t max_value = 1000.;
     

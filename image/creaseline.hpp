@@ -1,14 +1,14 @@
 #ifndef __CREASE_LINE_HPP__
 #define __CREASE_LINE_HPP__
 
-#include <ext/xavier/image/probe.hpp>
+#include <ext/spurt/image/probe.hpp>
 #include <ext/nvis/math/fixed_vector.hpp>
 #include <teem/nrrd.h>
 #include <set>
 #include <map>
 #include <vector>
 
-namespace xavier {
+namespace spurt {
 namespace crease {
 std::vector< std::pair< nvis::vec3, nvis::vec3 > > problematic_edges;
 std::vector< nvis::vec3 > face_points;
@@ -92,29 +92,29 @@ struct Grid {
 
 bool zero_crossing(std::vector< nvis::vec3 >& zeros,
                    const nvis::vec3& p0, const nvis::vec3& p1,
-                   const xavier::gage_interface::scalar_wrapper& gH,
+                   const spurt::gage_interface::scalar_wrapper& gH,
                    unsigned int idx, unsigned int alt_idx);
                    
 void zero_crossing_e13(std::vector < std::pair < nvis::vec3,
                        nvis::vec3 > > & zeros,
                        const nvis::vec3& p0, const nvis::vec3& p1,
-                       const xavier::gage_interface::scalar_wrapper& gH,
+                       const spurt::gage_interface::scalar_wrapper& gH,
                        unsigned int idx, unsigned int ref);
                        
 void zero_crossing_e2(std::vector< nvis::vec3 >& zeros,
                       const nvis::vec3& p0, const nvis::vec3& p1,
                       const nvis::vec3& ev0, const nvis::vec3& ev1,
-                      const xavier::gage_interface::scalar_wrapper& gH,
+                      const spurt::gage_interface::scalar_wrapper& gH,
                       unsigned int ref);
                       
 void edge_orientation(nvis::vec3& ev1, const nvis::vec3& reference,
                       const nvis::vec3& p0, const nvis::vec3& p1,
-                      const xavier::gage_interface::scalar_wrapper& gH,
+                      const spurt::gage_interface::scalar_wrapper& gH,
                       unsigned int idx);
                       
 bool face_orientation(std::vector< nvis::vec3 >& vecs,
                       const std::vector< nvis::vec3 >& p,
-                      const xavier::gage_interface::scalar_wrapper& gH,
+                      const spurt::gage_interface::scalar_wrapper& gH,
                       unsigned int idx, bool ridge);
                       
 void extract_lines(const Nrrd* nrrd, bool ridge);
@@ -122,13 +122,13 @@ void extract_lines(const Nrrd* nrrd, bool ridge);
 };
 };
 
-void xavier::crease::
+void spurt::crease::
 edge_orientation(nvis::vec3& ev1, const nvis::vec3& reference,
                  const nvis::vec3& p0, const nvis::vec3& p1,
-                 const xavier::gage_interface::scalar_wrapper& gH,
+                 const spurt::gage_interface::scalar_wrapper& gH,
                  unsigned int idx)
 {
-    using namespace xavier;
+    using namespace spurt;
     using namespace gage_interface;
     using namespace nvis;
     using namespace std;
@@ -155,14 +155,14 @@ edge_orientation(nvis::vec3& ev1, const nvis::vec3& reference,
     ev1 = cur;
 }
 
-bool xavier::crease::
+bool spurt::crease::
 face_orientation(std::vector< nvis::vec3 >& vecs,
                  const std::vector< nvis::vec3 >& p,
-                 const xavier::gage_interface::scalar_wrapper& gH,
+                 const spurt::gage_interface::scalar_wrapper& gH,
                  unsigned int idx,
                  bool ridge)
 {
-    using namespace xavier;
+    using namespace spurt;
     using namespace gage_interface;
     using namespace nvis;
     using namespace std;
@@ -191,13 +191,13 @@ face_orientation(std::vector< nvis::vec3 >& vecs,
     return true;
 }
 
-void xavier::crease::
+void spurt::crease::
 zero_crossing_e13(std::vector< std::pair< nvis::vec3, nvis::vec3 > >& zeros,
                   const nvis::vec3& p0, const nvis::vec3& p1,
-                  const xavier::gage_interface::scalar_wrapper& gH,
+                  const spurt::gage_interface::scalar_wrapper& gH,
                   unsigned int idx, unsigned int ref)
 {
-    using namespace xavier;
+    using namespace spurt;
     using namespace gage_interface;
     using namespace nvis;
     using namespace std;
@@ -252,14 +252,14 @@ zero_crossing_e13(std::vector< std::pair< nvis::vec3, nvis::vec3 > >& zeros,
     }
 }
 
-void xavier::crease::
+void spurt::crease::
 zero_crossing_e2(std::vector< nvis::vec3 >& zeros,
                  const nvis::vec3& p0, const nvis::vec3& p1,
                  const nvis::vec3& ev0, const nvis::vec3& ev1,
-                 const xavier::gage_interface::scalar_wrapper& gH,
+                 const spurt::gage_interface::scalar_wrapper& gH,
                  unsigned int ref)
 {
-    using namespace xavier;
+    using namespace spurt;
     using namespace gage_interface;
     using namespace nvis;
     using namespace std;
@@ -301,13 +301,13 @@ zero_crossing_e2(std::vector< nvis::vec3 >& zeros,
 }
 
 
-bool xavier::crease::
+bool spurt::crease::
 zero_crossing(std::vector< nvis::vec3 >& zeros,
               const nvis::vec3& p0, const nvis::vec3& p1,
-              const xavier::gage_interface::scalar_wrapper& gH,
+              const spurt::gage_interface::scalar_wrapper& gH,
               unsigned int idx, unsigned int alt_idx)
 {
-    using namespace xavier;
+    using namespace spurt;
     using namespace gage_interface;
     using namespace nvis;
     using namespace std;
@@ -386,9 +386,9 @@ zero_crossing(std::vector< nvis::vec3 >& zeros,
     return true;
 }
 
-void xavier::crease::extract_lines(const Nrrd* nrrd, bool ridge)
+void spurt::crease::extract_lines(const Nrrd* nrrd, bool ridge)
 {
-    using namespace xavier;
+    using namespace spurt;
     using namespace gage_interface;
     using namespace nvis;
     using namespace std;

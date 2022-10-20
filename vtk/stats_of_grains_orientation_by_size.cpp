@@ -1,6 +1,6 @@
 #include <string>
 #include <math/fixed_vector.hpp>
-// #include <VTK/vtk_utils.hpp>
+// #include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <teem/nrrd.h>
 #include <set>
@@ -49,8 +49,8 @@ int main(int argc, char* argv[])
     
     std::string size_name(param_in);
     
-    Nrrd* __size = xavier::nrrd_utils::readNrrd(size_name);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> size(__size);
+    Nrrd* __size = spurt::nrrd_utils::readNrrd(size_name);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> size(__size);
     std::cerr << size_name << " loaded.\n";
     int nb_grains = __size->axis[0].size;
     

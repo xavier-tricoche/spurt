@@ -17,7 +17,7 @@
 #include <omp.h>
 #endif
 
-namespace xavier {
+namespace spurt {
 struct map_cell_data {
 
     typedef std::pair<nvis::vec2, double> value_type;
@@ -145,13 +145,13 @@ struct period_convergence_predicate {
     std::vector<double> ref_periods;
     double tol_cvg, tol_close;
 };
-} // xavier
+} // spurt
 
 namespace {
 
 template<typename P>
 double period(const nvis::vec2& x0, std::vector<nvis::vec2>& steps,
-              const P& __pmap, const xavier::map_metric& metric, int n)
+              const P& __pmap, const spurt::map_metric& metric, int n)
 {
     const P* pmap = __pmap.clone();
     try {
@@ -164,7 +164,7 @@ double period(const nvis::vec2& x0, std::vector<nvis::vec2>& steps,
 }
 } // anonymous
 
-namespace xavier {
+namespace spurt {
 
 template<typename MAP, typename PREDICATE>
 void period_analysis(const MAP& pmap, const map_metric& metric,

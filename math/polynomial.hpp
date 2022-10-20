@@ -18,7 +18,7 @@
 #include <boost/static_assert.hpp>
 // nvis
 #include <math/fixed_vector.hpp>
-// xavier
+// spurt
 #include <math/combinatorial.hpp>
 #include <misc/meta_utils.hpp>
 
@@ -40,7 +40,7 @@ inline T exponentiation_by_squaring(T x, size_t n)
 }
 }
 
-namespace xavier { namespace polynomial {
+namespace spurt { namespace polynomial {
 
 template<typename T>
 inline T power(T x, size_t n) {
@@ -866,7 +866,7 @@ struct alt_polynomial_basis<_Type, 4, 0> : public constant_basis<_Type, 4> {};
     
         
 } // polynomial
-} // xavier
+} // spurt
 
 
 #endif

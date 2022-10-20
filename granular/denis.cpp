@@ -54,8 +54,8 @@
 #include "vtkTransform.h"
 #include "vtkTubeFilter.h"
 #include "vtkWindowToImageFilter.h"
-// xavier
-#include <VTK/vtk_utils.hpp>
+// spurt
+#include <vtk/vtk_utils.hpp>
 #include <poincare/metric.hpp>
 #ifndef BPO_WRAPPER_IS_BROKEN
 #   include <misc/option_parse.hpp>
@@ -79,7 +79,7 @@ enum curve_type {
 
 curve_type _which_rep;
 
-using namespace xavier::denis;
+using namespace spurt::denis;
 
 // Equation parameters
 double  _omega, _T, _gamma, _rho, _g_star, _a;
@@ -97,7 +97,7 @@ double _kappa;
 nvis::ivec2 _res;
 bool _verbose;
 
-xavier::map_metric _metric;
+spurt::map_metric _metric;
 
 inline nvis::vec2 normalize(const nvis::vec2& x) {
     nvis::vec2 y;

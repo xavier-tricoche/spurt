@@ -11,7 +11,7 @@
 #include <image/probe.hpp>
 #include <image/nrrd_wrapper.hpp>
 
-namespace xavier {
+namespace spurt {
 
 namespace {
 	inline double pos_modulo(double x, double min, double max) {
@@ -25,7 +25,7 @@ namespace {
 // This class is *NOT* thread safe because it accesses a single gageContext
 // object, which itself is not thread safe.
 class gage_vector_field {
-    typedef xavier::gage_interface::vector_wrapper wrapper_t;
+    typedef spurt::gage_interface::vector_wrapper wrapper_t;
 	typedef nvis::bbox3 bounds_t;
 public:
     typedef wrapper_t::deriv3_t  derivative_type;
@@ -56,10 +56,10 @@ public:
     gage_vector_field(const Nrrd* nin, const std::string name="unknown",
                       bool have_jac=true,
 					  std::array<bool, 3> periodic = std::array<bool, 3>({false, false, false}))
-        : m_wrapper(nin, xavier::gage_interface::BC_INTERP, have_jac),
+        : m_wrapper(nin, spurt::gage_interface::BC_INTERP, have_jac),
           m_name(name), m_have_jacobian(have_jac), m_periodic(periodic) {
         m_wrapper.use_world();
-		xavier::nrrd_utils::nrrd_traits traits(nin);
+		spurt::nrrd_utils::nrrd_traits traits(nin);
 		const std::vector<double>& mins = traits.mins();
 		const std::vector<double>& maxs = traits.maxs();
 		m_bounds.min() = nvis::vec3(mins[1], mins[2], mins[3]);
@@ -148,6 +148,6 @@ public:
 	bounds_t            m_bounds;
 };
 
-} // xavier
+} // spurt
 
 #endif

@@ -25,7 +25,7 @@ void read_file(std::vector<nvis::fvec4>& points, std::vector<float>& times,
 
 int main(int argc, char* argv[]) {
     namespace bpo = boost::program_options;
-    namespace clt = xavier::cmdline_tools;
+    namespace clt = spurt::cmdline_tools;
 
     bpo::options_description desc(
         "Merge a set of travel time data files into a single NRRD file");
@@ -101,10 +101,10 @@ int main(int argc, char* argv[]) {
         data[5*i+3] = points[i][3];
         data[5*i+4] = values[i];
     }
-    xavier::nrrd_params<float, 2> params;
+    spurt::nrrd_params<float, 2> params;
     params.sizes()[0] = 5;
     params.sizes()[1] = points.size();
-    xavier::writeNrrd(data, output_name, params);
+    spurt::writeNrrd(data, output_name, params);
     std::cout << output_name << " has been exported\n";
     return 0;
 }

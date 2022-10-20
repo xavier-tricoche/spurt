@@ -5,7 +5,7 @@
 #include <math/fixed_matrix.hpp>
 #include <complex>
 
-namespace xavier {
+namespace spurt {
 
 inline double cross(const nvis::vec2& x, const nvis::vec2& y)
 {

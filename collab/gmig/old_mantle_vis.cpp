@@ -6,7 +6,7 @@
 #include "core_mantle_io.hpp"
 #include "utils.hpp"
 
-// xavier's utilities
+// spurt's utilities
 #include <format/format.hpp>
 #include <misc/option_parse.hpp>
 
@@ -33,7 +33,7 @@
 #include <boost/graph/connected_components.hpp>
 #include <boost/utility.hpp>
 
-using namespace xavier::gmig;
+using namespace spurt::gmig;
 
 typedef float  scalar_t;
 typedef int    integer_t;
@@ -191,7 +191,7 @@ struct VertexDistance {
 };
 
 bool init(int argc, char** argv) {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
     
     xcl::option_traits 
         required_group("Required parameters", true, false),
@@ -1020,7 +1020,7 @@ int main(int argc, char* argv[])
     else {
         // adaptive color map with spiral color scale
         std::vector<color_t> colors(20);
-        xavier::spiral_scale(colors, 20, 0.2);
+        spurt::spiral_scale(colors, 20, 0.2);
         scalar_t minval = *std::min_element(values.begin(), values.end());
         scalar_t maxval = *std::max_element(values.begin(), values.end());
         scalar_t dval = (maxval-minval)/19;
@@ -1072,7 +1072,7 @@ int main(int argc, char* argv[])
         // visualize
         VTK_MAKE_ACTOR(actor,del2D->GetOutput());
         actor->GetMapper()->ScalarVisibilityOff();
-        color_t c = xavier::rainbow[1+((2*i)%15)];
+        color_t c = spurt::rainbow[1+((2*i)%15)];
         actor->GetProperty()->SetColor(c[0], c[1], c[2]);
         renderer->AddActor(actor);
     }

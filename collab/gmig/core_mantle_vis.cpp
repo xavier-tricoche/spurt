@@ -14,7 +14,7 @@
 #include "core_mantle_io.hpp"
 #include "utils.hpp"
 
-// xavier's utilities
+// spurt's utilities
 #include <format/format.hpp>
 #include <misc/option_parse.hpp>
 
@@ -33,7 +33,7 @@
 #include <VTK/vtk_utils.hpp>
 #include <graphics/colors.hpp>
 
-using namespace xavier::gmig;
+using namespace spurt::gmig;
 
 const float core_radius = 3486; // in km
 const float earth_radius = 6371; // in km
@@ -129,7 +129,7 @@ bool world_coords = false;
 bool show_earth = false;
 
 bool init(int argc, char** argv) {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
     
     xcl::option_traits 
         required_group("Required parameters", true, false),
@@ -483,7 +483,7 @@ int main(int argc, char* argv[])
         // visualize
         VTK_MAKE_ACTOR(actor,del2D->GetOutput());
         actor->GetMapper()->ScalarVisibilityOff();
-        color_t c = xavier::rainbow[1+((2*i)%15)];
+        color_t c = spurt::rainbow[1+((2*i)%15)];
         actor->GetProperty()->SetColor(c[0], c[1], c[2]);
         renderer->AddActor(actor);
     }

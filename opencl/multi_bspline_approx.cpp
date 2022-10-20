@@ -8,7 +8,7 @@
 #include <vexcl/multivector.hpp>
 #include <vexcl/mba.hpp>
 
-#include <VTK/vtk_data_helper.hpp>
+#include <vtk/vtk_data_helper.hpp>
 #include <vtkDataSetWriter.h>
 
 // https://github.com/ddemidov/mba

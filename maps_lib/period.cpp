@@ -3,7 +3,7 @@
 
 // #define VERBOSE_PERIOD_CPP
 
-typedef xavier::default_metric_type metric_type;
+typedef spurt::default_metric_type metric_type;
 
 inline bool empty(const std::pair<int, int>& p)
 {
@@ -30,7 +30,7 @@ bool compatible(int i, const std::pair<int, int>& p, int j,
                 const metric_type& metric,
                 std::ostream& os)
 {
-    using namespace xavier;
+    using namespace spurt;
     
     if(empty(p)) {
         return true;

@@ -22,12 +22,12 @@ namespace div_cleaning {
 
 typedef double                                         scalar_type;
 typedef size_t                                         size_type;
-typedef xavier::grid::uniform_grid<scalar_type, 3>     raster_type;
+typedef spurt::grid::uniform_grid<scalar_type, 3>     raster_type;
 typedef raster_type::coord_type                        ivec_type;
 typedef raster_type::vec_type                          vec_type;
 typedef nvis::mat3                                     mat_type;
-typedef xavier::raster_data<vec_type,3>                vdataset_type;
-typedef xavier::raster_data<scalar_type, 3>            sdataset_type;
+typedef spurt::raster_data<vec_type,3>                vdataset_type;
+typedef spurt::raster_data<scalar_type, 3>            sdataset_type;
 
 typedef gmm::wsvector<scalar_type>                     sparse_vector;
 typedef gmm::row_matrix<sparse_vector>                 sparse_matrix;
@@ -98,7 +98,7 @@ namespace {
                             };
 }
 
-namespace xavier {
+namespace spurt {
 template<typename Data>
 struct divfree_field {
     typedef Data    data_type;
@@ -474,7 +474,7 @@ void singular_cg(const double& mu,
 }
 
 
-} // namespace xavier
+} // namespace spurt
 
 #endif // __XAVIER_DIVERGENCE_CLEANING_HPP__
 

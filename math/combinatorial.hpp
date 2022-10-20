@@ -9,7 +9,7 @@
     of subsets that arise in combinatorics problems.
  */
 
-namespace xavier { namespace combinatorial {
+namespace spurt { namespace combinatorial {
     
 template<typename _Int>
 inline _Int factorial(_Int hi, _Int lo=1) {

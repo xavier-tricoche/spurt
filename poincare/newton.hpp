@@ -9,7 +9,7 @@
 #include <poincare/metric.hpp>
 #include <poincare/map.hpp>
 
-namespace xavier {
+namespace spurt {
 
 namespace map_debug {
 extern std::vector< std::vector< nvis::vec2 > > newton_steps;
@@ -34,7 +34,7 @@ bool lnsearch(const Map& map, nvis::vec2& x, nvis::vec2& f,
 {
     double lambda = 1.0;
     const double alpha = 1e-4;
-    static double maxlength = xavier::__default_metric.diameter() * 0.05;
+    static double maxlength = spurt::__default_metric.diameter() * 0.05;
     
     nvis::vec2 xsave = x, fsave = f, d = norm(dd) > maxlength ? dd * maxlength / norm(dd) : dd;
     
@@ -114,7 +114,7 @@ bool compute_iterates(const Map& map, const RHS& rhs, const Jacobian& jacobian,
         nvis::vec2 y = x;
         nvis::vec2 f = rhs(x);
         for (unsigned int i = 0 ; i < period ; ++i) {
-            bool found = xavier::newton(rhs, jacobian, y, f, eps, niter);
+            bool found = spurt::newton(rhs, jacobian, y, f, eps, niter);
             if (!found) {
                 std::cout << "unable to converge from iterated position" << std::endl;
                 return false;

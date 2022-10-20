@@ -30,16 +30,16 @@
 #include <iostream>
 #include "misc/progress.hpp"
 
-using namespace xavier;
+using namespace spurt;
 using namespace ten_interface;
 
-typedef xavier::ProgressDisplay progress_t;
+typedef spurt::ProgressDisplay progress_t;
 
-xavier::ten_interface::Fiber::Fiber()
+spurt::ten_interface::Fiber::Fiber()
         : fwd(), bwd(), valid(true)
 {}
 
-void xavier::ten_interface::Fiber::reset()
+void spurt::ten_interface::Fiber::reset()
 {
     fwd.clear();
     bwd.clear();
@@ -57,9 +57,9 @@ void xavier::ten_interface::Fiber::reset()
     samples_bwd.clear();
 }
 
-xavier::ten_interface::Chain::Chain() {}
+spurt::ten_interface::Chain::Chain() {}
 
-xavier::ten_interface::Chain::Chain(unsigned int i0, unsigned int i1, const double* buffer)
+spurt::ten_interface::Chain::Chain(unsigned int i0, unsigned int i1, const double* buffer)
 {
     this->resize((i1 > i0 ? i1 - i0 + 1 : i0 - i1 + 1));
     if (i1 > i0)
@@ -82,7 +82,7 @@ xavier::ten_interface::Chain::Chain(unsigned int i0, unsigned int i1, const doub
     }
 }
 
-void xavier::ten_interface::Chain::probe(std::vector< point3 >& hf, const std::vector< double >& ts)
+void spurt::ten_interface::Chain::probe(std::vector< point3 >& hf, const std::vector< double >& ts)
 {
     assert(ts.size() && ts[0] > 0);
 
@@ -100,7 +100,7 @@ void xavier::ten_interface::Chain::probe(std::vector< point3 >& hf, const std::v
     }
 }
 
-xavier::ten_interface::TrackingParam::TrackingParam()
+spurt::ten_interface::TrackingParam::TrackingParam()
         : seeds(), step(0.01), stop_criteria(), intg_method(tenFiberIntgRK4),
         eigen(tenFiberTypeEvec0),
         aniso_type(tenAniso_FA), min_aniso(0.5), max_length(10.0),
@@ -114,12 +114,12 @@ xavier::ten_interface::TrackingParam::TrackingParam()
     stop_criteria[4] = 4;
 }
 
-xavier::ten_interface::TrackingParam::~TrackingParam()
+spurt::ten_interface::TrackingParam::~TrackingParam()
 {
     dti = 0;
 }
 
-void xavier::ten_interface::
+void spurt::ten_interface::
 error_display(const std::string& who, const std::string& what,
               const char* _type)
 {
@@ -129,7 +129,7 @@ error_display(const std::string& who, const std::string& what,
     << err << std::endl;
 }
 
-int xavier::ten_interface::
+int spurt::ten_interface::
 integrate(const TrackingParam& param, std::vector< Fiber >& fibers,
           std::vector< double >& requested_lengths)
 {
@@ -274,7 +274,7 @@ integrate(const TrackingParam& param, std::vector< Fiber >& fibers,
 }
 
 
-xavier::ten_interface::context::
+spurt::ten_interface::context::
 context(const TrackingParam& param)
 {
     int E;
@@ -339,7 +339,7 @@ context(const TrackingParam& param)
     }
 }
 
-bool xavier::ten_interface::context::
+bool spurt::ten_interface::context::
 setup(const TrackingParam& param)
 {
     int E;
@@ -411,7 +411,7 @@ setup(const TrackingParam& param)
     return true;
 }
 
-void xavier::ten_interface::integrate(Fiber& fiber, context& ctx)
+void spurt::ten_interface::integrate(Fiber& fiber, context& ctx)
 {
     double start[3] = { fiber.seed[0], fiber.seed[1], fiber.seed[2] };
     unsigned int id0, id1;
@@ -451,7 +451,7 @@ void xavier::ten_interface::integrate(Fiber& fiber, context& ctx)
     }
 }
 
-void xavier::ten_interface::integrate_and_sample(Fiber& fiber, context& ctx,
+void spurt::ten_interface::integrate_and_sample(Fiber& fiber, context& ctx,
         const std::vector< double >& requested_lengths, const bool save_curves)
 {
     double start[3] = { fiber.seed[0], fiber.seed[1], fiber.seed[2] };

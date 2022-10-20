@@ -4,7 +4,7 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 
-namespace xavier {
+namespace spurt {
 
 typedef nvis::vec2              point_type;
 typedef nvis::bbox2             bounds_type;

@@ -34,7 +34,7 @@
 #include <memory>
 #include <string>
 
-// xavier's utilities
+// spurt's utilities
 #include <format/format.hpp>
 #include <misc/option_parse.hpp>
 
@@ -507,7 +507,7 @@ void KeypressCB ( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void
 }
 
 void initialize(int argc, char* argv[]) {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
             required_group(true, false, "Required Options"),
@@ -700,7 +700,7 @@ void set_parameters() {
 }
 
 void raycast() {
-	std::string ext = xavier::filename::extension(input_name);
+	std::string ext = spurt::filename::extension(input_name);
 	if (ext == "vtk") {
     	VTK_CREATE(vtkDataSetReader, reader);
     	reader->SetFileName(input_name.c_str());

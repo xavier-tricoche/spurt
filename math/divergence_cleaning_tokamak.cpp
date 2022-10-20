@@ -87,12 +87,12 @@ inline bool valid(size_type n) {
 
 int main(int argc, const char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     
     initialize(argc, argv);
     
     Nrrd* nin = nrrdNew();
-    nin = xavier::readNrrd(in);
+    nin = spurt::readNrrd(in);
     
     // verify data type
     if (nin->dim != 4 || nin->axis[0].size != 3) {
@@ -101,7 +101,7 @@ int main(int argc, const char* argv[])
     }
     
     std::vector<double> flow;
-    xavier::to_vector(flow, nin);
+    spurt::to_vector(flow, nin);
     ivec_type dims(nin->axis[1].size, nin->axis[2].size, nin->axis[3].size);
     nvis::vec3 spc(nin->axis[1].spacing, nin->axis[2].spacing, nin->axis[3].spacing);
     grid_type domain(dims, spc, nvis::fixed_vector<bool, 3>(false, true, true));

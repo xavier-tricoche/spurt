@@ -6,12 +6,12 @@
 #include <math/matrix.hpp>
 #include "crease.hpp"
 
-namespace xavier {
+namespace spurt {
 namespace crease {
 
 // linear parallel vector operator on a face
-bool par_vec_op(std::vector< nvis::vec3 >& beta, const xavier::mat3& V,
-                const xavier::mat3& W);
+bool par_vec_op(std::vector< nvis::vec3 >& beta, const spurt::mat3& V,
+                const spurt::mat3& W);
                 
 bool linear_parallel_operator(std::vector< nvis::vec3 >& b,
                               const nvis::vec3 v[3],

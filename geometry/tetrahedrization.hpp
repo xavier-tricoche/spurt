@@ -5,7 +5,7 @@
 
 // blatantly and shamelessly copied from FAnToM's code...
 
-namespace xavier {
+namespace spurt {
 typedef nvis::fixed_vector<int, 8>  hexahedron;
 typedef nvis::fixed_vector<int, 6>  prism;
 typedef nvis::fixed_vector<int, 4>  tetrahedron;
@@ -115,7 +115,7 @@ static const int prismTetsVertsTable[12][4] = {
 };
 }
 
-namespace xavier {
+namespace spurt {
 inline bool config(const face& f)
 {
     int min = std::numeric_limits<int>::max();;

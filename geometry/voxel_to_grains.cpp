@@ -55,13 +55,13 @@ int main(int argc, char* argv[])
 {
     initialize(argc, argv);
     
-    Nrrd* nin = xavier::readNrrd(tags);
+    Nrrd* nin = spurt::readNrrd(tags);
     std::vector<int> __tags;
-    xavier::to_vector(__tags, nin);
+    spurt::to_vector(__tags, nin);
     
     std::vector<float> __vals;
-    Nrrd* tmp = xavier::readNrrd(vals);
-    xavier::to_vector(__vals, tmp);
+    Nrrd* tmp = spurt::readNrrd(vals);
+    spurt::to_vector(__vals, tmp);
     
     int nbvoxels = __tags.size();
     

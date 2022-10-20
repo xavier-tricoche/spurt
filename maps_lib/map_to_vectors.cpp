@@ -36,7 +36,7 @@
 #endif
 
 
-using namespace xavier;
+using namespace spurt;
 
 // -------------------------
 //
@@ -48,7 +48,7 @@ typedef grid<double, 2>                                     plane_type;
 typedef raster_data<nvis::vec3, double, 3>                  field_type;
 typedef std::pair<nvis::vec2, int>                          map_data_type;
 typedef raster_data<map_data_type, double, 2>               dataset_type;
-typedef xmt_poincare_map<xavier::map::wrapper<field_type> > map_type;
+typedef xmt_poincare_map<spurt::map::wrapper<field_type> > map_type;
 
 field_type*                 _field;
 std::vector<nvis::vec3>     _vectors;
@@ -59,7 +59,7 @@ nvis::vec3                  _volume_spacing;
 plane_type*                 _plane;
 nvis::ivec2                 _plane_res;
 nvis::bbox2                 _plane_bounds;
-xavier::map_metric          _plane_metric;
+spurt::map_metric          _plane_metric;
 nvis::vec2                  _plane_spacing;
 dataset_type*               _dataset;
 
@@ -127,9 +127,9 @@ typedef std::vector<nvis::vec2>                 orbit_type;
 typedef std::pair<orbit_type, nvis::fvec3>      color_orbit_type;
 
 std::vector<color_orbit_type>           _orbits;
-xavier::discrete_color_map<int>*        _cmap;
-xavier::logical2physical*               _converter;
-xavier::map_analysis_param              _params;
+spurt::discrete_color_map<int>*        _cmap;
+spurt::logical2physical*               _converter;
+spurt::map_analysis_param              _params;
 std::vector<nvis::ivec2>                _saddle_cells, _center_cells;
 nvis::vec2                              _last;
 std::vector<nvis::vec2>                 _problematic_seeds;
@@ -326,7 +326,7 @@ static void init()
 #endif
     
     Nrrd* nin = nrrdNew();
-    nin = xavier::readNrrd(in);
+    nin = spurt::readNrrd(in);
     
     // verify data type
     if(nin->dim != 4 || nin->axis[0].size != 3) {
@@ -335,7 +335,7 @@ static void init()
     }
     
     std::vector<double> _array;
-    xavier::to_vector(_array, nin);
+    spurt::to_vector(_array, nin);
     _volume_res = nvis::ivec3(nin->axis[1].size,
                               nin->axis[2].size,
                               nin->axis[3].size);

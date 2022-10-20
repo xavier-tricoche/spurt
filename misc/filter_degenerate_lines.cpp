@@ -20,7 +20,7 @@ typedef std::list< crease_point_type >          crease_line_type;
 typedef crease_line_type::const_iterator        iterator;
 
 void find_best_seed(nvis::vec3& x, double& mode, const crease_line_type& cl,
-                    const xavier::MeasureWrapper& measure)
+                    const spurt::MeasureWrapper& measure)
 {
     mode = 0;
     for (iterator it = cl.begin() ; it != cl.end() ; ++it) {
@@ -31,7 +31,7 @@ void find_best_seed(nvis::vec3& x, double& mode, const crease_line_type& cl,
     }
 }
 
-bool correct_point(nvis::vec3& x, const xavier::MeasureWrapper& measure)
+bool correct_point(nvis::vec3& x, const spurt::MeasureWrapper& measure)
 {
     double mode = measure.value(x);
     double sign = (mode > 0 ? 1 : -1);
@@ -107,7 +107,7 @@ double distance(const crease_line_type& cl, const std::vector<crease_line_type>&
 
 
 void draw(std::vector<nvis::vec3>& line, const nvis::vec3& seed,
-          const xavier::MeasureWrapper& measure, int idx, double h)
+          const spurt::MeasureWrapper& measure, int idx, double h)
 {
     const double min_cos = 0.95;
     // std::cerr << "integrating along " << (idx == 0 ? "major" : "minor") << " eigenvector from "
@@ -188,8 +188,8 @@ int main(int argc, char* argv[])
         h = atof(argv[4]);
     }
     
-    Nrrd* nrrd = xavier::nrrd_utils::readNrrd(argv[3]);
-    xavier::MeasureWrapper measure(nrrd, 2);
+    Nrrd* nrrd = spurt::nrrd_utils::readNrrd(argv[3]);
+    spurt::MeasureWrapper measure(nrrd, 2);
     
     std::vector<crease_line_type> all_lines, new_lines;
     

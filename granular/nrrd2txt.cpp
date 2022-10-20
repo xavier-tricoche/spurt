@@ -30,9 +30,9 @@ int main(int argc, char* argv[])
 {
     init(argc, argv);
     
-    Nrrd* nin = xavier::readNrrd(in_name);
+    Nrrd* nin = spurt::readNrrd(in_name);
     std::vector<float> data;
-    xavier::to_vector<float>(data, nin);
+    spurt::to_vector<float>(data, nin);
     
     std::fstream output(out_name, std::ios::out);
     if (!output) {

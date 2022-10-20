@@ -12,7 +12,7 @@
 
 #include "misc_helper.hpp"
 
-namespace xavier {
+namespace spurt {
     inline std::string number_to_rank(unsigned i) {
         switch (i % 10) {
             case 1:  return std::to_string(i) + "st";
@@ -141,6 +141,6 @@ namespace xavier {
         std::vector<std::string> argv(arg_list);
         return match_multistring(arg, argv);
     }
-} // xavier
+} // spurt
 
 #endif

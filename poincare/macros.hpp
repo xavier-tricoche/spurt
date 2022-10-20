@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-namespace xavier {
+namespace spurt {
 namespace map_debug {
 extern int verbose_level;
 }

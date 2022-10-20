@@ -893,9 +893,9 @@ int main(int argc, char* argv[])
         std::cerr.rdbuf(alt_buf);
     }
     
-    Nrrd* nin = xavier::readNrrd(file);
+    Nrrd* nin = spurt::readNrrd(file);
     std::vector<float> values;
-    xavier::to_vector(values, nin);
+    spurt::to_vector(values, nin);
     nvis::ivec3 size;
     nvis::vec3 step;
     for (int i = 0 ; i < 3 ; ++i) {

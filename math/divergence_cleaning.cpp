@@ -39,7 +39,7 @@ void initialize(int argc, const char* argv[])
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
 }
 
-typedef xavier::raster_grid<3, double>  grid_type;
+typedef spurt::raster_grid<3, double>  grid_type;
 typedef grid_type::coord_type           ivec_type;
 typedef grid_type::size_type            index_type;
 typedef grid_type::point_type           vec_type;
@@ -241,7 +241,7 @@ int main(int argc, const char* argv[])
     initialize(argc, argv);
     
     Nrrd* nin = nrrdNew();
-    nin = xavier::readNrrd(in);
+    nin = spurt::readNrrd(in);
     
     // verify data type
     if (nin->dim != 4 || nin->axis[0].size != 3) {
@@ -250,7 +250,7 @@ int main(int argc, const char* argv[])
     }
     
     std::vector<double> flow;
-    xavier::to_vector(flow, nin);
+    spurt::to_vector(flow, nin);
     ivec_type dims(nin->axis[1].size, nin->axis[2].size, nin->axis[3].size);
     nvis::vec3 spc(nin->axis[1].spacing, nin->axis[2].spacing, nin->axis[3].spacing);
     grid_type domain(dims, vec_type(0), spc);
@@ -287,7 +287,7 @@ int main(int argc, const char* argv[])
     vector_t x__(size), rhs__(size);
 #endif
     
-    xavier::setup_system_tokamak_dirichlet_interior<grid_type, double, sparse_matrix>(domain, A);
+    spurt::setup_system_tokamak_dirichlet_interior<grid_type, double, sparse_matrix>(domain, A);
     for (int i = 0 ; i < size ; ++i) {
         ivec_type ic = interior.coordinates(i);
         int gi = domain.index(ic + ivec_type(1, 1, 1));

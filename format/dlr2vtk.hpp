@@ -46,49 +46,49 @@ struct cell_array_helper;
 vtkPoints* vtk_points(const std::vector<point_type>&);
 
 vtkUnstructuredGrid* vtk_cellarray(const cell_array_helper&);
-               
+
 public:
-    
-    dlr2vtk_converter() : m_boundary_only(false), 
+
+    dlr2vtk_converter() : m_boundary_only(false),
         m_mesh_only(false), m_verbose(false),
         m_comp_name("velocity") {}
-    
+
     dlr2vtk_converter(const std::string& gridname="", const std::string& valname="")
         : m_grid_name(gridname), m_value_name(valname), m_attributes(),
           m_boundary_only(false),
           m_mesh_only(false), m_verbose(false), m_comp_name("velocity") {}
-    
+
     void set_filenames(const std::string& gridname, const std::string& valname) {
         m_grid_name = gridname;
         m_value_name = valname;
     }
-    
+
     void set_grid_name(const std::string& gridname) {
         m_grid_name = gridname;
     }
-    
+
     void set_value_name(const std::string& valname) {
         m_value_name = valname;
     }
-    
+
     void set_attributes(const std::vector<std::string>& attributes) {
         m_attributes = attributes;
     }
-    
+
     void set_mesh_only(bool do_meshonly=true) {
         m_mesh_only = do_meshonly;
     }
-    
+
     void set_boundary_only(bool do_boundary=true) {
         m_boundary_only = do_boundary;
     }
-    
+
     void set_verbose(bool _verbose) {
         m_verbose = _verbose;
     }
-    
+
     void import();
-    
+
     VTK_SMART(vtkUnstructuredGrid) get_vtk_dataset() { return m_vtk_dataset; }
 
 private:
@@ -99,7 +99,7 @@ private:
     bool m_verbose;
     std::vector< pair_type > m_vector_fields;
     std::vector< pair_type > m_scalar_fields;
-    
+
     // helper functions
     struct cell_array_helper {
         cell_array_helper(const std::vector<long>& ids,
@@ -138,12 +138,12 @@ private:
         const std::vector<cell_entry>& m_types;
     };
 };
-    
+
 
 void dlr2vtk_converter::import()
 {
     // sanity check
-    if (m_grid_name.empty()) { 
+    if (m_grid_name.empty()) {
         throw std::runtime_error("Missing grid file");
     }
     if (m_value_name.empty() && m_attributes.size())
@@ -168,7 +168,7 @@ void dlr2vtk_converter::import()
                 reader.read_data("x_" + att, val0, m_verbose);
                 reader.read_data("y_" + att, val1, m_verbose);
                 reader.read_data("z_" + att, val2, m_verbose);
-                if (m_verbose) 
+                if (m_verbose)
                     std::cout << "val0.size()=" << val0.size() << '\n'
                         << "val1.size()=" << val1.size() << '\n'
                         << "val2.size()=" << val2.size() << '\n';
@@ -188,11 +188,11 @@ void dlr2vtk_converter::import()
                     std::cout << "x_" << att << " range: "
                         << *std::min_element(val0.begin(), val0.end()) << " - "
                         << *std::max_element(val0.begin(), val0.end()) << '\n';
-                    
+
                     std::cout << "y_" << att << " range: "
                         << *std::min_element(val1.begin(), val1.end()) << " - "
                         << *std::max_element(val1.begin(), val1.end()) << '\n';
-                    
+
                     std::cout << "z_" << att << " range: "
                         << *std::min_element(val2.begin(), val2.end()) << " - "
                         << *std::max_element(val2.begin(), val2.end()) << '\n';
@@ -215,14 +215,14 @@ void dlr2vtk_converter::import()
         std::cout << "there are " << points.size() << " points in input mesh\n"
                   << "associated bounding box: " << bounds << '\n';
     }
-    
+
     if (m_verbose) std::cout << "about to create grid...\n";
     m_vtk_dataset = vtk_cellarray(helper);
     if (m_verbose) std::cout << "grid created. About to add points...\n";
     m_vtk_dataset->SetPoints(vtk_utils::make_vtkpoints(points));
     if (m_verbose) std::cout << "points added. About to add vectors...\n";
     for (int i=0; i<m_vector_fields.size(); ++i) {
-        if (m_verbose) 
+        if (m_verbose)
             std::cout << "adding vector field #" << i << " of size " << m_vector_fields[i].first.size() << std::endl;
         vtk_utils::add_vectors_from_numbers<std::vector<double>, VTK_SMART(vtkUnstructuredGrid),3>
             (m_vtk_dataset, m_vector_fields[i].first, true, m_vector_fields[i].second);
@@ -246,7 +246,7 @@ void dlr2vtk_converter::import()
                   << "number of vectors: " << m_vtk_dataset->GetPointData()->GetScalars()->GetNumberOfTuples() << '\n'
                   << "number of scalars: " << m_vtk_dataset->GetPointData()->GetVectors()->GetNumberOfTuples() << '\n';
     }
-    
+
 }
 
 vtkUnstructuredGrid*

@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <boost/static_assert.hpp>
 
-namespace xavier
+namespace spurt
 {
 
 /// legacy wrapper for raster_data<>
@@ -167,7 +167,7 @@ private:
     mutable bool            __verbose;
 };
 
-} // namespace xavier
+} // namespace spurt
 
 #endif
 

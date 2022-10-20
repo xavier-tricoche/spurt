@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
     initialize(argc, argv);
     
     Nrrd* nin = nrrdNew();
-    nin = xavier::readNrrd(in);
+    nin = spurt::readNrrd(in);
     
     // verify data type
     if (nin->dim != 3 || nin->axis[0].size != 3) {
@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
     }
     
     std::vector<double> __array;
-    xavier::to_vector(__array, nin);
+    spurt::to_vector(__array, nin);
     int M = nin->axis[1].size;
     int N = nin->axis[2].size;
     

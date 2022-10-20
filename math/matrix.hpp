@@ -11,7 +11,7 @@
 #include <stdexcept>
 #include <assert.h>
 
-namespace xavier {
+namespace spurt {
 extern bool display_eigen_stuff;
 
 // ultra-basic matrix type
@@ -44,7 +44,7 @@ struct matrix {
         if (_m == _n) {
             return _m;
         }
-        throw std::runtime_error("xavier::matrix::size(): matrix is not symmetric");
+        throw std::runtime_error("spurt::matrix::size(): matrix is not symmetric");
     }
     
     void resize(unsigned int m, unsigned int n) {

@@ -13,7 +13,7 @@
 #include <util/timer.hpp>
 // teem
 #include <teem/nrrd.h>
-// xavier
+// spurt
 #include <math/RBF.hpp>
 #include <image/nrrd_wrapper.hpp>
 
@@ -87,9 +87,9 @@ struct Quintic {
     }
 };
 
-typedef xavier::RBF::InfiniteSupportRBFInterpolator<nvis::vec1, double, 2, Linear>    linear_rbf_type;
-typedef xavier::RBF::InfiniteSupportRBFInterpolator<nvis::vec1, double, 2, Cubic>     cubic_rbf_type;
-typedef xavier::RBF::InfiniteSupportRBFInterpolator<nvis::vec1, double, 2, Quintic>   quintic_rbf_type;
+typedef spurt::RBF::InfiniteSupportRBFInterpolator<nvis::vec1, double, 2, Linear>    linear_rbf_type;
+typedef spurt::RBF::InfiniteSupportRBFInterpolator<nvis::vec1, double, 2, Cubic>     cubic_rbf_type;
+typedef spurt::RBF::InfiniteSupportRBFInterpolator<nvis::vec1, double, 2, Quintic>   quintic_rbf_type;
 
 template<typename _Interpolator>
 void check_solution(const _Interpolator& f) {
@@ -287,7 +287,7 @@ int main(int argc, char* argv[]) {
         printUsage("Unrecognized kernel type");
     }
 
-    xavier::nrrd_params<float, 2> params;
+    spurt::nrrd_params<float, 2> params;
     params.sizes()[0] = resolution[0];
     params.sizes()[1] = resolution[1];
     params.mins()[0] = bounds.min()[0];
@@ -295,7 +295,7 @@ int main(int argc, char* argv[]) {
     nvis::vec2 spacing = bounds.size() / nvis::vec2(resolution - nvis::ivec2(1,1));
     params.spacings()[0] = spacing[0];
     params.spacings()[1] = spacing[1];
-    xavier::writeNrrd(result, output_name, params);
+    spurt::writeNrrd(result, output_name, params);
     std::cout << output_name << " has been exported\n";
 
     return 0;

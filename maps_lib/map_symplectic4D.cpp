@@ -11,7 +11,7 @@
 #include <math/fixed_matrix.hpp>
 #include <util/wall_timer.hpp>
 
-// xavier
+// spurt
 #include <math/math.hpp>
 
 #include <iostream>
@@ -53,7 +53,7 @@ void write_to_ostream(std::ostream& os, const std::string& str) {
     }
 }
 
-void update_progress(xavier::ProgressDisplay& progress) {
+void update_progress(spurt::ProgressDisplay& progress) {
     {
     #ifndef  NO_TBB
         tbb::mutex::scoped_lock lock(progress_mutex);
@@ -74,14 +74,14 @@ double hx, hy;
 double xb[2], yb[2], zb[2], wb[2];
 size_t nx, ny, nz, nw;
 
-typedef xavier::symplectic4D::state_type state_type;
-typedef xavier::symplectic4D::deriv_type deriv_type;
-typedef xavier::symplectic4D::bounds_type bounds_type;
+typedef spurt::symplectic4D::state_type state_type;
+typedef spurt::symplectic4D::deriv_type deriv_type;
+typedef spurt::symplectic4D::bounds_type bounds_type;
 
 typedef Eigen::Matrix<size_t, 4, 1> int4;
 typedef Eigen::Matrix<double, 4, 4> matrix_type;
 
-typedef xavier::map_metric<4, state_type, bounds_type> metric4D_type;
+typedef spurt::map_metric<4, state_type, bounds_type> metric4D_type;
 
 int4 res;
 state_type spacing;
@@ -144,7 +144,7 @@ inline double lmax(size_t n, const std::vector< state_type >& pos, const metric4
     double lambdas[4] = { eigenvals[0].real(), eigenvals[1].real(), eigenvals[2].real(), eigenvals[3].real() };
     return *std::max_element(lambdas, lambdas+4);
 }
-using namespace xavier;
+using namespace spurt;
 using namespace map_analysis;
 
 namespace {
@@ -154,7 +154,7 @@ double __mod(double a, double b)
 }
 }
 
-typedef xavier::symplectic4D    map_type;
+typedef spurt::symplectic4D    map_type;
 
 int main(int argc, char* argv[])
 {
@@ -200,7 +200,7 @@ int main(int argc, char* argv[])
     std::cout << "initializing coordinates\n";
     std::vector<state_type> pos_fwd(nsamples), pos_bwd(nsamples);
 
-    xavier::ProgressDisplay progress;
+    spurt::ProgressDisplay progress;
 
     progress.start(nsamples, "Initializing flow map");
     progress_counter = 0;

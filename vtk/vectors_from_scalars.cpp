@@ -17,7 +17,7 @@
 std::string input_name, output_name;
 
 // void initialize(int argc, char* argv[]) {
-//     namespace xcl = xavier::command_line;
+//     namespace xcl = spurt::command_line;
 //
 //     xcl::option_traits
 //             required_group(true, false, "Required Options"),

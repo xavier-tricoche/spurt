@@ -12,7 +12,7 @@
 #include <math/fixed_vector.hpp>
 #include <image/nrrd_wrapper.hpp>
 
-namespace xavier {
+namespace spurt {
 
 template<typename T>
 struct subvector {
@@ -265,13 +265,13 @@ int& mesh::face::face_id() { return m_id; }
 // --- mesh ----
 
 void mesh::load_mesh(const std::string& mesh_name) {
-    xavier::DLRreader reader(mesh_name, "");
+    spurt::DLRreader reader(mesh_name, "");
     reader.read_mesh(false, m_vertices, m_cell_indices, m_cell_offsets);
     m_ncells = m_cell_offsets.size()-1; // last entry is not an actual cell
 }
 
 void mesh::load_data(const std::string& data_name) {
-    xavier::DLRreader reader("", data_name);
+    spurt::DLRreader reader("", data_name);
     reader.read_vector_data("velocity", m_velocity);
 }
 
@@ -369,7 +369,7 @@ void mesh::extract_boundary(bool verbose) {
     m_boundary_to_cell.clear();
     m_offset_to_boundary.clear();
     m_face_to_cells.clear();
-    xavier::ProgressDisplay progress;
+    spurt::ProgressDisplay progress;
     progress.fraction_on();
     progress.start(m_ncells, "Extracting all cell faces", 1000);
     for (index_type i=0; i<m_ncells; ++i) {
@@ -548,7 +548,7 @@ std::vector<mesh::vec3_type> mesh::get_shear_stress(bool verbose) {
     }
     if (m_boundary_to_cell.empty() || m_offset_to_boundary.empty() || m_normals.empty()) extract_boundary();
 
-    xavier::ProgressDisplay progress;
+    spurt::ProgressDisplay progress;
     progress.fraction_on();
     std::map<index_type, vec3_type> boundary_velocity;
     std::vector<vec3_type> shear_stress(m_velocity.size());
@@ -599,7 +599,7 @@ void mesh::save_boundary(const std::string& basename, bool verbose) {
         array[5*i+4] = n;
     }
     size_t dims[2] = { 5, m_boundary_to_cell.size() };
-    xavier::nrrd_utils::writeNrrd(&array[0], boundary_name, nrrdTypeLLong, 2, dims);
+    spurt::nrrd_utils::writeNrrd(&array[0], boundary_name, nrrdTypeLLong, 2, dims);
     if (verbose) {
         std::cout << "boundary to cell information written in "
         << boundary_name << "\n";
@@ -617,7 +617,7 @@ void mesh::save_boundary(const std::string& basename, bool verbose) {
         array[5*i+4] = n;
     }
     dims[1] = m_offset_to_boundary.size();
-    xavier::nrrd_utils::writeNrrd(&array[0], offset_name, nrrdTypeLLong, 2, dims);
+    spurt::nrrd_utils::writeNrrd(&array[0], offset_name, nrrdTypeLLong, 2, dims);
     if (verbose) {
         std::cout << "offset to boundary information written in "
         << offset_name << '\n';
@@ -625,7 +625,7 @@ void mesh::save_boundary(const std::string& basename, bool verbose) {
 
     dims[0] = 3;
     dims[1] = m_normals.size();
-    xavier::nrrd_utils::writeNrrd(&m_normals[0], normal_name, nrrdTypeFloat, 2, dims);
+    spurt::nrrd_utils::writeNrrd(&m_normals[0], normal_name, nrrdTypeFloat, 2, dims);
     if (verbose) {
         std::cout << "boundary normals written in " << normal_name << '\n';
     }
@@ -636,7 +636,7 @@ void mesh::load_boundary(const std::string& basename, bool verbose) {
     std::string offset_name = basename + "_offset.nrrd";
     std::string normal_name = basename + "_normals.nrrd";
 
-    Nrrd* nin = xavier::nrrd_utils::readNrrd(boundary_name);
+    Nrrd* nin = spurt::nrrd_utils::readNrrd(boundary_name);
     m_boundary_to_cell.resize(nin->axis[1].size);
     long int* ids = (long int*)nin->data;
     for (size_t i=0; i<m_boundary_to_cell.size(); ++i) {
@@ -652,7 +652,7 @@ void mesh::load_boundary(const std::string& basename, bool verbose) {
         << boundary_name << "\n";
     }
 
-    nin = xavier::nrrd_utils::readNrrd(offset_name);
+    nin = spurt::nrrd_utils::readNrrd(offset_name);
     m_offset_to_boundary.resize(nin->axis[1].size);
     ids = (long int*)nin->data;
     for (size_t i=0; i<m_offset_to_boundary.size(); ++i) {
@@ -668,7 +668,7 @@ void mesh::load_boundary(const std::string& basename, bool verbose) {
         << offset_name << "\n";
     }
 
-    nin = xavier::nrrd_utils::readNrrd(normal_name);
+    nin = spurt::nrrd_utils::readNrrd(normal_name);
     m_normals.resize(nin->axis[1].size);
     float* nrmls = (float*)nin->data;
     for (size_t i=0; i<m_normals.size(); i++) {
@@ -682,6 +682,6 @@ void mesh::load_boundary(const std::string& basename, bool verbose) {
     }
 }
 
-} // namespace xavier
+} // namespace spurt
 
 #endif // __XAVIER_GEOMETRY_BOUNDARY_EXTRACTION_HPP__

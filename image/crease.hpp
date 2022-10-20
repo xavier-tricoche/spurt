@@ -7,7 +7,7 @@
 #include <vector>
 #include <list>
 
-namespace xavier {
+namespace spurt {
 namespace crease {
 // this parameter controls the subdivision going on in the
 // detection of crease points on provided edges.
@@ -42,7 +42,7 @@ bool eigen(nvis::vec2& emin, double& lmin, const nvis::vec3& H,
 };
 };
 
-bool xavier::crease::
+bool spurt::crease::
 find_intersection(double* x0, double* x1, double* inter,
                   gage_interface::scalar_wrapper& gH_wrapper,
                   bool ridge)
@@ -132,7 +132,7 @@ find_intersection(double* x0, double* x1, double* inter,
     else return false;
 }
 
-bool xavier::crease::
+bool spurt::crease::
 quick_search(double* x0, double* x1, double* inter,
              gage_interface::scalar_wrapper& gH,
              bool ridge)
@@ -177,7 +177,7 @@ quick_search(double* x0, double* x1, double* inter,
     return false;
 }
 
-bool xavier::crease::
+bool spurt::crease::
 eigen(double* evec, double& lambda, double* H, bool ridge)
 {
     static nvis::vec3 Hessian;
@@ -188,7 +188,7 @@ eigen(double* evec, double& lambda, double* H, bool ridge)
     Hessian[1] = H[1];
     Hessian[2] = H[2];
 
-    xavier::eigensystem(emin, emax, lmin, lmax, Hessian);
+    spurt::eigensystem(emin, emax, lmin, lmax, Hessian);
     if (ridge) {
         lambda = lmin;
         evec[0] = emin[0];
@@ -203,7 +203,7 @@ eigen(double* evec, double& lambda, double* H, bool ridge)
     }
 }
 
-bool xavier::crease::
+bool spurt::crease::
 find_intersection(const nvis::vec2& x0, const nvis::vec2& x1,
                   nvis::vec2& inter,
                   gage_interface::scalar_wrapper& gH_wrapper,
@@ -243,7 +243,7 @@ find_intersection(const nvis::vec2& x0, const nvis::vec2& x1,
     return false;
 }
 
-bool xavier::crease::
+bool spurt::crease::
 find_intersection(const nvis::vec2& x0, const nvis::vec2& x1,
                   nvis::vec2& inter,
                   gage_interface::scalar_wrapper& gH_wrapper,
@@ -281,7 +281,7 @@ find_intersection(const nvis::vec2& x0, const nvis::vec2& x1,
     return false;
 }
 
-bool xavier::crease::
+bool spurt::crease::
 quick_search(const nvis::vec2& x0, const nvis::vec2& x1, nvis::vec2& inter,
              gage_interface::scalar_wrapper& gH,
              bool ridge)
@@ -324,13 +324,13 @@ quick_search(const nvis::vec2& x0, const nvis::vec2& x1, nvis::vec2& inter,
     return false;
 }
 
-bool xavier::crease::
+bool spurt::crease::
 eigen(nvis::vec2& evec, double& lambda, const nvis::vec3& H, bool ridge)
 {
     nvis::vec2 emin, emax;
     double lmin, lmax;
 
-    xavier::eigensystem(emin, emax, lmin, lmax, H);
+    spurt::eigensystem(emin, emax, lmin, lmax, H);
 
     /*
     // checking results

@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
         threshold = atof(argv[3]);
     }
 
-    Nrrd *nin = xavier::readNrrd(argv[1]);
+    Nrrd *nin = spurt::readNrrd(argv[1]);
     Image< float > image(nin);
     unsigned int M = image.m;
     unsigned int N = image.n;
@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
     size[1] = M;
     size[2] = N;
     std::vector< float > spacing;
-    xavier::writeNrrd((void*)rgb, argv[2], nrrdTypeFloat, size, spacing);
+    spurt::writeNrrd((void*)rgb, argv[2], nrrdTypeFloat, size, spacing);
 
     std::sort(evals.begin(), evals.end());
     std::cout << "ridge strength ranges from " << evals[0] << " and " << evals.back() << '\n';

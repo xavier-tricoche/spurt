@@ -1,7 +1,7 @@
 #ifndef __NEW_CREASE_LINE_HPP__
 #define __NEW_CREASE_LINE_HPP__
 
-#include <xavier/image/probe.hpp>
+#include <spurt/image/probe.hpp>
 #include <nvis/math/fixed_vector.hpp>
 #include <teem/nrrd.h>
 #include <set>
@@ -12,7 +12,7 @@
 #include <sstream>
 #include <string>
 
-namespace xavier
+namespace spurt
 {
     template< typename T >
     void display_stats( const std::vector< T >& data, const std::string& msg );
@@ -133,7 +133,7 @@ namespace xavier
 
 
 inline
-    xavier::crease::FaceId::FaceId( unsigned int i0, unsigned int i1, 
+    spurt::crease::FaceId::FaceId( unsigned int i0, unsigned int i1, 
     unsigned int i2, unsigned int i3 )
     : is(4)
 {
@@ -145,7 +145,7 @@ inline
 }
 
 inline
-    xavier::crease::FaceId::FaceId( const FaceId& fid )
+    spurt::crease::FaceId::FaceId( const FaceId& fid )
     : is(4)
 {
     for ( unsigned int i=0 ; i<4 ; i++ )
@@ -155,7 +155,7 @@ inline
 }
 
 inline
-    int xavier::crease::FaceId::operator<( const FaceId& fid ) const
+    int spurt::crease::FaceId::operator<( const FaceId& fid ) const
 {
     return ( is[0] < fid.is[0] ||
         ( is[0] == fid.is[0] && 
@@ -167,7 +167,7 @@ inline
 }
 
 inline
-    std::ostream& xavier::crease::operator<<( ostream& os, const xavier::crease::FaceId& fid )
+    std::ostream& spurt::crease::operator<<( ostream& os, const spurt::crease::FaceId& fid )
 {
     os << "[ " << fid.is[0] << ", " << fid.is[1] << ", " 
         << fid.is[2] << ", " << fid.is[3] << "]";

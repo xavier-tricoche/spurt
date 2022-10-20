@@ -11,7 +11,7 @@
 #include <util/timer.hpp>
 
 namespace search {
-extern  std::vector< std::vector< xavier::fixpoint > > all_p_chains;
+extern  std::vector< std::vector< spurt::fixpoint > > all_p_chains;
 
 template< typename T >
 void find_extrema(const Image<T>& image, const SubImage& subimage, int radius,
@@ -26,7 +26,7 @@ void find_extrema(const Image<T>& image, const SubImage& subimage, int radius,
     
     nvis::timer __timer;
     
-    xavier::sort_ids(__ids, __copy, !max);
+    spurt::sort_ids(__ids, __copy, !max);
     
     for (unsigned int l = 0 ; l < N ; ++l) {
         unsigned int n = __ids[l];

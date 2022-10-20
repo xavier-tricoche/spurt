@@ -9,7 +9,7 @@
 */
 
 
-namespace xavier {
+namespace spurt {
 
 template<typename T, int N>
 class indexed_point {

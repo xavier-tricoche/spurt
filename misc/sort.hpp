@@ -6,7 +6,7 @@
 #include <list>
 #include <math/fixed_vector.hpp>
 
-namespace xavier {
+namespace spurt {
 template<typename T1, typename T2>
 struct Lt_pair_lexicographic {
     bool operator()(const std::pair<T1, T2>& p0, const std::pair<T1, T2>& p1) const {
@@ -126,7 +126,7 @@ bool test(const std::vector< T >& values,
 };
 
 // template< typename T >
-// inline void xavier::sort(const T* _begin,
+// inline void spurt::sort(const T* _begin,
 //                          const T* _end,
 //                          std::vector< unsigned int >& sorted)
 // {
@@ -142,7 +142,7 @@ bool test(const std::vector< T >& values,
 // }
 
 template< typename T, typename Size_ >
-inline void xavier::sort(const std::vector< T >& values,
+inline void spurt::sort(const std::vector< T >& values,
                          std::vector< Size_ >& sorted)
 {
     sorted.clear();
@@ -167,7 +167,7 @@ inline void xavier::sort(const std::vector< T >& values,
 }
 
 template< typename T, typename Order, typename Size_ >
-inline void xavier::sort(const std::vector< T >& values,
+inline void spurt::sort(const std::vector< T >& values,
                          std::vector< Size_ >& sorted,
                          const Order& order)
 {
@@ -193,7 +193,7 @@ inline void xavier::sort(const std::vector< T >& values,
 }
 
 template< typename T, typename Size_ >
-bool xavier::test(const std::vector< T >& values,
+bool spurt::test(const std::vector< T >& values,
                   const std::vector< Size_ >& sorted)
 {
     if (!sorted.size() && !values.size()) return true;

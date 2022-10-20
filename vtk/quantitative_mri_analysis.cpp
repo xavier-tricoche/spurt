@@ -3,8 +3,8 @@
 #include <fstream>
 #include <memory>
 
-#include <VTK/vtk_utils.hpp>
-#include <VTK/vtk_camera_helper.hpp>
+#include <vtk/vtk_utils.hpp>
+#include <vtk/vtk_camera_helper.hpp>
 #include <misc/option_parse.hpp>
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
@@ -197,9 +197,9 @@ public:
             }
     	    bounds.min() = nvis::vec3(box[0], box[2], box[4]);
     	    bounds.max() = nvis::vec3(box[1], box[3], box[5]);
-			
+
 			std::cout << "region: " << bounds.min() << " -> " << bounds.max() << '\n';
- 
+
             selected_region(minc, maxc);
 
             this->Mapper->SetClippingPlanes(planes);
@@ -235,15 +235,15 @@ void KeypressCB ( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void
         std::cin >> name;
         double m = measure();
         if (verbose) {
-            std::cout <<  "file: " << input_name << ", grain: " << grain_id 
-				<< ", bounds: " << bounds.min() << "-" << bounds.max() 
+            std::cout <<  "file: " << input_name << ", grain: " << grain_id
+				<< ", bounds: " << bounds.min() << "-" << bounds.max()
 				<< ", what :" << name << ", intensity :" << m << std::endl;
         }
         else std::cout << name << " measure: " << m << '\n';
         if (!log_file.fail()) {
             // save to csv file...
-            log_file << "file: " << input_name << ", grain: " << grain_id 
-				<< ", bounds: " << bounds.min() << "-" << bounds.max() 
+            log_file << "file: " << input_name << ", grain: " << grain_id
+				<< ", bounds: " << bounds.min() << "-" << bounds.max()
 				<< ", what :" << name << ", intensity :" << m << std::endl;
         }
     }
@@ -292,7 +292,7 @@ void KeypressCB ( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void
 }
 
 void initialize(int argc, char* argv[]) {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
             required_group(true, false, "Required Options"),
@@ -485,7 +485,7 @@ void set_parameters() {
 }
 
 void raycast() {
-	std::string ext = xavier::filename::extension(input_name);
+	std::string ext = spurt::filename::extension(input_name);
 	if (ext == "vtk") {
     	VTK_CREATE(vtkDataSetReader, reader);
     	reader->SetFileName(input_name.c_str());

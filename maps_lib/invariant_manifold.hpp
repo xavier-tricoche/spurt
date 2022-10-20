@@ -11,9 +11,9 @@
 
 
 
-namespace xavier {
+namespace spurt {
 struct fp_chain {
-    typedef xavier::fixpoint    fp_type;
+    typedef spurt::fixpoint    fp_type;
     
     fp_chain(const std::vector<fp_type>& _fps, const map_metric& _metric)
         : fixed_points(_fps), metric(_metric) {}
@@ -73,7 +73,7 @@ struct fp_chain {
         return fixed_points.size();
     }
     
-    std::vector<xavier::fixpoint>   fixed_points;
+    std::vector<spurt::fixpoint>   fixed_points;
     map_metric                      metric;
 };
 
@@ -125,7 +125,7 @@ struct manifold_progress {
     unsigned int segment;
 };
 
-double min_dist(const std::vector<fp_chain>& chains, const xavier::map_metric& metric)
+double min_dist(const std::vector<fp_chain>& chains, const spurt::map_metric& metric)
 {
     std::vector<double> dist;
     std::vector<nvis::vec2> all_pos;
@@ -148,7 +148,7 @@ double min_dist(const std::vector<fp_chain>& chains, const xavier::map_metric& m
 struct manifold_stop {
 
     manifold_stop(const std::vector<fp_chain>& all_chains,
-                  const xavier::map_metric& metric, double eps)
+                  const spurt::map_metric& metric, double eps)
         : _chains(all_chains), _metric(metric), _eps(eps),
           _left_dist(0.3*min_dist(all_chains, metric)), _left(false) {}
           
@@ -255,7 +255,7 @@ struct manifold_stop {
     }
     
     const std::vector<fp_chain>&    _chains;
-    xavier::map_metric              _metric;
+    spurt::map_metric              _metric;
     double                          _eps;
     double                          _left_dist;
     nvis::vec2                      _start;
@@ -273,7 +273,7 @@ struct manifold_stop {
 
 struct manifold_stop_period_one {
 
-    manifold_stop_period_one(const xavier::map_metric& metric, double eps)
+    manifold_stop_period_one(const spurt::map_metric& metric, double eps)
         : _metric(metric), _eps(eps) {}
         
     void start(const nvis::vec2& x) {
@@ -318,7 +318,7 @@ struct manifold_stop_period_one {
         return false;
     }
     
-    xavier::map_metric      _metric;
+    spurt::map_metric      _metric;
     double                  _eps;
     nvis::vec2              _start;
     mutable bool            _has_left;
@@ -397,7 +397,7 @@ BVP_Step(const Map& map, int period, const map_metric& metric,
 template<typename MAP, typename STOP>
 inline void ManBVP(manifold_type& manifold, manifold_progress& progress,
                    const MAP& map, const STOP& stop, int period, const map_metric& metric,
-                   const xavier::fixpoint& saddle, bool fwd, double eps,
+                   const spurt::fixpoint& saddle, bool fwd, double eps,
                    double max_length, double delta_min, double alpha_max,
                    double delta_alpha_max,  map_analysis_param& param)
 {
@@ -771,7 +771,7 @@ bool compute_separatrix(std::vector<fp_chain>& all_p_chains,
     return true;
 }
 
-} // xavier
+} // spurt
 
 #endif
 

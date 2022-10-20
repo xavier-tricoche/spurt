@@ -23,7 +23,7 @@
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
 #include <misc/strings.hpp>
-#include <VTK/vtk_interpolator.hpp>
+#include <vtk/vtk_interpolator.hpp>
 #include <tbb/parallel_for.h>
 #include <tbb/tbb.h>
 
@@ -68,7 +68,7 @@ void write_to_ostream(std::ostream& os, const std::string& str) {
     }
 }
 
-void update_progress(xavier::ProgressDisplay& progress) {
+void update_progress(spurt::ProgressDisplay& progress) {
     {
         std::scoped_lock lock(progress_mutex);
         progress.update(progress_counter);
@@ -94,7 +94,7 @@ struct is_one_of_those_types< T, T1, T2, T3,
                 std::is_same<T, T3>::value >::type > : public std::true_type {};
 
 void initialize(int argc, const char* argv[]) {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     cmdline = "Command line: " + std::string(argv[0]);
     for (int i=1; i<argc; i++) {
@@ -151,7 +151,7 @@ void initialize(int argc, const char* argv[]) {
     }
 }
 
-using namespace xavier;
+using namespace spurt;
 using namespace vtk_utils;
 
 struct vec3 : public Eigen::Vector3d
@@ -207,7 +207,7 @@ inline std::string to_str(const vec3& p, bool precise=false) {
     return os.str();
 }
 
-namespace xavier {
+namespace spurt {
 template<>
 struct data_traits< vec3 > {
     typedef vec3::value_type value_type;
@@ -226,20 +226,20 @@ struct data_traits< vec3 > {
         return v.norm();
     }
 };
-} // namespace xavier
+} // namespace spurt
 
 typedef vec3 point_type;
 typedef vec3 vector_type;
 typedef double scalar_type;
 
 typedef vtk_utils::point_locator<vtkUnstructuredGrid, double, 3> unstructured_locator_type;
-typedef xavier::fixed_mesh_time_dependent_field<unstructured_locator_type, std::vector<vec3> > unstructured_field_type;
+typedef spurt::fixed_mesh_time_dependent_field<unstructured_locator_type, std::vector<vec3> > unstructured_field_type;
 typedef vtk_utils::point_locator<vtkStructuredGrid, double, 3> curvilinear_locator_type;
-typedef xavier::fixed_mesh_time_dependent_field<curvilinear_locator_type, std::vector<vec3> > curvilinear_field_type;
-typedef xavier::structured_mesh_time_dependent_field< vtkRectilinearGrid, double, 3, std::vector<vec3> > rectilinear_field_type;
-typedef xavier::structured_mesh_time_dependent_field< vtkImageData, double, 3, std::vector<vec3> > image_field_type;
-//typedef xavier::structured_mesh_time_dependent_field< boundaryAwareRectGrid, double, 3, std::vector<vec3> > BARG_field_type;  //BARG edit #2
-typedef xavier::tp_bspline_time_dependent_field< boundaryAwareRectGrid, double, 3, std::vector<vec3> > BARG_field_type;  //BARG edit
+typedef spurt::fixed_mesh_time_dependent_field<curvilinear_locator_type, std::vector<vec3> > curvilinear_field_type;
+typedef spurt::structured_mesh_time_dependent_field< vtkRectilinearGrid, double, 3, std::vector<vec3> > rectilinear_field_type;
+typedef spurt::structured_mesh_time_dependent_field< vtkImageData, double, 3, std::vector<vec3> > image_field_type;
+//typedef spurt::structured_mesh_time_dependent_field< boundaryAwareRectGrid, double, 3, std::vector<vec3> > BARG_field_type;  //BARG edit #2
+typedef spurt::tp_bspline_time_dependent_field< boundaryAwareRectGrid, double, 3, std::vector<vec3> > BARG_field_type;  //BARG edit
 
 
 struct RKDOPRI5 {
@@ -526,7 +526,7 @@ int runTBB(shared_ptr<Field> field) {
 
     the_bounds = bnds;
     int npoints;
-    xavier::raster_grid<3> sampling_grid(res, bnds);
+    spurt::raster_grid<3> sampling_grid(res, bnds);
 
     if (seed_name.empty()) {
         std::cout << "initializing seed locations..." << std::flush;
@@ -549,7 +549,7 @@ int runTBB(shared_ptr<Field> field) {
     }
     else {
         std::cout << "importing seed locations from file..." << std::flush;
-        std::string ext = xavier::filename::extension(seed_name);
+        std::string ext = spurt::filename::extension(seed_name);
         if (ext == "vtk" || ext == "VTK" || ext == "vtp" || ext == "VTP") {
             VTK_SMART(vtkDataSet) dataset = vtk_utils::readVTK(seed_name);
             npoints = dataset->GetNumberOfPoints();
@@ -608,7 +608,7 @@ int runTBB(shared_ptr<Field> field) {
     std::fill(flowtimes, flowtimes + npoints, t0);
 
     size_t nbcomputed=0;
-    xavier::ProgressDisplay progress(true);
+    spurt::ProgressDisplay progress(true);
     progress.fraction_on();
     size_t nb_lost = 0;
     if (deltaT < 0) {
@@ -857,7 +857,7 @@ int runTBB(shared_ptr<Field> field) {
 
             std::ostringstream os;
             os << name_out << (T>0 ? "-fwd_" : "-bwd_") << "flowmap-deltaT=" << fabs(next_time-t0) << "_t0=" << t0 << ".nrrd";
-            xavier::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step, mins, ctrs, cmdline);
+            spurt::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step, mins, ctrs, cmdline);
             if (do_log) {
                 ofs << "exported: " << os.str() << '\n';
             }
@@ -866,7 +866,7 @@ int runTBB(shared_ptr<Field> field) {
             os.clear();
             os.str("");
             os << name_out << (T>0 ? "-fwd_" : "-bwd_") << "flowtime-deltaT=" << fabs(next_time-t0) << "_t0=" << t0 << ".nrrd";
-            xavier::nrrd_utils::writeNrrdFromContainers(flowtimes, os.str(), size, step, mins, ctrs, cmdline);
+            spurt::nrrd_utils::writeNrrdFromContainers(flowtimes, os.str(), size, step, mins, ctrs, cmdline);
             if (do_log) {
                 ofs << "exported: " << os.str() << '\n';
             }
@@ -1209,7 +1209,7 @@ shared_ptr<unstructured_field_type> load_DLR_time_steps() {
         steps.swap(new_steps);
     }
 
-    xavier::DLRreader reader(mesh_name, "");
+    spurt::DLRreader reader(mesh_name, "");
     std::vector<nvis::fvec3> vertices;
     std::vector<long> cell_indices;
     std::vector<std::pair<DLRreader::cell_type, long> > cell_types;
@@ -1343,14 +1343,14 @@ shared_ptr<unstructured_field_type> load_DLR_time_steps() {
 
     std::vector< std::shared_ptr<std::vector<vector_type> > > data(steps.size());
     for (int i=0; i<steps.size(); i++) {
-        const std::string ext = xavier::filename::extension(steps[i]);
+        const std::string ext = spurt::filename::extension(steps[i]);
         data[i] = std::shared_ptr< std::vector< vector_type > >(new std::vector< vector_type >());
         if (ext == "nrrd" || ext == "nhdr") {
-            Nrrd* nin = xavier::nrrd_utils::readNrrd(steps[i]);
+            Nrrd* nin = spurt::nrrd_utils::readNrrd(steps[i]);
             data[i]->resize(nin->axis[1].size);
             // std::cout << "nin->axis[1].size=" << nin->axis[1].size << '\n';
             // std::cout << "data[i]->size()=" << data[i]->size() << '\n';
-            xavier::nrrd_utils::to_vector<vector_type,float>(*data[i], nin->data, data[i]->size());
+            spurt::nrrd_utils::to_vector<vector_type,float>(*data[i], nin->data, data[i]->size());
         }
         else {
             std::vector<double> vx, vy, vz;
@@ -1373,7 +1373,7 @@ shared_ptr<unstructured_field_type> load_DLR_time_steps() {
 
 int main(int argc, const char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     using namespace odeint;
 
     initialize(argc, argv);
@@ -1388,7 +1388,7 @@ int main(int argc, const char* argv[])
     nb_threads = std::thread::hardware_concurrency();
 #endif
     std::cout << nb_threads << " threads available\n";
-    const std::string ext = xavier::filename::extension(name_in);
+    const std::string ext = spurt::filename::extension(name_in);
 
     if (ext == "dlr") {
         std::shared_ptr<unstructured_field_type> field = load_DLR_time_steps();
@@ -1400,8 +1400,8 @@ int main(int argc, const char* argv[])
         get_filenames(steps, times);
         assert(!steps.empty());
         const std::string& name = steps[0];
-        std::string ext = xavier::filename::extension(name);
-        xavier::lower_case(ext);
+        std::string ext = spurt::filename::extension(name);
+        spurt::lower_case(ext);
         if (ext == "vtk") {
             // we need to load the dataset to figure out the type...
             VTK_SMART(vtkDataSet) mystery = vtk_utils::readVTK(name);
@@ -1451,8 +1451,8 @@ int main(int argc, const char* argv[])
         get_filenames(steps, times);
         assert(!steps.empty());
         const std::string& name = steps[0];
-        std::string ext = xavier::filename::extension(name);
-        xavier::lower_case(ext);
+        std::string ext = spurt::filename::extension(name);
+        spurt::lower_case(ext);
 		assert(ext == "vtr");
 		std::shared_ptr<BARG_field_type> field = load_BARG_time_steps(steps, times);
         runTBB(field);

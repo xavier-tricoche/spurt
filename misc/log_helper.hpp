@@ -10,7 +10,7 @@
 #include <omp.h>
 #endif
 
-namespace xavier { namespace log { 
+namespace spurt { namespace log { 
     
 class dual_ostream {
 public:
@@ -204,7 +204,7 @@ dual_ostream& operator<<(dual_ostream& os, const T& t) {
 
 
 } // log
-} // xavier
+} // spurt
 
 
 

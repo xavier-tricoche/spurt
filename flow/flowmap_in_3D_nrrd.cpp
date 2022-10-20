@@ -23,8 +23,8 @@ using namespace nvis;
 
 using namespace boost::numeric::odeint;
 
-typedef xavier::raster_grid<2, double, size_t> grid_t;
-typedef xavier::raster_data<vec3, 2, double, size_t> raster_t;
+typedef spurt::raster_grid<2, double, size_t> grid_t;
+typedef spurt::raster_data<vec3, 2, double, size_t> raster_t;
 typedef vec3 state_t; // (x, y, inside)
 
 
@@ -37,10 +37,10 @@ vec4 bounds_as_array(0);
 bbox2 bounds;
 
 struct nrrd_vector_field {
-    typedef xavier::gage_interface::vector_wrapper wrapper_t;
+    typedef spurt::gage_interface::vector_wrapper wrapper_t;
     
     nrrd_vector_field(Nrrd* nin) 
-        : m_wrapper(nin, xavier::gage_interface::BC_INTERP, false) {
+        : m_wrapper(nin, spurt::gage_interface::BC_INTERP, false) {
             m_wrapper.use_world();
         }
             
@@ -112,7 +112,7 @@ find_condition(state_t& x0, RHS rhs, Condition cond, const double t_start,
 }
 
 void initialize(int argc, char* argv[]) {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
     xcl::option_traits 
         required_group(true, false, "Required Options"), 
         positional_group(true, true, "Positional Group"),
@@ -163,9 +163,9 @@ int main(int argc, char* argv[]) {
 
     // bool fwd = (t > 0);
     
-    xavier::ProgressDisplay progress;
+    spurt::ProgressDisplay progress;
     
-    Nrrd* nin = xavier::nrrd_utils::readNrrd(in_name);
+    Nrrd* nin = spurt::nrrd_utils::readNrrd(in_name);
     
     std::vector<nrrd_vector_field*> nrrd_vfs(nthreads);
     for (int i=0; i<nthreads; ++i) {
@@ -277,7 +277,7 @@ int main(int argc, char* argv[]) {
     }
     
     if (out_name.empty()) {
-        out_name = xavier::filename::remove_extension(in_name) + "-fmap.nrrd";
+        out_name = spurt::filename::remove_extension(in_name) + "-fmap.nrrd";
     }
     fmap.save_as_nrrd(out_name);
     

@@ -141,9 +141,9 @@ int main(int argc, char* argv[])
         pmap.debug_jmap(x, hits, jacs, times, 20);
         for (unsigned int j = 0 ; j < times.size() ; ++j) {
         
-            xavier::map_wrapper< poincare_map > map(pmap, j + 1);
-            xavier::central_diff_jacobian< xavier::map_wrapper< poincare_map > > cdj(map, 0.05, 0.05);
-            xavier::integral_jacobian< xavier::map_wrapper< poincare_map > > itj(map);
+            spurt::map_wrapper< poincare_map > map(pmap, j + 1);
+            spurt::central_diff_jacobian< spurt::map_wrapper< poincare_map > > cdj(map, 0.05, 0.05);
+            spurt::integral_jacobian< spurt::map_wrapper< poincare_map > > itj(map);
             nvis::mat2 __itj, __cdj;
             try {
                 __cdj = cdj(x);

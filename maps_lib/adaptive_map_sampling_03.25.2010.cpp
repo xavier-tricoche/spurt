@@ -18,7 +18,7 @@
 #include <util/wall_timer.hpp>
 #include <math/bounding_box.hpp>
 
-// xavier's math stuff
+// spurt's math stuff
 #include <math/math.hpp>
 
 // poincare lib
@@ -62,7 +62,7 @@
 using namespace map_analysis;
 
 mesh_type* sampling_mesh;
-std::vector< std::vector< xavier::fixpoint > > all_chains;
+std::vector< std::vector< spurt::fixpoint > > all_chains;
 
 double approx_error;
 std::vector<rational_type> ref_values;
@@ -142,7 +142,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
     typedef std::pair<nvis::vec2, data_type>            data_point_type;
     typedef poincare_index<mesh_type, poincare_map>     poincare_index_type;
     typedef mesh_type::triangle_type                    triangle_type;
-    typedef xavier::Edge                                edge_index_type;
+    typedef spurt::Edge                                edge_index_type;
     
     output.p_orbits.clear();
     output.p_meshes.clear();
@@ -211,7 +211,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
         boundary[i].first = corner[i];
         boundary[i].second = point_data(frame_orbit_id, i);
     }
-    output.base_mesh = mesh_type(boundary, xavier::point_locator());
+    output.base_mesh = mesh_type(boundary, spurt::point_locator());
     mesh_type& base_mesh = output.base_mesh;
     
     unsigned int res[2];
@@ -229,7 +229,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
     _timer.restart();
     for (int i = 0 ; i < static_data::central_map_orbits.size() ; ++i) {
         orbit& obt = static_data::central_map_orbits[i];
-        // double q = (xavier::period_x_periodic(obt.points(), metric)).first;
+        // double q = (spurt::period_x_periodic(obt.points(), metric)).first;
         double q = dist_based_x_period(obt.points(), metric);
         for (int j = 0 ; j < obt.size() ; ++j) {
             obt[j] = metric.modulo(obt[j]);
@@ -262,7 +262,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
     }
     base_mesh.set_tolerance(1.0e-7);
     
-    xavier::map_debug::verbose_level = 1;
+    spurt::map_debug::verbose_level = 1;
     
     /*************************************************************************
     *
@@ -296,7 +296,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
         
         std::vector<double> valid_qs;
         for (std::set<rational_type>::iterator it = rationals.begin() ; it != rationals.end() ; ++it) {
-            valid_qs.push_back(xavier::value(*it));
+            valid_qs.push_back(spurt::value(*it));
         }
         
         std::cerr << "there are " << valid_qs.size() << " interesting rational periods:\n";
@@ -576,7 +576,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
                                 // std::cerr << "orbit_integrator: unable to integrate from " << x0 << std::endl;
                             }
                             if (pos.size() >= 9*period) {
-                                xavier::push_front(approx_zero, pos);
+                                spurt::push_front(approx_zero, pos);
                                 double q = period_x_periodic(pos, metric).first;
                                 os << "rational period at this point is " << q << '\n';
                             } else {
@@ -614,7 +614,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
         
 #ifdef EXPORT_TO_VTK
         if (false) {
-            mesh_type tmp_mesh(boundary, xavier::point_locator());
+            mesh_type tmp_mesh(boundary, spurt::point_locator());
             tmp_mesh.set_tolerance(1.0e-8);
             std::vector<point_type> points;
             std::vector<data_type> data;
@@ -654,10 +654,10 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
         typedef newton::cached_map<poincare_map>    cached_map_type;
         typedef newton::rhs_map<cached_map_type>    rhs_type;
         typedef newton::J_map<cached_map_type>      jacobian_type;
-        typedef xavier::fixpoint                    fixpoint_type;
+        typedef spurt::fixpoint                    fixpoint_type;
         
-        xavier::map_debug::verbose_level = 1;
-        xavier::__default_metric = metric;
+        spurt::map_debug::verbose_level = 1;
+        spurt::__default_metric = metric;
         std::vector<std::list<fixpoint_type> > __fps(nb_threads);
         
         sub_timer.restart();
@@ -690,7 +690,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
                 nvis::vec2 f;
                 bool found;
                 try {
-                    found = xavier::newton(rhs, jacobian, seed, f, 1.e-3, 20); // 1.0e-3 is black magic
+                    found = spurt::newton(rhs, jacobian, seed, f, 1.e-3, 20); // 1.0e-3 is black magic
                 } catch (...) {
                     found = false;
                 }
@@ -699,7 +699,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
                     os << "fixed point found at " << seed << " with norm " << nvis::norm(f) << '\n';
                     std::cerr << os.str();
                     fixpoint_type fp;
-                    xavier::linear_analysis(jacobian, period, seed, fp);
+                    spurt::linear_analysis(jacobian, period, seed, fp);
                     __fps[thread_id].push_back(fp);
                 }
             }
@@ -725,7 +725,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
                 std::cerr << "p-step jacobian = " << vt.J << '\n';
                 nvis::vec2 evecs[2];
                 std::complex<double> evals[2];
-                bool saddle = xavier::eigen(evecs, evals, vt.J);
+                bool saddle = spurt::eigen(evecs, evals, vt.J);
                 if (!saddle) {
                     std::cerr << "WARNING: type mismatch: center found\n";
                 } else {

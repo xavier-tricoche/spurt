@@ -70,9 +70,9 @@ int main(int argc, char* argv[])
     }
     std::cerr << "floor height = " << height << std::endl;
     
-    Nrrd* nin = xavier::readNrrd(name_in);
+    Nrrd* nin = spurt::readNrrd(name_in);
     std::vector<float> data;
-    xavier::to_vector<float>(data, nin);
+    spurt::to_vector<float>(data, nin);
     int N = nin->axis[1].size;
     std::vector<nvis::fvec3> points(N);
     

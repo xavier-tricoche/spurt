@@ -150,7 +150,7 @@ inline std::array<value_t, 6> second_derivative(value_t (*f)(const pos_t&),
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
             required_group(true, false, "Required Options"),
@@ -194,7 +194,7 @@ int main(int argc, char* argv[]) {
 
     srand48(seedval);
 
-    std::string filename = xavier::filename::remove_extension(name_out);
+    std::string filename = spurt::filename::remove_extension(name_out);
 
     fname = lower_case(fname);
 

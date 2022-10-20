@@ -24,7 +24,7 @@
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
 #include <misc/log_helper.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 
 #include <Eigen/Core>
 #include <Eigen/SVD>
@@ -39,13 +39,13 @@
 #include <omp.h>
 #endif
 
-using namespace xavier::lavd;
+using namespace spurt::lavd;
 
 typedef std::mt19937_64 random_generator_t;
 
 std::ofstream log_file;
 
-xavier::log::dual_ostream xavier::lavd::_log_(log_file, std::cout, 1, 0, 0, true);
+spurt::log::dual_ostream spurt::lavd::_log_(log_file, std::cout, 1, 0, 0, true);
 
 std::string name_in, name_out;
 std::string me;
@@ -53,7 +53,7 @@ size_t nsamples=1000000;
 size_t nb_threads;
 nvis::ivec3 up(2,2,2);
 size_t n_used = 10;
-value_t t_between_files=3*xavier::lavd::HOUR;
+value_t t_between_files=3*spurt::lavd::HOUR;
 bbox_t domain, region;
 size_t support_radius;
 
@@ -63,7 +63,7 @@ inline vec3 append(const vec2& v, value_t t) {
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
             required_group(true, false, "Required Options"),
@@ -94,8 +94,8 @@ void initialize(int argc, const char* argv[])
 Nrrd* current_velocity_volume=0;
 Nrrd* current_vorticity_volume=0;
 
-typedef xavier::image< vec3, 3, value_t, size_t > vector_image_t;
-typedef xavier::image< value_t, 3, value_t, size_t > scalar_image_t;
+typedef spurt::image< vec3, 3, value_t, size_t > vector_image_t;
+typedef spurt::image< value_t, 3, value_t, size_t > scalar_image_t;
 
 std::shared_ptr< vector_image_t > vec_img;
 std::shared_ptr< scalar_image_t > scl_img;
@@ -122,14 +122,14 @@ void import_data(const std::vector< std::string >& vel_filenames,
     std::vector< Nrrd* > vel_tsteps(n_used);
     // std::vector< Nrrd* > vor_tsteps(n_used);
     for (size_t i=0; i<n_used; ++i) {
-        vel_tsteps[i]=xavier::nrrd_utils::readNrrd(vel_filenames[i]);
+        vel_tsteps[i]=spurt::nrrd_utils::readNrrd(vel_filenames[i]);
         std::cout << "Imported " << vel_filenames[i] << '\n';
-        // vor_tsteps[i]=xavier::nrrd_utils::readNrrd(vor_filenames[i]);
+        // vor_tsteps[i]=spurt::nrrd_utils::readNrrd(vor_filenames[i]);
         // std::cout << "Imported " << vor_filenames[i] << '\n';
     }
     size_t last_time_step = n_used - 1;
-    current_velocity_volume = xavier::lavd::create_nrrd_volume(vel_tsteps, 0, t_between_files);
-    // current_vorticity_volume = xavier::lavd::create_nrrd_volume(vor_tsteps, 0, t_between_files);
+    current_velocity_volume = spurt::lavd::create_nrrd_volume(vel_tsteps, 0, t_between_files);
+    // current_vorticity_volume = spurt::lavd::create_nrrd_volume(vor_tsteps, 0, t_between_files);
     current_t_min = 0;
     current_t_max = last_time_step*t_between_files;
 
@@ -161,10 +161,10 @@ void check_nrrd_interpolation() {
     float* err = (float*)calloc(N, sizeof(float));
 
     NrrdVectorField velocity(current_velocity_volume);
-    xavier::ProgressDisplay progress(false);
+    spurt::ProgressDisplay progress(false);
     progress.start(N, "nrrd interpolation check");
     for (size_t n=0; n<N; ++n) {
-        nvis::fixed_vector<size_t, 3> coord=xavier::index_to_coord(n, size);
+        nvis::fixed_vector<size_t, 3> coord=spurt::index_to_coord(n, size);
         nvis::vec3 x = bounds.min() + nvis::vec3(coord)*spacing;
         nvis::vec3 v0, v1;
         progress.update(n);
@@ -179,7 +179,7 @@ void check_nrrd_interpolation() {
     }
     progress.end();
 
-    xavier::nrrd_utils::writeNrrdFromContainers(err, "nrrd_err_"+ name_out, size, spacing, bounds.min());
+    spurt::nrrd_utils::writeNrrdFromContainers(err, "nrrd_err_"+ name_out, size, spacing, bounds.min());
 }
 
 inline double unif01(std::uint_fast64_t n) {
@@ -189,7 +189,7 @@ inline double unif01(std::uint_fast64_t n) {
 
 int main(int argc, const char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
 
     me=argv[0];
 
@@ -227,7 +227,7 @@ int main(int argc, const char* argv[])
     region.min() = domain.min();
     region.max() = domain.max();
 
-    support_radius = xavier::lavd::compute_support_radius();
+    support_radius = spurt::lavd::compute_support_radius();
 
     // initialize velocity and vorticity volumes
     import_data(velocity_filenames, vorticity_filenames);
@@ -246,7 +246,7 @@ int main(int argc, const char* argv[])
     std::cout << "region=\n" << region << '\n';
     std::cout << "current_t_max = " << current_t_max << '\n';
 
-    xavier::ProgressDisplay progress(false);
+    spurt::ProgressDisplay progress(false);
 
     auto timer_start = std::chrono::high_resolution_clock::now();
 
@@ -367,7 +367,7 @@ int main(int argc, const char* argv[])
         size_t offset = nsamples - nvalid;
         std::cout << "error percentiles:\n";
         for (int i=0; i<10; ++i) {
-            std::cout << xavier::number_to_rank(i) << " percentile: " << err[offset+i*nvalid/10] << '\n';
+            std::cout << spurt::number_to_rank(i) << " percentile: " << err[offset+i*nvalid/10] << '\n';
         }
         std::cout << "100th percentile: " << err.back() << '\n';
     }
@@ -411,7 +411,7 @@ int main(int argc, const char* argv[])
 
             if (!thread) progress.update(n);
 
-            nvis::fixed_vector<size_t, 3> coord = xavier::index_to_coord(n, res);
+            nvis::fixed_vector<size_t, 3> coord = spurt::index_to_coord(n, res);
             pos[n] = orig3d + nvis::vec3(coord)*step;
             try {
                 (*vf_copies[thread])(pos[n], nrrd_vec[n]);
@@ -492,15 +492,15 @@ int main(int argc, const char* argv[])
         __ctr[2] = nrrdCenterNode;
         __ctr[3] = nrrdCenterNode;
 
-        xavier::nrrd_utils::writeNrrdFromContainers(nrrd_data, "nrrd_" + name_out,
+        spurt::nrrd_utils::writeNrrdFromContainers(nrrd_data, "nrrd_" + name_out,
                           __res, __spc, __mins, __ctr);
-        xavier::nrrd_utils::writeNrrdFromContainers(tril_data, "tril_" + name_out,
+        spurt::nrrd_utils::writeNrrdFromContainers(tril_data, "tril_" + name_out,
                           __res, __spc, __mins, __ctr);
 
         std::cout << "relative error distribution:\n";
         size_t nvalid = N-nzero;
         for (int i=0 ; i<10; ++i) {
-            std::cout << xavier::number_to_rank(i*10) << " percentile: " << rel_err[nzero+i*nvalid/10] << '\n';
+            std::cout << spurt::number_to_rank(i*10) << " percentile: " << rel_err[nzero+i*nvalid/10] << '\n';
         }
         std::cout << "100th percentile: " << rel_err.back() << '\n';
 

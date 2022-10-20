@@ -6,7 +6,7 @@
 #include <misc/meta_utils.hpp>
 #include <matio.h>
 
-namespace xavier { namespace matlab {
+namespace spurt { namespace matlab {
     
 template<typename T>
 class mat_struct {
@@ -168,4 +168,4 @@ void load_mat(const std::string& filename, std::vector<mat_struct<T> >& output) 
 }
     
 } // matlab
-} // xavier
+} // spurt

@@ -23,11 +23,11 @@
 #include <math/fixed_vector.hpp>
 
 #include "DLRreader.hpp"
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 
 typedef nvis::fvec3                     point_type;
 typedef nvis::bounding_box<point_type>  box_type;
-typedef xavier::DLRreader::cell_type    cell_type;
+typedef spurt::DLRreader::cell_type    cell_type;
 typedef std::pair<cell_type, long>      cell_entry;
 
 typedef std::pair< std::vector<double>, std::string > pair_type;
@@ -179,7 +179,7 @@ VTK_SMART(vtkUnstructuredGrid)
 vtk_cellarray(const cell_array_helper& helper)
 {
     std::cout << "in vtk_cellarray...\n";
-    using namespace xavier;
+    using namespace spurt;
     VTK_CREATE(vtkCellArray, __cells);
     __cells->SetNumberOfCells(helper.nb_cells());
     for (long cell_id=0 ; cell_id<helper.nb_cells() ; ++cell_id) {
@@ -406,7 +406,7 @@ int main(int argc, char* argv[])
         re = false;
     }
 
-    xavier::DLRreader reader(grid_filename, data_filename);
+    spurt::DLRreader reader(grid_filename, data_filename);
     std::vector<point_type> points;
     std::vector<long> cell_indices;
     std::vector<cell_entry> cell_types;
@@ -508,8 +508,8 @@ int main(int argc, char* argv[])
         std::cout << "processing connected component #" << i << '\n';
         std::string name = out_filename;
         // remove existing vtk extension
-        std::string ext = xavier::filename::extension(name);
-        name = xavier::filename::remove_extension(name);
+        std::string ext = spurt::filename::extension(name);
+        name = spurt::filename::remove_extension(name);
         if (ccs.size()>1) {
             std::ostringstream os;
             os << name << "_" << i+1 << "_of_" << ccs.size() << '.' << ext;

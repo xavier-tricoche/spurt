@@ -18,7 +18,7 @@
 #include <math/fixed_matrix.hpp>
 #include <util/wall_timer.hpp>
 
-// xavier
+// spurt
 #include <math/math.hpp>
 #include "definitions.hpp"
 #include "xmt_poincare_map.hpp"
@@ -82,9 +82,9 @@ typedef grid<double, 3>                         grid_type;
 typedef raster_data<nvis::vec3, double, 3>      field_type;
 
 
-typedef xmt_poincare_map<xavier::map::wrapper<field_type> > map_type;
+typedef xmt_poincare_map<spurt::map::wrapper<field_type> > map_type;
 
-inline int pos(const nvis::vec2& x, unsigned int res, const xavier::map_metric& metric)
+inline int pos(const nvis::vec2& x, unsigned int res, const spurt::map_metric& metric)
 {
     using namespace static_data;
     int i = floor(res * (x[0] - metric.bounds().min()[0]) / metric.width());
@@ -92,7 +92,7 @@ inline int pos(const nvis::vec2& x, unsigned int res, const xavier::map_metric& 
     return i + j*res;
 }
 
-inline double lmax(int n, const std::vector< nvis::vec2 >& pos, const xavier::map_metric& metric)
+inline double lmax(int n, const std::vector< nvis::vec2 >& pos, const spurt::map_metric& metric)
 {
     static double hx = (maxx - minx) / (double)resx;
     static double hy = (maxy - miny) / (double)resy;
@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
               << ", eps = " << eps << '\n';
               
     Nrrd* nin = nrrdNew();
-    nin = xavier::readNrrd(file);
+    nin = spurt::readNrrd(file);
     
     // verify data type
     if (nin->dim != 4 || nin->axis[0].size != 3) {
@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
     }
     
     std::vector<double> __array;
-    xavier::to_vector(__array, nin);
+    spurt::to_vector(__array, nin);
     nvis::ivec3 dims(nin->axis[1].size, nin->axis[2].size, nin->axis[3].size);
     nvis::vec3 spc(nin->axis[1].spacing, nin->axis[2].spacing, nin->axis[3].spacing);
     grid_type domain(dims, spc, nvis::fixed_vector<bool, 3>(false, true, true));
@@ -160,7 +160,7 @@ int main(int argc, char* argv[])
                            nvis::vec2(bbox.max()[1], bbox.max()[0]));
                            
     bool per[2] = {true, false};
-    xavier::map_metric metric(__bounds, per);
+    spurt::map_metric metric(__bounds, per);
     _minx = metric.bounds().min()[0];
     _miny = metric.bounds().min()[1];
     _maxx = metric.bounds().max()[0];

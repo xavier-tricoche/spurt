@@ -9,7 +9,7 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 #include <util/timer.hpp>
-// xavier
+// spurt
 #include <data/raster.hpp>
 #include "data_IO.hpp"
 #include "utils.hpp"
@@ -18,7 +18,7 @@
 #include <omp.h>
 #endif
 
-namespace xavier { namespace gmig {
+namespace spurt { namespace gmig {
 
 /** \class travel_time_interpolator
   * \brief A lightweight wrapper around a RBF interpolator to solve
@@ -121,7 +121,7 @@ template<typename Int_, typename Val_ = typename Int_::data_type>
 void travel_time_gradient(raster2d<nvis::fixed_vector<Val_, 3> >& raster, 
                           const Int_& fun, bool verbose = false);
 } // gmig
-} // xavier
+} // spurt
 
 
 #include "detail/reconstruct.hpp"

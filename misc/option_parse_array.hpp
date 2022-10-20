@@ -15,7 +15,7 @@
 #include <math/fixed_vector.hpp>
 #include <Eigen/Core>
 
-namespace xavier { namespace command_line {
+namespace spurt { namespace command_line {
 
 namespace po = boost::program_options;
 
@@ -89,7 +89,7 @@ struct vector_validator {
 };
 
 } // commandline
-} // xavier
+} // spurt
 
 #define XAVIER_COMMAND_LINE_VECTOR_TYPES \
     X(bool); \
@@ -108,7 +108,7 @@ namespace boost { namespace program_options {
     template<> \
     void validate<>(boost::any& v, const std::vector<std::string>& s, \
                     std::vector<_Type>*, long) { \
-         using namespace xavier::command_line; \
+         using namespace spurt::command_line; \
          std::cout << "Parsing bounded sequence" << std::endl; \
          vector_validator< std::vector<_Type> >::validate(v, s); \
     }
@@ -181,19 +181,19 @@ namespace boost { namespace program_options {
     template<> \
     void validate<>(boost::any& v, const std::vector<std::string>& s, \
                     nvis::fixed_vector<_Type, _Size>*, long) { \
-        using namespace xavier::command_line; \
+        using namespace spurt::command_line; \
         array_validator<nvis::fixed_vector<_Type, _Size>, _Size>::validate(v, s); \
     } \
     template<> \
     void validate<>(boost::any& v, const std::vector<std::string>& s, \
                     boost::array<_Type, _Size>*, long) { \
-        using namespace xavier::command_line; \
+        using namespace spurt::command_line; \
         array_validator<boost::array<_Type, _Size>, _Size>::validate(v, s); \
     } \
     template<> \
     void validate<>(boost::any& v, const std::vector<std::string>& s, \
                     Eigen::Matrix<_Type, _Size, 1>*, long) { \
-        using namespace xavier::command_line; \
+        using namespace spurt::command_line; \
         array_validator<Eigen::Matrix<_Type, _Size, 1>, _Size>::validate(v, s); \
     }
 XAVIER_COMMAND_LINE_ARRAY_TYPES_AND_SIZES
@@ -204,7 +204,7 @@ XAVIER_COMMAND_LINE_ARRAY_TYPES_AND_SIZES
     template<> \
     void validate<>(boost::any& v, const std::vector<std::string>& s, \
                     std::array<_Type, _Size>*, long) { \
-        using namespace xavier::command_line; \
+        using namespace spurt::command_line; \
         array_validator<std::array<_Type, _Size>, _Size>::validate(v, s); \
     } 
 XAVIER_COMMAND_LINE_ARRAY_TYPES_AND_SIZES
@@ -215,7 +215,7 @@ XAVIER_COMMAND_LINE_ARRAY_TYPES_AND_SIZES
 } // boost
 
 
-namespace xavier { namespace command_line {
+namespace spurt { namespace command_line {
 
 #define STRINGIFY(x) #x
 #define TO_STRING(x) STRINGIFY(x)
@@ -303,6 +303,6 @@ inline std::string type_as_string(bool use_brackets=true, bool use_short=false) 
 }
 
 } // commandline
-} // xavier
+} // spurt
 
 #endif // __XAVIER_OPTION_PARSE_ARRAY_HPP__

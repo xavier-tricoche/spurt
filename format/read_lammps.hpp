@@ -8,7 +8,7 @@
 #include <teem/hest.h>
 #include <teem/nrrd.h>
 
-namespace xavier {
+namespace spurt {
 
 class LAMMPSreader {
 public:

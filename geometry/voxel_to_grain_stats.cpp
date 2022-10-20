@@ -58,9 +58,9 @@ int main(int argc, char* argv[])
     initialize(argc, argv);
     std::string basename(outs);
     
-    Nrrd* nin = xavier::readNrrd(file);
+    Nrrd* nin = spurt::readNrrd(file);
     std::vector<int> tags;
-    xavier::to_vector(tags, nin);
+    spurt::to_vector(tags, nin);
     nvis::ivec3 size;
     nvis::vec3 step;
     for (int i = 0 ; i < 3 ; ++i) {
@@ -74,8 +74,8 @@ int main(int argc, char* argv[])
     std::cout << "size = " << size << '\n';
     
     std::vector<float> attributes;
-    Nrrd* tmp = xavier::readNrrd(att);
-    xavier::to_vector(attributes, tmp);
+    Nrrd* tmp = spurt::readNrrd(att);
+    spurt::to_vector(attributes, tmp);
     
     int nbvoxels = size[0] * size[1] * size[2];
     

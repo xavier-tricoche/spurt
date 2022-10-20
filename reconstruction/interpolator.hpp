@@ -3,7 +3,7 @@
 #include <math/fixed_vector.hpp>
 
 
-namespace xavier {
+namespace spurt {
 
 
 

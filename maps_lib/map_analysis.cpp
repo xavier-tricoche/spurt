@@ -8,14 +8,14 @@
 #include <omp.h>
 #endif
 
-using namespace xavier;
+using namespace spurt;
 
 typedef grid<double, 2>                         grid_type;
 typedef std::pair<nvis::vec2, int>              data_type;
 typedef raster_data<data_type, double, 2>       dataset_type;
 
 
-double xavier::average_distance(const std::vector<nvis::vec2>& steps, int p,
+double spurt::average_distance(const std::vector<nvis::vec2>& steps, int p,
                                 const map_metric& metric)
 {
     if (steps.size() < p) {
@@ -36,7 +36,7 @@ double xavier::average_distance(const std::vector<nvis::vec2>& steps, int p,
     return d/(double)count;
 }
 
-int xavier::best_period(const std::vector<nvis::vec2>& steps, int maxp,
+int spurt::best_period(const std::vector<nvis::vec2>& steps, int maxp,
                         const map_metric& metric)
 {
     std::map<double, int> period_to_dist;

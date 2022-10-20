@@ -1,6 +1,6 @@
 #include <poincare/ls.hpp>
 
-typedef xavier::matrix<double> mat;
+typedef spurt::matrix<double> mat;
 
 inline double SIGN(double a, double b)
 {
@@ -19,7 +19,7 @@ inline double pythag(double a, double b)
             (absb == 0.0 ? 0.0 : absb*sqrt(1.0 + SQR(absa / absb))));
 }
 
-bool xavier::NR_svddcmp(const mat& A, std::vector<double> w, mat& U, mat& V)
+bool spurt::NR_svddcmp(const mat& A, std::vector<double> w, mat& U, mat& V)
 {
 // Given a matrix A[1..m][1..n], this routine computes its singular value
 // decomposition, A = U.Diag(w).V^T

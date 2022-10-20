@@ -16,7 +16,7 @@
 #include <math/poisson_gmm.hpp>
 #include <data/grid.hpp>
 
-typedef xavier::grid<double, 3>     grid_type;
+typedef spurt::grid<double, 3>     grid_type;
 typedef grid_type::ivec_type        ivec_type;
 typedef grid_type::index_type       index_type;
 typedef grid_type::vec_type         vec_type;
@@ -62,7 +62,7 @@ const int tets_id[64] = { -1, 18, -1, -1, 5, 6, 4, 7,
 } // anonymous
 
 
-namespace xavier {
+namespace spurt {
 inline int even(int a)
 {
     return (a % 2 ? -1 : +1);
@@ -404,7 +404,7 @@ void singular_cg(const double& mu,
     }
 }
 
-} // namespace xavier
+} // namespace spurt
 
 #endif // __XAVIER_DIVERGENCE_CLEANING_HPP__
 

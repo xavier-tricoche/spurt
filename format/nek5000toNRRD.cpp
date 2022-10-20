@@ -63,12 +63,12 @@ void save_grid(size_t nPoints, float *pos, size_t nCells, int *ids)
     dims[0] = 3;
     dims[1] = nPoints;
     std::string name = std::string(outfile) + "-points.nrrd";
-    xavier::nrrd_utils::writeNrrdFromContainers(pos, name, dims, spc);
+    spurt::nrrd_utils::writeNrrdFromContainers(pos, name, dims, spc);
 
     dims[0] = 8;
     dims[1] = nCells;
     name = std::string(outfile) + "-cells.nrrd";
-    xavier::nrrd_utils::writeNrrdFromContainers(ids, name, dims, spc);
+    spurt::nrrd_utils::writeNrrdFromContainers(ids, name, dims, spc);
 }
 
 
@@ -181,7 +181,7 @@ int main(int argc, char* argv[])
         spc[0] = spc[1] = airNaN();
 
         std::string name = std::string(outfile) + "-vals-t=" + boost::lexical_cast<std::string>(timestep) + ".nrrd";
-        xavier::nrrd_utils::writeNrrdFromContainers(vals, name, dims, spc);
+        spurt::nrrd_utils::writeNrrdFromContainers(vals, name, dims, spc);
         delete[] vals;
     }
 

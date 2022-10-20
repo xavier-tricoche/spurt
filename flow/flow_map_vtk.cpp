@@ -16,7 +16,7 @@
 #include <math/bounding_box.hpp>
 #include <flow/vector_field.hpp>
 #include <data/raster.hpp>
-#include <VTK/vtk_interpolator.hpp>
+#include <vtk/vtk_interpolator.hpp>
 
 #include <boost/numeric/odeint.hpp>
 #include <boost/filesystem.hpp>
@@ -66,7 +66,7 @@ struct is_one_of_those_types< T, T1, T2, T3,
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     cmdline = "Command line: " + std::string(argv[0]);
     for (int i=1; i<argc; i++) {
@@ -113,7 +113,7 @@ void initialize(int argc, const char* argv[])
     }
 }
 
-using namespace xavier;
+using namespace spurt;
 using namespace vtk_utils;
 
 struct vec3 : public Eigen::Vector3d {
@@ -389,7 +389,7 @@ int run(VTK_SMART(DataSet) dataset) {
     the_bounds = bnds;
 
     std::cout << "Resolution = " << res[0] << " x " << res[1] << " x " << res[2] << std::endl;
-    xavier::raster_grid<3> sampling_grid(res, bnds);
+    spurt::raster_grid<3> sampling_grid(res, bnds);
 
     std::cout << "sampling grid bounds are: " << sampling_grid.bounds().min()
         << " -> " << sampling_grid.bounds().max() << '\n';
@@ -415,7 +415,7 @@ int run(VTK_SMART(DataSet) dataset) {
     }
 
     size_t nbcomputed=0;
-    xavier::ProgressDisplay progress(true);
+    spurt::ProgressDisplay progress(true);
 
     size_t nb_lost = 0;
     progress.start(npoints);
@@ -525,13 +525,13 @@ int run(VTK_SMART(DataSet) dataset) {
 
     std::ostringstream os;
     os << name_out << "-flowmap-deltaT=" << T << ".nrrd";
-    xavier::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step, mins, ctrs, cmdline);
+    spurt::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step, mins, ctrs, cmdline);
 
     size[0] = 1;
     os.clear();
     os.str("");
     os << name_out << "-flowmap-deltaT=" << T << "-time.nrrd";
-    xavier::nrrd_utils::writeNrrdFromContainers(flowtimes, os.str(), size, step, mins, ctrs, cmdline);
+    spurt::nrrd_utils::writeNrrdFromContainers(flowtimes, os.str(), size, step, mins, ctrs, cmdline);
 
     delete[] flowmap;
     delete[] flowtimes;
@@ -572,7 +572,7 @@ int runTBB(VTK_SMART(DataSet) dataset) {
     the_bounds = bnds;
 
     std::cout << "Resolution = " << res[0] << " x " << res[1] << " x " << res[2] << std::endl;
-    xavier::raster_grid<3> sampling_grid(res, bnds);
+    spurt::raster_grid<3> sampling_grid(res, bnds);
 
     std::cout << "sampling grid bounds are: " << sampling_grid.bounds().min()
         << " -> " << sampling_grid.bounds().max() << '\n';
@@ -607,7 +607,7 @@ int runTBB(VTK_SMART(DataSet) dataset) {
     });
 
     size_t nbcomputed=0;
-    xavier::ProgressDisplay progress(true);
+    spurt::ProgressDisplay progress(true);
     progress.fraction_on();
 
     size_t nb_lost = 0;
@@ -743,13 +743,13 @@ int runTBB(VTK_SMART(DataSet) dataset) {
 
     std::ostringstream os;
     os << name_out << (T>0 ? "-fwd_" : "-bwd_") << "flowmap-deltaT=" << fabs(T) << ".nrrd";
-    xavier::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step, mins, ctrs, cmdline);
+    spurt::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step, mins, ctrs, cmdline);
 
     size[0] = 1;
     os.clear();
     os.str("");
     os << name_out << (T>0 ? "-fwd_" : "-bwd_") << "flowtime-deltaT=" << fabs(T) << ".nrrd";
-    xavier::nrrd_utils::writeNrrdFromContainers(flowtimes, os.str(), size, step, mins, ctrs, cmdline);
+    spurt::nrrd_utils::writeNrrdFromContainers(flowtimes, os.str(), size, step, mins, ctrs, cmdline);
 
     delete[] flowmap;
     delete[] flowtimes;
@@ -759,7 +759,7 @@ int runTBB(VTK_SMART(DataSet) dataset) {
 
 int main(int argc, const char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     using namespace odeint;
 
     initialize(argc, argv);

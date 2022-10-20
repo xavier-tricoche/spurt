@@ -12,7 +12,7 @@
 #include <misc/progress.hpp>
 
 
-namespace xavier { namespace nrrd_manip {
+namespace spurt { namespace nrrd_manip {
 
 template<typename T>
 using mat_t=Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
@@ -131,14 +131,14 @@ void sort_eigenvalues(Type_* eigenvalues, Type_* eigenvectors, size_t N, size_t 
 
 } // nrrd_manip
 
-} // xavier
+} // spurt
 
 
-namespace xavier { namespace nrrd_manip {
+namespace spurt { namespace nrrd_manip {
 template<typename T>
 Nrrd* transpose(const Nrrd* nin, int Nrows, int Ncols, bool show_progress) {
 
-    size_t N=xavier::nrrd_utils::nrrd_size(nin, true);
+    size_t N=spurt::nrrd_utils::nrrd_size(nin, true);
     T* out_array=(T*)malloc(N*Ncols*Nrows*sizeof(T));
 
     if (nin->type==nrrdTypeFloat)
@@ -167,7 +167,7 @@ Nrrd* transpose(const Nrrd* nin, int Nrows, int Ncols, bool show_progress) {
 template<typename T>
 Nrrd* product(const Nrrd* nin1, const Nrrd* nin2,
               int Nrows, int Ncols1, int Ncols2, bool show_progress) {
-    size_t N=xavier::nrrd_utils::nrrd_size(nin1, true);
+    size_t N=spurt::nrrd_utils::nrrd_size(nin1, true);
     T* out_array=(T*)malloc(N*Ncols2*Nrows*sizeof(T));
 
     if (nin1->type==nrrdTypeFloat && nin2->type==nrrdTypeFloat)
@@ -202,7 +202,7 @@ Nrrd* product(const Nrrd* nin1, const Nrrd* nin2,
 
 template<typename T>
 Nrrd* sum(const Nrrd* nin1, const Nrrd* nin2, int Nrows, int Ncols, bool show_progress) {
-    size_t N=xavier::nrrd_utils::nrrd_size(nin1, true);
+    size_t N=spurt::nrrd_utils::nrrd_size(nin1, true);
     T* out_array=(T*)malloc(N*Nrows*Ncols*sizeof(T));
 
     if (nin1->type==nrrdTypeFloat && nin2->type==nrrdTypeFloat)
@@ -221,7 +221,7 @@ Nrrd* sum(const Nrrd* nin1, const Nrrd* nin2, int Nrows, int Ncols, bool show_pr
 
 template<typename T>
 Nrrd* subtraction(const Nrrd* nin1, const Nrrd* nin2, int Nrows, int Ncols, bool show_progress) {
-    size_t N=xavier::nrrd_utils::nrrd_size(nin1, true);
+    size_t N=spurt::nrrd_utils::nrrd_size(nin1, true);
     T* out_array=(T*)malloc(N*Nrows*Ncols*sizeof(T));
 
     if (nin1->type==nrrdTypeFloat && nin2->type==nrrdTypeFloat)
@@ -241,7 +241,7 @@ Nrrd* subtraction(const Nrrd* nin1, const Nrrd* nin2, int Nrows, int Ncols, bool
 template<typename T>
 Nrrd* trans_product(const Nrrd* nin1, const Nrrd* nin2,
                     int Nrows, int Ncols1, int Ncols2, bool show_progress) {
-    size_t N=xavier::nrrd_utils::nrrd_size(nin1, true);
+    size_t N=spurt::nrrd_utils::nrrd_size(nin1, true);
     T* out_array=(T*)malloc(N*Ncols1*Ncols2*sizeof(T));
 
     if (nin1->type==nrrdTypeFloat && nin2->type==nrrdTypeFloat)
@@ -265,7 +265,7 @@ Nrrd* trans_product(const Nrrd* nin1, const Nrrd* nin2,
 
 template<typename T>
 Nrrd* cauchy_green(const Nrrd* nin, int Nrows, bool show_progress) {
-    size_t N=xavier::nrrd_utils::nrrd_size(nin, true);
+    size_t N=spurt::nrrd_utils::nrrd_size(nin, true);
     T* out_array=(T*)malloc(N*Nrows*Nrows*sizeof(T));
 
     if (nin->type==nrrdTypeFloat)
@@ -280,7 +280,7 @@ Nrrd* cauchy_green(const Nrrd* nin, int Nrows, bool show_progress) {
 
 template<typename T>
 Nrrd* inverse(const Nrrd* nin, int Nrows, bool show_progress) {
-    size_t N=xavier::nrrd_utils::nrrd_size(nin, true);
+    size_t N=spurt::nrrd_utils::nrrd_size(nin, true);
     T* out_array=(T*)malloc(N*Nrows*Nrows*sizeof(T));
 
     if (nin->type==nrrdTypeFloat)
@@ -297,7 +297,7 @@ Nrrd* inverse(const Nrrd* nin, int Nrows, bool show_progress) {
 template<typename T>
 void SVD(Nrrd*& sings, Nrrd*& left, Nrrd*& right,
          const Nrrd* nin, int Nrows, int Ncols, bool show_progress) {
-    size_t N=xavier::nrrd_utils::nrrd_size(nin, true);
+    size_t N=spurt::nrrd_utils::nrrd_size(nin, true);
     int Ndiag=std::min(Nrows, Ncols);
 
     T* svals_array=(T*)malloc(N*Ndiag*sizeof(T));
@@ -327,7 +327,7 @@ void SVD(Nrrd*& sings, Nrrd*& left, Nrrd*& right,
 template<typename Type_>
 void general_Eigendecomposition(Nrrd*& evals, Nrrd*& evecs, const Nrrd* nin,
                                int Nrows, bool show_progress) {
-    size_t N=xavier::nrrd_utils::nrrd_size(nin, true);
+    size_t N=spurt::nrrd_utils::nrrd_size(nin, true);
     typedef std::complex<Type_> value_t;
     typedef Type_ base_t;
 
@@ -356,7 +356,7 @@ void general_Eigendecomposition(Nrrd*& evals, Nrrd*& evecs, const Nrrd* nin,
 template<typename Type_>
 void symmetric_Eigendecomposition(Nrrd*& evals, Nrrd*& evecs, const Nrrd* nin,
                                   int Nrows, bool show_progress) {
-    size_t N=xavier::nrrd_utils::nrrd_size(nin, true);
+    size_t N=spurt::nrrd_utils::nrrd_size(nin, true);
     typedef Type_ value_t;
 
     value_t* evals_ptr=(value_t*)malloc(N*Nrows*sizeof(value_t));
@@ -381,7 +381,7 @@ void symmetric_Eigendecomposition(Nrrd*& evals, Nrrd*& evecs, const Nrrd* nin,
 
 template<typename T>
 Nrrd* FTLE(const Nrrd* nin, int Nrows, bool show_progress) {
-    size_t N=xavier::nrrd_utils::nrrd_size(nin, true);
+    size_t N=spurt::nrrd_utils::nrrd_size(nin, true);
 
     T* out_array=(T*)malloc(N*sizeof(T));
     if (nin->type==nrrdTypeFloat) {
@@ -406,9 +406,9 @@ void Eigendecomposition(Nrrd*& evals, Nrrd*& evecs,
 }
 
 } // nrrd_manip
-} // namespace xavier
+} // namespace spurt
 
-namespace xavier { namespace nrrd_manip { namespace detail {
+namespace spurt { namespace nrrd_manip { namespace detail {
     template<typename T>
     Nrrd* mat2nrrd(const std::vector< mat_t<T> >& mats,
                    const std::array<size_t, 3>& res,
@@ -418,7 +418,7 @@ namespace xavier { namespace nrrd_manip { namespace detail {
         int ncoef=Ncols*Nrows;
         assert(N==mats.size());
         T* raster=(T*)calloc(ncoef*N, sizeof(T));
-        xavier::ProgressDisplay progress(show_progress);
+        spurt::ProgressDisplay progress(show_progress);
         progress.start(N, "Matrices to Raster");
         for (size_t i=0; i<N; ++i) {
             for (int j=0; j<ncoef; ++j) {
@@ -433,7 +433,7 @@ namespace xavier { namespace nrrd_manip { namespace detail {
         dims[2]=res[1];
         dims[3]=res[2];
         Nrrd *nout = nrrdNew();
-        if (nrrdWrap_nva(nout, raster, xavier::nrrd_utils::nrrd_value_traits_from_type<T>::index,
+        if (nrrdWrap_nva(nout, raster, spurt::nrrd_utils::nrrd_value_traits_from_type<T>::index,
                          4, &dims[0])) {
             throw std::runtime_error("nrrd wrap error in mat2nrrd");
         }
@@ -449,7 +449,7 @@ namespace xavier { namespace nrrd_manip { namespace detail {
         int ncoef=Nrows;
         assert(N==vecs.size());
         T* raster=(T*)calloc(ncoef*N, sizeof(T));
-        xavier::ProgressDisplay progress(show_progress);
+        spurt::ProgressDisplay progress(show_progress);
         progress.start(N, "Vectors to Raster");
         for (size_t i=0; i<N; ++i) {
             for (int j=0; j<ncoef; ++j) {
@@ -464,7 +464,7 @@ namespace xavier { namespace nrrd_manip { namespace detail {
         dims[2]=res[1];
         dims[3]=res[2];
         Nrrd *nout = nrrdNew();
-        if (nrrdWrap_nva(nout, raster, xavier::nrrd_utils::nrrd_value_traits_from_type<T>::index,
+        if (nrrdWrap_nva(nout, raster, spurt::nrrd_utils::nrrd_value_traits_from_type<T>::index,
                          4, &dims[0])) {
             throw std::runtime_error("nrrd wrap error in vec2nrrd");
         }
@@ -487,8 +487,8 @@ namespace xavier { namespace nrrd_manip { namespace detail {
         mat_t<T> refval(Nrows, Ncols);
         mats.resize(N, refval);
 
-        xavier::nrrd_utils::nrrd_data_wrapper<T> raster(nin);
-        xavier::ProgressDisplay progress(show_progress);
+        spurt::nrrd_utils::nrrd_data_wrapper<T> raster(nin);
+        spurt::ProgressDisplay progress(show_progress);
         progress.start(N, "Raster to Matrices");
         for (size_t i=0; i<N; ++i) {
             mats[i].resize(Nrows, Ncols); // does nothing if already set
@@ -508,7 +508,7 @@ namespace xavier { namespace nrrd_manip { namespace detail {
         typedef Eigen::Map< mat_t<T1> > in_map_t;
 
         assert(N>0);
-        xavier::ProgressDisplay progress(show_progress);
+        spurt::ProgressDisplay progress(show_progress);
         progress.start(N, "Transpose no alloc");
         int nterms=Nrows*Ncols;
         out_map_t out_matrix(out_ptr, Ncols, Nrows);
@@ -534,7 +534,7 @@ namespace xavier { namespace nrrd_manip { namespace detail {
         a_map_t A(a_ptr, Nrows, Ncols);
         b_map_t B(b_ptr, Nrows, Ncols);
 
-        xavier::ProgressDisplay progress(show_progress);
+        spurt::ProgressDisplay progress(show_progress);
         progress.start(N, "Sum");
         for (size_t i=0; i<N ; ++i, out_ptr+=ncoef, a_ptr+=ncoef, b_ptr+=ncoef) {
             new (&sum) out_map_t(out_ptr, Nrows, Ncols);
@@ -558,7 +558,7 @@ namespace xavier { namespace nrrd_manip { namespace detail {
         a_map_t A(a_ptr, Nrows, Ncols);
         b_map_t B(b_ptr, Nrows, Ncols);
 
-        xavier::ProgressDisplay progress(show_progress);
+        spurt::ProgressDisplay progress(show_progress);
         progress.start(N, "Sum");
         for (size_t i=0; i<N ; ++i, out_ptr+=ncoef, a_ptr+=ncoef, b_ptr+=ncoef) {
             new (&subtraction) out_map_t(out_ptr, Nrows, Ncols);
@@ -586,7 +586,7 @@ namespace xavier { namespace nrrd_manip { namespace detail {
         a_map_t A(a_ptr, Nrows, Ncols1);
         b_map_t B(b_ptr, Ncols1, Ncols2);
 
-        xavier::ProgressDisplay progress(show_progress);
+        spurt::ProgressDisplay progress(show_progress);
         progress.start(N, "Product");
         for (size_t i=0; i<N; ++i, out_ptr+=ncoef_out, a_ptr+=ncoef_a, b_ptr+=ncoef_b) {
             new (&res) out_map_t(out_ptr, Nrows, Ncols2);
@@ -615,7 +615,7 @@ namespace xavier { namespace nrrd_manip { namespace detail {
         a_map_t A(a_ptr, Nrows, Ncols1);
         b_map_t B(b_ptr, Ncols1, Ncols2);
 
-        xavier::ProgressDisplay progress(show_progress);
+        spurt::ProgressDisplay progress(show_progress);
         progress.start(N, "Transpose+Product");
         for (size_t i=0; i<N; ++i, out_ptr+=ncoef_out, a_ptr+=ncoef_a, b_ptr+=ncoef_b) {
             new (&tprod) out_map_t(out_ptr, Ncols1, Ncols2);
@@ -639,7 +639,7 @@ namespace xavier { namespace nrrd_manip { namespace detail {
         out_map_t cg(out_ptr, Nrows, Nrows);
         in_map_t J(in_ptr, Nrows, Nrows);
 
-        xavier::ProgressDisplay progress(show_progress);
+        spurt::ProgressDisplay progress(show_progress);
         progress.start(N, "Cauchy-Green");
         for (size_t i=0; i<N; ++i, out_ptr+=ncoef, in_ptr+=ncoef) {
             new (&cg) out_map_t(out_ptr, Nrows, Nrows);
@@ -661,7 +661,7 @@ namespace xavier { namespace nrrd_manip { namespace detail {
 
         int Ndiag=std::min(Nrows, Ncols);
         typedef Eigen::JacobiSVD< mat_t<T1> > svd_t;
-        xavier::ProgressDisplay progress(show_progress);
+        spurt::ProgressDisplay progress(show_progress);
 
         out_matrix_map_t left(left_ptr, Nrows, Ndiag);
         out_matrix_map_t right(right_ptr, Ncols, Ndiag);
@@ -715,7 +715,7 @@ namespace xavier { namespace nrrd_manip { namespace detail {
         typedef Eigen::Map< mat_t< TypeOut_ > > out_matrix_map_t;
         typedef Eigen::Map< mat_t< TypeIn_ > > in_matrix_map_t;
         typedef EigenSolver_ solver_t;
-        xavier::ProgressDisplay progress(show_progress);
+        spurt::ProgressDisplay progress(show_progress);
 
         out_matrix_map_t evals(evals_ptr, Nrows, 1);
         out_matrix_map_t evecs(evecs_ptr, Nrows, Nrows);
@@ -758,7 +758,7 @@ namespace xavier { namespace nrrd_manip { namespace detail {
 
         mat_t cg;
 
-        xavier::ProgressDisplay progress(show_progress);
+        spurt::ProgressDisplay progress(show_progress);
         progress.start(N, "FTLE computation");
         for (size_t i=0; i<N ; ++i, ++ftle, in_ptr+=ncoef) {
             in_map_t A(in_ptr, Nrows, Nrows);
@@ -777,7 +777,7 @@ namespace xavier { namespace nrrd_manip { namespace detail {
         typedef Eigen::Map< mat_t<T> > out_map_t;
         typedef Eigen::Map< mat_t<T1> > in_map_t;
 
-        xavier::ProgressDisplay progress(show_progress);
+        spurt::ProgressDisplay progress(show_progress);
 
         int ncoef=Nrows*Nrows;
         out_map_t inv(out_ptr, Nrows, Nrows);
@@ -851,7 +851,7 @@ namespace xavier { namespace nrrd_manip { namespace detail {
         Type_* evecs_ptr=eigenvectors;
         size_t stride=Nrows*Nrows;
         std::map<Type_, int, Compare_> order_map;
-        xavier::ProgressDisplay progress(show_progress);
+        spurt::ProgressDisplay progress(show_progress);
 
         progress.start(N, "Sort eigenvalues and eigenvectors");
         for (size_t n=0; n<N; ++n, evals_ptr+=Nrows, evecs_ptr+=stride) {
@@ -911,8 +911,8 @@ namespace xavier { namespace nrrd_manip { namespace detail {
         else {
             for (int i=0; i<src->dim-1; ++i) sizes[i]=src->axis[i+1].size;
         }
-        if (nrrdWrap_nva(nout, data, xavier::nrrd_utils::nrrd_value_traits_from_type<T>::index, dim, sizes)) {
-            throw std::runtime_error(xavier::nrrd_utils::error_msg("wrap_and_copy_header"));
+        if (nrrdWrap_nva(nout, data, spurt::nrrd_utils::nrrd_value_traits_from_type<T>::index, dim, sizes)) {
+            throw std::runtime_error(spurt::nrrd_utils::error_msg("wrap_and_copy_header"));
         }
         detail::copyAxisInfo<double>(nout, src, nrrdAxisInfoSpacing);
         detail::copyAxisInfo<double>(nout, src, nrrdAxisInfoMin);
@@ -942,4 +942,4 @@ namespace xavier { namespace nrrd_manip { namespace detail {
 
 } // detail
 } // nrrd_manip
-} // xavier
+} // spurt

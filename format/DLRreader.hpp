@@ -23,7 +23,7 @@
 #include <unistd.h>
 #include <netcdf.h>
 
-namespace xavier {
+namespace spurt {
 
 class DLRreader {
     bool verbose;
@@ -484,6 +484,6 @@ void DLRreader::read_vector_data_from_file(const std::string& filename, const st
     }
 }
 
-} // namespace xavier
+} // namespace spurt
 
 #endif // __FORMAT_DLRREADER_HPP__

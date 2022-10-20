@@ -71,9 +71,9 @@ int main(int argc, char* argv[])
     
     nvis::bounding_box<nvis::fvec3> bounds(nvis::fvec3(0,0,0), nvis::fvec3(0.24,0.53,0.24));
     
-    Nrrd* nin = xavier::readNrrd(name_in);
+    Nrrd* nin = spurt::readNrrd(name_in);
     std::vector<double> data;
-    xavier::to_vector<double>(data, nin);
+    spurt::to_vector<double>(data, nin);
     int N = nin->axis[1].size;
     std::cerr << "there are " << N << " points\n";
     nvis::fvec3* all_points = new nvis::fvec3[N];

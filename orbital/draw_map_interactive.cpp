@@ -8,7 +8,7 @@
 #include "new_universal_poincare_map.hpp"
 #include "cr3bp.hpp"
 
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <misc/sort.hpp>
 #include <graphics/colors.hpp>
 
@@ -170,7 +170,7 @@ void sort(double& d, std::vector<nvis::ivec2>& edges, const std::vector<nvis::ve
             dist[j] = nvis::norm(pts[i]-pts[j]);
         }
         std::vector<unsigned int> sorted;
-        xavier::sort(dist, sorted);
+        spurt::sort(dist, sorted);
         edges.push_back(nvis::ivec2(i, sorted[1]));
         edges.push_back(nvis::ivec2(i, sorted[2]));
         d+=nvis::norm(pts[i]-pts[sorted[1]]);
@@ -322,7 +322,7 @@ int main(int argc, char* argv[])
     int failed = 0;
 
     std::vector<nvis::fvec3> scale;
-    xavier::spiral_scale(scale, 10, 0.1, 1, 1, 0, scale_order);
+    spurt::spiral_scale(scale, 10, 0.1, 1, 1, 0, scale_order);
 
     std::vector<std::pair<double, VTK_SMART(vtkPolyData)> > polydatas;
     std::vector<double> values;
@@ -435,7 +435,7 @@ int main(int argc, char* argv[])
         std::cout << '\n';
     }
 
-    xavier::adaptive_color_map<double> __cmap(values, scale, false);
+    spurt::adaptive_color_map<double> __cmap(values, scale, false);
     VTK_CREATE(vtkColorTransferFunction, cmap);
     for (int i=0; i<__cmap.t.size(); ++i) {
         nvis::fvec3 c=__cmap.t[i];

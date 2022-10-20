@@ -53,7 +53,7 @@ void initialize(int argc, const char* argv[])
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
 }
 
-typedef xavier::nrrd_data_traits<Nrrd*>  field_type;
+typedef spurt::nrrd_data_traits<Nrrd*>  field_type;
 
 std::map<float, std::string> file_names;
 std::vector<float> _times;
@@ -175,7 +175,7 @@ struct load_file {
         if (it==file_names.end()) {
             throw std::runtime_error("invalid time step");
         }
-        Nrrd* nin = xavier::nrrd_utils::readNrrd(it->second);
+        Nrrd* nin = spurt::nrrd_utils::readNrrd(it->second);
 
         std::ostringstream os;
         os << it->second << " imported in " << dt.elapsed() << " s." << std::endl;
@@ -249,7 +249,7 @@ private:
 
 int main(int argc, const char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
 
     initialize(argc, argv);
 
@@ -269,7 +269,7 @@ int main(int argc, const char* argv[])
     }
     in.close();
 
-    Nrrd* nin = xavier::nrrd_utils::readNrrd(file_names.begin()->second);
+    Nrrd* nin = spurt::nrrd_utils::readNrrd(file_names.begin()->second);
     field_type vf(nin);
     field_wrapper wrapper(vf);
 
@@ -281,7 +281,7 @@ int main(int argc, const char* argv[])
 
     nvis::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
     std::cerr << "Resolution = " << res << std::endl;
-    xavier::raster_grid<3> sampling_grid(res, wrapper.bounds());
+    spurt::raster_grid<3> sampling_grid(res, wrapper.bounds());
     int npoints = sampling_grid.size();
     float* flowmap = (float*)calloc(3*npoints, sizeof(float));
 
@@ -421,7 +421,7 @@ int main(int argc, const char* argv[])
 
     std::ostringstream os;
     os << name_out << "-flowmap-t0=" << t0 << "-T=" << T << ".nrrd";
-    xavier::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step);
+    spurt::nrrd_utils::writeNrrdFromContainers(flowmap, os.str(), size, step);
 
     return 0;
 }

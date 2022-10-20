@@ -6,7 +6,7 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 
-namespace xavier {
+namespace spurt {
 
 template<typename T1, typename T2>
 class quadtree {

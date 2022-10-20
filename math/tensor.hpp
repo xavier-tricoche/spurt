@@ -2,7 +2,7 @@
 #include <teem/ell.h>
 #include <math/fixed_vector.hpp>
 
-namespace xavier {
+namespace spurt {
 template<typename V, typename T>
 inline T outer(const V& v1, const V& v2)
 {

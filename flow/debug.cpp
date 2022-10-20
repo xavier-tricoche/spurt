@@ -9,7 +9,7 @@
 
 #include <math/fixed_vector.hpp>
 
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 
 #include <vtkTransform.h>
 #include <vtkTransformFilter.h>
@@ -32,12 +32,12 @@ vec4 bnds;
 
 template< typename T >
 inline T nrrd_value(const Nrrd* nin, size_t n) {
-    return xavier::nrrd_utils::nrrd_data_wrapper<T>(nin)[n];
+    return spurt::nrrd_utils::nrrd_data_wrapper<T>(nin)[n];
 }
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
             required_group(true, false, "Required Options"),
@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
 
     VTK_CREATE(vtkRenderer, renderer);
 
-    Nrrd* mask = xavier::nrrd_utils::readNrrd(mask_name);
+    Nrrd* mask = spurt::nrrd_utils::readNrrd(mask_name);
     nvis::bbox2 region;
     region.min() = nvis::vec2(bnds[0], bnds[1]);
     region.max() = nvis::vec2(bnds[2], bnds[3]);
@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
     domain->SetOrigin(mins[0], mins[1], -1);
     domain->SetSpacing(spc[0], spc[1], 1);
     std::vector<float> values;
-    xavier::nrrd_utils::to_vector(values, mask);
+    spurt::nrrd_utils::to_vector(values, mask);
     vtk_utils::add_scalars(domain, values);
     VTK_CREATE(vtkDataSetMapper, domain_mapper);
     domain_mapper->SetInputData(domain);
@@ -162,8 +162,8 @@ int main(int argc, char* argv[]) {
 
     for (size_t i=0; i<input_files.size(); ++i) {
         name_in = input_files[i];
-        xavier::ProgressDisplay progress(false);
-        Nrrd* traj_nrrd = xavier::nrrd_utils::readNrrd(name_in);
+        spurt::ProgressDisplay progress(false);
+        Nrrd* traj_nrrd = spurt::nrrd_utils::readNrrd(name_in);
         float* data = (float*)traj_nrrd->data;
         size_t n_pts = traj_nrrd->axis[1].size;
         progress.start(n_pts, "Processing filename #" + std::to_string(i));
@@ -292,7 +292,7 @@ int main(int argc, char* argv[]) {
         if (drand48()>0.1) continue;
         failed_paths.push_back(std::vector<nvis::vec2>());
         std::vector<nvis::vec2>& sl = failed_paths.back();
-        Nrrd* nin = xavier::nrrd_utils::readNrrd(failed[n]);
+        Nrrd* nin = spurt::nrrd_utils::readNrrd(failed[n]);
         size_t npts = nin->axis[1].size;
         std::cout << "\n" << npts << " points in failed path\n";
         for (int k=0; k<npts; ++k) {

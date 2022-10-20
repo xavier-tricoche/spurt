@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
     std::vector<size_t> dims(2);
     dims[0] = 4;
     dims[1] = bounds.size()/4;
-    xavier::writeNrrdFromContainers(data, std::string(name_out), /*nrrdTypeDouble,*/ dims);
+    spurt::writeNrrdFromContainers(data, std::string(name_out), /*nrrdTypeDouble,*/ dims);
     
     return 0;
 }

@@ -244,7 +244,7 @@ struct p_map_functor {
             if (q.numerator() != _p) {
                 continue;
             } else {
-                _qs.push_back(xavier::value(q));
+                _qs.push_back(spurt::value(q));
             }
         }
     }

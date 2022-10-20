@@ -53,7 +53,7 @@ nvis::fixed_vector<T, N> to_vec(const std::array<T, N>& array) {
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
         
     xcl::option_traits 
             required_group(true, false, "Required Options"), 
@@ -97,17 +97,17 @@ struct ABC_field {
 
 int main(int argc, const char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     using namespace odeint;
     
     initialize(argc, argv);
     
-    name_out=xavier::filename::remove_extension(name_out);
+    name_out=spurt::filename::remove_extension(name_out);
     
     ABC_field rhs(abc[0], abc[1], abc[2]);
     
     if (verbose) std::cout << "Resolution = " << res[0] << "x" << res[1] << "x" << res[2] << std::endl;
-    xavier::raster_grid<3> sampling_grid(to_vec(res), to_bbox(bnds));
+    spurt::raster_grid<3> sampling_grid(to_vec(res), to_bbox(bnds));
           
     size_t npoints = sampling_grid.size();
         
@@ -125,7 +125,7 @@ int main(int argc, const char* argv[])
     runge_kutta_dopri5<state_t> stepper;
     value_t dt = 1.0e-2;
     
-    xavier::ProgressDisplay progress(true);
+    spurt::ProgressDisplay progress(true);
     
     progress.start(npoints, "Computing flow map");
     #pragma omp parallel
@@ -172,7 +172,7 @@ int main(int argc, const char* argv[])
     
     size[0] = 3;
     os << name_out << "-flowmap-e=" << eps << "-T=" << std::setw(4) << std::setfill('0') << t_max << ".nrrd";
-    xavier::nrrd_utils::writeNrrdFromContainers(fmap, os.str(), /*nrrd_value_traits_from_type<value_t>::index,*/ size, step, mins);
+    spurt::nrrd_utils::writeNrrdFromContainers(fmap, os.str(), /*nrrd_value_traits_from_type<value_t>::index,*/ size, step, mins);
     
     return 0;
 }

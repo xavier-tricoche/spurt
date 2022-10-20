@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
     size_t n = std::atoi(argv[1]);
     std::string filename = argv[2];
     
-    filename = xavier::filename::remove_extension(filename);
+    filename = spurt::filename::remove_extension(filename);
     
     double step = TWO_PI/(double)(n-1);
     
@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
     std::array<size_t, 4> dims({3, n, n, n});
     std::array<double, 4> spcs({__nan__, step, step, step});
     std::array<double, 4> mins({__nan__, -PI, -PI, -PI});
-    xavier::writeNrrdFromContainers(reinterpret_cast<double *>(&f[0]), filename + ".nrrd", dims, spcs, mins);
+    spurt::writeNrrdFromContainers(reinterpret_cast<double *>(&f[0]), filename + ".nrrd", dims, spcs, mins);
     
     srand48(time(0));
     std::fstream output(filename + ".xyz", std::ios::out);

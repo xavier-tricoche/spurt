@@ -32,7 +32,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <math/bounding_box.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <set>
@@ -139,7 +139,7 @@ struct i2x {
             step[i] = nrrd->axis[nrrd->dim-3+i].spacing;
             size[i] = nrrd->axis[nrrd->dim-3+i].size;
         }
-        bounds = xavier::nrrd_utils::get_bounds<3>(nrrd);
+        bounds = spurt::nrrd_utils::get_bounds<3>(nrrd);
     }
 
     nvis::vec3 operator()(int id) const {
@@ -213,7 +213,7 @@ struct euler {
 };
 
 
-typedef xavier::nrrd_data_traits<Nrrd*>  field_type;
+typedef spurt::nrrd_data_traits<Nrrd*>  field_type;
 typedef right_hand_side<field_type> rhs_type;
 typedef euler<rhs_type>             euler_type;
 
@@ -288,7 +288,7 @@ to_tubes(const std::list<curve_type>& curves,
 }
 
 typedef nvis::vec3                              value_type;
-typedef xavier::nrrd_data_traits<Nrrd*>              nrrd_data_traits;
+typedef spurt::nrrd_data_traits<Nrrd*>              nrrd_data_traits;
 typedef Garcia_vis_helper::color_map<double>    color_map_type;
 typedef color_map_type::color_type              color_type;
 
@@ -337,8 +337,8 @@ int main(int argc, char* argv[])
     vertex_tag_name.append("-point-attributes.txt");
     point_coord_name.append("-init_coords.nrrd");
 
-    Nrrd* __coords = xavier::nrrd_utils::readNrrd(point_coord_name);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> coords(__coords);
+    Nrrd* __coords = spurt::nrrd_utils::readNrrd(point_coord_name);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> coords(__coords);
 
     vtkSmartPointer<vtkDataSetReader> mesh_reader = vtkSmartPointer<vtkDataSetReader>::New();
     mesh_reader->SetFileName(mesh_name.c_str());
@@ -406,9 +406,9 @@ int main(int argc, char* argv[])
     std::vector<double>     all_grain_vals;
     {
         std::cerr << "opening " << density << '\n';
-        Nrrd* nin_val = xavier::nrrd_utils::readNrrd(density);
+        Nrrd* nin_val = spurt::nrrd_utils::readNrrd(density);
         std::vector<float> vals;
-        xavier::nrrd_utils::to_vector(vals, nin_val);
+        spurt::nrrd_utils::to_vector(vals, nin_val);
         std::cerr << vals.size() << " values in file\n";
         int n = vals.size() / 2;
         for (int i = 0 ; i < n ; ++i) {
@@ -433,9 +433,9 @@ int main(int argc, char* argv[])
     std::map<int, float>    grain_norms;
     {
         std::cerr << "opening " << grain_norm << '\n';
-        Nrrd* nin_val = xavier::nrrd_utils::readNrrd(grain_norm);
+        Nrrd* nin_val = spurt::nrrd_utils::readNrrd(grain_norm);
         std::vector<float> vals;
-        xavier::nrrd_utils::to_vector(vals, nin_val);
+        spurt::nrrd_utils::to_vector(vals, nin_val);
         std::cerr << vals.size() << " values in file\n";
         int n = vals.size() / 2;
         for (int i = 0 ; i < n ; ++i) {
@@ -449,7 +449,7 @@ int main(int argc, char* argv[])
     }
 
     std::string name = info.base_dir + "Efield.nrrd";
-    Nrrd* nin_vec = xavier::nrrd_utils::readNrrd(name);
+    Nrrd* nin_vec = spurt::nrrd_utils::readNrrd(name);
     if (nin_vec->dim != 4) {
         throw;
     }
@@ -459,7 +459,7 @@ int main(int argc, char* argv[])
 
     std::vector<double> scalars;
     std::vector<double> tmp_scl;
-    xavier::nrrd_utils::to_vector(tmp_scl, nin_vec);
+    spurt::nrrd_utils::to_vector(tmp_scl, nin_vec);
     std::cerr << tmp_scl.size() / 3 << " vector values\n";
     scalars.resize(tmp_scl.size() / 3);
     for (int i = 0 ; i < tmp_scl.size() / 3 ; ++i) {
@@ -470,7 +470,7 @@ int main(int argc, char* argv[])
     std::sort(tmp.begin(), tmp.end());
     std::cerr << "min norm = " << tmp.front() << ", max norm = " << tmp.back() << ", median norm = " << tmp[tmp.size()/2] << '\n';
 
-    xavier::inverse_transform_sampling<double> itf(scalars);
+    spurt::inverse_transform_sampling<double> itf(scalars);
 
     color_map_type cmap(tmp, col_gamma, false);
     vtkSmartPointer<vtkColorTransferFunction> ctf = vtkSmartPointer<vtkColorTransferFunction>::New();
@@ -520,7 +520,7 @@ int main(int argc, char* argv[])
     vtkSmartPointer<vtkRenderWindowInteractor> iren = vtkSmartPointer<vtkRenderWindowInteractor>::New();
     iren->SetRenderWindow(ren_win);
 
-    nvis::bbox3 bounds = xavier::nrrd_utils::get_bounds<3>(nin_vec);
+    nvis::bbox3 bounds = spurt::nrrd_utils::get_bounds<3>(nin_vec);
     bounds.min() += nvis::vec3(20, 20, 20);
     bounds.max() += nvis::vec3(20, 20, 20);
     std::cerr << "frame bounds are " << bounds << '\n';

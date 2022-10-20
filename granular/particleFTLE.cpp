@@ -10,7 +10,7 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 #include <util/timer.hpp>
-// xavier
+// spurt
 #include <math/MLS.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <math/matrix.hpp>
@@ -127,14 +127,14 @@ inline std::string zeros(int n)
 
 inline double ftle(const Eigen::MatrixXd& jacobian)
 {
-    xavier::mat3 M;
+    spurt::mat3 M;
     for (int i = 0 ; i < 3 ; ++i) {
         for (int j = 0 ; j < 3 ; ++j) {
             M(i, j) = jacobian(j+1, i);
         }
     }
     
-    xavier::mat3 T(xavier::transpose(M));
+    spurt::mat3 T(spurt::transpose(M));
     M *= T;
     std::vector<double> evals;
     std::vector<nvis::vec3> evecs;

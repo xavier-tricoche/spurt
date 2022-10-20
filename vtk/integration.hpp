@@ -3,7 +3,7 @@
 
 #include <list>
 
-namespace xavier {
+namespace spurt {
 template<typename RHS, typename T>
 struct euler {
 

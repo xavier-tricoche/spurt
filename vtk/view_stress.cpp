@@ -30,7 +30,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <set>
 #include <sstream>
@@ -175,12 +175,12 @@ int main(int argc, char* argv[])
     stress_field_reader->Update();
 //    vtkStructuredPoints* stress_field = stress_field_reader->GetOutput();
 
-    Nrrd* __ids = xavier::nrrd_utils::readNrrd(info.id_to_tags);
-    xavier::nrrd_utils::nrrd_data_wrapper<int> ids(__ids);
+    Nrrd* __ids = spurt::nrrd_utils::readNrrd(info.id_to_tags);
+    spurt::nrrd_utils::nrrd_data_wrapper<int> ids(__ids);
     std::cerr << info.id_to_tags << " loaded.\n";
 
-    Nrrd* __gstress = xavier::nrrd_utils::readNrrd(info.stress_span);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> grain_stress(__gstress);
+    Nrrd* __gstress = spurt::nrrd_utils::readNrrd(info.stress_span);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> grain_stress(__gstress);
     std::cerr << info.stress_span << " loaded.\n";
     int nb_grains = __gstress->axis[1].size;
 

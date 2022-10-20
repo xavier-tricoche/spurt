@@ -13,7 +13,7 @@
 #include <vtkPolyData.h>
 #include <vtkRectilinearGrid.h>
 
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <format/filename.hpp>
 
 

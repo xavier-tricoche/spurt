@@ -5,7 +5,7 @@
 #include <sstream>
 #include "new_creaseline.hpp"
 
-using namespace xavier;
+using namespace spurt;
 using namespace gage_interface;
 
 int main( int argc, char* argv[] )

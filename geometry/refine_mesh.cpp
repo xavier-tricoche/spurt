@@ -4,7 +4,7 @@
 #include <exception>
 
 #include <geometry/tetrahedrization.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <misc/option_parse.hpp>
 #include <misc/sort.hpp>
 #include <misc/progress.hpp>
@@ -13,11 +13,11 @@ bool verbose;
 bool refine;
 std::string name_in, name_out;
 
-typedef xavier::fixed_sorted_vector<size_t, 2> edge_type;
+typedef spurt::fixed_sorted_vector<size_t, 2> edge_type;
 typedef nvis::fixed_vector<double, 3> pos_type;
 
 void initialize(int argc, char* argv[]) {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
             required(true, false, "Required Options"),
@@ -54,14 +54,14 @@ VTK_SMART(vtkUnstructuredGrid) tetrahedrize(VTK_SMART(vtkDataSet) dataset) {
 
     VTK_CREATE(vtkCellArray, tets);
 
-    xavier::ProgressDisplay progress(true);
+    spurt::ProgressDisplay progress(true);
     progress.begin(ncells, "Splitting tets");
     for (size_t i=0; i<ncells; ++i) {
         progress.update(i);
         VTK_CREATE(vtkGenericCell, cell);
         dataset->GetCell(i, cell);
         int celltype = cell->GetCellType();
-        std::list<xavier::tetrahedron> newtets;
+        std::list<spurt::tetrahedron> newtets;
         if (celltype == VTK_TETRA) {
             // simply copy cell
             tets->InsertNextCell(cell);
@@ -70,25 +70,25 @@ VTK_SMART(vtkUnstructuredGrid) tetrahedrize(VTK_SMART(vtkDataSet) dataset) {
 
         VTK_SMART(vtkIdList) id_list = cell->GetPointIds();
         if (celltype == VTK_VOXEL || celltype == VTK_HEXAHEDRON) {
-            xavier::hexahedron hexa;
+            spurt::hexahedron hexa;
             for (int k=0; k<8; ++k) {
                 hexa[k] = id_list->GetId(k);
             }
-            xavier::decompose_hexahedron(newtets, hexa);
+            spurt::decompose_hexahedron(newtets, hexa);
         }
         else if (celltype == VTK_WEDGE) {
-            xavier::prism pr;
+            spurt::prism pr;
             for (int k=0; k<6; ++k) {
                 pr[k] = id_list->GetId(k);
             }
-            xavier::decompose_prism(newtets, pr);
+            spurt::decompose_prism(newtets, pr);
         }
         else if (celltype == VTK_PYRAMID) {
-            xavier::pyramid py;
+            spurt::pyramid py;
             for (int k=0; k<5; ++k) {
                 py[k] = id_list->GetId(k);
             }
-            xavier::decompose_pyramid(newtets, py);
+            spurt::decompose_pyramid(newtets, py);
         }
         else {
             std::cerr << "Unrecognized / unsupported cell type: " << celltype << '\n';
@@ -134,7 +134,7 @@ VTK_SMART(vtkUnstructuredGrid) refine_tetmesh(VTK_SMART(vtkUnstructuredGrid) tet
     VTK_CREATE(vtkCellArray, tets);
     std::vector<pos_type> all_new_pos;
     std::map<edge_type, size_t> edge_to_index;
-    xavier::ProgressDisplay progress(true);
+    spurt::ProgressDisplay progress(true);
     progress.begin(ncells, "Subdividing tetrahedra");
     for (size_t i=0; i<ncells; ++i) {
         progress.update(i);
@@ -142,7 +142,7 @@ VTK_SMART(vtkUnstructuredGrid) refine_tetmesh(VTK_SMART(vtkUnstructuredGrid) tet
         tetmesh->GetCell(i, cell);
         int celltype = cell->GetCellType();
         VTK_SMART(vtkIdList) id_list = cell->GetPointIds();
-        std::list<xavier::tetrahedron> newtets;
+        std::list<spurt::tetrahedron> newtets;
         std::vector<pos_type> old_pos(4);
         for (int k=0; k<4; ++k) {
             tetmesh->GetPoint(id_list->GetId(k), &old_pos[k][0]);
@@ -189,7 +189,7 @@ VTK_SMART(vtkUnstructuredGrid) refine_tetmesh(VTK_SMART(vtkUnstructuredGrid) tet
         tets->InsertCellPoint(id_list->GetId(3));
 
         // split octahedron into 2 pyramids
-        xavier::pyramid py1, py2;
+        spurt::pyramid py1, py2;
         py1[0] = npts+edge_to_index[edges[3]];
         py1[1] = npts+edge_to_index[edges[4]];
         py1[2] = npts+edge_to_index[edges[1]];
@@ -202,11 +202,11 @@ VTK_SMART(vtkUnstructuredGrid) refine_tetmesh(VTK_SMART(vtkUnstructuredGrid) tet
         py2[3] = npts+edge_to_index[edges[2]];
         py2[4] = npts+edge_to_index[edges[0]];
 
-        std::list<xavier::tetrahedron> _tets;
-        xavier::decompose_pyramid(_tets, py1);
-        xavier::decompose_pyramid(_tets, py2);
+        std::list<spurt::tetrahedron> _tets;
+        spurt::decompose_pyramid(_tets, py1);
+        spurt::decompose_pyramid(_tets, py2);
         for (auto it=_tets.begin(); it!=_tets.end(); ++it) {
-            const xavier::tetrahedron& t = *it;
+            const spurt::tetrahedron& t = *it;
             tets->InsertNextCell(4);
             tets->InsertCellPoint(t[0]);
             tets->InsertCellPoint(t[1]);

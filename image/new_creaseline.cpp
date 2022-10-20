@@ -4,7 +4,7 @@
 
 using namespace std;
 using namespace nvis;
-using namespace xavier;
+using namespace spurt;
 using namespace gage_interface;
 
 /*
@@ -19,10 +19,10 @@ interpolation seems unsatisfactory
 */
 
 
-double xavier::crease::threshold;
-double xavier::crease::eps;
-unsigned int xavier::crease::subdiv;
-unsigned int xavier::crease::upsample=1;
+double spurt::crease::threshold;
+double spurt::crease::eps;
+unsigned int spurt::crease::subdiv;
+unsigned int spurt::crease::upsample=1;
 
 vector< crease::Edge > crease::problematic_edges;
 vector< crease::Point > crease::all_face_points;
@@ -72,7 +72,7 @@ inline bool eval_ok( double eval, double threshold, bool ridge )
 }
 
 template< typename T >
-void xavier::display_stats( const std::vector< T >& data, const std::string& msg )
+void spurt::display_stats( const std::vector< T >& data, const std::string& msg )
 {
     // examine the value distribution of the considered scalar quantity
     std::vector< T > vals( data.begin(), data.end() );

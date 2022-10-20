@@ -195,7 +195,7 @@ void resample(const nvis::bbox3& bounds,
 {
     int size = values[0].size();
     nvis::ivec3 dims(res[0], res[1], res[2]);
-    xavier::RasterGrid<3> grid(dims, bounds);
+    spurt::RasterGrid<3> grid(dims, bounds);
     int npts = grid.size();
     float* data = (float*)calloc(npts*size, sizeof(float));
     
@@ -230,7 +230,7 @@ void resample(const nvis::bbox3& bounds,
         sz[i+1] = res[i];
         spc[i+1] = grid.step()[i];
     }
-    xavier::writeNrrd(data, name_out, nrrdTypeFloat, sz, spc);
+    spurt::writeNrrd(data, name_out, nrrdTypeFloat, sz, spc);
 }
 
 

@@ -6,7 +6,7 @@
 #include <iostream>
 #include "polynomial.hpp"
 
-namespace xavier { namespace RBF {
+namespace spurt { namespace RBF {
 
 template<typename T>
 inline T linear(T x) { return x; }
@@ -253,7 +253,7 @@ struct polyharmonic_function {
 
 } // namespace RBF
 
-} // namespace xavier
+} // namespace spurt
 
 
 #endif

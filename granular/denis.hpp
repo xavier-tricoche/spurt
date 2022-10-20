@@ -4,7 +4,7 @@
 #include <math/fixed_vector.hpp>
 #include <poincare/metric.hpp>
 
-namespace xavier { 
+namespace spurt { 
 namespace denis {
     
 // gamma = 0.5, 1, 1.5
@@ -90,7 +90,7 @@ private:
     
 
 } // denis
-} // xavier
+} // spurt
 
 
 #endif // __GRANULAR_DENIS_HPP__

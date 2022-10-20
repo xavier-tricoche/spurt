@@ -188,22 +188,22 @@ void draw_mesh(const T& mesh, const nvis::fvec3& color, gfx_ID& id, const I& inc
     typedef typename T::triangle_type   triangle_type;
     
     // uniquify edges
-    std::set<xavier::Edge> edges;
+    std::set<spurt::Edge> edges;
     for (int i = 0 ; i < mesh.get_nb_triangles() ; ++i) {
         if (!included(mesh, i)) {
             continue;
         }
         const triangle_type& tri = mesh.get_triangle_vertices(i);
-        edges.insert(xavier::Edge(tri[0], tri[1]));
-        edges.insert(xavier::Edge(tri[1], tri[2]));
-        edges.insert(xavier::Edge(tri[2], tri[0]));
+        edges.insert(spurt::Edge(tri[0], tri[1]));
+        edges.insert(spurt::Edge(tri[1], tri[2]));
+        edges.insert(spurt::Edge(tri[2], tri[0]));
     }
     
     register_id(id);
     glNewList(id.list_id, GL_COMPILE);
     glBegin(GL_LINES);
     glColor3f(color[0], color[1], color[2]);
-    for (std::set<xavier::Edge>::const_iterator it = edges.begin() ; it != edges.end() ; ++it) {
+    for (std::set<spurt::Edge>::const_iterator it = edges.begin() ; it != edges.end() ; ++it) {
         const nvis::vec2& p0 = mesh.get_vertex(it->i0);
         const nvis::vec2& p1 = mesh.get_vertex(it->i1);
         glVertex3f(p0[0], p0[1], -1);
@@ -300,7 +300,7 @@ void draw_steps(const nvis::fvec3& color, unsigned int period, double scaling,
 
 template<typename T>
 void draw_edges(const T& mesh, const nvis::fvec3& color, unsigned int period,
-                const std::list<xavier::Edge>& edges)
+                const std::list<spurt::Edge>& edges)
 {
     std::cerr << "drawing " << edges.size() << " " << period << "-edges with color"
               << color << "\n";
@@ -310,7 +310,7 @@ void draw_edges(const T& mesh, const nvis::fvec3& color, unsigned int period,
     glNewList(id.list_id, GL_COMPILE);
     glColor3f(color[0], color[1], color[2]);
     glBegin(GL_LINES);
-    for (std::list<xavier::Edge>::const_iterator it = edges.begin() ; it != edges.end() ; ++it) {
+    for (std::list<spurt::Edge>::const_iterator it = edges.begin() ; it != edges.end() ; ++it) {
         const typename T::point_type& p0 = mesh.get_vertex(it->i0);
         const typename T::point_type& p1 = mesh.get_vertex(it->i1);
         std::cerr << "drawing singular edge " << p0 << " - " << p1 << '\n';
@@ -345,9 +345,9 @@ void draw_degenerate_points(const std::list<nvis::vec2>& points,
     glEndList();
 }
 
-void draw_fixpoints(const std::list<std::list<xavier::fixpoint> >& chains, unsigned int size = 3)
+void draw_fixpoints(const std::list<std::list<spurt::fixpoint> >& chains, unsigned int size = 3)
 {
-    typedef std::list<xavier::fixpoint>     chain_type;
+    typedef std::list<spurt::fixpoint>     chain_type;
     typedef std::list<chain_type>           list_type;
     typedef list_type::const_iterator       it_type;
     
@@ -456,9 +456,9 @@ void compute_manifold(unsigned int period, double length, const Map& map)
     const map_metric& metric = map.metric();
     
     std::vector<fp_chain> all_p_chains;
-    const std::list<std::list<xavier::fixpoint> >& chains = output.p_chains[period-1];
+    const std::list<std::list<spurt::fixpoint> >& chains = output.p_chains[period-1];
     
-    typedef std::list<xavier::fixpoint> list_chain_type;
+    typedef std::list<spurt::fixpoint> list_chain_type;
     for (std::list<list_chain_type>::const_iterator it = chains.begin() ;
             it != chains.end() ; ++it) {
         all_p_chains.push_back(fp_chain(it->begin(), it->end(), static_data::metric));
@@ -513,7 +513,7 @@ struct p_map_functor {
             if (q.numerator() != _p) {
                 continue;
             } else {
-                _qs.push_back(xavier::value(q));
+                _qs.push_back(spurt::value(q));
             }
         }
     }
@@ -1050,17 +1050,17 @@ int main(int argc, char* argv[])
     for (int i = 0 ; i < output.p_chains.size() ; ++i) {
         outf << i + 1 << '\n';
         outf << output.p_chains[i].size() << " chains or period " << i + 1 << "\n";
-        for (std::list<std::list<xavier::fixpoint> >::iterator it = output.p_chains[i].begin() ;
+        for (std::list<std::list<spurt::fixpoint> >::iterator it = output.p_chains[i].begin() ;
                 it != output.p_chains[i].end() ; ++it) {
-            const std::list<xavier::fixpoint>& chain = *it;
+            const std::list<spurt::fixpoint>& chain = *it;
             if (it->front().saddle) {
-                for (std::list<xavier::fixpoint>::const_iterator it2 = chain.begin() ;
+                for (std::list<spurt::fixpoint>::const_iterator it2 = chain.begin() ;
                         it2 != chain.end() ; ++it2) {
                     outf << "saddle" << " " << it2->pos << " " << it2->evec[0] << " "
                          << it2->evec[1] << '\n';
                 }
             } else {
-                for (std::list<xavier::fixpoint>::const_iterator it2 = chain.begin() ;
+                for (std::list<spurt::fixpoint>::const_iterator it2 = chain.begin() ;
                         it2 != chain.end() ; ++it2) {
                     outf << "center" << " " << it2->pos << '\n';
                 }

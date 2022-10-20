@@ -12,7 +12,7 @@
 // nvis
 #include <math/fixed_vector.hpp>
 
-namespace xavier { namespace gmig {
+namespace spurt { namespace gmig {
 
 inline double deg2rad(double deg) {
     static const double k = M_PI/180.;
@@ -305,6 +305,6 @@ struct LessPosTolerance {
 };
 
 } // namespace gmig
-} // namespace xavier
+} // namespace spurt
 
 #endif

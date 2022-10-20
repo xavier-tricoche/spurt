@@ -8,7 +8,7 @@
 #include <limits>
 #include <list>
 
-namespace xavier {
+namespace spurt {
     
 // defines a data point associating a spatial coordinate with a value
 template<typename T, typename V, int K>

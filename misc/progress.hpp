@@ -32,7 +32,7 @@ std::ostream& operator<<(std::ostream& os, _put_time<CharT> f) {
 }
 #endif
 
-namespace xavier {
+namespace spurt {
 
 static std::string human_readable_duration(double _t) {
     using namespace std::chrono;
@@ -209,6 +209,6 @@ std::ostream& operator<<(std::ostream& os, const ProgressDisplay& pd) {
     return os;
 }
 
-} // namespace xavier
+} // namespace spurt
 
 #endif

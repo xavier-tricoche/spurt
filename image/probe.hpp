@@ -16,7 +16,7 @@ typedef fixed_vector< double, 6 > vec6;
 typedef fixed_vector< double, 4 > vec4;
 }
 
-namespace xavier {
+namespace spurt {
 struct coord_mapping {
 	
 	coord_mapping() : origin(0,0,0), step(0,0,0) {}
@@ -137,7 +137,7 @@ protected:
     double kparm[NRRD_KERNEL_PARMS_NUM];
     bool _use_wc;
     bool _use_grad, _use_hess, _use_heval, _use_hevec; 
-    xavier::coord_mapping wcidx;
+    spurt::coord_mapping wcidx;
 };
 
 // gage interface for scalar volumes
@@ -178,7 +178,7 @@ protected:
     double kparm[NRRD_KERNEL_PARMS_NUM];
     bool _use_wc;
     bool _use_jac;
-    xavier::coord_mapping wcidx;
+    spurt::coord_mapping wcidx;
 	kernel_idx_t m_kernel_idx;
 };
 
@@ -239,7 +239,7 @@ protected:
     const gage_t *_mode, *_mode_grad, *_mode_hess, *_mode_hess_eval, *_mode_hess_evec;
     double kparm[NRRD_KERNEL_PARMS_NUM];
     bool _use_wc;
-    xavier::coord_mapping wcidx;
+    spurt::coord_mapping wcidx;
 };
 
 
@@ -294,7 +294,7 @@ protected:
     double kparm[NRRD_KERNEL_PARMS_NUM];
     bool _use_wc;
     bool _use_grad, _use_hess, _use_heval, _use_hevec; 
-    xavier::coord_mapping wcidx;
+    spurt::coord_mapping wcidx;
     
 };
 #endif
@@ -304,7 +304,7 @@ protected:
 };
 
 inline
-xavier::gage_interface::index_grid::
+spurt::gage_interface::index_grid::
 index_grid(const Nrrd* nrrd, unsigned int upsample)
 {
 //    NrrdAxisInfo *info;
@@ -326,7 +326,7 @@ index_grid(const Nrrd* nrrd, unsigned int upsample)
 
 inline
 unsigned int
-xavier::gage_interface::index_grid::
+spurt::gage_interface::index_grid::
 id(unsigned int i, unsigned int j, unsigned int k) const
 {
     return i + size[0]*(j + size[1]*k);
@@ -334,7 +334,7 @@ id(unsigned int i, unsigned int j, unsigned int k) const
 
 inline
 nvis::vec3
-xavier::gage_interface::index_grid::
+spurt::gage_interface::index_grid::
 operator()(unsigned int i, unsigned int j, unsigned int k) const
 {
     return nvis::vec3(min[0] + i*d[0],
@@ -342,7 +342,7 @@ operator()(unsigned int i, unsigned int j, unsigned int k) const
                       min[2] + k*d[2]);
 }
 
-inline bool xavier::gage_interface::scalar_wrapper::
+inline bool spurt::gage_interface::scalar_wrapper::
 __gageProbe(gageContext* ctx, double u, double v, double w) const
 {
     if (!_use_wc) return gageProbe(ctx, u, v, w);
@@ -352,7 +352,7 @@ __gageProbe(gageContext* ctx, double u, double v, double w) const
 
 
 template<typename Position_, size_t N, typename Value_>
-bool xavier::gage_interface::scalar_wrapper::
+bool spurt::gage_interface::scalar_wrapper::
 value(const Position_& u, Value_& v) const
 {
     bool asw;
@@ -365,7 +365,7 @@ value(const Position_& u, Value_& v) const
 }
 
 template<typename Position_, size_t N, typename Vector_>
-bool xavier::gage_interface::scalar_wrapper::
+bool spurt::gage_interface::scalar_wrapper::
 gradient(const Position_& u, Vector_& g) const
 {   
     if (!_use_grad) {
@@ -384,7 +384,7 @@ gradient(const Position_& u, Vector_& g) const
 }
 
 template<typename Position_, size_t N, typename Matrix_>
-bool xavier::gage_interface::scalar_wrapper::
+bool spurt::gage_interface::scalar_wrapper::
 hessian(const Position_& u, Matrix_& h) const
 {   
     if (!_use_hess) {
@@ -414,7 +414,7 @@ hessian(const Position_& u, Matrix_& h) const
 }
 
 template<typename Position_, size_t N, typename Vector_>
-bool xavier::gage_interface::scalar_wrapper::
+bool spurt::gage_interface::scalar_wrapper::
 hess_evals(const Position_& u, Vector_& vals) const {
     if (!_use_heval) {
         throw std::runtime_error("Hessian eigenvalues computation deactivated");
@@ -432,7 +432,7 @@ hess_evals(const Position_& u, Vector_& vals) const {
 }
 
 template<typename Position_, size_t N, typename Vector_>
-bool xavier::gage_interface::scalar_wrapper::
+bool spurt::gage_interface::scalar_wrapper::
 hess_evecs(const Position_& u, std::vector<Vector_>& evecs) const {
     if (!_use_hevec) {
         throw std::runtime_error("Hessian eigenvectors computation deactivated");

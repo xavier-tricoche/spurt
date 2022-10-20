@@ -113,7 +113,7 @@ void load_NRRD(const std::string& name, const std::string& me) {
         printUsageAndExit(me, biffGetDone(NRRD));
     }
     std::vector<double> data;
-    xavier::nrrd_utils::to_vector<double>(data, nin);
+    spurt::nrrd_utils::to_vector<double>(data, nin);
     // identify data type based on number of columns
     int ncol = nin->axis[0].size;
     int npts = nin->axis[1].size;
@@ -180,10 +180,10 @@ void load_NRRD(const std::string& name, const std::string& me) {
 }
 
 void load_DLR(const std::string& grid_name, const std::string data_name, const std::string& me) {
-    xavier::DLRreader reader(grid_name, data_name);
+    spurt::DLRreader reader(grid_name, data_name);
     std::vector<nvis::fvec3> vertices;
     std::vector<long int> cell_indices;
-    std::vector<std::pair<xavier::DLRreader::cell_type, long int> >cell_types;
+    std::vector<std::pair<spurt::DLRreader::cell_type, long int> >cell_types;
     reader.read_mesh(false, vertices, cell_indices, cell_types);
     int npts = vertices.size();
     all_points.resize(npts);
@@ -231,7 +231,7 @@ struct myRBF {
     double _R;
     myRBF(double radius) : _R(radius) {}
     double radius() const { return _R; }
-    double operator()(double r) const { return xavier::RBF::wendland(r, _R); }
+    double operator()(double r) const { return spurt::RBF::wendland(r, _R); }
 };
 
 int main(int argc, char* argv[]) {
@@ -361,7 +361,7 @@ int main(int argc, char* argv[]) {
     std::cout << "\nDetermining needed radius at each vertex...\n";
     std::vector<float> radii(npts, 0);
 
-    const int nneeded = xavier::MLS::dof(3, 2);
+    const int nneeded = spurt::MLS::dof(3, 2);
 
 #pragma omp parallel
     {
@@ -414,7 +414,7 @@ int main(int argc, char* argv[]) {
     _timer.restart();
 
     typedef Eigen::VectorXd     data_type;
-    xavier::RBF::CompactSupportRBFInterpolator<data_type, double, 3, myRBF>
+    spurt::RBF::CompactSupportRBFInterpolator<data_type, double, 3, myRBF>
         interpolator(all_points, all_values, phi);
     std::cout << "RBF solution computed in " << _timer.elapsed() << " seconds\n";
 

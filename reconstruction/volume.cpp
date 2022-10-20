@@ -45,7 +45,7 @@ void initialize(int argc, char* argv[])
 }
 
 int main(int argc, char* argv[]) {
-    using namespace xavier::reconstruction;
+    using namespace spurt::reconstruction;
 
     initialize(argc, argv);
 
@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
     for (int i=0 ; i<sz.size() ; ++i) sz[i] = size[i]+1;
     std::vector<double> spc(res[2]>1 ? 3 : 2);
     for (int i=0 ; i<spc.size() ; ++i) spc[i] = step[i];
-    xavier::nrrd_utils::writeNrrdFromContainers(data, name, sz, spc);
+    spurt::nrrd_utils::writeNrrdFromContainers(data, name, sz, spc);
 
     return 0;
 }

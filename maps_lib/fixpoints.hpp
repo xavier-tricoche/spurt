@@ -8,7 +8,7 @@
 #include <math/angle.hpp>
 #include <map>
 
-namespace xavier {
+namespace spurt {
 
 extern bool record_search_steps;
 extern std::vector<std::pair<nvis::vec2, nvis::vec2> > search_steps;
@@ -84,14 +84,14 @@ std::ostream& operator<<(std::ostream& os, const fixpoint& fp)
 }
 
 void linear_analysis(const nvis::mat2& J, unsigned int period,
-                     const nvis::vec2& x, xavier::fixpoint& fp)
+                     const nvis::vec2& x, spurt::fixpoint& fp)
 {
     fp.pos = x;
     fp.K = period;
     fp.saddle = eigen(fp.evec, fp.eval, J);
 }
 
-bool similar(const xavier::fixpoint& fp0, const xavier::fixpoint& fp1)
+bool similar(const spurt::fixpoint& fp0, const spurt::fixpoint& fp1)
 {
     if ((fp0.saddle && !fp1.saddle) || (fp1.saddle && !fp0.saddle)) {
         return false;
@@ -108,13 +108,13 @@ bool similar(const xavier::fixpoint& fp0, const xavier::fixpoint& fp1)
 
 template<typename MAP>
 bool linear_analysis(const MAP& map, unsigned int period, const default_metric_type& metric,
-                     const nvis::vec2& x, xavier::fixpoint& fp,
+                     const nvis::vec2& x, spurt::fixpoint& fp,
                      double hmin, double hmax)
 {
     rhs_only_wrapper<MAP> rhs(map, metric, period);
     nvis::mat2 J_coarse = rhs.jacobian(x, hmax);
     nvis::mat2 J_fine = rhs.jacobian(x, hmin);
-    xavier::fixpoint fp_coarse, fp_fine;
+    spurt::fixpoint fp_coarse, fp_fine;
     linear_analysis(J_coarse, period, x, fp_coarse);
     linear_analysis(J_fine, period, x, fp_fine);
     std::ostringstream os;
@@ -125,7 +125,7 @@ bool linear_analysis(const MAP& map, unsigned int period, const default_metric_t
         return true;
     } else {
         nvis::mat2 J_mid = rhs.jacobian(x, 0.5*(hmin + hmax));
-        xavier::fixpoint fp_mid;
+        spurt::fixpoint fp_mid;
         linear_analysis(J_mid, period, x, fp_mid);
         if (similar(fp_coarse, fp_mid)) {
             fp = fp_mid;

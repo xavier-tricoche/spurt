@@ -4,7 +4,7 @@
 #include <math/fixed_vector.hpp>
 #include <boost/static_assert.hpp>
 
-namespace xavier
+namespace spurt
 {
 template<typename T, int N>
 struct id_set {
@@ -61,4 +61,4 @@ typedef id_set<int, 2>    id2;
 typedef id_set<int, 3>    id3;
 typedef id_set<int, 4>    id4;
 
-} // xavier
+} // spurt

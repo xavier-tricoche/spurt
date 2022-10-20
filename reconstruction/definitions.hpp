@@ -3,7 +3,7 @@
 
 #include <math/fixed_vector.hpp>
 
-namespace xavier { namespace reconstruction {
+namespace spurt { namespace reconstruction {
 
 template<typename T, int N>
 class point {
@@ -54,7 +54,7 @@ inline double cube(double x){
 }
 
 } // reconstruction
-} // xavier
+} // spurt
 
 
 #endif

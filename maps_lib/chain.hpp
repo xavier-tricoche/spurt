@@ -5,7 +5,7 @@
 #include <math/fixed_matrix.hpp>
 #include <poincare/metric.hpp>
 
-namespace xavier {
+namespace spurt {
 
 
 }

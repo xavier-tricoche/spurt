@@ -11,7 +11,7 @@
 #include <math/fixed_matrix.hpp>
 #include <util/wall_timer.hpp>
 
-// xavier
+// spurt
 #include <math/math.hpp>
 
 #include <iostream>
@@ -35,8 +35,8 @@ typedef Eigen::Matrix<double, 2, 2> matrix_t;
 typedef Eigen::Matrix<double, 2, 1> vector_t;
 typedef Eigen::Matrix<int, 2, 1> ivector_t;
 typedef Eigen::SelfAdjointEigenSolver<matrix_t> eigensolver_t;
-typedef xavier::raster_grid<2> raster_t;
-typedef xavier::map_metric<2> metric_t;
+typedef spurt::raster_grid<2> raster_t;
+typedef spurt::map_metric<2> metric_t;
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -61,17 +61,17 @@ tbb::atomic<size_t> progress_counter;
 
 typedef tbb::blocked_range<int> tbb_block;
 
-void update_progress(xavier::ProgressDisplay& progress) {
+void update_progress(spurt::ProgressDisplay& progress) {
     {
         tbb::mutex::scoped_lock lock(progress_mutex);
         progress.update(progress_counter);
     }
 }
 
-xavier::ProgressDisplay partial_progress(true), total_progress(false);
+spurt::ProgressDisplay partial_progress(true), total_progress(false);
 
 void initialize(int argc, const char* argv[]) {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
         required(true, false, "Required Options"),
@@ -113,7 +113,7 @@ inline size_t ij2n(size_t i, size_t j) {
     return i + res[0]*j;
 }
 
-inline double lmax(size_t n, const std::vector< nvis::vec2 >& pos, const xavier::map_metric<2>& metric)
+inline double lmax(size_t n, const std::vector< nvis::vec2 >& pos, const spurt::map_metric<2>& metric)
 {
     size_t i = n % res[0];
     size_t j = n / res[1];
@@ -179,7 +179,7 @@ inline double hlmin(size_t n, const std::vector<double>& values)
 #endif
 }
 
-using namespace xavier;
+using namespace spurt;
 using namespace map_analysis;
 
 namespace {
@@ -189,7 +189,7 @@ double __mod(double a, double b)
 }
 }
 
-typedef xavier::standard_map map_type;
+typedef spurt::standard_map map_type;
 
 int main(int argc, const char* argv[])
 {
@@ -383,7 +383,7 @@ int main(int argc, const char* argv[])
         nrrdAxisInfoSet_nva(nout, nrrdAxisInfoKind, kinds);
         nrrdAxisInfoSet_nva(nout, nrrdAxisInfoCenter, centers);
         nrrdAxisInfoSet_nva(nout, nrrdAxisInfoSpacing, spc);
-        xavier::nrrd_utils::writeNrrd(nout, os.str(), true);
+        spurt::nrrd_utils::writeNrrd(nout, os.str(), true);
         nrrdNuke(nout);
         std::cout << "exported " << os.str() << std::endl;
 
@@ -408,7 +408,7 @@ int main(int argc, const char* argv[])
         nrrdAxisInfoSet_nva(nout, nrrdAxisInfoKind, kinds);
         nrrdAxisInfoSet_nva(nout, nrrdAxisInfoCenter, centers);
         nrrdAxisInfoSet_nva(nout, nrrdAxisInfoSpacing, spc);
-        xavier::nrrd_utils::writeNrrd(nout, os.str(), true);
+        spurt::nrrd_utils::writeNrrd(nout, os.str(), true);
         nrrdNuke(nout);
         std::cout << "exported " << os.str() << std::endl;
         at=to;

@@ -26,7 +26,7 @@
 #include <omp.h>
 #endif
 
-using namespace xavier;
+using namespace spurt;
 using namespace map_analysis;
 using namespace map_display;
 
@@ -125,7 +125,7 @@ void compute_best_period(const std::vector<nvis::vec2>& pts, std::vector<std::pa
 static void init()
 {
     std::vector<std::vector<nvis::vec3> > __pplot;
-    nvis::bbox3 bounds = xavier::read_nathan_poincare(__pplot, in);
+    nvis::bbox3 bounds = spurt::read_nathan_poincare(__pplot, in);
     _bounds = nvis::bbox2(nvis::vec2(bounds.min()[0], bounds.min()[1]),
                           nvis::vec2(bounds.max()[0], bounds.max()[1]));
     nvis::vec2 __size = _bounds.size();

@@ -27,7 +27,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <teem/hest_helper.hpp>
 #include <set>
@@ -270,12 +270,12 @@ int main(int argc, char* argv[])
     stress_field_reader->Update();
     vtkStructuredPoints* stress_field = stress_field_reader->GetOutput();
     
-    Nrrd* __ids = xavier::nrrd_utils::readNrrd(idf);
-    xavier::nrrd_utils::nrrd_data_wrapper<int> ids(__ids);
+    Nrrd* __ids = spurt::nrrd_utils::readNrrd(idf);
+    spurt::nrrd_utils::nrrd_data_wrapper<int> ids(__ids);
     std::cerr << std::string(idf) << " loaded.\n";
     
-    Nrrd* __gstress = xavier::nrrd_utils::readNrrd(gstress);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> grain_stress(__gstress);
+    Nrrd* __gstress = spurt::nrrd_utils::readNrrd(gstress);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> grain_stress(__gstress);
     std::cerr << gstress << " loaded.\n";
     int nb_grains = __gstress->axis[1].size;
     

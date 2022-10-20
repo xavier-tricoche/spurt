@@ -15,7 +15,7 @@ int nsamples, max_iter, nhits, dim;
 double thickness, k1, k2, eps;
 std::string filename;
 
-using namespace xavier;
+using namespace spurt;
 
 typedef symplectic4D map_type;
 typedef map_type::state_type state_type;

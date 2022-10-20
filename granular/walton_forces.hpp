@@ -3,7 +3,7 @@
 
 #include <granular/dem_utils.hpp>
 
-namespace xavier {
+namespace spurt {
 namespace granular {
 namespace walton {
 
@@ -278,6 +278,6 @@ _Vector tangential_force(const _Vector& T_old, const _Vector& Normal,
 
 } // walton
 } // granular
-} // xavier
+} // spurt
 
 #endif

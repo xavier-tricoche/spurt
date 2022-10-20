@@ -24,7 +24,7 @@ inline bool robust_newton(const Map& rhs, const Jac& jacobian, nvis::vec2& x,
         nvis::vec2 y(x);
         bool found;
         try {
-            found = xavier::newton(rhs, jacobian, y, f, eps, 20);
+            found = spurt::newton(rhs, jacobian, y, f, eps, 20);
         } catch (...) {
             return false;
         }
@@ -60,7 +60,7 @@ inline bool robust_newton(const Map& rhs, const Jac& jacobian, nvis::vec2& x,
 }
 
 template<typename Map, typename Jac>
-inline bool find_fixed_points(std::list<xavier::fixpoint>& fps,
+inline bool find_fixed_points(std::list<spurt::fixpoint>& fps,
                               const Map& rhs, const Jac& jacobian, const nvis::vec2& seed,
                               double tol, double epsilon = 1.0e-6)
 {
@@ -85,8 +85,8 @@ inline bool find_fixed_points(std::list<xavier::fixpoint>& fps,
     
     for (int i = 0 ; i < rhs.period() ; ++i) {
     
-        xavier::fixpoint fpt;
-        xavier::linear_analysis(jacobian, rhs.period(), x, fpt);
+        spurt::fixpoint fpt;
+        spurt::linear_analysis(jacobian, rhs.period(), x, fpt);
         fps.push_back(fpt);
         
         // move on to next one on the chain
@@ -96,10 +96,10 @@ inline bool find_fixed_points(std::list<xavier::fixpoint>& fps,
     return true;
 }
 
-inline double chain_distance(const std::list<xavier::fixpoint>& chain1,
-                             const std::list<xavier::fixpoint>& chain2)
+inline double chain_distance(const std::list<spurt::fixpoint>& chain1,
+                             const std::list<spurt::fixpoint>& chain2)
 {
-    typedef std::list<xavier::fixpoint>         chain_type;
+    typedef std::list<spurt::fixpoint>         chain_type;
     typedef chain_type::const_iterator          fp_iter_type;
     
     // quadratic complexity method. problem is tiny anyway
@@ -117,11 +117,11 @@ inline double chain_distance(const std::list<xavier::fixpoint>& chain1,
 }
 
 template<typename Map>
-inline double chain_norm(const std::list<xavier::fixpoint>& chain,
+inline double chain_norm(const std::list<spurt::fixpoint>& chain,
                          const Map& map)
 {
     double l1norm = 0;
-    for (std::list<xavier::fixpoint>::const_iterator it = chain.begin() ;
+    for (std::list<spurt::fixpoint>::const_iterator it = chain.begin() ;
             it != chain.end() ; ++it) {
         l1norm += nvis::norm(map(it->pos));
     }
@@ -130,10 +130,10 @@ inline double chain_norm(const std::list<xavier::fixpoint>& chain,
 }
 
 template<typename Map>
-inline void uniquify_chains(std::list<std::list<xavier::fixpoint> >& all_chains,
+inline void uniquify_chains(std::list<std::list<spurt::fixpoint> >& all_chains,
                             const Map& map, double tolerance)
 {
-    typedef std::list<xavier::fixpoint>         chain_type;
+    typedef std::list<spurt::fixpoint>         chain_type;
     typedef chain_type::iterator                fp_iter_type;
     typedef std::list<chain_type>::iterator     chain_iter_type;
     

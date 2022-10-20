@@ -11,7 +11,7 @@
 #include <math/MLS.hpp>
 #include <poincare/metric.hpp>
 
-namespace xavier {
+namespace spurt {
 
 template<typename RHS>
 class map_approximation {

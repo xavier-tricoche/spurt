@@ -10,7 +10,7 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 #include <util/timer.hpp>
-// xavier
+// spurt
 #include <math/MLS.hpp>
 #include <image/nrrd_wrapper.hpp>
 
@@ -247,7 +247,7 @@ int main(int argc, const char* argv[])
     size[0] = 7;
     size[1] = size[2] = nx;
     size[3] = nz;
-    xavier::writeNrrdFromContainers(data, output_f, /*nrrdTypeFloat,*/ size, spacing);
+    spurt::writeNrrdFromContainers(data, output_f, /*nrrdTypeFloat,*/ size, spacing);
     
     std::cerr << "output NRRD file exported\n";
     

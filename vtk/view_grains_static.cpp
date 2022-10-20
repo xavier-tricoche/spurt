@@ -27,7 +27,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <set>
 #include <sstream>
@@ -353,29 +353,29 @@ int main(int argc, char* argv[])
     stress_field_reader->Update();
 //    vtkStructuredPoints* stress_field = stress_field_reader->GetOutput();
 
-    Nrrd* __ids = xavier::nrrd_utils::readNrrd(info.id_to_tags);
-    xavier::nrrd_utils::nrrd_data_wrapper<int> ids(__ids);
+    Nrrd* __ids = spurt::nrrd_utils::readNrrd(info.id_to_tags);
+    spurt::nrrd_utils::nrrd_data_wrapper<int> ids(__ids);
     std::cerr << info.id_to_tags << " loaded.\n";
 
-    Nrrd* __fa = xavier::nrrd_utils::readNrrd(info.fa);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> fa(__fa);
+    Nrrd* __fa = spurt::nrrd_utils::readNrrd(info.fa);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> fa(__fa);
     std::cerr << info.fa << " loaded.\n";
     int nb_grains = __fa->axis[0].size;
 
-    Nrrd* __size = xavier::nrrd_utils::readNrrd(info.size);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> size(__size);
+    Nrrd* __size = spurt::nrrd_utils::readNrrd(info.size);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> size(__size);
     std::cerr << info.size << " loaded.\n";
 
-    Nrrd* __gstress = xavier::nrrd_utils::readNrrd(info.stress_span);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> grain_stress(__gstress);
+    Nrrd* __gstress = spurt::nrrd_utils::readNrrd(info.stress_span);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> grain_stress(__gstress);
     std::cerr << info.stress_span << " loaded.\n";
 
-    Nrrd* __westin = xavier::nrrd_utils::readNrrd(info.westin);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> westin(__westin);
+    Nrrd* __westin = spurt::nrrd_utils::readNrrd(info.westin);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> westin(__westin);
     std::cerr << info.westin << " loaded.\n";
 
-    Nrrd* __dir = xavier::nrrd_utils::readNrrd(info.dir);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> dir(__dir);
+    Nrrd* __dir = spurt::nrrd_utils::readNrrd(info.dir);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> dir(__dir);
     std::cerr << info.dir << " loaded.\n";
 
     std::map<int, color_type> colors;

@@ -43,7 +43,7 @@
 #endif
 
 
-using namespace xavier;
+using namespace spurt;
 
 const double invalid_double = std::numeric_limits<double>::max();
 
@@ -64,7 +64,7 @@ int         orbit_data::max_period;
 plane_type*                 _plane;
 nvis::ivec2                 _plane_res;
 nvis::bbox2                 _plane_bounds;
-xavier::map_metric          _plane_metric;
+spurt::map_metric          _plane_metric;
 nvis::vec2                  _plane_spacing;
 dataset_type*               _dataset;
 
@@ -80,7 +80,7 @@ double  _k;
 float   pt_sz, ups;
 bool    logical;
 
-std::vector<std::vector<nvis::vec2> > xavier::broken_manifolds;
+std::vector<std::vector<nvis::vec2> > spurt::broken_manifolds;
 
 void initialize(int argc, char* argv[])
 {
@@ -213,8 +213,8 @@ std::vector<std::vector<separatrix> >           _separatrices;
 //
 // -------------------------
 std::vector<color_orbit_type>                   _orbits;
-xavier::discrete_color_map<int>*                _cmap;
-xavier::map_analysis_param                      _params, _debug_params;
+spurt::discrete_color_map<int>*                _cmap;
+spurt::map_analysis_param                      _params, _debug_params;
 std::vector<nvis::ivec2>                        _saddle_cells, _center_cells;
 nvis::vec2                                      _last;
 std::vector<nvis::vec2>                         _problematic_seeds;
@@ -2108,12 +2108,12 @@ int main(int argc, char** argv)
     }
     
     std::vector<nvis::fvec3> colors;
-    xavier::spiral_scale(colors, maxp, 1);
+    spurt::spiral_scale(colors, maxp, 1);
     std::vector<int> reference_values(maxp);
     for (int i=1 ; i<=maxp ; ++i) {
         reference_values[i-1] = i;
     }
-    _cmap = new xavier::discrete_color_map<int>(reference_values, colors);
+    _cmap = new spurt::discrete_color_map<int>(reference_values, colors);
     
     init();
     
@@ -2168,7 +2168,7 @@ int main(int argc, char** argv)
         std::vector<double> sp(2);
         sp[0] = _plane_spacing[0];
         sp[1] = _plane_spacing[1];
-        xavier::writeNrrd(qs, "qs.nrrd", nrrdTypeDouble, s, sp);
+        spurt::writeNrrd(qs, "qs.nrrd", nrrdTypeDouble, s, sp);
         */
     }
     

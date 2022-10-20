@@ -1,7 +1,7 @@
 #include "probe.hpp"
 #include <stdexcept>
 
-using namespace xavier;
+using namespace spurt;
 
 // inline bool gage_interface::scalar_wrapper::
 // __gageProbe(gageContext* ctx, double u, double v, double w) const

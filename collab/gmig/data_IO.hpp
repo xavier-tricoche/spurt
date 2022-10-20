@@ -12,10 +12,10 @@
 // nvis
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
-// xavier
+// spurt
 #include "typedefs.hpp"
 
-namespace xavier { namespace gmig { namespace traveltime {
+namespace spurt { namespace gmig { namespace traveltime {
 
 /** \fn read_text
   * \brief Custom reader for Hui Huang's files
@@ -83,7 +83,7 @@ void save_rbf(const travel_time_data<Scalar_>& data,
               
 } // namespace traveltime
 } // namespace gmig
-} // namespace xavier
+} // namespace spurt
                       
 #include "detail/data_IO.hpp"
 

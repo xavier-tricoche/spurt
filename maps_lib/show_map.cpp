@@ -27,7 +27,7 @@
 #include <omp.h>
 #endif
 
-using namespace xavier;
+using namespace spurt;
 using namespace map_analysis;
 using namespace map_display;
 // using namespace div_cleaning;
@@ -41,15 +41,15 @@ double __mod(double a, double b)
 
 std::vector<std::pair<nvis::vec2, nvis::fvec3> > seeds;
 
-typedef xavier::grid<double, 3>                 grid_type;
+typedef spurt::grid<double, 3>                 grid_type;
 typedef raster_data<nvis::vec3, 3, double>      trilinear_field_type;
 typedef divfree_field<trilinear_field_type>     divfree_field_type;
 typedef nvis::fixed_vector<int, 3>              ivec_type;
 
-xavier::map_metric  metric2d;
+spurt::map_metric  metric2d;
 
-typedef xmt_poincare_map<xavier::map::wrapper<trilinear_field_type> >   trilinear_map_type;
-typedef xmt_poincare_map<xavier::map::wrapper<divfree_field_type> >     divfree_map_type;
+typedef xmt_poincare_map<spurt::map::wrapper<trilinear_field_type> >   trilinear_map_type;
+typedef xmt_poincare_map<spurt::map::wrapper<divfree_field_type> >     divfree_map_type;
 
 nvis::bbox2 _bounds;
 
@@ -238,7 +238,7 @@ void connect(const std::vector<nvis::vec2>& steps, const M& pmap)
         
 #if 0
         std::list<std::pair<nvis::vec2, nvis::vec2> > tmp;
-        xavier::clip(tmp, x, y, metric2d);
+        spurt::clip(tmp, x, y, metric2d);
         for(std::list<std::pair<nvis::vec2, nvis::vec2> >::const_iterator jit = tmp.begin();
                 jit != tmp.end() ; ++jit) {
             orb.push_back(*jit);
@@ -444,7 +444,7 @@ void poincare_plot(std::list<colored_orbit_type>& points, const M& pmap,
 static void init()
 {
     Nrrd* nin = nrrdNew();
-    nin = xavier::readNrrd(in);
+    nin = spurt::readNrrd(in);
     
     // verify data type
     if(nin->dim != 4 || nin->axis[0].size != 3) {
@@ -453,7 +453,7 @@ static void init()
     }
     
     std::vector<double> __array;
-    xavier::to_vector(__array, nin);
+    spurt::to_vector(__array, nin);
     ivec_type dims(nin->axis[1].size, nin->axis[2].size, nin->axis[3].size);
     nvis::vec3 spc(nin->axis[1].spacing, nin->axis[2].spacing, nin->axis[3].spacing);
     grid_type domain(dims, spc, nvis::fixed_vector<bool, 3>(false, true, true));

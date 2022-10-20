@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
     os << dir << "/" << prefix << delta << suffix;
     
     Nrrd* nin = nrrdNew();
-    nin = xavier::readNrrd(os.str());
+    nin = spurt::readNrrd(os.str());
     
     int M = nin->axis[1].size;
     int N = nin->axis[2].size;
@@ -64,11 +64,11 @@ int main(int argc, char* argv[])
         os2 << dir << '/' << "lambda2-" << prefix << it << suffix;
         
         Nrrd* nin1 = nrrdNew();
-        nin1 = xavier::readNrrd(os1.str());
+        nin1 = spurt::readNrrd(os1.str());
         float* ftle = (float*)nin1->data;
         
         Nrrd* nin2 = nrrdNew();
-        nin2 = xavier::readNrrd(os2.str());
+        nin2 = spurt::readNrrd(os2.str());
         float* lambda2 = (float*)nin2->data;
         
         #pragma omp parallel for

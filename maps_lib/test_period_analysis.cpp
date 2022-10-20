@@ -34,7 +34,7 @@
 #include <graphics/colors.hpp>
 
 
-using namespace xavier;
+using namespace spurt;
 using namespace map_analysis;
 using namespace map_display;
 // using namespace div_cleaning;
@@ -44,10 +44,10 @@ typedef raster_data<nvis::vec3, double, 3>      trilinear_field_type;
 typedef divfree_field<trilinear_field_type>     divfree_field_type;
 typedef nvis::ivec3                             ivec_type;
 
-xavier::map_metric  metric2d;
+spurt::map_metric  metric2d;
 
-typedef xmt_poincare_map<xavier::map::wrapper<trilinear_field_type> >   trilinear_map_type;
-typedef xmt_poincare_map<xavier::map::wrapper<divfree_field_type> >     divfree_map_type;
+typedef xmt_poincare_map<spurt::map::wrapper<trilinear_field_type> >   trilinear_map_type;
+typedef xmt_poincare_map<spurt::map::wrapper<divfree_field_type> >     divfree_map_type;
 
 nvis::bbox2 _bounds;
 
@@ -57,7 +57,7 @@ double  eps, dq, xf;
 bool    div_free;
 float   pt_sz, ln_w;
 
-std::vector<std::vector<nvis::vec2> > xavier::broken_manifolds;
+std::vector<std::vector<nvis::vec2> > spurt::broken_manifolds;
 
 void initialize(int argc, char* argv[])
 {
@@ -92,12 +92,12 @@ void initialize(int argc, char* argv[])
 std::vector<nvis::vec2> edges, interesting_edges;
 std::vector<std::pair<double, std::vector<nvis::vec2> > > orbits;
 std::vector<std::pair<nvis::ivec3, nvis::vec3> > quads;
-xavier::band_color_map<double>* cmap;
+spurt::band_color_map<double>* cmap;
 
 static void init()
 {
     Nrrd* nin = nrrdNew();
-    nin = xavier::readNrrd(in);
+    nin = spurt::readNrrd(in);
     
     // verify data type
     if(nin->dim != 4 || nin->axis[0].size != 3) {
@@ -106,7 +106,7 @@ static void init()
     }
     
     std::vector<double> __array;
-    xavier::to_vector(__array, nin);
+    spurt::to_vector(__array, nin);
     ivec_type dims(nin->axis[1].size, nin->axis[2].size, nin->axis[3].size);
     nvis::vec3 spc(nin->axis[1].spacing, nin->axis[2].spacing, nin->axis[3].spacing);
     grid_type domain(dims, spc, nvis::fixed_vector<bool, 3>(false, true, true));
@@ -148,16 +148,16 @@ static void init()
     for (int i=minp ; i<=maxp ; ++i) {
         for (int j=1 ; j<=std::min(i,3) ; ++j) {
             rational q(i,j);
-            vals.insert(xavier::value<int, double>(q));
+            vals.insert(spurt::value<int, double>(q));
         }
     }
     std::cerr << "there are " << vals.size() << " relevant rational periods for considered periods\n";
     std::copy(vals.begin(), vals.end(), std::ostream_iterator<double>(std::cerr, " "));
     
     std::vector<double> copy(vals.begin(), vals.end());
-    xavier::period_convergence_predicate predicate(3, copy, dq, 0.1*dq);
+    spurt::period_convergence_predicate predicate(3, copy, dq, 0.1*dq);
     
-    xavier::period_analysis<trilinear_map_type, xavier::period_convergence_predicate>
+    spurt::period_analysis<trilinear_map_type, spurt::period_convergence_predicate>
     (basic_map, metric2d, resolution, predicate,
      niter, maxdepth, edges, orbits, quads);
      
@@ -168,8 +168,8 @@ static void init()
         cp[i] = 0.5*(copy[i] + copy[i+1]);
     }
     std::vector<nvis::fvec3> colors;
-    xavier::spiral_scale(colors, vals.size(), 0.5);
-    cmap = new xavier::band_color_map<double>(cp, colors);
+    spurt::spiral_scale(colors, vals.size(), 0.5);
+    cmap = new spurt::band_color_map<double>(cp, colors);
     
     for (int i=0 ; i<quads.size() ; ++i) {
         double min = (quads[i].second)[0];

@@ -3,7 +3,7 @@
 #include <math/bounding_box.hpp>
 #include <crease/measure_wrapper.hpp>
 
-using namespace xavier;
+using namespace spurt;
 using namespace nvis;
 using namespace std;
 
@@ -140,12 +140,12 @@ vec6 _hessian(const MeasureWrapper& wrap, const vec3& p)
 
 // --------------------------------------------------------------------------
 
-void xavier::test_derivatives(const Nrrd* nrrd, int aniso)
+void spurt::test_derivatives(const Nrrd* nrrd, int aniso)
 {
     srand48(time(0));
     MeasureWrapper wrapper(nrrd, aniso);
 
-    nvis::bbox3 box = xavier::nrrd_utils::get_bounds<3>(nrrd);
+    nvis::bbox3 box = spurt::nrrd_utils::get_bounds<3>(nrrd);
 
     // check gradient
     double avg = 0, total_max = 0;

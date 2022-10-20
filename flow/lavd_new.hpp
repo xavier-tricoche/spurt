@@ -19,10 +19,10 @@
 #include <image/nrrd_wrapper.hpp>
 #include <misc/log_helper.hpp>
 #include <misc/progress.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <data/raster.hpp>
 
-namespace xavier { namespace lavd {
+namespace spurt { namespace lavd {
 
 typedef double value_t;
 
@@ -36,7 +36,7 @@ constexpr double WEEK =   604800;
 constexpr double MONTH =  2592000;
 
 // log ostream used 
-extern xavier::log::dual_ostream _log_;
+extern spurt::log::dual_ostream _log_;
 
 typedef nvis::fixed_vector< value_t, 1 > vec1;
 typedef nvis::fixed_vector< value_t, 2 > vec2;
@@ -50,23 +50,23 @@ typedef nvis::bounding_box< vec2 >     bbox_t;
 typedef nvis::fixed_vector< long, 2 > coord_t;
 typedef nvis::bounding_box< lvec2 >  coord_range_t;
 
-typedef xavier::image< vec3, 3, value_t, size_t > vector_field_t;
-typedef xavier::image< value_t, 3, value_t, size_t > scalar_field_t;
-typedef xavier::image< value_t, 1, value_t, size_t > scalar_line_t;
+typedef spurt::image< vec3, 3, value_t, size_t > vector_field_t;
+typedef spurt::image< value_t, 3, value_t, size_t > scalar_field_t;
+typedef spurt::image< value_t, 1, value_t, size_t > scalar_line_t;
 
 // template< typename T=value_t >
 // inline T nrrd_value(const Nrrd* nin, size_t n) {};
 
 template< typename T = value_t >
 inline T nrrd_value(const Nrrd* nin, size_t n) {
-    return xavier::nrrd_utils::nrrd_data_wrapper<value_t>(nin)[n];
+    return spurt::nrrd_utils::nrrd_data_wrapper<value_t>(nin)[n];
 }
 
 template<>
 inline vec3 nrrd_value< vec3 >(const Nrrd* nin, size_t n) {
     vec3 v(0);
-    v[0] = xavier::nrrd_utils::nrrd_data_wrapper<value_t>(nin)[3*n];
-    v[1] = xavier::nrrd_utils::nrrd_data_wrapper<value_t>(nin)[3*n+1];
+    v[0] = spurt::nrrd_utils::nrrd_data_wrapper<value_t>(nin)[3*n];
+    v[1] = spurt::nrrd_utils::nrrd_data_wrapper<value_t>(nin)[3*n+1];
     return v;
 }
 
@@ -83,7 +83,7 @@ inline std::pair<double, double> axis_bounds(const NrrdAxisInfo& axis) {
 
 inline void get_spatial_info(bbox_t& bounds, nvis::vec2& spc, const std::string& filename, int offset=0) {
     // compute bounds of Nrrd file
-    Nrrd* nin=xavier::nrrd_utils::readNrrd(filename);
+    Nrrd* nin=spurt::nrrd_utils::readNrrd(filename);
     std::pair<value_t, value_t > minmax;
     minmax = axis_bounds(nin->axis[offset]);
     bounds.min()[0] = minmax.first;
@@ -100,7 +100,7 @@ void print(const Nrrd* nin) {
     
     _log_(3) << "NRRD: @" << (address_t)(nin) << '\n';
     _log_(3) << "dim=" << nin->dim << '\n';
-    _log_(3) << "type=" << nin->type << " (" << xavier::nrrd_utils::nrrd_type_name(nin->type)  << ")" << '\n';
+    _log_(3) << "type=" << nin->type << " (" << spurt::nrrd_utils::nrrd_type_name(nin->type)  << ")" << '\n';
     _log_(3) << "data=" << (address_t)(nin->data) << '\n';
     for (int i=0; i<nin->dim ; ++i) {
         _log_(3) << "axis[" << i << "].size=" << nin->axis[i].size << '\n';
@@ -116,7 +116,7 @@ struct NrrdScalarField
     constexpr static size_t dim = N;
     typedef nvis::fixed_vector< value_t, N > pos_t;
     typedef const void* address_t;
-    typedef xavier::gage_interface::scalar_wrapper wrapper_t;
+    typedef spurt::gage_interface::scalar_wrapper wrapper_t;
 
     static vec3 make3d(pos_t p) {
         vec3 q(0);
@@ -159,8 +159,8 @@ struct NrrdScalarField
             }
         }
         Nrrd* nout=nrrdNew();
-        if (nrrdWrap_nva(nout, data, xavier::nrrd_utils::nrrd_value_traits_from_type<value_t>::index, 3, sz)) {
-            throw std::runtime_error(xavier::nrrd_utils::error_msg("Unable to create Nrrd"));
+        if (nrrdWrap_nva(nout, data, spurt::nrrd_utils::nrrd_value_traits_from_type<value_t>::index, 3, sz)) {
+            throw std::runtime_error(spurt::nrrd_utils::error_msg("Unable to create Nrrd"));
         }
         nrrdAxisInfoSet_nva(nout, nrrdAxisInfoSpacing, spc);
         nrrdAxisInfoSet_nva(nout, nrrdAxisInfoCenter, center);
@@ -169,7 +169,7 @@ struct NrrdScalarField
     }
 
     NrrdScalarField(Nrrd* nin, const std::string& name="unknown") 
-        : m_wrapper(make3d(nin), xavier::gage_interface::BC_INTERP, 
+        : m_wrapper(make3d(nin), spurt::gage_interface::BC_INTERP, 
                     false, false, false, false), m_name(name) {
         m_wrapper.use_world();
     #ifdef __VERBOSE_LAVD__
@@ -208,12 +208,12 @@ struct NrrdScalarField
 
 struct NrrdVectorField
 {
-    typedef xavier::gage_interface::vector_wrapper wrapper_t;
+    typedef spurt::gage_interface::vector_wrapper wrapper_t;
     typedef wrapper_t::deriv3_t deriv_t;
     
     NrrdVectorField(Nrrd* nin, const std::string name="unknown",
                     bool have_jac=true) 
-        : m_wrapper(nin, xavier::gage_interface::BC_INTERP, have_jac),
+        : m_wrapper(nin, spurt::gage_interface::BC_INTERP, have_jac),
           m_name(name), m_have_jac(have_jac) {
         m_wrapper.use_world();
     #ifdef __VERBOSE_LAVD__
@@ -326,9 +326,9 @@ size_t compute_support_radius()
     value_t mins[]={ 0 };
     int center[] = { nrrdCenterNode };
     Nrrd* nin=nrrdNew();
-    if (nrrdWrap_nva(nin, data, xavier::nrrd_utils::nrrd_value_traits_from_type<value_t>::index, 
+    if (nrrdWrap_nva(nin, data, spurt::nrrd_utils::nrrd_value_traits_from_type<value_t>::index, 
                      1, sz)) {
-        throw std::runtime_error(xavier::nrrd_utils::error_msg("unable to compute support radius"));
+        throw std::runtime_error(spurt::nrrd_utils::error_msg("unable to compute support radius"));
     }
     nrrdAxisInfoSet_nva(nin, nrrdAxisInfoSpacing, spc);
     nrrdAxisInfoSet_nva(nin, nrrdAxisInfoCenter, center);
@@ -533,7 +533,7 @@ Nrrd* create_nrrd_volume(std::vector< Nrrd* >& slices, value_t min, value_t spc)
         sizes[1]=slices[0]->axis[1].size;
         sizes[2]=slices.size();
     }
-    if (nrrdWrap_nva(nout, data, xavier::nrrd_utils::nrrd_value_traits_from_type<value_t>::index, dim, sizes)) {
+    if (nrrdWrap_nva(nout, data, spurt::nrrd_utils::nrrd_value_traits_from_type<value_t>::index, dim, sizes)) {
         throw std::runtime_error("Unable to create NRRD");
     }
     double spacing[dim];
@@ -687,7 +687,7 @@ void export_results(value_t current_time, value_t wall_time, value_t cpu_time,
     _log_(1) << "done\n";
     
     _log_(1) << "Writing NRRD file under " << filename << "... " << std::flush;
-    xavier::nrrd_utils::writeNrrdFromContainers(lavd, filename, 
+    spurt::nrrd_utils::writeNrrdFromContainers(lavd, filename, 
                       __res, __spc, __mins, __ctr, comments);
     _log_(1) << "done\n";
     
@@ -729,10 +729,10 @@ Nrrd* get_border_mask(const std::string& border_mask_name,
                       const std::string& velocity_name)
 {
     if (!border_mask_name.empty()) {
-        return xavier::nrrd_utils::readNrrd(border_mask_name);
+        return spurt::nrrd_utils::readNrrd(border_mask_name);
     }
     
-    Nrrd* vel = xavier::nrrd_utils::readNrrd(velocity_name);
+    Nrrd* vel = spurt::nrrd_utils::readNrrd(velocity_name);
     size_t size[2] = { vel->axis[1].size, vel->axis[2].size };
     int *data = (int*)calloc(size[0]*size[1], sizeof(int));
     for (size_t i=0; i<size[0]*size[1]; ++i) {
@@ -773,7 +773,7 @@ void export_mask(const std::string& filename, const bbox_t& region,
     int shift = ( is_scalar ? 0 : 1);
 
     // export region as mask
-    Nrrd* nin(xavier::nrrd_utils::readNrrd(filename));
+    Nrrd* nin(spurt::nrrd_utils::readNrrd(filename));
     value_t minx = nin->axis[shift+0].min;
     value_t miny = nin->axis[shift+1].min;
     value_t dx = nin->axis[shift+0].spacing;
@@ -795,7 +795,7 @@ void export_mask(const std::string& filename, const bbox_t& region,
         }
     }
     size_t sz[2] = {M, N};
-    xavier::nrrd_utils::writeNrrd(mask_array, "region_mask.nrrd", nrrdTypeDouble, 2, sz);
+    spurt::nrrd_utils::writeNrrd(mask_array, "region_mask.nrrd", nrrdTypeDouble, 2, sz);
     
     nrrdNuke(nin);
     delete[] mask_array;
@@ -803,7 +803,7 @@ void export_mask(const std::string& filename, const bbox_t& region,
 
 
 } // lavd
-} // xavier
+} // spurt
 
 
 #endif

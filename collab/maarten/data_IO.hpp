@@ -11,7 +11,7 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 
-namespace xavier { namespace maarten {
+namespace spurt { namespace maarten {
 
 // custom reader for Hui Huang's files
 // format:
@@ -79,6 +79,6 @@ nvis::bbox2 read_text(std::vector<nvis::vec2>& points,
 }
     
 } // maarten
-} // xavier
+} // spurt
 
 #endif

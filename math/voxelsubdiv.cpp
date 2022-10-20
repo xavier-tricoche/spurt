@@ -5,7 +5,7 @@
 
 int main(int argc, char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     
     nvis::vec3 v[8] = { nvis::vec3(0, 0, 0), nvis::vec3(1, 0, 0),
                         nvis::vec3(1, 1, 0), nvis::vec3(0, 1, 0),
@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
     
     nvis::vec3 tets[24][4];
     for (int face = 0 ; face < 6 ; ++face) {
-        const nvis::ivec4 aface = xavier::grid::voxel_faces[face];
+        const nvis::ivec4 aface = spurt::grid::voxel_faces[face];
         for (int i = 0 ; i < 4 ; ++i) {
             tets[4*face+i][0] = v[aface[i]];
             tets[4*face+i][1] = v[aface[(i+1)%4]];

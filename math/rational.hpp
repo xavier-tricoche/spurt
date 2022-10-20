@@ -5,7 +5,7 @@
 #include <list>
 #include <boost/rational.hpp>
 
-namespace xavier {
+namespace spurt {
 
 template<typename I, typename F>
 inline F value(const boost::rational<I>& r)

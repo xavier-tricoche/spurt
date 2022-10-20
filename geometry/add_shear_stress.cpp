@@ -1,5 +1,5 @@
 #include "boundary_extraction.hpp"
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <misc/option_parse.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <format/DLRreader.hpp>
@@ -8,14 +8,14 @@ std::string grid_name, data_name, out_name, boundary_name;
 bool verbose = false;
 bool include_mesh = false;
 
-typedef xavier::mesh mesh_type;
+typedef spurt::mesh mesh_type;
 typedef mesh_type::face face_type;
 typedef mesh_type::index_type index_type;
 typedef mesh_type::vertex_type vertex_type;
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     std::string cmdline = "Command line: " + std::string(argv[0]);
     for (int i=1; i<argc; i++) {
@@ -88,7 +88,7 @@ int main(int argc, const char* argv[]) {
 
     std::cout << "Saving to NRRD file..." << std::flush;
     size_t dims[2] = { 3, newfield.size() };
-    xavier::nrrd_utils::writeNrrd(&newfield[0], out_name, nrrdTypeFloat, 2, dims);
+    spurt::nrrd_utils::writeNrrd(&newfield[0], out_name, nrrdTypeFloat, 2, dims);
     std::cout << " done\n";
 
     if (!verbose) {

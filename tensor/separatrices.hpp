@@ -35,7 +35,7 @@
 #include <omp.h>
 #endif
 
-namespace xavier {
+namespace spurt {
 template<typename T>
 nvis::vec3 eigenplane(const T& field, const nvis::vec3& x, bool linear_type)
 {
@@ -155,7 +155,7 @@ void eigendirections(std::vector<nvis::vec3>& dir, const T& field, const nvis::v
     }
 }
 
-} // xavier
+} // spurt
 
 
 

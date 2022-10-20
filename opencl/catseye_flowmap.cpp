@@ -44,8 +44,8 @@ typedef vex::multivector< value_t, 3 >        state_type;
 typedef std::array<value_t, 3>                      pos3;
 typedef Eigen::Matrix<value_t, 3, 1>                vec3;
 typedef Eigen::Matrix<value_t, 3, 3>                mat3;
-typedef xavier::raster_grid<3, double>         grid_type;
-typedef xavier::raster_data<vec3, 3, double> raster_type;
+typedef spurt::raster_grid<3, double>         grid_type;
+typedef spurt::raster_data<vec3, 3, double> raster_type;
 typedef grid_type::coord_type                 coord_type;
 //]
 
@@ -84,7 +84,7 @@ struct catseye_rhs {
 };
 
 struct raster_wrapper {
-    raster_wrapper(const xavier::raster3d<vec3>& r) 
+    raster_wrapper(const spurt::raster3d<vec3>& r) 
         : _raster(r), _res(r.grid().resolution()) {}
     
     const vec3& operator()(long int i, long int j, long int k) const {
@@ -93,13 +93,13 @@ struct raster_wrapper {
         return _raster(c[0]%_res[0], c[1]%_res[1], c[2]%_res[2]);
     }
     
-    const xavier::raster3d<vec3>& _raster;
-    const xavier::raster3d<vec3>::grid_type::coord_type _res;
+    const spurt::raster3d<vec3>& _raster;
+    const spurt::raster3d<vec3>::grid_type::coord_type _res;
 };
     
     
 template<size_t N>
-void gradient(const xavier::raster3d<vec3>& fmap,
+void gradient(const spurt::raster3d<vec3>& fmap,
               const std::array<value_t, N>& kernel,
               std::vector<mat3>& grad,
               std::vector<value_t>& ftle) {
@@ -154,7 +154,7 @@ void write(const std::string& filename, const std::vector<Value_>& data,
     os << "NRRD0001\n"
        << "# Complete NRRD file format specification at:\n"
        << "# http://teem.sourceforge.net/nrrd/format.html\n"
-       << "type: " << xavier::type2string<value_t>::type_name() << "\n"
+       << "type: " << spurt::type2string<value_t>::type_name() << "\n"
        << "dimension: ";
     if (valsize>1) os << " " << valsize;
     for (int i=0; i<3; ++i)  os << " " << grid.resolution()[i];
@@ -182,7 +182,7 @@ int main( int argc , const char **argv )
     using namespace std;
     using namespace odeint;
     
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
     
     std::array<value_t, 3> abc {sqrt(3), sqrt(2), 1};
     value_t dt = 1.0e-2;
@@ -219,7 +219,7 @@ int main( int argc , const char **argv )
         exit(1);
     }
     
-    filename=xavier::filename::remove_extension(filename);
+    filename=spurt::filename::remove_extension(filename);
 
     //[ vexcl_main
     // setup the opencl context
@@ -236,7 +236,7 @@ int main( int argc , const char **argv )
     bounds.min()[1]=bounds.min()[2]=-ymax;
     bounds.max()[1]=bounds.max()[2]=ymax;
     
-    xavier::rgrid3d grid(coord_type(res, res, res), bounds);
+    spurt::rgrid3d grid(coord_type(res, res, res), bounds);
 
     // initialize the state of the cat's eye system
     std::vector< vec3 > ic(n);

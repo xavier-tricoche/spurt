@@ -2,13 +2,13 @@
 #include <misc/option_parse.hpp>
 #include <iostream>
 #include <boost/filesystem.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <format/filename.hpp>
 #include <misc/strings.hpp>
 
 #include <vtkImageIterator.h>
 
-namespace xcl = xavier::command_line;
+namespace xcl = spurt::command_line;
 typedef boost::filesystem::path path_t;
 
 template<typename T>
@@ -23,8 +23,8 @@ void save_nrrd_image(vtkImageData* img, size_t* dims, int* ext, const std::strin
     	iter.NextSpan();
 	}
 
-	int idx = xavier::nrrd_utils::nrrd_value_traits_from_type<data_type>::index;
-	xavier::nrrd_utils::writeNrrd(data, name, idx, (dims[0]>1 ? 4 : 3), (dims[0]>1 ? dims : &dims[1]));
+	int idx = spurt::nrrd_utils::nrrd_value_traits_from_type<data_type>::index;
+	spurt::nrrd_utils::writeNrrd(data, name, idx, (dims[0]>1 ? 4 : 3), (dims[0]>1 ? dims : &dims[1]));
 }
 
 int main(int argc, const char* argv[]) {

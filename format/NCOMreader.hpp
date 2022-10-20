@@ -26,7 +26,7 @@ inline void check_nc( int status ) {
 }
 }
 
-namespace xavier {
+namespace spurt {
 
 namespace NCOMreader {
 
@@ -193,4 +193,4 @@ void load_dataset(const std::string& filename, std::vector<double>& lat, std::ve
 
 } // NCOMreader
 
-} // xavier
+} // spurt

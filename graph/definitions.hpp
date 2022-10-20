@@ -8,7 +8,7 @@
 #include <boost/utility.hpp>
 #include <boost/graph/copy.hpp>
 
-namespace xavier {
+namespace spurt {
 
 template <typename Scalar_, typename PropertyMap_>
 struct property_filter {
@@ -70,6 +70,6 @@ using vertex_prop_copier=boost::detail::vertex_copier<GraphIn_, GraphOut_>;
 template <typename GraphIn_, typename GraphOut_>
 using edge_prop_copier=boost::detail::edge_copier<GraphIn_, GraphOut_>;
     
-} // namespace xavier
+} // namespace spurt
 
 #endif // __GRAPH_DEFINITIONS_HPP__

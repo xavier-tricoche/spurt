@@ -15,7 +15,7 @@
 #include <teem/nrrd.h>
 #include "denis.hpp"
 
-using namespace xavier::denis;
+using namespace spurt::denis;
 
 // constant of gravity
 const double _G  = 9.80665;

@@ -1,11 +1,11 @@
 #include "math/matrix.hpp"
 #include "math/math.hpp"
 
-bool xavier::display_eigen_stuff;
+bool spurt::display_eigen_stuff;
 
 // ---------------------------------------------------------------------------
 
-void xavier::mat3::eigensystem( std::vector< double >& evals,
+void spurt::mat3::eigensystem( std::vector< double >& evals,
                                 std::vector< nvis::vec3 >& evecs ) const
 {
     // coefficients of characteristic polynomial
@@ -71,7 +71,7 @@ void xavier::mat3::eigensystem( std::vector< double >& evals,
 
 // ---------------------------------------------------------------------------
 
-void xavier::check_eigen( const mat3& M )
+void spurt::check_eigen( const mat3& M )
 {
     if ( true || !display_eigen_stuff ) {
         return;
@@ -155,7 +155,7 @@ void xavier::check_eigen( const mat3& M )
 
 // ---------------------------------------------------------------------------
 
-nvis::vec3 xavier::eigenvector( const mat3& M, const double lambda )
+nvis::vec3 spurt::eigenvector( const mat3& M, const double lambda )
 {
     static unsigned int indices[3][2]= { {1,2}, {0,2}, {0,1} };
     static const double epsilon = 1.0e-6;

@@ -12,7 +12,7 @@
 #include <util/timer.hpp>
 // teem
 #include <teem/nrrd.h>
-// xavier
+// spurt
 #include <data/raster.hpp>
 #include <math/RBF.hpp>
 #include <math/RBFbasis.hpp>
@@ -33,15 +33,15 @@ bool        __verbose = false;
 std::string __kernel_name = "r3";
 size_t      __number_of_bins = 36;
 
-using namespace xavier::gmig;
+using namespace spurt::gmig;
 
 typedef std::vector<nvis::vec2>      value_type;
-typedef xavier::raster2d<value_type> dataset_type;
+typedef spurt::raster2d<value_type> dataset_type;
 typedef dataset_type::grid_type      grid_type;
 
-typedef xavier::RBF::gaussian_function<double> gauss_t;
-typedef xavier::RBF::wendland_function<double> wendland_t;
-typedef xavier::RBF::truncated_gaussian_function<double> trgauss_t;
+typedef spurt::RBF::gaussian_function<double> gauss_t;
+typedef spurt::RBF::wendland_function<double> wendland_t;
+typedef spurt::RBF::truncated_gaussian_function<double> trgauss_t;
 
 // map [-pi, pi] angles to [0, 2pi]
 inline double convert_angle(double a) {
@@ -314,7 +314,7 @@ int main(int argc, char* argv[])
         usage("Unrecognized kernel type: " + __kernel_name);
     }
     
-    xavier::nrrd_params<float, 3> params;
+    spurt::nrrd_params<float, 3> params;
     params.sizes()[0] = __number_of_bins;
     params.sizes()[1] = __resolution[0];
     params.sizes()[2] = __resolution[1];
@@ -332,7 +332,7 @@ int main(int argc, char* argv[])
     for (size_t i=0 ; i<__number_of_bins*raster.size() ; ++i) {
         vec2bins(&data[__number_of_bins*i], raster[i]);
     }
-    xavier::writeNrrd(data, output_name, params);
+    spurt::writeNrrd(data, output_name, params);
     std::cout << output_name << " has been exported\n";
     
     return 0;

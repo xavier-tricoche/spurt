@@ -15,7 +15,7 @@
 #include <math.h>
 
 #include <format/filename.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <misc/option_parse.hpp>
 
 #include <vtkCellIterator.h>
@@ -127,7 +127,7 @@ std::string in_name, in_boundary, out_name, geom_name;
 
 void initialize(int argc, char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
         required(true, false, "Required Options"),
@@ -156,10 +156,10 @@ void initialize(int argc, char* argv[])
     }
 }
 
-typedef xavier::mesh mesh_type;
-typedef xavier::mesh_type::face face_type;
-typedef xavier::mesh_type::cell_kind cell_kind;
-typedef xavier::mesh_type::vertex_type vertex_type;
+typedef spurt::mesh mesh_type;
+typedef spurt::mesh_type::face face_type;
+typedef spurt::mesh_type::cell_kind cell_kind;
+typedef spurt::mesh_type::vertex_type vertex_type;
 
 unsigned int vtk_celltype_to_dlr_celltype(unsigned char vtkid) {
     if (vtkid == VTK_TRIANGLE) return cell_kind::TRIANGLE;
@@ -179,7 +179,7 @@ int main(int argc, char* argv[]) {
     std::vector<face_type> boundary_faces;
     mesh_type amesh;
 
-    if (xavier::filename::extension(in_name) == "grid") {
+    if (spurt::filename::extension(in_name) == "grid") {
         amesh.load(in_name);
     }
     else {

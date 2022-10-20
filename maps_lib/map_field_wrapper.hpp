@@ -4,7 +4,7 @@
 #include <math/fixed_vector.hpp>
 #include <data/raster.hpp>
 
-namespace xavier {
+namespace spurt {
 namespace map {
 typedef raster_grid<3, double>     grid_type;
 
@@ -105,7 +105,7 @@ private:
 };
 
 } // map
-} // xavier
+} // spurt
 
 #endif
 

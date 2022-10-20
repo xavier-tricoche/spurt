@@ -23,7 +23,7 @@
 
 constexpr nvis::vec3 gravity(0, 0, -9.80665);
 
-using namespace xavier::granular::dem;
+using namespace spurt::granular::dem;
 
 /******************************************************************************
 *                                                                             *

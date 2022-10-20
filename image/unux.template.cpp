@@ -12,7 +12,7 @@ struct transpose_wrapper {
     template<typename T, int Nrows, int Ncols, int, int> 
     static void apply(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input) {
         assert(input.size()==1);
-        xavier::nrrd_matrix_transpose<T, Nrows, Ncols> trans_op;
+        spurt::nrrd_matrix_transpose<T, Nrows, Ncols> trans_op;
         output.resize(0);
         output[0]=trans_op(input[0]);
     }
@@ -22,7 +22,7 @@ struct product_wrapper {
     template<typename T, int Nrows, int Ncols, int Ncols2, int, int> 
     static void apply(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input) {
         assert(input.size()==2);
-        xavier::nrrd_matrix_product<T, Nrows, Ncols, Ncols2> prod_op;
+        spurt::nrrd_matrix_product<T, Nrows, Ncols, Ncols2> prod_op;
         output.resize(0);
         output[0]=prod_op(input[0], input[1]);
     }
@@ -32,7 +32,7 @@ struct svd_wrapper {
     template<typename T, int Nrows, int Ncols, int, int> 
     static void apply(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input) {
         assert(input.size()==1);
-        xavier::nrrd_matrix_svd<T, Nrows, Ncols> svd_op;
+        spurt::nrrd_matrix_svd<T, Nrows, Ncols> svd_op;
         output.resize(3);
         svd_op(input[0], output[0], output[1], output[2]);
     }
@@ -42,7 +42,7 @@ struct trans_prod_wrapper {
     template<typename T, int Nrows, int Ncols, int Ncols2, int> 
     static void apply(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input) {
         assert(input.size()==2);
-        xavier::nrrd_matrix_transpose_product<T, Nrows, Ncols, Ncols2> transx_op;
+        spurt::nrrd_matrix_transpose_product<T, Nrows, Ncols, Ncols2> transx_op;
         output.resize(1);
         output[0]=transx_op(input[0], input[1]);
     }
@@ -52,7 +52,7 @@ struct invert_wrapper {
     template<typename T, int N, int, int, int> 
     static void apply(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input) {
         assert(input.size()==1);
-        xavier::nrrd_matrix_invert<T, N> inv_op;
+        spurt::nrrd_matrix_invert<T, N> inv_op;
         output.resize(1);
         output[0]=inv_op(input[0]);
     }
@@ -176,7 +176,7 @@ void do_something_unsized(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& 
 
 
 int main(int argc, char* argv[]) {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
     std::vector<std::string> input_file_names;
     std::vector<std::string> output_file_names;
     std::vector<int> dims;
@@ -226,7 +226,7 @@ int main(int argc, char* argv[]) {
     std::vector<Nrrd*> input, output;
     input.resize(input_file_names.size());
     for (int i=0; i<input.size(); ++i) {
-        input[i]=xavier::readNrrd(input_file_names[i]);
+        input[i]=spurt::readNrrd(input_file_names[i]);
     }
     
     // determine selected operator
@@ -271,7 +271,7 @@ int main(int argc, char* argv[]) {
     
     if (ok) {
         if (output.size()==3 && output_file_names.size()==1) {
-            std::string basename=xavier::get_basename(output_file_names[0]);
+            std::string basename=spurt::get_basename(output_file_names[0]);
             output_file_names.resize(3);
             output_file_names[0]=basename+"-sinvals.nrrd";
             output_file_names[1]=basename+"-leftvec.nrrd";

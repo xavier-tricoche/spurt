@@ -55,7 +55,7 @@ void validate(time_of_day& tod, const std::vector<std::string>& s) {
     }
 }
 
-// typedef xavier::command_line::custom_parser< time_of_day >::parser_type parser_t;
+// typedef spurt::command_line::custom_parser< time_of_day >::parser_type parser_t;
 
 // void validate(boost::any& v, const std::vector<std::string>& values,
 //               time_of_day* target_type, int) {
@@ -122,7 +122,7 @@ void validate<>(boost::any& v, const std::vector<std::string>& values,
 
 int main(int argc, const char* argv[]) {
 
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
     
     char c = 'a';
     short sh = 1;
@@ -149,7 +149,7 @@ int main(int argc, const char* argv[]) {
         optional_group(false, false, "Optional Group");
         
     xcl::option_parser parser(argv[0],
-        "Testing xavier::commandline::option_parser");
+        "Testing spurt::commandline::option_parser");
         
     try {
         // parser.use_default_symbol();

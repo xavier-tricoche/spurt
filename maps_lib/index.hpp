@@ -32,7 +32,7 @@ struct poincare_index {
     typedef typename mesh_type::data_type       data_type;
     typedef typename mesh_type::triangle_type   triangle_type;
     typedef std::pair<point_type, point_type>   uncertain_vec_type;
-    typedef xavier::Edge                        edge_index_type;
+    typedef spurt::Edge                        edge_index_type;
     
     poincare_index() {}
     
@@ -42,7 +42,7 @@ struct poincare_index {
         for (int i = 0 ; i < 3 ; ++i) {
             nvis::vec2 v0 = vector_value(d[i], period, metric);
             steps.push_back(step_type(d[i].pos(), d[i].pos() + v0));
-            dtheta += xavier::signed_angle(v0, vector_value(d[(i+1)%3], period, metric));
+            dtheta += spurt::signed_angle(v0, vector_value(d[(i+1)%3], period, metric));
         }
         return (int)round(0.5*dtheta / M_PI);
     }
@@ -58,7 +58,7 @@ struct poincare_index {
         double dtheta = 0, dtheta_max = 0;
         for (int i = 0 ; i < 3 ; ++i) {
             nvis::vec2 v0 = vector_value(d[i], period, metric);
-            double delta = fabs(xavier::signed_angle(v0, vector_value(d[(i+1)%3], period, metric)));
+            double delta = fabs(spurt::signed_angle(v0, vector_value(d[(i+1)%3], period, metric)));
             dtheta += delta;
             dtheta_max = std::max(dtheta_max, delta);
             steps.push_back(step_type(d[i].pos(), d[i].pos() + v0));
@@ -101,7 +101,7 @@ struct poincare_index {
         const point_type& v1 = uv1.first;
         steps.push_back(step_type(x0, x0 + v0));
         steps.push_back(step_type(x1, x1 + v1));
-        double theta = xavier::signed_angle(v0, v1);
+        double theta = spurt::signed_angle(v0, v1);
         
         if (fabs(theta) < dtheta) {
             return theta;
@@ -151,7 +151,7 @@ struct poincare_index {
             steps.push_back(step_type(x1, x1 + __v1));
         }
         
-        double theta = xavier::signed_angle(__v0, __v1);
+        double theta = spurt::signed_angle(__v0, __v1);
         
         if (fabs(theta) < dtheta) {
             return theta;
@@ -236,7 +236,7 @@ struct poincare_index {
         }
         
         // easy cases first
-        double theta = xavier::signed_angle(__v0, __v1);
+        double theta = spurt::signed_angle(__v0, __v1);
         if (fabs(theta) < std::max(large_angle, dtheta)) {
             return theta;
         } else if (nvis::norm(x1 - x0) < dx && depth > 5) {
@@ -285,7 +285,7 @@ struct poincare_index {
         }
         
         // easy cases first
-        double theta = xavier::signed_angle(__v0, __v1);
+        double theta = spurt::signed_angle(__v0, __v1);
         if (fabs(theta) < std::max(large_angle, dtheta)) {
             return theta;
         } else if (depth == max_depth && nvis::norm(rhs.error(x0)) > 0.1*nvis::norm(v0)) {
@@ -353,7 +353,7 @@ struct poincare_index {
         }
         
         // easy cases first
-        double theta = xavier::signed_angle(__v0, __v1);
+        double theta = spurt::signed_angle(__v0, __v1);
         if (fabs(theta) < std::max(large_angle, dtheta)) {
             return theta;
         } else if (nvis::norm(x1 - x0) < dx) {
@@ -375,7 +375,7 @@ struct poincare_index {
         double a3 = nvis::inner(j1 + j0 - 2.*(__v1 - __v0), __v0);
         
         std::complex<double> u[3];
-        int nbroots = xavier::cubic_equation(a3, a2, a1, a0, u);
+        int nbroots = spurt::cubic_equation(a3, a2, a1, a0, u);
         for (int i = 0 ; i < nbroots ; ++i) {
             if (u[i].imag()) {
                 continue;

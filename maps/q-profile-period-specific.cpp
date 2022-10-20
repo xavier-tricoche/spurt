@@ -20,7 +20,7 @@
 #include <util/wall_timer.hpp>
 #include <math/bounding_box.hpp>
 
-// xavier
+// spurt
 #include <math/math.hpp>
 #include <poincare/metric.hpp>
 
@@ -53,7 +53,7 @@ char* outs, *file, *ts;
 double h, max_diff, min_area, max_area, max_ratio;
 
 struct point_counter {
-    typedef xavier::quadtree<int, nvis::vec2>   quadtree_type;
+    typedef spurt::quadtree<int, nvis::vec2>   quadtree_type;
     
     point_counter() : n(0) {}
     
@@ -65,7 +65,7 @@ struct point_counter {
 };
 
 struct leaf_display {
-    typedef xavier::quadtree<int, nvis::vec2>   quadtree_type;
+    typedef spurt::quadtree<int, nvis::vec2>   quadtree_type;
     
     leaf_display() : os() {}
     void operator()(const quadtree_type& q) {
@@ -81,7 +81,7 @@ struct leaf_display {
 };
 
 struct point_locator {
-    typedef xavier::quadtree<int, nvis::vec2>   quadtree_type;
+    typedef spurt::quadtree<int, nvis::vec2>   quadtree_type;
     typedef quadtree_type::data_type            data_type;
     
     point_locator(const nvis::bbox2& bounds, size_t max_depth, size_t max_nb_pts)
@@ -115,12 +115,12 @@ struct orbit_integrator {
     typedef I   integrator_type;
     
     orbit_integrator(const integrator_type& integrator, size_t nsteps,
-                     const xavier::map_metric& metric)
+                     const spurt::map_metric& metric)
         : __nsteps(nsteps), __integ(integrator), __metric(metric) {}
         
     void operator()(const nvis::vec2& x0,
                     std::vector<nvis::vec2>& points,
-                    std::vector<xavier::point_data>& data) const {
+                    std::vector<spurt::point_data>& data) const {
         const integrator_type* pmap = __integ.clone();
         points.clear();
         data.clear();
@@ -136,25 +136,25 @@ struct orbit_integrator {
             return;
         }
         
-        std::pair<double, double> sf = xavier::period_x_periodic(__steps, x0, __metric);
+        std::pair<double, double> sf = spurt::period_x_periodic(__steps, x0, __metric);
         
         // std::cerr << "found period = " << sf.first << std::endl;
         
         points.resize(__steps.size() + 1);
         data.resize(__steps.size() + 1);
-        size_t orbit_id = xavier::__map_orbits.size();
+        size_t orbit_id = spurt::__map_orbits.size();
         points[0] = __metric.modulo(x0);
-        data[0] = xavier::point_data(orbit_id, 0);
+        data[0] = spurt::point_data(orbit_id, 0);
         for (int i = 0 ; i < __steps.size() ; ++i) {
             points[i+1] = __metric.modulo(__steps[i]);
-            data[i+1] = xavier::point_data(orbit_id, i + 1);
+            data[i+1] = spurt::point_data(orbit_id, i + 1);
         }
-        xavier::__map_orbits.push_back(xavier::orbit(points, sf.first));
+        spurt::__map_orbits.push_back(spurt::orbit(points, sf.first));
     }
     
     size_t                  __nsteps;
     const integrator_type&  __integ;
-    xavier::map_metric      __metric;
+    spurt::map_metric      __metric;
 };
 
 
@@ -193,8 +193,8 @@ void initialize(int argc, char* argv[])
 
 typedef std::pair<double, double>                                       pair_type;
 typedef std::vector<nvis::vec2>::const_iterator                         const_iter_type;
-typedef xavier::point_data                                              point_data;
-typedef xavier::triangulation<point_data, point_locator>                mesh_type;
+typedef spurt::point_data                                              point_data;
+typedef spurt::triangulation<point_data, point_locator>                mesh_type;
 typedef mesh_type::index_type                                           index_type;
 typedef mesh_type::triangle_type                                        triangle_type;
 typedef mesh_type::point_type                                           point_type;
@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
     field->periodic_coordinates(false);
     
     bool per[2] = {true, false};
-    xavier::map_metric metric(field->bounds(), per);
+    spurt::map_metric metric(field->bounds(), per);
     
     poincare_map pmap(field);
     pmap.precision(h);
@@ -234,7 +234,7 @@ int main(int argc, char* argv[])
               std::back_inserter(ref_values));
     std::cerr << "there are " << ref_values.size() << " interesting values\n";
     for (int i = 0 ; i < ref_values.size() ; ++i) {
-        std::cerr << ref_values[i] << " = " << xavier::value(ref_values[i]) << '\n';
+        std::cerr << ref_values[i] << " = " << spurt::value(ref_values[i]) << '\n';
     }
     
 #if _OPENMP
@@ -242,16 +242,16 @@ int main(int argc, char* argv[])
 #endif
     
     srand48(time(0));
-    std::vector< std::pair<point_type, xavier::point_data> > all_points;
+    std::vector< std::pair<point_type, spurt::point_data> > all_points;
     
     // reset central orbit repository
-    xavier::__map_orbits.clear();
+    spurt::__map_orbits.clear();
     
     // 1D sampling along symmetry axis
 #pragma openmp parallel
     {
         std::vector<nvis::vec2> steps;
-        std::vector<xavier::point_data> data;
+        std::vector<spurt::point_data> data;
         #pragma omp for schedule(dynamic,1)
         for (int i = 0 ; i < n1 ; ++i) {
 #if _OPENMP
@@ -277,23 +277,23 @@ int main(int argc, char* argv[])
     
     std::cerr << "building initial triangulation after 1D sampling\n";
     // form the boundary
-    std::pair<nvis::vec2, xavier::point_data> boundary[4];
+    std::pair<nvis::vec2, spurt::point_data> boundary[4];
     std::vector<nvis::vec2> corner(4);
     corner[0] = bounds.min();
     corner[1] = bounds.min() + nvis::vec2(bounds.size()[0], 0);
     corner[2] = bounds.max();
     corner[3] = bounds.min() + nvis::vec2(0, bounds.size()[1]);
-    size_t orbit_id = xavier::__map_orbits.size();
-    xavier::__map_orbits.push_back(xavier::orbit(corner, 0));
+    size_t orbit_id = spurt::__map_orbits.size();
+    spurt::__map_orbits.push_back(spurt::orbit(corner, 0));
     for (int i = 0 ; i < 4 ; ++i) {
         boundary[i].first = corner[i];
-        boundary[i].second = xavier::point_data(orbit_id, i);
+        boundary[i].second = spurt::point_data(orbit_id, i);
     }
     
     mesh_type mesh(boundary, point_locator(bounds, 10, 10));
     
     // std::cerr << "before triangulating: " << std::endl;
-    // const std::vector<xavier::orbit>& all_orbits = xavier::__map_orbits;
+    // const std::vector<spurt::orbit>& all_orbits = spurt::__map_orbits;
     // for (int i = 0 ; i < all_orbits.size() ; ++i) {
     //  std::cerr << "orbit #" << i
     //  << " contains " << all_orbits[i].size() << " points starting at " << all_orbits[i][0]
@@ -327,21 +327,21 @@ int main(int argc, char* argv[])
     std::cerr << "triangulation initially contains " << mesh.get_nb_triangles()
               << " triangles\n";
               
-    xavier::export_VTK(mesh, "initial_triangulation.vtk", "none", false);
+    spurt::export_VTK(mesh, "initial_triangulation.vtk", "none", false);
     
     
     std::cerr << "refining triangulation to achieve prescribed max area\n";
     mesh.set_export_basename("area_triangulation");
-    bool valid_mesh = xavier::refine(mesh, intg,
-                                     xavier::triangle_area_controller(max_area),
+    bool valid_mesh = spurt::refine(mesh, intg,
+                                     spurt::triangle_area_controller(max_area),
                                      max_nb_triangles);
     std::cerr << "refinement was " << (valid_mesh ? "successful" : "not successful") << '\n';
     std::cerr << mesh.get_nb_vertices() << " points sampled after area-driven 2D refinement\n";
     std::cerr << mesh.get_nb_triangles() << " triangles after area driven 2D refinement\n";
     std::cerr << "max area was " << max_area << std::endl;
     
-    valid_mesh = xavier::refine(mesh, intg,
-                                xavier::triangle_multiple_orbits_controller(min_area),
+    valid_mesh = spurt::refine(mesh, intg,
+                                spurt::triangle_multiple_orbits_controller(min_area),
                                 max_nb_triangles);
                                 
 #ifdef __REFINE_SAFETY_FACTOR__
@@ -350,9 +350,9 @@ int main(int argc, char* argv[])
         os << "q=" << iter->numerator() << "/" << iter->denominator()
            << "_triangulation";
         mesh.set_export_basename(os.str());
-        std::cerr << "refining triangulation around q=" << xavier::value(*iter) << '\n';
-        valid_mesh = xavier::refine(mesh, intg,
-                                    xavier::triangle_value_inclusion_controller(xavier::value(*iter),
+        std::cerr << "refining triangulation around q=" << spurt::value(*iter) << '\n';
+        valid_mesh = spurt::refine(mesh, intg,
+                                    spurt::triangle_value_inclusion_controller(spurt::value(*iter),
                                             min_area),
                                     max_nb_triangles);
         std::cerr << "refinement was " << (valid_mesh ? "successful" : "not successful") << '\n';
@@ -366,8 +366,8 @@ int main(int argc, char* argv[])
         os << "zero_period=" << period << "_triangulation";
         mesh.set_export_basename(os.str());
         std::cerr << "refining triangulation for period " << period << '\n';
-        valid_mesh = xavier::refine(mesh, intg,
-                                    xavier::triangle_contains_fixed_point_controller(min_area, period, metric),
+        valid_mesh = spurt::refine(mesh, intg,
+                                    spurt::triangle_contains_fixed_point_controller(min_area, period, metric),
                                     max_nb_triangles);
         std::cerr << "refinement was " << (valid_mesh ? "successful" : "not successful") << '\n';
         std::cout << mesh.get_nb_vertices() << " points sampled after zero-driven 2D refinement\n";
@@ -377,7 +377,7 @@ int main(int argc, char* argv[])
     std::ostringstream os_name, os_comment;
     os_name << outs << "-n1=" << n1 << "-n2=" << n2 << "-m=" << m << ".vtk";
     os_comment << "Sample points from " << file << " at t=" << ts << " with estimated safety factor";
-    xavier::export_VTK(mesh, os_name.str(), os_comment.str(), false);
+    spurt::export_VTK(mesh, os_name.str(), os_comment.str(), false);
 }
 
 

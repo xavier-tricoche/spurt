@@ -22,7 +22,7 @@
 
 // #define DISPLAY_TIMINGS
 
-namespace xavier {
+namespace spurt {
 inline nvis::vec3 barycentric(const nvis::vec2& x, const nvis::vec2 p[3])
 {
     // x-p0 = b1*(p1-p0) + b2*(p2-p0)
@@ -37,7 +37,7 @@ inline nvis::vec3 barycentric(const nvis::vec2& x, const nvis::vec2 p[3])
 }
 }
 
-namespace xavier {
+namespace spurt {
 struct triangulation_exception: public std::runtime_error {
 
     triangulation_exception() : std::runtime_error(""), offending_position(0, 0) {}
@@ -61,7 +61,7 @@ struct triangulation_exception: public std::runtime_error {
 // };
 // }
 
-namespace xavier {
+namespace spurt {
 
 template < typename T1, typename T2>
 class triangulation {
@@ -620,7 +620,7 @@ inline void triangulation<T1, T2>::triangulate_new_points(index_type first_id)
                 std::cerr << os.str() << "\n";
                 continue; // let's not get dramatic about it
 
-                xavier::triangulation_exception e(os.str());
+                spurt::triangulation_exception e(os.str());
                 std::copy(been_there.begin(), been_there.end(), std::back_inserter(e.visited_triangles));
                 e.offending_position = x;
                 throw e;

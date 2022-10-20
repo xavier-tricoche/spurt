@@ -44,7 +44,7 @@ class QAction;
 // Forward Qt class declarations
 class Ui_MainWindow;
 
-namespace xavier { namespace gmig {
+namespace spurt { namespace gmig {
     
 struct TypeAttributes;
 
@@ -122,7 +122,7 @@ private:
 };
 
 } // gmig
-} // xavier
+} // spurt
 
 #endif // _ALT_MANTLE_VIS_HPP_
 

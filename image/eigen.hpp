@@ -4,7 +4,7 @@
 #include <math/fixed_vector.hpp>
 #include <complex>
 
-namespace xavier
+namespace spurt
 {
   void eigensystem( nvis::vec2& evec_min, nvis::vec2& evec_max,
             double& lmin, double& lmax,
@@ -20,7 +20,7 @@ namespace xavier
 
 
 inline
-void xavier::eigensystem( nvis::vec2& evec_min, nvis::vec2& evec_max,
+void spurt::eigensystem( nvis::vec2& evec_min, nvis::vec2& evec_max,
               double& lmin, double& lmax,
               const nvis::vec3& Hessian )
 {
@@ -49,7 +49,7 @@ void xavier::eigensystem( nvis::vec2& evec_min, nvis::vec2& evec_max,
 
 
 inline
-void xavier::eigensystem( nvis::vec2& evec_min, nvis::vec2& evec_max,
+void spurt::eigensystem( nvis::vec2& evec_min, nvis::vec2& evec_max,
               std::complex< double >& lmin, 
               std::complex< double >& lmax,
               const nvis::vec4& Jacobian )
@@ -81,7 +81,7 @@ void xavier::eigensystem( nvis::vec2& evec_min, nvis::vec2& evec_max,
 
 
 inline
-nvis::vec2 xavier::singularsystem( const nvis::vec4& M )
+nvis::vec2 spurt::singularsystem( const nvis::vec4& M )
 {
     static nvis::vec2 v;
     

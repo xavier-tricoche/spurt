@@ -17,7 +17,7 @@
 #include "denis.hpp"
 #include <data/raster.hpp>
 
-using namespace xavier::denis;
+using namespace spurt::denis;
 
 // constant of gravity
 const double _G  = 9.80665;
@@ -31,7 +31,7 @@ double _vmin, _vmax;
 size_t _niter, _npass, _width, _height;
 
 typedef nvis::vec3                     color_type;
-typedef xavier::image2d<color_type>    image_type;
+typedef spurt::image2d<color_type>    image_type;
 typedef image_type::grid_type          grid_type;
 typedef grid_type::point_type          point_type;
 typedef grid_type::coord_type          coord_type;

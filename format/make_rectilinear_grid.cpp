@@ -1,4 +1,4 @@
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <misc/option_parse.hpp>
 #include "teem/nrrd.h"
@@ -8,12 +8,12 @@ int verbose=0;
 std::string name_x, name_y, name_z, name_data, name_out;
 
 VTK_SMART(vtkDoubleArray) import_scalar_array(const std::string& nrrd_filename) {
-    Nrrd* nin = xavier::nrrd_utils::readNrrd(nrrd_filename);
+    Nrrd* nin = spurt::nrrd_utils::readNrrd(nrrd_filename);
     size_t n = nin->axis[0].size;
     VTK_CREATE(vtkDoubleArray, array);
     array->SetNumberOfTuples(n);
     array->SetNumberOfComponents(1);
-    xavier::nrrd_utils::nrrd_data_wrapper<double> wrapper(nin);
+    spurt::nrrd_utils::nrrd_data_wrapper<double> wrapper(nin);
     for (size_t i=0; i<n; ++i) {
         array->SetTuple1(i, wrapper[i]);
     }
@@ -23,7 +23,7 @@ VTK_SMART(vtkDoubleArray) import_scalar_array(const std::string& nrrd_filename) 
 int main(int argc, const char* argv[]) {
 
     std::string name_id, name_coef, name_rhs;
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
     int verbose=0;
 
     xcl::option_traits
@@ -72,7 +72,7 @@ int main(int argc, const char* argv[]) {
     grid->SetZCoordinates(zs);
     
     VTK_SMART(vtkDoubleArray) data = import_scalar_array(name_data);
-    data->SetName(xavier::filename::remove_extension(name_data).c_str());
+    data->SetName(spurt::filename::remove_extension(name_data).c_str());
     grid->GetPointData()->SetScalars(data);
     
     VTK_CREATE(vtkXMLRectilinearGridWriter, writer);

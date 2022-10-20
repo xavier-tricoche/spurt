@@ -43,14 +43,14 @@ int main(int argc, const char* argv[])
     hestOpt* hopt;
     initialize(argc, argv, hopt);
     
-    Nrrd* nin = xavier::nrrd_utils::readNrrd(name_in);
+    Nrrd* nin = spurt::nrrd_utils::readNrrd(name_in);
     if (nin->dim != 2) {
         std::cerr << "Input NRRD has invalid dimension (" << nin->dim << " != 2)\n";
         exit(-1);
     }
     
     std::vector<float> values;
-    xavier::nrrd_utils::to_vector(values, nin);
+    spurt::nrrd_utils::to_vector(values, nin);
     
     std::cerr << "values contains " << values.size() << " elements\n";
     

@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-// xavier's utilities
+// spurt's utilities
 #include <format/format.hpp>
 #include <misc/option_parse.hpp>
 

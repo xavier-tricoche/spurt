@@ -173,7 +173,7 @@ void test_transpose(size_t n=50) {
     compute_transpose<Nrows, Ncols>(transposes, matrices);
     double t1=timer.elapsed();
 
-    xavier::nrrd_utils::nrrd_matrix_transpose<float, Nrows, Ncols> trans_op;
+    spurt::nrrd_utils::nrrd_matrix_transpose<float, Nrows, Ncols> trans_op;
     toverhead=0;
     timer.restart();
     Nrrd* res=trans_op(nrrd);
@@ -214,7 +214,7 @@ void test_product(size_t n=50) {
     compute_prod<Nrows, Ncols1, Ncols2>(product, left, right);
     double t1=timer.elapsed();
 
-    xavier::nrrd_utils::nrrd_matrix_product<float, Nrows, Ncols1, Ncols2> prod_op;
+    spurt::nrrd_utils::nrrd_matrix_product<float, Nrows, Ncols1, Ncols2> prod_op;
     toverhead=0;
     timer.restart();
     Nrrd* res=prod_op(nrrd1, nrrd2);
@@ -255,7 +255,7 @@ void test_SVD(size_t n=50) {
     compute_SVD<Nrows, Ncols, P>(singvals, leftvecs, rightvecs, matrices);
     double t1=timer.elapsed();
 
-    xavier::nrrd_utils::nrrd_matrix_svd<float, Nrows, Ncols> svd_op;
+    spurt::nrrd_utils::nrrd_matrix_svd<float, Nrows, Ncols> svd_op;
     toverhead=0;
     timer.restart();
     Nrrd *snrrd, *lnrrd, *rnrrd;

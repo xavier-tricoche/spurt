@@ -11,7 +11,7 @@ double length;
 bool verbose;
 
 void initialize(int argc, const char* argv[]) {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
     verbose = false;
 
     cmdline = "Command line: " + std::string(argv[0]);
@@ -47,14 +47,14 @@ int main(int argc, const char* argv[]) {
 
     initialize(argc, argv);
 
-    Nrrd* nin = xavier::nrrd_utils::readNrrd(input);
+    Nrrd* nin = spurt::nrrd_utils::readNrrd(input);
     assert(nin->dim == 4);
     size_t res[3] = { nin->axis[1].size, nin->axis[2].size, nin->axis[3].size };
     size_t N = res[0]*res[1]*res[2];
     size_t shift[3] = { 1, res[0], res[0]*res[1] };
     double spc[3] = { nin->axis[1].spacing, nin->axis[2].spacing, nin->axis[3].spacing };
 
-    xavier::nrrd_utils::nrrd_data_wrapper<double> wrapper(nin);
+    spurt::nrrd_utils::nrrd_data_wrapper<double> wrapper(nin);
 
     typedef Eigen::Matrix<double, 3, 3> mat_t;
     typedef Eigen::Matrix<double, 3, 1> vec_t;
@@ -118,13 +118,13 @@ int main(int argc, const char* argv[]) {
     Nrrd *nout = nrrdNew();
 
     if (nrrdWrap_nva(nout, ftle, nrrdTypeDouble, 3, res)) {
-        throw std::runtime_error(xavier::nrrd_utils::error_msg("writeNrrd: error while wrapping"));
+        throw std::runtime_error(spurt::nrrd_utils::error_msg("writeNrrd: error while wrapping"));
     }
     nout->axis[0].spacing = spc[0];
     nout->axis[1].spacing = spc[1];
     nout->axis[2].spacing = spc[2];
     if (nrrdSave(output.c_str(), nout, NULL)) {
-        throw std::runtime_error(xavier::nrrd_utils::error_msg("writeNrrd: error while saving"));
+        throw std::runtime_error(spurt::nrrd_utils::error_msg("writeNrrd: error while saving"));
     }
 
     nrrdNix(nout); // only deletes the structure not the data

@@ -54,7 +54,7 @@ std::string array_as_string() { return "X ..."; }
 #undef X
 }
 
-namespace xavier {
+namespace spurt {
 
 class cmdline_parser {
     namespace po = boost::program_options;
@@ -138,7 +138,7 @@ public:
 };
 
 template<typename T>
-void xavier::cmdline_parser::add(const std::string& opt_name,
+void spurt::cmdline_parser::add(const std::string& opt_name,
                                  T& storage, const std::string& description, 
                                  bool required, const std::string& token_display) {
                                      
@@ -150,7 +150,7 @@ void xavier::cmdline_parser::add(const std::string& opt_name,
 }
 
 template<typename Array, typename T, unsigned N>
-void xavier::cmdline_parser::add(const std::string& opt_name,
+void spurt::cmdline_parser::add(const std::string& opt_name,
                                  Array& storage, const std::string& description,
                                  unsigned min_token, bool required, 
                                  const std::string& token_display) {
@@ -168,4 +168,4 @@ void xavier::cmdline_parser::add(const std::string& opt_name,
 
 
 
-} // namespace xavier
+} // namespace spurt

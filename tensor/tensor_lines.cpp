@@ -26,7 +26,7 @@ int r;
 float col[3];
 
 typedef Eigen::Matrix<double, 7, 1> tensor_type;
-typedef xavier::nrrd_field<tensor_type, 3, double> tensor_field_type;
+typedef spurt::nrrd_field<tensor_type, 3, double> tensor_field_type;
 typedef EigenvectorField<tensor_field_type> eigenvector_field_type;
 typedef EigenvectorField<DoublePointLoad> dpl_eigenvectorfield_type;
 
@@ -91,8 +91,8 @@ bool seeds_from_density(std::vector<nvis::vec3>& seeds, const std::string& name,
     Nrrd* sampling_nrrd;
     nvis::bbox3 sampling_bounds;
     nvis::vec3 sampling_step;
-    xavier::inverse_transform_sampling<float>* sampler;
-    sampling_nrrd = xavier::nrrd_utils::readNrrd(name);
+    spurt::inverse_transform_sampling<float>* sampler;
+    sampling_nrrd = spurt::nrrd_utils::readNrrd(name);
     int size = 1;
     if (sampling_nrrd->dim != 3) {
         std::cerr << "Provided NRRD seeding density file is not a 3D scalar volume. Ignored.\n";
@@ -114,8 +114,8 @@ bool seeds_from_density(std::vector<nvis::vec3>& seeds, const std::string& name,
         }
     }
     std::vector<float> vals(size);
-    xavier::nrrd_utils::to_vector(vals, sampling_nrrd);
-    sampler = new xavier::inverse_transform_sampling<float>(vals);
+    spurt::nrrd_utils::to_vector(vals, sampling_nrrd);
+    sampler = new spurt::inverse_transform_sampling<float>(vals);
 
     for (int count = 0 ; count < n ; ++count) {
         unsigned int id = sampler->sample();

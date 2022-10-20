@@ -8,7 +8,7 @@
 #include <sstream>
 #include <map>
 
-namespace xavier {
+namespace spurt {
 
 template<typename T, typename PD, typename CD>
 struct __Node {
@@ -80,7 +80,7 @@ struct __Node {
 
 
 
-} // xavier
+} // spurt
 
 #endif
 

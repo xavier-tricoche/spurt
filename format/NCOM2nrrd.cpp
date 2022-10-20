@@ -6,7 +6,7 @@
 #include <misc/option_parse.hpp>
 #include <misc/strings.hpp>
 
-#include <VTK/vtk_data_helper.hpp>
+#include <vtk/vtk_data_helper.hpp>
 
 std::string name_in, name_out, var_names;
 bool verbose=false;
@@ -29,7 +29,7 @@ inline double rad2deg(double r) {
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
         
     xcl::option_traits 
             required_group(true, false, "Required Options"), 
@@ -81,20 +81,20 @@ int main(int argc, char* argv[]) {
     size_t nlat, nlon;
     double t;
     if (name_out.empty()) {
-        name_out = xavier::filename::remove_extension(name_in);
+        name_out = spurt::filename::remove_extension(name_in);
     }
     else {
-        name_out = xavier::filename::remove_extension(name_out);
+        name_out = spurt::filename::remove_extension(name_out);
     }
     
     std::vector<std::string> names;
     std::vector< std::vector<double > > variables;
     if (!var_names.empty()) {
-        xavier::tokenize(names, var_names);
-        xavier::NCOMreader::load_dataset(name_in, lat_deg, lon_deg, vel_spatial, names, variables, t);
+        spurt::tokenize(names, var_names);
+        spurt::NCOMreader::load_dataset(name_in, lat_deg, lon_deg, vel_spatial, names, variables, t);
     }
     else {
-        xavier::NCOMreader::load_dataset(name_in, lat_deg, lon_deg, vel_spatial, t);
+        spurt::NCOMreader::load_dataset(name_in, lat_deg, lon_deg, vel_spatial, t);
     }
     nlat=lat_deg.size();
     nlon=lon_deg.size();
@@ -246,15 +246,15 @@ int main(int argc, char* argv[]) {
     center[1] = nrrdCenterNode;
     center[2] = nrrdCenterNode;
     if (save_uv) {
-        xavier::nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&vel_spatial[0]), 
+        spurt::nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&vel_spatial[0]), 
             name_out+"-spatial_velocity.nrrd", /*nrrdTypeDouble,*/ sz, spc, min, center, empty);
     }
-    xavier::nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&vel_angular[0]),
+    spurt::nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&vel_angular[0]),
             name_out+"-angular_velocity.nrrd", /*nrrdTypeDouble,*/ sz, spc, min, center, empty);
     std::cout << "t=" << t << '\n';
     
     for (size_t i=0; i<names.size(); ++i) {
-        xavier::nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&variables[i][0]),
+        spurt::nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&variables[i][0]),
             name_out + "-" + names[i], /*nrrdTypeDouble,*/ 
             std::vector<size_t>(sz.begin()+1, sz.end()), 
             std::vector<double>(spc.begin()+1, spc.end()), 

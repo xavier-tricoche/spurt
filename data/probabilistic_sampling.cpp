@@ -24,7 +24,7 @@
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
 
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 
 #include <Eigen/Core>
 #include <Eigen/SVD>
@@ -39,7 +39,7 @@ bool verbose;
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
         
     xcl::option_traits 
             required(true, false, "Required Options"), 
@@ -84,7 +84,7 @@ size_t select(const std::vector<long double>& cdf, double value) {
 int main(int argc, const char* argv[]) {
     initialize(argc, argv);
     
-    Nrrd* image_nrrd = xavier::readNrrd(name_image);
+    Nrrd* image_nrrd = spurt::readNrrd(name_image);
     
     if (image_nrrd && verbose) std::cout << name_image << " successfully imported\n";
     else if (!verbose) {
@@ -92,20 +92,20 @@ int main(int argc, const char* argv[]) {
         exit(1);
     } 
     
-    Nrrd* feature_nrrd = xavier::readNrrd(name_feature);
+    Nrrd* feature_nrrd = spurt::readNrrd(name_feature);
     if (feature_nrrd && verbose) std::cout << name_feature << " successfully imported\n";
     else if (!verbose) {
         std::cerr << "ERROR: unable to open " << name_feature << '\n';
         exit(1);
     } 
     
-    xavier::nrrd_data_wrapper<int> image(image_nrrd);
-    xavier::nrrd_data_wrapper<double> feature(feature_nrrd);
+    spurt::nrrd_data_wrapper<int> image(image_nrrd);
+    spurt::nrrd_data_wrapper<double> feature(feature_nrrd);
     
     size_t size[2] = { image_nrrd->axis[0].size, image_nrrd->axis[1].size };
     
     std::vector<value_type> pixels(size[0]*size[1]);
-    xavier::ProgressDisplay progress(verbose);
+    spurt::ProgressDisplay progress(verbose);
     progress.start(size[0]*size[1], "Reading feature values");
     for (size_t i=0; i<size[0]*size[1]; ++i) {
         pixels[i] = value_type(std::abs(feature[i]), i);

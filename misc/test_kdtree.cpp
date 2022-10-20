@@ -12,7 +12,7 @@ template<int dim>
 void compare()
 {
     typedef Eigen::Matrix<float, dim, 1>        vec_type;
-    typedef xavier::indexed_point<float, dim>   point_type;
+    typedef spurt::indexed_point<float, dim>   point_type;
     typedef kdtree<vec_type, int, dim>          tree_type_1;
     typedef KDTree::KDTree<dim, point_type>     tree_type_2;
     typedef sfcnn<vec_type, dim, float>         tree_type_3;

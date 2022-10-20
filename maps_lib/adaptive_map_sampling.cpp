@@ -55,7 +55,7 @@
 using namespace map_analysis;
 
 mesh_type* sampling_mesh;
-std::vector< std::vector< xavier::fixpoint > > all_chains;
+std::vector< std::vector< spurt::fixpoint > > all_chains;
 
 double approx_error;
 std::vector<rational_type> ref_values;
@@ -134,7 +134,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
     typedef point_data                                  data_type;
     typedef std::pair<nvis::vec2, data_type>            data_point_type;
     typedef poincare_index<mesh_type, poincare_map>     poincare_index_type;
-    typedef xavier::Edge                                edge_index_type;
+    typedef spurt::Edge                                edge_index_type;
     
     output.p_orbits.clear();
     output.p_meshes.clear();
@@ -196,7 +196,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
         boundary[i].first = corner[i];
         boundary[i].second = point_data(frame_orbit_id, i);
     }
-    output.base_mesh = mesh_type(boundary, xavier::point_locator());
+    output.base_mesh = mesh_type(boundary, spurt::point_locator());
     mesh_type& base_mesh = output.base_mesh;
     
     unsigned int res[2];
@@ -214,7 +214,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
     nvis::timer period_timer;
     for (int i = 0 ; i < static_data::central_map_orbits.size() ; ++i) {
         orbit& obt = static_data::central_map_orbits[i];
-        // double q = (xavier::period_x_periodic(obt.points(), metric)).first;
+        // double q = (spurt::period_x_periodic(obt.points(), metric)).first;
         double q = dist_based_x_period(obt.points(), metric);
         for (int j = 0 ; j < obt.size() ; ++j) {
             obt[j] = metric.modulo(obt[j]);
@@ -247,7 +247,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
     base_mesh.set_tolerance(1.0e-7);
     std::cerr << "meshing of initial orbits completed in " << meshing_timer.elapsed() << " s.\n";
     
-    xavier::map_debug::verbose_level = 1;
+    spurt::map_debug::verbose_level = 1;
     
     for (int period = 1 ; period <= params.mp ; ++period) {
         std::cerr << "\nprocessing period " << period << "...\n";
@@ -276,7 +276,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
         
         std::vector<double> valid_qs;
         for (std::set<rational_type>::iterator it = rationals.begin() ; it != rationals.end() ; ++it) {
-            valid_qs.push_back(xavier::value(*it));
+            valid_qs.push_back(spurt::value(*it));
         }
         
         std::cerr << "there are " << valid_qs.size() << " interesting rational periods:\n";
@@ -437,7 +437,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
                                     // std::cerr << "orbit_integrator: unable to integrate from " << x0 << std::endl;
                                 }
                                 if (pos.size() >= 9*period) {
-                                    xavier::push_front(approx_zero, pos);
+                                    spurt::push_front(approx_zero, pos);
                                     double q = period_x_periodic(pos, metric).first;
                                     os << "rational period at this point is " << q << '\n';
                                 } else {
@@ -473,7 +473,7 @@ adaptive_map_sampling(adaptive_map_sampling_output& output,
         
 #ifdef EXPORT_TO_VTK
         if (false) {
-            mesh_type tmp_mesh(boundary, xavier::point_locator());
+            mesh_type tmp_mesh(boundary, spurt::point_locator());
             tmp_mesh.set_tolerance(1.0e-8);
             std::vector<point_type> points;
             std::vector<data_type> data;

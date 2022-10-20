@@ -14,7 +14,7 @@
 #include <util/timer.hpp>
 #include <vis/integral_curve.hpp>
 
-// xavier
+// spurt
 #include <format/filename.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <poincare/metric.hpp>
@@ -53,7 +53,7 @@ nvis::ivec2 _res;
 bool _verbose;
 int _cmap_id;
 
-xavier::map_metric _metric;
+spurt::map_metric _metric;
 
 template<typename T1, typename T2, size_t N>
 class raster {
@@ -390,7 +390,7 @@ int main(int argc, char* argv[])
         if (arg == "-h" || arg == "--help") usage();
         else if (arg == "-o" || arg == "--output") {
             if (i == argc-1) usage("Missing output name");
-            output_name = xavier::filename::remove_extension(argv[++i]);
+            output_name = spurt::filename::remove_extension(argv[++i]);
         }
         else if (arg == "-a" || arg == "--amplitude") {
             if (i == argc-1) usage("Missing amplitude value");
@@ -625,7 +625,7 @@ int main(int argc, char* argv[])
         }
     }
     
-    xavier::nrrd_params<float, 3> params;
+    spurt::nrrd_params<float, 3> params;
     params.sizes()[0] = 3;
     params.sizes()[1] = output.resolution()[0];
     params.sizes()[2] = output.resolution()[1];
@@ -636,19 +636,19 @@ int main(int argc, char* argv[])
     params.spacings()[1] = output.spacing()[0];
     params.spacings()[2] = output.spacing()[1];
     
-    xavier::writeNrrdFromParams(const_cast<float*>(output.get_array()), output_name + "-col.nrrd", params);
+    spurt::writeNrrdFromParams(const_cast<float*>(output.get_array()), output_name + "-col.nrrd", params);
     std::cout << output_name + "-col.nrrd was exported\n";
 
-    xavier::writeNrrdFromParams(const_cast<float*>(phi_raster.get_array()), output_name + "-phi.nrrd", params);
+    spurt::writeNrrdFromParams(const_cast<float*>(phi_raster.get_array()), output_name + "-phi.nrrd", params);
     std::cout << output_name + "-phi.nrrd was exported\n";
 
-    xavier::writeNrrdFromParams(const_cast<float*>(input.get_array()), output_name + "-ref.nrrd", params);
+    spurt::writeNrrdFromParams(const_cast<float*>(input.get_array()), output_name + "-ref.nrrd", params);
     std::cout << output_name + "-ref.nrrd was exported\n";
     
-    xavier::writeNrrdFromParams(const_cast<float*>(vec_raster.get_array()), output_name + "-vec.nrrd", params);
+    spurt::writeNrrdFromParams(const_cast<float*>(vec_raster.get_array()), output_name + "-vec.nrrd", params);
     std::cout << output_name + "-vec.nrrd was exported\n";
     
-    xavier::nrrd_params<int, 2> paramsi;
+    spurt::nrrd_params<int, 2> paramsi;
     paramsi.sizes()[0] = output.resolution()[0];
     paramsi.sizes()[1] = output.resolution()[1];
     paramsi.mins()[0] = output.bounds().min()[0];
@@ -656,7 +656,7 @@ int main(int argc, char* argv[])
     paramsi.spacings()[0] = output.spacing()[0];
     paramsi.spacings()[1] = output.spacing()[1];
     
-    xavier::writeNrrdFromParams(const_cast<int*>(counter.get_array()), output_name + "-cnt.nrrd", paramsi);
+    spurt::writeNrrdFromParams(const_cast<int*>(counter.get_array()), output_name + "-cnt.nrrd", paramsi);
     std::cout << output_name + "-cnt.nrrd was exported\n";
     
     return 0;

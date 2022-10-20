@@ -16,7 +16,7 @@
 #include <math.h>
 
 #include <format/filename.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <misc/option_parse.hpp>
 #include <image/nrrd_wrapper.hpp>
 
@@ -143,7 +143,7 @@ std::string in_name, out_name, geom_name;
 
 void initialize(int argc, char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
         required(true, false, "Required Options"),
@@ -251,7 +251,7 @@ void do_fit(const tree_type& tree, const std::vector<double>& rhs,
     
     const value_type* val_rhs = (const value_type*)&rhs[0];
 
-    xavier::MLS::weighted_least_squares<value_type, vector_type> wls(3, 0, NRHS);
+    spurt::MLS::weighted_least_squares<value_type, vector_type> wls(3, 0, NRHS);
     
     soln.resize(NRHS*target->GetNumberOfPoints());
     std::fill(soln.begin(), soln.end(), 0);

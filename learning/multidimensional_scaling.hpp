@@ -7,7 +7,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Eigenvalues>
 
-namespace xavier {
+namespace spurt {
 
 template <typename T>
 class MultidimensionalScaling {
@@ -76,6 +76,6 @@ protected:
     matrix_t Tau;
 };
 
-} // namespace xavier
+} // namespace spurt
 
 #endif

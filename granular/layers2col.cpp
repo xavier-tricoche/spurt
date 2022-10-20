@@ -32,10 +32,10 @@ int main(int argc, char* argv[])
 {
     init(argc, argv);
     
-    Nrrd* nin = xavier::readNrrd(in_name);
+    Nrrd* nin = spurt::readNrrd(in_name);
     
     std::vector<float> coords;
-    xavier::to_vector<float>(coords, nin);
+    spurt::to_vector<float>(coords, nin);
     
     size_t npart = coords.size()/3;
     
@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
     color_scale.push_back(nvis::fvec3(82, 207, 182));
     color_scale.push_back(nvis::fvec3(39, 168, 199));
     
-    xavier::adaptive_color_map<float> cmap(y, color_scale);
+    spurt::adaptive_color_map<float> cmap(y, color_scale);
     
     float* colors = (float*)calloc(3*npart, sizeof(float));
     for (int i=0 ; i<npart ; ++i) {

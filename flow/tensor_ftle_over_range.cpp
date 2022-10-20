@@ -305,7 +305,7 @@ int main(int argc, const char* argv[])
                 _size[k] = size[k+1];
                 _spac[k] = step[k+1];
             }
-            xavier::nrrd_utils::writeNrrd(len, name.make("length.nrrd", counter, cur_length), nrrdTypeInt, _size, _spac);
+            spurt::nrrd_utils::writeNrrd(len, name.make("length.nrrd", counter, cur_length), nrrdTypeInt, _size, _spac);
         }
 #endif
         
@@ -328,7 +328,7 @@ int main(int argc, const char* argv[])
         }
         std::cout << "total computation time for ftle was " << timer.elapsed() << '\n';
         
-        xavier::nrrd_utils::writeNrrd(ftle, name.make("ftle", counter, cur_length), nrrdTypeFloat, size3, step3);
+        spurt::nrrd_utils::writeNrrd(ftle, name.make("ftle", counter, cur_length), nrrdTypeFloat, size3, step3);
         
         cur_length = next_length;
     }

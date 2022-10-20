@@ -34,7 +34,7 @@ void initialize(int argc, const char* argv[])
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
 }
 
-typedef xavier::raster_grid<3, double>  grid_type;
+typedef spurt::raster_grid<3, double>  grid_type;
 typedef grid_type::coord_type           ivec_type;
 typedef grid_type::size_type            index_type;
 typedef grid_type::vec_type             vec_type;
@@ -207,8 +207,8 @@ int main(int argc, const char* argv[])
     initialize(argc, argv);
     
     Nrrd* nin = nrrdNew();
-    nin = xavier::readNrrd(in);
-    xavier::nrrd_traits traits(nin);
+    nin = spurt::readNrrd(in);
+    spurt::nrrd_traits traits(nin);
     
     // verify data type
     if (traits.dim() != 4 || traits.sizes()[0] != 3) {
@@ -217,7 +217,7 @@ int main(int argc, const char* argv[])
     }
     
     std::vector<double> flow;
-    xavier::to_vector(flow, nin);
+    spurt::to_vector(flow, nin);
     ivec_type dims(traits.sizes()[1], traits.sizes()[2], traits.sizes()[3]);
     nvis::vec3 spc(traits.spacings()[1], traits.spacings()[2], traits.spacings()[3]);
     nvis::vec3 orig(traits.mins()[1], traits.mins()[2], traits.mins()[3]);

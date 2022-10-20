@@ -6,7 +6,7 @@
 #include "poincare/macros.hpp"
 #include <iostream>
 
-namespace xavier {
+namespace spurt {
 
 struct fixpoint {
     fixpoint() : isolated(true) {}
@@ -33,7 +33,7 @@ std::ostream& operator<<(std::ostream& os, const fixpoint& fp)
 
 template< typename Jacobian >
 void linear_analysis(const Jacobian& jac, unsigned int period,
-                     const nvis::vec2& x, xavier::fixpoint& fp)
+                     const nvis::vec2& x, spurt::fixpoint& fp)
 {
     nvis::mat2 J = jac(x);
     
@@ -53,7 +53,7 @@ void linear_analysis(const Jacobian& jac, unsigned int period,
 template< typename Jacobian >
 bool linear_chain_analysis(const Jacobian& one_jacobian,
                            const std::vector< nvis::vec2 >& pos,
-                           std::vector< xavier::fixpoint >& fps)
+                           std::vector< spurt::fixpoint >& fps)
 {
     unsigned int period = pos.size();
     fps.resize(period);

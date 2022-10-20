@@ -9,7 +9,7 @@
 #include <poincare/map.hpp>
 #include <poincare/metric.hpp>
 
-using namespace xavier;
+using namespace spurt;
 
 namespace map_analysis {
 struct Neighbor {
@@ -203,7 +203,7 @@ void advance(const T& map, int period,
 
 template< typename Map >
 void refine_separatrix(std::vector< nvis::vec2 >& refined,
-                       const xavier::fixpoint& fp0, const xavier::fixpoint& fp1,
+                       const spurt::fixpoint& fp0, const spurt::fixpoint& fp1,
                        const std::vector< nvis::vec2 >& sep,
                        const Map& map,
                        const map_metric& metric)
@@ -360,7 +360,7 @@ void connect_points(std::vector< nvis::vec2 >& curve, const std::vector< nvis::v
     
     std::vector< unsigned int > sorted;
     for (unsigned int i = 0 ; i < n ; ++i) {
-        xavier::sort(distances[i], sorted);
+        spurt::sort(distances[i], sorted);
         // points[sorted[0]] is the closest neighbor
         // find closest point in opposite direction
         neighbors[i].first = sorted[0];
@@ -544,7 +544,7 @@ bool trace_rational_manifold(const PMap& pmap, const Map& map, unsigned int peri
 
 template< typename Map >
 void refine(std::vector< nvis::vec2 >& finer,
-            const xavier::fixpoint& fp0, const xavier::fixpoint& fp1,
+            const spurt::fixpoint& fp0, const spurt::fixpoint& fp1,
             const std::vector< nvis::vec2 >& sep,
             const Map& map,
             const map_metric& metric)
@@ -556,7 +556,7 @@ void refine(std::vector< nvis::vec2 >& finer,
 
 template< typename Map >
 unsigned int find_saddle_neighbors(Neighbor& nfwd, Neighbor& nbwd,
-                                   const std::vector< std::vector< xavier::fixpoint > >& all_p_chains,
+                                   const std::vector< std::vector< spurt::fixpoint > >& all_p_chains,
                                    unsigned int chain_id,
                                    const Map& map,
                                    const map_metric& metric)
@@ -566,7 +566,7 @@ unsigned int find_saddle_neighbors(Neighbor& nfwd, Neighbor& nbwd,
     try {
         // chain period. assuming no period doubling
         unsigned int p = all_p_chains[0].size();
-        const std::vector< xavier::fixpoint >& saddle_chain = all_p_chains[chain_id];
+        const std::vector< spurt::fixpoint >& saddle_chain = all_p_chains[chain_id];
         nfwd = Neighbor(chain_id, -1);
         nbwd = Neighbor(chain_id, -1);
         if (p == 1) {
@@ -581,7 +581,7 @@ unsigned int find_saddle_neighbors(Neighbor& nfwd, Neighbor& nbwd,
             nfwd = Neighbor(chain_id, -1);
             nbwd = Neighbor(chain_id, -1);
             
-            const xavier::fixpoint& fp = saddle_chain[start_id];
+            const spurt::fixpoint& fp = saddle_chain[start_id];
             int d_id;
             
             // determine order:
@@ -592,7 +592,7 @@ unsigned int find_saddle_neighbors(Neighbor& nfwd, Neighbor& nbwd,
             Connection closest;
             closest.d = std::numeric_limits<double>::max();
             for (unsigned int j = 0 ; j < all_p_chains.size() ; ++j) {
-                const std::vector< xavier::fixpoint >& chain = all_p_chains[j];
+                const std::vector< spurt::fixpoint >& chain = all_p_chains[j];
                 if (chain[0].saddle) {
                     for (unsigned int i = 0 ; i < p ; ++i) {
                         if (j == chain_id && i == start_id) {
@@ -625,7 +625,7 @@ unsigned int find_saddle_neighbors(Neighbor& nfwd, Neighbor& nbwd,
                         // compute min distance to points
                         closest.d = std::numeric_limits<double>::max();
                         for (unsigned int j = 0 ; j < all_p_chains.size() ; ++j) {
-                            const std::vector< xavier::fixpoint >& chain = all_p_chains[j];
+                            const std::vector< spurt::fixpoint >& chain = all_p_chains[j];
                             if (chain[0].saddle) {
                                 for (unsigned int i = 0 ; i < p ; ++i) {
                                     if (j == chain_id && i == start_id) {
@@ -676,7 +676,7 @@ unsigned int find_saddle_neighbors(Neighbor& nfwd, Neighbor& nbwd,
 
 template< typename Map >
 void walk(std::vector< nvis::vec2 >& steps,
-          const xavier::fixpoint& fp0, const xavier::fixpoint& fp1,
+          const spurt::fixpoint& fp0, const spurt::fixpoint& fp1,
           const Map& map, double dir,
           const map_metric& metric, bool fwd = true)
 {
@@ -771,7 +771,7 @@ void walk(std::vector< nvis::vec2 >& steps,
                 dots[i] = nvis::inner(step, target_evec) / nvis::norm(step);
             }
             std::vector< unsigned int > sorted_dots;
-            xavier::sort(dots, sorted_dots);
+            spurt::sort(dots, sorted_dots);
             
             last_id = sorted_dots.back();
         }
@@ -980,7 +980,7 @@ bool valid_curve(const std::vector< nvis::vec2 >& curve,
 template<typename Map>
 bool transport(std::vector<separatrix_type>& separatrices,
                const Map& map, unsigned int p, const map_metric& metric,
-               const std::list<xavier::fixpoint>& chain)
+               const std::list<spurt::fixpoint>& chain)
 {
     try {
         typedef std::list< nvis::vec2 > list_type;
@@ -1001,7 +1001,7 @@ bool transport(std::vector<separatrix_type>& separatrices,
                 nvis::vec2 target = metric.modulo(map.map(cur_list.back(), 1));
                 nvis::vec2 best;
                 double d = std::numeric_limits<double>::max();
-                for (std::list<xavier::fixpoint>::const_iterator it = chain.begin() ; it != chain.end() ; it++) {
+                for (std::list<spurt::fixpoint>::const_iterator it = chain.begin() ; it != chain.end() ; it++) {
                     double __d =
                 }
                 
@@ -1036,7 +1036,7 @@ bool transport(std::vector<separatrix_type>& separatrices,
 }
 
 template< typename Map >
-bool process_saddle_chain(std::vector< std::vector< xavier::fixpoint > >& all_p_chains,
+bool process_saddle_chain(std::vector< std::vector< spurt::fixpoint > >& all_p_chains,
                           std::vector< std::vector< nvis::vec2 > >& separatrices,
                           std::vector< bool >& invalid,
                           unsigned int chain_id,
@@ -1056,11 +1056,11 @@ bool process_saddle_chain(std::vector< std::vector< xavier::fixpoint > >& all_p_
     bool everything_ok = true;
     try {
         // chain period
-        std::vector< std::vector< xavier::fixpoint > > tmp_vec(all_p_chains.begin(), all_p_chains.end());
-        std::vector< xavier::fixpoint >& saddle_chain = tmp_vec[chain_id];
+        std::vector< std::vector< spurt::fixpoint > > tmp_vec(all_p_chains.begin(), all_p_chains.end());
+        std::vector< spurt::fixpoint >& saddle_chain = tmp_vec[chain_id];
         p = saddle_chain.size();
         
-        const xavier::fixpoint& fp = saddle_chain[0];
+        const spurt::fixpoint& fp = saddle_chain[0];
         int d_id;
         std::vector< nvis::vec2 > steps;
         std::vector< nvis::vec2 > remain;
@@ -1101,7 +1101,7 @@ bool process_saddle_chain(std::vector< std::vector< xavier::fixpoint > >& all_p_
                       << nexts[0].chain_id << std::endl;
             pdoubling = true;
             
-            std::vector< xavier::fixpoint >& aux_vec = tmp_vec[nexts[0].chain_id];
+            std::vector< spurt::fixpoint >& aux_vec = tmp_vec[nexts[0].chain_id];
             for (unsigned int i = 0 ; i < aux_vec.size() ; ++i) {
                 saddle_chain.push_back(aux_vec[i]);
             }

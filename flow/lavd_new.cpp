@@ -23,7 +23,7 @@
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
 #include <misc/log_helper.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 
 #include <Eigen/Core>
 #include <Eigen/SVD>
@@ -40,7 +40,7 @@
 
 namespace odeint = boost::numeric::odeint;
 
-using namespace xavier::lavd;
+using namespace spurt::lavd;
 
 
 std::string name_in, name_out;
@@ -55,13 +55,13 @@ std::string start_time_str;
 std::string border_mask_name;
 std::ofstream log_file;
 
-xavier::log::dual_ostream xavier::lavd::_log_(log_file, std::cout, 1, 0, 0, true);
+spurt::log::dual_ostream spurt::lavd::_log_(log_file, std::cout, 1, 0, 0, true);
 
-value_t t_max=2*xavier::lavd::DAY;
+value_t t_max=2*spurt::lavd::DAY;
 value_t t_init=0;
 value_t t_skip=0;
-value_t t_export_step=3*xavier::lavd::HOUR;
-value_t t_between_files=3*xavier::lavd::HOUR;
+value_t t_export_step=3*spurt::lavd::HOUR;
+value_t t_between_files=3*spurt::lavd::HOUR;
 value_t eps=1.0e-8;
 value_t dt=30;
 std::array<size_t, 2> res( { 512, 512 } );
@@ -108,7 +108,7 @@ void set_verbose_values() {
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
             required_group(true, false, "Required Options"),
@@ -246,18 +246,18 @@ void import_data(const std::vector< std::string >& vel_filenames,
     size_t first = ( start_id >= support_radius ? start_id-support_radius : static_cast<size_t>(0) );
     for (size_t i=first; i<first+n_used; ++i) {
         _log_(1) << "Reading " << vel_filenames[i] << "... " << std::flush;
-        vel_tsteps[i-first]=xavier::nrrd_utils::readNrrd(vel_filenames[i]);
+        vel_tsteps[i-first]=spurt::nrrd_utils::readNrrd(vel_filenames[i]);
         _log_(1) << "done" << std::endl;
         print(vel_tsteps[i-first]);
 
         _log_(1) << "Reading " << vor_filenames[i] << "... " << std::flush;
-        vor_tsteps[i-first]=xavier::nrrd_utils::readNrrd(vor_filenames[i]);
+        vor_tsteps[i-first]=spurt::nrrd_utils::readNrrd(vor_filenames[i]);
         _log_(1) << "done" << std::endl;
     }
     last_time_step = first + n_used - 1;
     value_t outer_tmin = /*t_init +*/ first*t_between_files;
     _log_(2) << "outer_tmin=" << outer_tmin << std::endl;
-    current_velocity_volume = xavier::lavd::create_nrrd_volume(vel_tsteps, outer_tmin, t_between_files);
+    current_velocity_volume = spurt::lavd::create_nrrd_volume(vel_tsteps, outer_tmin, t_between_files);
     _log_(2) << "after velocity volume creation:" << std::endl;
     print(current_velocity_volume);
 
@@ -266,7 +266,7 @@ void import_data(const std::vector< std::string >& vel_filenames,
         nrrdNuke(vel_tsteps[i]);
     }
 
-    current_vorticity_volume = xavier::lavd::create_nrrd_volume(vor_tsteps, outer_tmin, t_between_files);
+    current_vorticity_volume = spurt::lavd::create_nrrd_volume(vor_tsteps, outer_tmin, t_between_files);
     current_t_min = start_id*t_between_files;
     current_t_max = last_time_step*t_between_files;
     if (current_t_max < t_max) current_t_max -= support_radius*t_between_files;
@@ -293,13 +293,13 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
     std::ostringstream os;
     ios::fmtflags default_settings = os.flags();
     if (long_name) {
-        os << name_out << "_started_at_" << start_time_str << "_flowmap+lavd_" << std::setw(5) << std::setfill('0') << current_time/xavier::lavd::HOUR << "h_";
+        os << name_out << "_started_at_" << start_time_str << "_flowmap+lavd_" << std::setw(5) << std::setfill('0') << current_time/spurt::lavd::HOUR << "h_";
         os << res[0] << "x" << res[1] << "_" << std::setprecision(2)
            << std::scientific << eps;
         os.flags(default_settings);
     }
     else {
-        os << name_out << "_fmap+lavd_" << std::setw(5) << std::setfill('0') << current_time/xavier::lavd::HOUR << "h";
+        os << name_out << "_fmap+lavd_" << std::setw(5) << std::setfill('0') << current_time/spurt::lavd::HOUR << "h";
     }
     std::string basename = os.str();
 
@@ -317,7 +317,7 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
     os << "*kernel size=" << support_radius << '\n';
     std::string comment = os.str();
 
-    xavier::lavd::export_results< float >(
+    spurt::lavd::export_results< float >(
         current_time,
         wall_time, cpu_time,
         final,
@@ -335,7 +335,7 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
 
 int main(int argc, const char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     using namespace odeint;
 
     me=argv[0];
@@ -366,7 +366,7 @@ int main(int argc, const char* argv[])
 
     nb_samples = res[0]*res[1];
 
-    name_out=xavier::filename::remove_extension(name_out);
+    name_out=spurt::filename::remove_extension(name_out);
 
     std::vector<std::string> velocity_filenames;
     std::vector<std::string> vorticity_filenames;
@@ -410,7 +410,7 @@ int main(int argc, const char* argv[])
     all_orbits.resize(nb_samples);
     all_states.resize(nb_samples);
 
-    support_radius = xavier::lavd::compute_support_radius();
+    support_radius = spurt::lavd::compute_support_radius();
     _log_(1) << "support radius = " << support_radius << std::endl;
 
     // initialize velocity and vorticity volumes
@@ -425,7 +425,7 @@ int main(int argc, const char* argv[])
     _log_(1) << "bounds=" << region << std::endl;
 
     if (export_region)
-        xavier::lavd::export_mask(vorticity_filenames[0], region, true);
+        spurt::lavd::export_mask(vorticity_filenames[0], region, true);
 
     std::vector<size_t> sample_counter(nb_threads);
     std::vector< shared_ptr< NrrdODERHS > > rhs_copies(nb_threads);
@@ -440,7 +440,7 @@ int main(int argc, const char* argv[])
                  [](char& c) { if (c==' ') c='_'; });
     _log_(1) << "start_time_string=" << start_time_str << std::endl;
 
-    xavier::ProgressDisplay progress(false), total_progress(false);
+    spurt::ProgressDisplay progress(false), total_progress(false);
 
     total_progress.start(1); // we only care for the timer function
     total_progress.set_active(false);

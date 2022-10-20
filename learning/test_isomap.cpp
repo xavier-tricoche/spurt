@@ -13,7 +13,7 @@
 #include <vtkRenderWindowInteractor.h>
 
 // VTK helper functions and macros
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <graphics/colors.hpp>
 
 typedef nvis::fixed_vector<double, 3> vec3;
@@ -73,7 +73,7 @@ double sphere_radius=0.1;
 nvis::vec3 bg_color;
 
 bool init(int argc, const char* argv[]) {
-    namespace xcl=xavier::command_line;
+    namespace xcl=spurt::command_line;
     
     xcl::option_traits 
         required_group(true, false, "Required parameters"),
@@ -138,15 +138,15 @@ int main(int argc, const char* argv[]) {
     
     typedef boost::property<boost::vertex_color_t, bool> vertex_prop_t;
     typedef boost::property<boost::edge_weight_t, double> edge_prop_t;
-    typedef xavier::graph<vertex_prop_t, 
+    typedef spurt::graph<vertex_prop_t, 
                           boost::property<boost::edge_weight_t, double, 
                           boost::property<boost::edge_weight2_t, double> > > graph_t;
-    typedef xavier::Isomap<double, graph_t> isomap_t;
+    typedef spurt::Isomap<double, graph_t> isomap_t;
     typedef isomap_t::vector_t vector_t;
     typedef isomap_t::row_vector_t row_vector_t;
     
     graph_t graph;
-    xavier::compute_connectivity<graph_t, vec3, 3>(graph, search_radius, points);
+    spurt::compute_connectivity<graph_t, vec3, 3>(graph, search_radius, points);
     
     isomap_t::matrix_t coordinates;
     try {

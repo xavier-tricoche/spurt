@@ -4,13 +4,13 @@
 
 using namespace std;
 using namespace nvis;
-using namespace xavier;
+using namespace spurt;
 using namespace gage_interface;
 
 
-double xavier::crease::threshold;
-double xavier::crease::eps;
-unsigned int xavier::crease::subdiv;
+double spurt::crease::threshold;
+double spurt::crease::eps;
+unsigned int spurt::crease::subdiv;
 
 vector< crease::Edge > crease::problematic_edges;
 vector< crease::Point > crease::all_face_points;

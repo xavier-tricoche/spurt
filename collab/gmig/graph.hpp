@@ -2,7 +2,7 @@
 #include <utility>
 #include <vector>
 
-namespace xavier {
+namespace spurt {
 
 template<typename VAttribute_, typename EAttribute_>
 class Graph : public std::vector<std::pair<VAttribute_,
@@ -79,4 +79,4 @@ public:
     bool visited(int v) const { return _marked[v]; }
 }; 
 
-} // namespace xavier
+} // namespace spurt

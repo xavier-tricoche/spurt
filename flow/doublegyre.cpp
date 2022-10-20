@@ -54,7 +54,7 @@ nvis::fixed_vector<T, N> to_vec(const std::array<T, N>& array) {
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
         
     xcl::option_traits 
             required_group(true, false, "Required Options"), 
@@ -85,15 +85,15 @@ void initialize(int argc, const char* argv[])
 
 int main(int argc, const char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     using namespace odeint;
     
-    typedef xavier::raster_grid<2> grid_t;
+    typedef spurt::raster_grid<2> grid_t;
     typedef grid_t::coord_type coord_t;
     
     initialize(argc, argv);
     
-    xavier::DoubleGyre<value_t, state_t> rhs;
+    spurt::DoubleGyre<value_t, state_t> rhs;
     
     if (verbose) std::cout << "Resolution = " << res[0] << "x" << res[1] << std::endl;
      grid_t sampling_grid(to_vec(res), to_bbox(bnds));
@@ -114,7 +114,7 @@ int main(int argc, const char* argv[])
     // runge_kutta_dopri5<state_t> stepper;
     value_t dt = 1.0e-2;
     
-    xavier::ProgressDisplay progress(true);
+    spurt::ProgressDisplay progress(true);
     
     progress.start(npoints, "Computing flow map");
     #pragma omp parallel
@@ -147,13 +147,13 @@ int main(int argc, const char* argv[])
     }
     progress.end();
             
-    xavier::nrrd_utils::nrrd_params<value_t, 3> nrrd_params;
+    spurt::nrrd_utils::nrrd_params<value_t, 3> nrrd_params;
     nrrd_params.mins()[0] = AIR_NAN;
-    xavier::vector::copy(sampling_grid.bounds().min(), nrrd_params.mins(), 0, 1);
+    spurt::vector::copy(sampling_grid.bounds().min(), nrrd_params.mins(), 0, 1);
     nrrd_params.spacings()[0] = AIR_NAN;
-    xavier::vector::copy(sampling_grid.spacing(), nrrd_params.spacings(), 0, 1);
+    spurt::vector::copy(sampling_grid.spacing(), nrrd_params.spacings(), 0, 1);
     nrrd_params.sizes()[0]=2;
-    xavier::vector::copy(sampling_grid.resolution(), nrrd_params.sizes(), 0, 1);
+    spurt::vector::copy(sampling_grid.resolution(), nrrd_params.sizes(), 0, 1);
     nrrd_params.centers().fill(nrrdCenterNode);
     nrrd_params.centers()[0]=nrrdCenterUnknown;
     nrrd_params.labels() = {{"flow map", "x", "y"}};
@@ -165,7 +165,7 @@ int main(int argc, const char* argv[])
     os.str("");
     
     os << name_out << "-flowmap-e=" << eps << "-T=" << std::setw(4) << std::setfill('0') << t_max << ".nrrd";
-    xavier::nrrd_utils::writeNrrdFromParams(fmap, os.str(), nrrd_params);
+    spurt::nrrd_utils::writeNrrdFromParams(fmap, os.str(), nrrd_params);
     
     return 0;
 }

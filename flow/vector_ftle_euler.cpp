@@ -62,7 +62,7 @@ struct scaled_field {
     double _s;
 };
 
-typedef xavier::nrrd_data_traits<Nrrd*>  field_type;
+typedef spurt::nrrd_data_traits<Nrrd*>  field_type;
 typedef scaled_field<field_type>    rhs_type;
 
 template<typename RHS>
@@ -107,21 +107,21 @@ struct euler {
 
 int main(int argc, const char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     
     initialize(argc, argv);
     
-    Nrrd* nin = xavier::nrrd_utils::readNrrd(name_in);
+    Nrrd* nin = spurt::nrrd_utils::readNrrd(name_in);
     field_type  vf(nin);
     rhs_type    rhs(vf, scale);
     euler<rhs_type> intg(rhs, h);
     
     nvis::fixed_vector<size_t, 3> res(nsamples[0], nsamples[1], nsamples[2]);
     std::cerr << "Resolution = " << res << std::endl;
-    xavier::rgrid3d sampling_grid(res, vf.bounds());
-    xavier::image3d<nvis::vec3> flowmaps[2] = {
-        xavier::image3d<nvis::vec3>(sampling_grid),
-        xavier::image3d<nvis::vec3>(sampling_grid)
+    spurt::rgrid3d sampling_grid(res, vf.bounds());
+    spurt::image3d<nvis::vec3> flowmaps[2] = {
+        spurt::image3d<nvis::vec3>(sampling_grid),
+        spurt::image3d<nvis::vec3>(sampling_grid)
     };
     
     nvis::timer timer;

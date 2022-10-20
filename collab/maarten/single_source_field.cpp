@@ -12,7 +12,7 @@
 #include <util/timer.hpp>
 // teem
 #include <teem/nrrd.h>
-// xavier
+// spurt
 #include <math/RBF.hpp>
 #include <math/RBFbasis.hpp>
 #include <image/nrrd_wrapper.hpp>
@@ -69,7 +69,7 @@ public:
     }
 };
 
-namespace xrbf = xavier::RBF;
+namespace xrbf = spurt::RBF;
 
 typedef nvis::vec1 data_type;
 typedef nvis::vec2 point_type;
@@ -342,7 +342,7 @@ read_nrrd(std::vector<point_type>& points,
         throw;
     }
     std::vector<double> data;
-    xavier::to_vector(data, nin);
+    spurt::to_vector(data, nin);
     size_t N = nin->axis[0].size;
     bool has_weights = (N == 4);
     size_t nb_rows = data.size()/N;
@@ -395,13 +395,13 @@ void save_rbf(const std::vector<point_type>& points,
         data[4*i+2] = 0;
         data[4*i+3] = weights[i][0];
     }
-    xavier::nrrd_params<double, 2> params;
+    spurt::nrrd_params<double, 2> params;
     params.sizes()[0] = 4;
     params.sizes()[1] = nweights;
     params.description() = "RBF reconstruction data for kernel " + kernel_name;
     params.labels()[0] = "x_rec;y_rec,time,weight";
     params.labels()[1] = "RBF centers";
-    xavier::writeNrrd(data, filename, params);
+    spurt::writeNrrd(data, filename, params);
     std::cout << filename << " has been exported\n";
 }
 
@@ -622,7 +622,7 @@ int main(int argc, char* argv[])
         if (do_reconstruct) std::cout << "output: " << output_name << '\n';
         if (do_export_weights) std::cout << "weights: " << weights_name << '\n';
     }
-    weights_name = xavier::get_basename(weights_name);
+    weights_name = spurt::get_basename(weights_name);
     
     size_t number_of_samples = resolution[0]*resolution[1];
     
@@ -630,7 +630,7 @@ int main(int argc, char* argv[])
     std::vector<data_type> values, weights;
     bool import_weights = false;
     // determine type of file to import
-    std::string ext = xavier::get_extension(input_name);
+    std::string ext = spurt::get_extension(input_name);
     nvis::bbox2 in_bounds;
     if (ext == "nrrd" || ext == ".nhdr") {
         in_bounds = read_nrrd(points, values, weights, input_name);
@@ -638,7 +638,7 @@ int main(int argc, char* argv[])
     }
     else {
         std::vector<double> dummy;
-        in_bounds = xavier::maarten::read_text(points, values, dummy, input_name);
+        in_bounds = spurt::maarten::read_text(points, values, dummy, input_name);
     }    
     source = points[0];
     if (verbose) {
@@ -983,7 +983,7 @@ int main(int argc, char* argv[])
     }
     
     if (do_reconstruct) { 
-        xavier::nrrd_params<float, 3> params;
+        spurt::nrrd_params<float, 3> params;
         params.sizes()[0] = 3;
         params.sizes()[1] = resolution[0];
         params.sizes()[2] = resolution[1];
@@ -994,7 +994,7 @@ int main(int argc, char* argv[])
         params.spacings()[0] = 1;
         params.spacings()[1] = spacing[0];
         params.spacings()[2] = spacing[1];
-        xavier::writeNrrd(result, output_name, params);
+        spurt::writeNrrd(result, output_name, params);
         std::cout << output_name << " has been exported\n";
     }
     return 0;

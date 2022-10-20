@@ -8,8 +8,8 @@
 
 #define QUICK_TEST_3
 
-using namespace xavier;
-using namespace xavier::crease;
+using namespace spurt;
+using namespace spurt::crease;
 
 const double DET_EPSILON = 1.0e-6;
 const double inside_eps = 0.01;
@@ -20,7 +20,7 @@ unsigned int __max_depth;
 
 double current_face_avg_norm;
 
-unsigned int xavier::crease::nb_pvo = 0;
+unsigned int spurt::crease::nb_pvo = 0;
 
 inline double dist(double v)
 {
@@ -30,7 +30,7 @@ inline double dist(double v)
 // ---------------------------------------------------------------------------
 
 // Stetten's average direction
-nvis::vec3 xavier::crease::average(nvis::vec3 dirs[4])
+nvis::vec3 spurt::crease::average(nvis::vec3 dirs[4])
 {
     double mat[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
     // mat = sum_i( dirs[i] * dirs[i]^T )
@@ -90,9 +90,9 @@ void subdivide_face(std::vector< face_type >& out, const face_type& face, bool i
         f.depth = face.depth + 1;
         
         for (unsigned int j = 0 ; j < 4 ; j++) { // loop over vertices
-            f.p[j] = p[xavier::crease::indices[i][j]];
-            f.g[j] = g[xavier::crease::indices[i][j]];
-            f.Hg[j] = Hg[xavier::crease::indices[i][j]];
+            f.p[j] = p[spurt::crease::indices[i][j]];
+            f.g[j] = g[spurt::crease::indices[i][j]];
+            f.Hg[j] = Hg[spurt::crease::indices[i][j]];
         }
         f.set_basis();
     }
@@ -100,7 +100,7 @@ void subdivide_face(std::vector< face_type >& out, const face_type& face, bool i
 
 // ---------------------------------------------------------------------------
 
-void xavier::crease::refine_face(face_type& out, const face_type& face,
+void spurt::crease::refine_face(face_type& out, const face_type& face,
                                  const nvis::vec3& q, double h)
 {
     // compute local coordinates
@@ -122,7 +122,7 @@ void xavier::crease::refine_face(face_type& out, const face_type& face,
 
 bool error3(const nvis::vec3& ref, const nvis::vec3& val, bool normalize = true)
 {
-    using namespace xavier::crease;
+    using namespace spurt::crease;
     const double min_dot = cos(max_int_error * M_PI / 2.);
     
     double mr = 1, mv = 1;
@@ -136,7 +136,7 @@ bool error3(const nvis::vec3& ref, const nvis::vec3& val, bool normalize = true)
 
 bool error2(const face_type& f, double ref_g_norm, double ref_Hg_norm)
 {
-    using namespace xavier::crease;
+    using namespace spurt::crease;
     
     double gm = std::max(gradient_eps, max_int_error * ref_g_norm);
     double Hgm = std::max(gradient_eps, max_int_error * ref_Hg_norm);
@@ -183,16 +183,16 @@ bool error2(const face_type& f, double ref_g_norm, double ref_Hg_norm)
 
 // ---------------------------------------------------------------------------
 
-bool xavier::crease::par_vec_op(std::vector< nvis::vec3 >& beta, const xavier::mat3& V,
-                                const xavier::mat3& W)
+bool spurt::crease::par_vec_op(std::vector< nvis::vec3 >& beta, const spurt::mat3& V,
+                                const spurt::mat3& W)
 {
     beta.clear();
     
-    using namespace xavier;
+    using namespace spurt;
     using namespace crease;
     
     // check if W can be inverted
-    xavier::mat3 M;
+    spurt::mat3 M;
     
     
     double detW = fabs(det(W));
@@ -262,14 +262,14 @@ bool xavier::crease::par_vec_op(std::vector< nvis::vec3 >& beta, const xavier::m
 
 // ---------------------------------------------------------------------------
 
-bool xavier::crease::linear_parallel_operator(std::vector< nvis::vec3 >& b,
+bool spurt::crease::linear_parallel_operator(std::vector< nvis::vec3 >& b,
         const nvis::vec3 g[3],
         const nvis::vec3 ev[3])
 {
     // parallel vector operator method for linear faces
     // use barycentric coordinates: #0->(0,0), #1->(1,0), #2->(0,1)
     // solve for ev_i = V*(s,t,1)^T, g_i = W*(s,t,1)^T
-    xavier::mat3 V, W;
+    spurt::mat3 V, W;
     for (unsigned int i = 0 ; i < 3 ; i++) {
         V(i, 2) = ev[0][i];
         V(i, 0) = ev[1][i] - ev[0][i];
@@ -384,7 +384,7 @@ bool check_face_for_crossings(const face_type& face)
             }
         }
         
-        if (true || xavier::crease::speedup) {
+        if (true || spurt::crease::speedup) {
             return (nbcross[0]*nbcross[1] + nbcross[0]*nbcross[2]  + nbcross[1]*nbcross[2] > 0);
         } else {
             return (nbcross[0] + nbcross[1] + nbcross[2] > 0);
@@ -442,7 +442,7 @@ bool check_face_for_crossings(const face_type& face)
 bool process_face_PVO(std::vector< nvis::vec3 >& xing,
                       const face_type& face, const unsigned int depth)
 {
-    using namespace xavier::crease;
+    using namespace spurt::crease;
     
     ++nb_pvo;
     
@@ -450,7 +450,7 @@ bool process_face_PVO(std::vector< nvis::vec3 >& xing,
     // std::cout << "face pos: " << p0 << " " << p1 << " " << p2 << " " << p3 << std::endl;
     bool found = false;
     
-    // bool verbose = !xavier::crease::apply_filter;
+    // bool verbose = !spurt::crease::apply_filter;
     bool verbose = __verbose;
     
     if (verbose) {
@@ -460,7 +460,7 @@ bool process_face_PVO(std::vector< nvis::vec3 >& xing,
     }
     
     // add current quadrilateral to the list
-    if (xavier::crease::display_debug_info) {
+    if (spurt::crease::display_debug_info) {
         crease::current_vertices.push_back(face.p[0]);
         crease::current_vertices.push_back(face.p[1]);
         crease::current_vertices.push_back(face.p[2]);
@@ -484,11 +484,11 @@ bool process_face_PVO(std::vector< nvis::vec3 >& xing,
         
         if (linear_parallel_operator(bs, g, Hg)) {
         
-            // if (xavier::crease::display_debug_info) {
-            //  xavier::crease::pvo_faces.push_back(face.p[0]);
-            //  xavier::crease::pvo_faces.push_back(face.p[1]);
-            //  xavier::crease::pvo_faces.push_back(face.p[2]);
-            //  xavier::crease::pvo_faces.push_back(face.p[3]);
+            // if (spurt::crease::display_debug_info) {
+            //  spurt::crease::pvo_faces.push_back(face.p[0]);
+            //  spurt::crease::pvo_faces.push_back(face.p[1]);
+            //  spurt::crease::pvo_faces.push_back(face.p[2]);
+            //  spurt::crease::pvo_faces.push_back(face.p[3]);
             // }
             
             for (unsigned int n = 0 ; n < bs.size() ; ++n) {
@@ -539,7 +539,7 @@ bool process_face_PVO(std::vector< nvis::vec3 >& xing,
 }
 
 unsigned int bad_counter = 0;
-int xavier::crease::
+int spurt::crease::
 search_face_PVO::operator()(std::vector< nvis::vec3 >& xing,
                             const nvis::vec3& p0, const nvis::vec3& p1,
                             const nvis::vec3& p2, const nvis::vec3& p3,
@@ -626,11 +626,11 @@ search_face_PVO::operator()(std::vector< nvis::vec3 >& xing,
                         
                         nvis::vec3 q = cur_xing[n];
                         // measures
-                        double val = xavier::crease::the_wrapper->value(q);
-                        nvis::vec3 g = xavier::crease::the_wrapper->gradient(q);
-                        nvis::vec3 Hg = xavier::crease::the_wrapper->Hgradient(q);
-                        nvis::vec3 e = xavier::crease::the_wrapper->eigenvector(q, xavier::crease::is_ridge ? 0 : 2);
-                        double str = xavier::crease::the_wrapper->eigenvalue(q, 1);
+                        double val = spurt::crease::the_wrapper->value(q);
+                        nvis::vec3 g = spurt::crease::the_wrapper->gradient(q);
+                        nvis::vec3 Hg = spurt::crease::the_wrapper->Hgradient(q);
+                        nvis::vec3 e = spurt::crease::the_wrapper->eigenvector(q, spurt::crease::is_ridge ? 0 : 2);
+                        double str = spurt::crease::the_wrapper->eigenvalue(q, 1);
                         // quality metrics
                         double gm = nvis::norm(g);
                         double Hgm = nvis::norm(g);
@@ -648,16 +648,16 @@ search_face_PVO::operator()(std::vector< nvis::vec3 >& xing,
                         bool tmp_found = false;
                         while (true) {
                             // did we find an extremum?
-                            if (gm < std::max(xavier::crease::gradient_eps_rel*avggm,
-                                              xavier::crease::gradient_eps)) {
+                            if (gm < std::max(spurt::crease::gradient_eps_rel*avggm,
+                                              spurt::crease::gradient_eps)) {
                                 tmp_found = true;
                                 break;
                             }
                             
                             // check that we have a valid solution of the PVO
-                            if (dot > (1 - xavier::crease::max_align_error)) {
+                            if (dot > (1 - spurt::crease::max_align_error)) {
                                 // is this the eigenvector we were looking for
-                                if (fabs(nvis::inner(g, e)) > 1 - xavier::crease::max_align_error) {
+                                if (fabs(nvis::inner(g, e)) > 1 - spurt::crease::max_align_error) {
                                     tmp_found = true;
                                     break;
                                 } else {
@@ -699,8 +699,8 @@ search_face_PVO::operator()(std::vector< nvis::vec3 >& xing,
                                           << "(" << crease::strength_threshold_select << "), depth is " << depth << std::endl;
                                           
                             // make sure that we did not get ahead of ourselves with our shaky heuristics
-                            if (gm > xavier::crease::gradient_eps &&
-                                    dot < (1 - xavier::crease::max_align_error)) {
+                            if (gm > spurt::crease::gradient_eps &&
+                                    dot < (1 - spurt::crease::max_align_error)) {
                                 // this is still a pretty bad approximation - let us try to do better
                                 // before we give up
                                 face_type tmp;
@@ -726,7 +726,7 @@ search_face_PVO::operator()(std::vector< nvis::vec3 >& xing,
                         // this is the real thing
                         else {
                             std::cout << "found crease point around at " << q << " and depth " << depth
-                                      << std::endl << "value = " << xavier::crease::the_wrapper->value(q)
+                                      << std::endl << "value = " << spurt::crease::the_wrapper->value(q)
                                       << std::endl << "<g,e>/|g| = " << fabs(nvis::inner(g, e)) << std::endl
                                       << "gm = " << nvis::norm(g) << std::endl
                                       << "strength = " << str << std::endl;

@@ -9,7 +9,7 @@
 #include "core_mantle_io.hpp"
 #include "utils.hpp"
 
-// xavier's utilities
+// spurt's utilities
 #include <format/format.hpp>
 #include <misc/option_parse.hpp>
 #include <learning/isomap.hpp>
@@ -58,7 +58,7 @@
 
 std::string home_directory;
 
-using namespace xavier::gmig;
+using namespace spurt::gmig;
 
 // **************************************************************************
 // 
@@ -76,7 +76,7 @@ typedef core_mantle::Vertex<scalar_t, integer_t>  vertex_t;
 typedef vertex_t::pos_t    pos_t;
 typedef vertex_t::bbox_t   bbox_t;
 
-typedef xavier::point_locator<scalar_t, integer_t, 3> locator_t;
+typedef spurt::point_locator<scalar_t, integer_t, 3> locator_t;
 typedef locator_t::point_type point_t;
 typedef locator_t::coord_type coord_t;
 typedef nvis::lexicographical_order order_t;
@@ -122,7 +122,7 @@ template<typename Tag_>
     using filter_graph_map_t=property_map<filtered_graph_t, Tag_>;
 }
 
-typedef xavier::Isomap<scalar_t, boost::graph_t> dim_reduct_t;
+typedef spurt::Isomap<scalar_t, boost::graph_t> dim_reduct_t;
 
 // **************************************************************************
 // 
@@ -181,7 +181,7 @@ struct Mesh {
     color_t color;
 };
 
-struct xavier::gmig::TypeAttributes {
+struct spurt::gmig::TypeAttributes {
     TypeAttributes() : graph(new boost::graph_t()) {}
     
     std::vector<pos_t> positions;
@@ -264,7 +264,7 @@ create_color_transfer_function(const std::vector<scalar_t>& values) {
     VTK_CREATE(vtkColorTransferFunction, ctf);
     
     std::vector<color_t> colors(20);
-    xavier::spiral_scale(colors, 20, 0.2);
+    spurt::spiral_scale(colors, 20, 0.2);
     scalar_t dval, minval, maxval;
     if (values.size()) { 
         minval=*std::min_element(values.begin(), values.end());
@@ -287,8 +287,8 @@ create_color_transfer_function(const std::vector<scalar_t>& values) {
 VTK_SMART(OrientationMarkerWidget) 
 coordinate_axes_widget(QVTKWidget* vtk_widget) {
     color_t text_color=
-        xavier::luminosity(params::bg_color)>0.5 ?
-        xavier::black : xavier::white;
+        spurt::luminosity(params::bg_color)>0.5 ?
+        spurt::black : spurt::white;
     color_t text_bg_color=0.5*(text_color+params::bg_color);
     VTK_CREATE(vtkAxesActor, axes);
     axes->SetCylinderRadius(0.05);
@@ -580,7 +580,7 @@ void triangulate(std::vector<triangle_t>& triangles, boost::graph_t& graph, cons
     // std::copy(ids.begin(), ids.end(), std::ostream_iterator<integer_t>(std::cout, ", "));
     // std::cout << "\ninput graph contains " << boost::num_vertices(graph) << " vertices and "
     //     << boost::num_edges(graph) << " edges\n";
-    xavier::extract_subgraph(subgraph, graph, vertex_predicate(ids));
+    spurt::extract_subgraph(subgraph, graph, vertex_predicate(ids));
     // std::cout << "resulting subgraph contains " << boost::num_vertices(subgraph) << " vertices and "
         // << boost::num_edges(subgraph) << " edges\n" << std::flush;
     
@@ -929,7 +929,7 @@ void mantle_vis_renderer::slot_file_action(QAction* action) {
 // **************************************************************************
 bool init(int argc, char** argv) {
     std::cout << "init\n" << std::flush;
-    namespace xcl=xavier::command_line;
+    namespace xcl=spurt::command_line;
     
     xcl::option_traits 
         required_group("Required parameters", true, false),
@@ -1228,7 +1228,7 @@ void mantle_vis_renderer::internal_main() {
         // determine superset of type-specific vertex connectivity
         boost::edge_map_t edge_weight;
         edge_weight=get(boost::edge_weight, *type_attr[i].graph);
-        xavier::compute_connectivity<boost::graph_t, pos_t, 3>(*type_attr[i].graph, params::search_radius, type_attr[i].positions);
+        spurt::compute_connectivity<boost::graph_t, pos_t, 3>(*type_attr[i].graph, params::search_radius, type_attr[i].positions);
         draw_from_scratch(type_attr[i], delay_rendering, !i);
     }
     
@@ -1273,7 +1273,7 @@ draw_from_scratch(TypeAttributes& ta, bool _draw, bool create_ctf) {
 
     // initialize connected components
     std::vector<integer_t> cc_ids;
-    xavier::connected_components(cc_ids, *ta.subgraph);
+    spurt::connected_components(cc_ids, *ta.subgraph);
     ta.cc.clear();
     for (integer_t i=0; i<cc_ids.size(); ++i) {
         integer_t id=cc_ids[i];

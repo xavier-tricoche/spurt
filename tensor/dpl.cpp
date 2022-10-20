@@ -38,7 +38,7 @@ void initialize(int argc, char* argv[], hestOpt* hopt)
 
 int main(int argc, char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     
     hestOpt *hopt;
     initialize(argc, argv, hopt);
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    xavier::nrrd_utils::nrrd_params<float, 3> params;
+    spurt::nrrd_utils::nrrd_params<float, 3> params;
     nvis::vec3 st = sampling_grid.spacing();
     params.spacings()[0] = std::numeric_limits<float>::quiet_NaN();
     params.sizes()[0] = 7;
@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
     }
     params.centers()[0] = nrrdCenterUnknown;
     for (int i=1; i<4; ++i) params.centers()[i] = nrrdCenterNode;
-    xavier::nrrd_utils::writeNrrdFromParams(data, name_out, params);
+    spurt::nrrd_utils::writeNrrdFromParams(data, name_out, params);
 
     delete[] data;
 

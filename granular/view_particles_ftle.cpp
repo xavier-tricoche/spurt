@@ -9,7 +9,7 @@
 #include <fstream>
 #include <iostream>
 
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 
 
 char* ftle_in, *coord_in, *out;

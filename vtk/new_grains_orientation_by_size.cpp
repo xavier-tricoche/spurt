@@ -31,7 +31,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <set>
 #include <sstream>
@@ -150,15 +150,15 @@ int main(int argc, char* argv[])
     std::string size_name(stat_base);
     size_name.append("-size.nrrd");
 
-    Nrrd* __size = xavier::nrrd_utils::readNrrd(size_name);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> size(__size);
+    Nrrd* __size = spurt::nrrd_utils::readNrrd(size_name);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> size(__size);
     std::cerr << size_name << " loaded.\n";
     int nb_grains = __size->axis[1].size;
 
     std::cerr << "there are " << nb_grains << " grains\n";
 
-    Nrrd* __orient = xavier::nrrd_utils::readNrrd(info.orientation);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> orient(__orient);
+    Nrrd* __orient = spurt::nrrd_utils::readNrrd(info.orientation);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> orient(__orient);
     std::cerr << info.orientation << " loaded.\n";
 
     std::map<int, uchar_color_type> colors;

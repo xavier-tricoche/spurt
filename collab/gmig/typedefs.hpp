@@ -7,11 +7,11 @@
 #include <Eigen/Dense>
 // nvis
 #include <math/fixed_vector.hpp>
-// xavier
+// spurt
 #include <math/RBF.hpp>
 #include <math/RBFbasis.hpp>
 
-namespace xavier { namespace gmig {
+namespace spurt { namespace gmig {
     
 static constexpr double invalid_double = std::numeric_limits<double>::max();
     
@@ -56,7 +56,7 @@ typedef RBF::CompactSupportRBFInterpolator<double, double, 2, wendland_type>    
 typedef RBF::CompactSupportRBFInterpolator<double, double, 2, truncated_gaussian_type>  trunc_gaussian_rbf_type;
 
 } // gmig
-} // xavier
+} // spurt
 
 
 #endif

@@ -66,7 +66,7 @@ struct c2i {
 
 }
 
-namespace xavier {
+namespace spurt {
 
 template<typename Grid_, typename Type_, typename Matrix_>
 void setup_system_tokamak_dirichlet_tokamak(const Grid_& domain, Matrix_& A,
@@ -352,7 +352,7 @@ void solve_poisson_interior(const Grid_& domain,
     }
 }
 
-} // xavier
+} // spurt
 
 
 

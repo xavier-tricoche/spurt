@@ -31,7 +31,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <teem/hest_helper.hpp>
 #include <set>
@@ -192,8 +192,8 @@ int main(int argc, char* argv[])
     edge_reader->Delete();
     std::cerr << edge_name << " loaded.\n";
     
-    Nrrd* nin = xavier::nrrd_utils::readNrrd(param_span);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> att(nin);
+    Nrrd* nin = spurt::nrrd_utils::readNrrd(param_span);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> att(nin);
     typedef std::pair<float, float> interval_type;
     std::map<int, interval_type>    grain_span;
     int nb_grains = nin->axis[1].size;

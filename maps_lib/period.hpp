@@ -34,7 +34,7 @@ inline bool is_full(const std::pair<int, int>& p)
 }
 
 void closest(std::vector<int>& r, const std::vector<nvis::vec2>& pts, int id, int n,
-             const xavier::default_metric_type& metric)
+             const spurt::default_metric_type& metric)
 {
     r.resize(n);
     std::map<double, int> dist;
@@ -52,7 +52,7 @@ void closest(std::vector<int>& r, const std::vector<nvis::vec2>& pts, int id, in
 }
 
 nvis::vec2 tangent(const std::vector<int>& ids, const std::vector<nvis::vec2>& pts,
-                   int start, int n, const xavier::default_metric_type& metric)
+                   int start, int n, const spurt::default_metric_type& metric)
 {
     // compute covariance matrix
     nvis::mat2 covar(0);
@@ -311,18 +311,18 @@ inline period_x_periodic_fourier(const std::vector<nvis::vec2>& steps,
 
 void connect_by_distance(std::vector<std::vector<int> >& curves,
                          const std::vector<nvis::vec2>& steps,
-                         const xavier::default_metric_type& metric);
+                         const spurt::default_metric_type& metric);
 
 void connect_and_check(std::vector<std::vector<int> >& curves,
                        const std::vector<nvis::vec2>& steps,
-                       const xavier::default_metric_type& metric);
+                       const spurt::default_metric_type& metric);
 
 void connect_by_period(std::vector<std::vector<int> >& curves,
                        const std::vector<nvis::vec2>& steps,
-                       const xavier::default_metric_type& metric);
+                       const spurt::default_metric_type& metric);
 
 inline double average_distance(const std::vector<nvis::vec2>& steps, unsigned int period,
-                               const xavier::default_metric_type& metric)
+                               const spurt::default_metric_type& metric)
 {
     if (period >= steps.size()) {
         return std::numeric_limits<double>::max();
@@ -336,7 +336,7 @@ inline double average_distance(const std::vector<nvis::vec2>& steps, unsigned in
 
 struct distance_profile {
     distance_profile(const std::vector<nvis::vec2>& steps, unsigned int period,
-                     const xavier::default_metric_type& metric) : _p(period) {
+                     const spurt::default_metric_type& metric) : _p(period) {
         _mean = _median = std::numeric_limits<double>::max();
         _dist.resize(steps.size() - _p);
         double sum = 0;

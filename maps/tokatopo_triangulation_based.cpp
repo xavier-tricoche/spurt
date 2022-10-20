@@ -61,8 +61,8 @@ char* outs, *file, *ts;
 double h, dq, min_area, max_area, max_ratio;
 
 mesh_type* sampling_mesh;
-std::vector< std::vector< xavier::fixpoint > > all_chains;
-xavier::map_metric metric;
+std::vector< std::vector< spurt::fixpoint > > all_chains;
+spurt::map_metric metric;
 unsigned int verbose_level = 1;
 std::vector<std::pair<unsigned int, nvis::vec2> > probed_seeds;
 }
@@ -74,12 +74,12 @@ struct orbit_integrator {
     typedef I   integrator_type;
     
     orbit_integrator(const integrator_type& integrator, size_t nsteps,
-                     const xavier::map_metric& metric)
+                     const spurt::map_metric& metric)
         : __nsteps(nsteps), __integ(integrator), __metric(metric) {}
         
     void operator()(const nvis::vec2& x0,
                     std::vector<nvis::vec2>& points,
-                    std::vector<xavier::point_data>& data) const {
+                    std::vector<spurt::point_data>& data) const {
                     
         const integrator_type* pmap = __integ.clone();
         points.clear();
@@ -96,25 +96,25 @@ struct orbit_integrator {
             return;
         }
         
-        std::pair<double, double> sf = xavier::period_x_periodic(__steps, x0, __metric);
+        std::pair<double, double> sf = spurt::period_x_periodic(__steps, x0, __metric);
         
         // std::cerr << "found period = " << sf.first << std::endl;
         
         points.resize(__steps.size() + 1);
         data.resize(__steps.size() + 1);
-        size_t orbit_id = xavier::__map_orbits.size();
+        size_t orbit_id = spurt::__map_orbits.size();
         points[0] = __metric.modulo(x0);
-        data[0] = xavier::point_data(orbit_id, 0);
+        data[0] = spurt::point_data(orbit_id, 0);
         for (int i = 0 ; i < __steps.size() ; ++i) {
             points[i+1] = __metric.modulo(__steps[i]);
-            data[i+1] = xavier::point_data(orbit_id, i + 1);
+            data[i+1] = spurt::point_data(orbit_id, i + 1);
         }
-        xavier::__map_orbits.push_back(xavier::orbit(points, sf.first));
+        spurt::__map_orbits.push_back(spurt::orbit(points, sf.first));
     }
     
     size_t                  __nsteps;
     const integrator_type&  __integ;
-    xavier::map_metric      __metric;
+    spurt::map_metric      __metric;
 };
 
 void tokatopo::initialize(int argc, char* argv[])
@@ -156,7 +156,7 @@ inline double min_q_dist(double q, const std::vector<rational_type>& r)
 {
     double _min = std::numeric_limits<double>::max();
     for (int i = 0 ; i < r.size() ; ++i) {
-        _min = std::min(fabs(q - xavier::value(r[i])), _min);
+        _min = std::min(fabs(q - spurt::value(r[i])), _min);
     }
     
     return _min;
@@ -270,10 +270,10 @@ int tokatopo::compute_fixed_points()
     // test_error_estimate(field);
     
     bool per[2] = {true, false};
-    metric = xavier::map_metric(field->bounds(), per);
+    metric = spurt::map_metric(field->bounds(), per);
     
-    xavier::__default_metric = metric;
-    xavier::__map_orbits.clear();
+    spurt::__default_metric = metric;
+    spurt::__map_orbits.clear();
     
     poincare_map pmap(field);
     pmap.precision(h);
@@ -293,7 +293,7 @@ int tokatopo::compute_fixed_points()
     std::vector<double> factors;
     std::cerr << "interesting rational periods = \n";
     for (std::set<rational_type>::const_iterator it = tmp_factors.begin() ; it != tmp_factors.end() ; ++it) {
-        factors.push_back(xavier::value(*it));
+        factors.push_back(spurt::value(*it));
         std::cerr << factors.back() << "\n";
     }
     double min_dq = std::numeric_limits<double>::max();
@@ -303,16 +303,16 @@ int tokatopo::compute_fixed_points()
 #endif
     
     srand48(time(0));
-    std::vector< std::pair<point_type, xavier::point_data> > all_points;
+    std::vector< std::pair<point_type, spurt::point_data> > all_points;
     
     // reset central orbit repository
-    xavier::__map_orbits.clear();
+    spurt::__map_orbits.clear();
     
     // 1D sampling along symmetry axes
 #pragma openmp parallel
     {
         std::vector<nvis::vec2> steps;
-        std::vector<xavier::point_data> data;
+        std::vector<spurt::point_data> data;
         double dh = height / (double)(n1 - 1);
         #pragma omp for schedule(dynamic,1)
         for (int i = 0 ; i < n1 ; ++i) {
@@ -341,20 +341,20 @@ int tokatopo::compute_fixed_points()
     // form the boundary
     double ref_l = nvis::norm(bounds.size());
     nvis::vec2 dx(0.005*ref_l, 0.005*ref_l);
-    std::pair<nvis::vec2, xavier::point_data> boundary[4];
+    std::pair<nvis::vec2, spurt::point_data> boundary[4];
     std::vector<nvis::vec2> corner(4);
     corner[0] = bounds.min() - dx;
     corner[1] = bounds.min() + nvis::vec2(bounds.size()[0] + dx[0], -dx[1]);
     corner[2] = bounds.max() + dx;
     corner[3] = bounds.min() + nvis::vec2(-dx[0], bounds.size()[1] + dx[1]);
-    size_t orbit_id = xavier::__map_orbits.size();
-    xavier::__map_orbits.push_back(xavier::orbit(corner, 0));
+    size_t orbit_id = spurt::__map_orbits.size();
+    spurt::__map_orbits.push_back(spurt::orbit(corner, 0));
     for (int i = 0 ; i < 4 ; ++i) {
         boundary[i].first = corner[i];
-        boundary[i].second = xavier::point_data(orbit_id, i);
+        boundary[i].second = spurt::point_data(orbit_id, i);
     }
     
-    sampling_mesh = new mesh_type(boundary, xavier::point_locator(nvis::bbox2(corner[0], corner[2]), 10, 10));
+    sampling_mesh = new mesh_type(boundary, spurt::point_locator(nvis::bbox2(corner[0], corner[2]), 10, 10));
     mesh_type& mesh = *sampling_mesh;
     try {
         mesh.insert_points(all_points);
@@ -371,7 +371,7 @@ int tokatopo::compute_fixed_points()
     
     std::cerr << "resolution of density control mesh is " << res_x
               << " x " << res_y << std::endl;
-    xavier::regular_mesh raster(bounds, res_x, res_y);
+    spurt::regular_mesh raster(bounds, res_x, res_y);
     
     // ** shuffle seeding locations to avoid degenerate triangulation
     
@@ -401,7 +401,7 @@ int tokatopo::compute_fixed_points()
         }
         nvis::vec2 x0 = raster.random_point(n);
         std::vector<nvis::vec2> steps;
-        std::vector<xavier::point_data> data;
+        std::vector<spurt::point_data> data;
         intg(x0, steps, data);
         valid_id[n] = false;
         
@@ -418,14 +418,14 @@ int tokatopo::compute_fixed_points()
         std::ostringstream os_name, os_comment;
         os_name << outs << "-initial-mesh.vtk";
         os_comment << "Sample points from " << file << " at t=" << ts << " with estimated safety factor";
-        xavier::export_VTK(mesh, os_name.str(), os_comment.str(), true);
+        spurt::export_VTK(mesh, os_name.str(), os_comment.str(), true);
     }
     
     nvis::bbox2 interior_bounds(bounds.min() + 0.01*diagonal,
                                 bounds.min() + 0.99*diagonal);
     std::cerr << "refinement to achieve prescribed max area is... " << std::flush;
-    bool valid_mesh = xavier::refine(mesh, intg,
-                                     xavier::triangle_area_controller(max_area),
+    bool valid_mesh = spurt::refine(mesh, intg,
+                                     spurt::triangle_area_controller(max_area),
                                      max_nb_triangles);
     std::cerr << (valid_mesh ? "successful" : "not successful") << " (" << mesh.get_nb_vertices()
               << " / " << mesh.get_nb_triangles() << ")\n";
@@ -434,22 +434,22 @@ int tokatopo::compute_fixed_points()
         std::ostringstream os_name, os_comment;
         os_name << outs << "-area-control-only.vtk";
         os_comment << "Sample points from " << file << " at t=" << ts << " with estimated safety factor";
-        xavier::export_VTK(mesh, os_name.str(), os_comment.str(), true);
+        spurt::export_VTK(mesh, os_name.str(), os_comment.str(), true);
     }
     typedef boost::rational<int>                rational_type;
-    typedef xavier::point_data                  data_type;
+    typedef spurt::point_data                  data_type;
     typedef std::pair<nvis::vec2, data_type>    data_point_type;
     
-    xavier::MarkedPos marked_positions(0.5);
-    std::vector< std::vector< xavier::fixpoint > > chains;
+    spurt::MarkedPos marked_positions(0.5);
+    std::vector< std::vector< spurt::fixpoint > > chains;
     all_chains.clear();
     
-    xavier::map_debug::verbose_level = 1;
+    spurt::map_debug::verbose_level = 1;
     
     for (int p = 1 ; p <= max_period ; ++p) {
         std::cerr << "\nprocessing period " << p << "...\n";
         
-        std::cerr << "there are currently " << xavier::__map_orbits.size() << " orbits on record\n";
+        std::cerr << "there are currently " << spurt::__map_orbits.size() << " orbits on record\n";
         
         // determine what rationals should be considered
         std::set<rational_type> rationals;
@@ -465,17 +465,17 @@ int tokatopo::compute_fixed_points()
                   std::back_inserter(ref_values));
         std::cerr << "there are " << ref_values.size() << " interesting values\n";
         for (int i = 0 ; i < ref_values.size() ; ++i) {
-            std::cerr << ref_values[i] << " = " << xavier::value(ref_values[i]) << '\n';
+            std::cerr << ref_values[i] << " = " << spurt::value(ref_values[i]) << '\n';
         }
         
         // refine triangulation around interesting rationals
         for (std::set<rational_type>::const_iterator iter = rationals.begin() ; iter != rationals.end() ; ++iter) {
-            double r = xavier::value(*iter);
+            double r = spurt::value(*iter);
             std::cerr << "refinement around q=" << r << " was... " << std::flush;
             double _dq = (p == 1 ? 0.05 : dq);
             interval_type range(r - _dq, r + _dq);
-            valid_mesh = xavier::refine(mesh, intg,
-                                        xavier::triangle_interval_inclusion_controller(range, min_area),
+            valid_mesh = spurt::refine(mesh, intg,
+                                        spurt::triangle_interval_inclusion_controller(range, min_area),
                                         max_nb_triangles);
             std::cerr << (valid_mesh ? "successful" : "not successful") << '\n';
             // std::cout << mesh.get_nb_vertices() << " points sampled after value-driven 2D refinement\n";
@@ -505,7 +505,7 @@ int tokatopo::compute_fixed_points()
         std::set<size_t>::const_iterator iter;
         for (iter = close_orbits.begin() ; iter != close_orbits.end() ; ++iter) {
             int orbit_id = *iter;
-            size_t sz = xavier::__map_orbits[orbit_id].size();
+            size_t sz = spurt::__map_orbits[orbit_id].size();
             double min_norm = std::numeric_limits<double>::max();
             int min_id = -1;
             for (int i = 0 ; i < sz ; ++i) {
@@ -527,7 +527,7 @@ int tokatopo::compute_fixed_points()
             pair_ui pui = point_to_norm[i].first;
             unsigned int orbit_id = pui.first;
             unsigned int p_id = pui.second;
-            const xavier::orbit& orbit = xavier::__map_orbits[orbit_id];
+            const spurt::orbit& orbit = spurt::__map_orbits[orbit_id];
             seeds[i] = orbit[p_id];
             probed_seeds.push_back(std::pair<unsigned int, nvis::vec2>(orbit_id, seeds[i]));
         }
@@ -553,9 +553,9 @@ int tokatopo::compute_fixed_points()
         std::ostringstream os_name, os_comment;
         os_name << outs << "-refined_for_up_to_p=" << p << ".vtk";
         os_comment << "Sample points from " << file << " at t=" << ts << " with estimated safety factor";
-        xavier::export_VTK(mesh, os_name.str(), os_comment.str(), true);
+        spurt::export_VTK(mesh, os_name.str(), os_comment.str(), true);
         
-        std::cerr << "upon completing fixed points search there are " << xavier::__map_orbits.size()
+        std::cerr << "upon completing fixed points search there are " << spurt::__map_orbits.size()
                   << " orbits available\n";
                   
     } // for all periods

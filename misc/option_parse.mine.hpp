@@ -18,7 +18,7 @@
 // boost::program_options
 #include <misc/option_parse_array.hpp>
 
-namespace xavier { namespace command_line {
+namespace spurt { namespace command_line {
 
 namespace po = boost::program_options;
     
@@ -292,15 +292,15 @@ struct string_converter<std::enable_if<std::is_floating_point<T>::value, T> > {
 };
 
 } // command_line
-} // xavier
+} // spurt
 
 std::ostream& operator<<(std::ostream& oss, 
-                         const xavier::command_line::option_parser& parser) {
+                         const spurt::command_line::option_parser& parser) {
     oss << parser.print_self();
     return oss;
 }
 
-inline xavier::command_line::option_parser::
+inline spurt::command_line::option_parser::
 option_parser(const str_t& program_name,
               const str_t& synopsis,
               const str_t& default_section_title,
@@ -326,7 +326,7 @@ option_parser(const str_t& program_name,
     _flags_string += "-h";
 }
 
-inline std::string xavier::command_line::option_parser::
+inline std::string spurt::command_line::option_parser::
 print_self(bool with_synopsis, bool with_usage, bool with_options,
            const std::vector<str_t>& with_those_groups) const {
     std::ostringstream oss;
@@ -357,7 +357,7 @@ print_self(bool with_synopsis, bool with_usage, bool with_options,
 
 template<typename T>
 inline boost::program_options::typed_value<T>* 
-xavier::command_line::option_parser::
+spurt::command_line::option_parser::
 get_semantic(T& variable, bool required, const str_t& symbol) {
     std::cout << "get_semantic: variable with symbol " << symbol 
         << " is " << (required ? "required" : "no required") << '\n';
@@ -369,7 +369,7 @@ get_semantic(T& variable, bool required, const str_t& symbol) {
 
 template<typename T>
 inline boost::program_options::typed_value<T>* 
-xavier::command_line::option_parser::
+spurt::command_line::option_parser::
 get_semantic(T& variable, bool required, const T& value,
              const str_t& symbol) {
     std::cout << "get_semantic: variable with symbol " << symbol 
@@ -380,7 +380,7 @@ get_semantic(T& variable, bool required, const T& value,
 
 template<typename T>
 inline boost::program_options::typed_value<T>* 
-xavier::command_line::option_parser::
+spurt::command_line::option_parser::
 get_semantic(T& variable, bool required, const T& value,
              const str_t& value_as_string, 
              const str_t& symbol) {
@@ -390,7 +390,7 @@ get_semantic(T& variable, bool required, const T& value,
     return v->default_value(value, value_as_string.c_str());
 }
 
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 register_positional(const str_t& name, int N) {
     if (_current_position == -1) {
         std::ostringstream os;
@@ -408,7 +408,7 @@ register_positional(const str_t& name, int N) {
     _positionals.add(name.c_str(), _current_position);
 }
 
-inline std::string xavier::command_line::option_parser::
+inline std::string spurt::command_line::option_parser::
 reflow(const str_t& str, size_t init_indent, size_t indent) const {
     typedef boost::char_separator<char>    separator_t;
     typedef boost::tokenizer<separator_t>  tokenizer_t;
@@ -458,7 +458,7 @@ reflow(const str_t& str, size_t init_indent, size_t indent) const {
 //    * "<sym> <sym> "..." <sym>" (n times) if n-tuple
 //    * "<sym> ..." if open-ended sequence
 
-inline std::string xavier::command_line::option_parser::
+inline std::string spurt::command_line::option_parser::
 usage(size_t initial_indent, size_t indent) const {
 
     str_t indent_1, indent_2;
@@ -495,7 +495,7 @@ usage(size_t initial_indent, size_t indent) const {
 }
 
 // <short>
-inline std::string xavier::command_line::option_parser::
+inline std::string spurt::command_line::option_parser::
 short_form(const str_t& name, bool with_dash) {
     size_t n = name.find(',');
     str_t s;
@@ -516,7 +516,7 @@ short_form(const str_t& name, bool with_dash) {
 }
 
 // VAL(<sym>)
-inline std::string xavier::command_line::option_parser::
+inline std::string spurt::command_line::option_parser::
 untyped_parameter_string(const str_t& s, int N) const {
     if (N < 0) {
         return s + "...";
@@ -535,7 +535,7 @@ untyped_parameter_string(const str_t& s, int N) const {
 }
 
 template<typename _Type>
-inline std::string xavier::command_line::option_parser::
+inline std::string spurt::command_line::option_parser::
 typed_parameter_string(const str_t& s, int N) const {
     if (!s.empty()) return s;
     else if (_use_default_symbol) 
@@ -548,14 +548,14 @@ typed_parameter_string(const str_t& s, int N) const {
     }
 }
 
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_flag_to_usage_string(const str_t& name) {
     str_t s = short_form(name, false);
     if (s.size() == 1) _flags_string += s;
     else _options_string.push_back("[" + short_form(name, true) + "]");
 }
 
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_option_to_usage_string(const str_t& name, 
                            const str_t& val_str,
                            size_t N, bool required, bool positional) {
@@ -570,8 +570,8 @@ add_option_to_usage_string(const str_t& name,
     else _options_string.push_back(usage_str + " ");
 }
 
-inline xavier::command_line::option_parser::group_ptr 
-xavier::command_line::option_parser::
+inline spurt::command_line::option_parser::group_ptr 
+spurt::command_line::option_parser::
 get_group(const option_traits& traits) {
     const str_t& name = traits.group_name();
     if (!name.empty()) {
@@ -596,7 +596,7 @@ get_group(const option_traits& traits) {
 }
 
 template<typename _Type>
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_value(const str_t& name, _Type& variable, 
           const str_t& description,
           const option_traits& traits,
@@ -615,7 +615,7 @@ add_value(const str_t& name, _Type& variable,
 }
 
 template<typename _Type, typename _CompatibleType>
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_value(const str_t& name, _Type& variable, 
           const _CompatibleType& value, const str_t& description,
           const option_traits& traits,
@@ -633,7 +633,7 @@ add_value(const str_t& name, _Type& variable,
     if (traits.positional()) register_positional(name);
 }
 
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_flag(const str_t& name, bool& variable, 
          const str_t& description,
          const option_traits& traits) {
@@ -646,7 +646,7 @@ add_flag(const str_t& name, bool& variable,
 }
 
 template<size_t N, typename _Tuple, typename _Type, typename _CompatibleTuple>
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_tuple(const str_t& name, _Tuple& variable, 
           const _CompatibleTuple& value, const str_t& description,
           const option_traits& traits,
@@ -681,7 +681,7 @@ add_tuple(const str_t& name, _Tuple& variable,
 }
 
 template<size_t N, typename _Tuple, typename _Type>
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_tuple(const str_t& name, _Tuple& variable, 
           const str_t& description,
           const option_traits& traits,
@@ -699,7 +699,7 @@ add_tuple(const str_t& name, _Tuple& variable,
 }
 
 template<typename _Type>
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_sequence(const str_t& name, std::vector<_Type>& variable, 
              const str_t& description,
              const option_traits& traits,
@@ -721,7 +721,7 @@ add_sequence(const str_t& name, std::vector<_Type>& variable,
 }
 
 template<typename _Type>
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_custom(const str_t& name, _Type& variable,
            const str_t& description,
            int nargs,
@@ -749,7 +749,7 @@ add_custom(const str_t& name, _Type& variable,
 }
 
 template<typename _Type>
-inline void xavier::command_line::option_parser::
+inline void spurt::command_line::option_parser::
 add_custom(const str_t& name, _Type& variable,
            const _Type& value, 
            const std::string& value_str,
@@ -778,7 +778,7 @@ add_custom(const str_t& name, _Type& variable,
     if (traits.positional()) register_positional(name, nargs);
 }
 
-inline void xavier::command_line::
+inline void spurt::command_line::
 option_parser::parse(int argc, const char* argv[]) {
     // consolidate all option groups into a single overall group
     option_group all_options(_line_length);

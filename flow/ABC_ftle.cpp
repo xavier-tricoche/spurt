@@ -84,7 +84,7 @@ struct integration_monitor {
 
 int main(int argc, const char* argv[])
 {
-    using namespace xavier;
+    using namespace spurt;
     
     initialize(argc, argv);
     
@@ -92,10 +92,10 @@ int main(int argc, const char* argv[])
     
     nvis::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
     std::cerr << "Resolution = " << res << std::endl;
-    xavier::RasterGrid<3> sampling_grid(res, wrapper.bounds());
-    xavier::RasterData<nvis::vec3, 3> flowmaps[2]
-        = { xavier::RasterData<nvis::vec3, 3>(sampling_grid),
-            xavier::RasterData<nvis::vec3, 3>(sampling_grid)
+    spurt::RasterGrid<3> sampling_grid(res, wrapper.bounds());
+    spurt::RasterData<nvis::vec3, 3> flowmaps[2]
+        = { spurt::RasterData<nvis::vec3, 3>(sampling_grid),
+            spurt::RasterData<nvis::vec3, 3>(sampling_grid)
           };
           
     nvis::timer timer;
@@ -185,7 +185,7 @@ int main(int argc, const char* argv[])
             __ftle[2*n+1] = ftle::ftle(n, flowmaps[1], length);
         } catch (...) {
         }
-        if (xavier::invalid(__ftle[2*n]) || xavier::invalid(__ftle[2*n+1])) {
+        if (spurt::invalid(__ftle[2*n]) || spurt::invalid(__ftle[2*n+1])) {
             continue;
         }
     }
@@ -193,13 +193,13 @@ int main(int argc, const char* argv[])
     
     std::ostringstream os;
     os << name_out << "-ftle-T=" << length << ".nrrd";
-    xavier::nrrd_utils::writeNrrd(__ftle, os.str(), nrrdTypeFloat, size, step);
+    spurt::nrrd_utils::writeNrrd(__ftle, os.str(), nrrdTypeFloat, size, step);
     
     size[0] = 6;
     os.clear();
     os.str("");
     os << name_out << "-flowmap-T=" << length << ".nrrd";
-    xavier::nrrd_utils::writeNrrd(__fmap, os.str(), nrrdTypeFloat, size, step);
+    spurt::nrrd_utils::writeNrrd(__fmap, os.str(), nrrdTypeFloat, size, step);
     
     return 0;
 }

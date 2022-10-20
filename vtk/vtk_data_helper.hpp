@@ -240,14 +240,14 @@ make_polylines(const ForwardContainer& lines,
                 const point_type& q=valid_pts.back();
                 if (!mind || // no lower bound on segment length
                     (i==line.size()-1) || // always include last point
-                    (mind>0 && xavier::vector::distance(p, q)>mind)) { // else we must pass the filtering criterion
+                    (mind>0 && spurt::vector::distance(p, q)>mind)) { // else we must pass the filtering criterion
                     valid_pts.push_back(p);
                 }
                 else {
                     removed.push_back(nvis::ivec2(lid, i));
                     if (verbose) {
                         std::cout << "point #" << i << " rejected, distance="
-                            << xavier::vector::distance(p, q) << '\n';
+                            << spurt::vector::distance(p, q) << '\n';
                         std::cout << "p=" << p << ", q=" << q << '\n';
                     }
                 }
@@ -1307,7 +1307,7 @@ inline vtkPolyData* create_mesh(const std::vector<Position_>& pos,
 }
 
 template<typename Position_, typename Vector_, typename Int_,
-         typename = typename std::enable_if<xavier::is_array<Vector_>::value>::type >
+         typename = typename std::enable_if<spurt::is_array<Vector_>::value>::type >
 inline vtkPolyData* create_mesh(const std::vector<Position_>& pos,
                                 const std::string& name,
                                 const std::vector<Vector_>& vectors,

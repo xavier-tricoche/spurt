@@ -3,9 +3,9 @@ set( CREASE_SRC
     extractor.cpp
     pvo.cpp
 )
-add_library( xavier_crease ${LIBMODE} ${CREASE_SRC} )
-target_link_libraries( xavier_crease ${Teem_LIBRARIES} xavier_image xavier_math )
-install( TARGETS xavier_crease
+add_library( spurt_crease ${LIBMODE} ${CREASE_SRC} )
+target_link_libraries( spurt_crease ${Teem_LIBRARIES} spurt_image spurt_math )
+install( TARGETS spurt_crease
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
 )

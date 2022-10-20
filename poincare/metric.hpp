@@ -39,9 +39,9 @@ namespace {
         static const T& max(const bounds_type& b) { return b.second(); }
         static bool inside(const bounds_type& b, const value_type& v) {
             value_type v1 = v - b.first();
-            if (xavier::vector::min(v1) < 0) return false;
+            if (spurt::vector::min(v1) < 0) return false;
             v1 = b.second() - v;
-            if (xavier::vector::min(v1) < 0) return false;
+            if (spurt::vector::min(v1) < 0) return false;
             return true;
         }
     };
@@ -57,9 +57,9 @@ namespace {
         static const T& max(const bounds_type& b) { return b[1]; }
         static bool inside(const bounds_type& b, const value_type& v) {
             value_type v1 = v - b[0];
-            if (xavier::vector::min(v1) < 0) return false;
+            if (spurt::vector::min(v1) < 0) return false;
             v1 = b[1] - v;
-            if (xavier::vector::min(v1) < 0) return false;
+            if (spurt::vector::min(v1) < 0) return false;
             return true;
         }
     };
@@ -67,7 +67,7 @@ namespace {
 }
 
 
-namespace xavier {
+namespace spurt {
     
 template<int N, typename Pos_ = nvis::fixed_vector<double, N>, 
          typename Bounds_ = nvis::bounding_box<nvis::fixed_vector<double, N> > >
@@ -121,7 +121,7 @@ public:
     }
 
     double diameter() const {
-        return xavier::vector::norm(size());
+        return spurt::vector::norm(size());
     }
 
     bool periodic(size_t i) const {
@@ -153,7 +153,7 @@ public:
     }
 
     double distance(const pos_type& a, const pos_type& b) const {
-        return xavier::vector::norm(displacement(a, b));
+        return spurt::vector::norm(displacement(a, b));
     }
 
     double distance(const nvis::vec2& a, const nvis::vec2& b, const bvecN& per) const {
@@ -163,15 +163,15 @@ public:
     double angle(const pos_type& x0, const pos_type& x1, const pos_type& x2) const {
         pos_type v0 = displacement(x0, x1);
         pos_type v1 = displacement(x1, x2);
-        v0 /= xavier::vector::norm(v0);
-        v1 /= xavier::vector::norm(v1);
+        v0 /= spurt::vector::norm(v0);
+        v1 /= spurt::vector::norm(v1);
         
         pos_type v2 = v1;
-        v2 -= xavier::vector::dot(v1, v0)*v0;
-        v2 /= xavier::vector::norm(v2);
+        v2 -= spurt::vector::dot(v1, v0)*v0;
+        v2 /= spurt::vector::norm(v2);
         
-        double cos_alpha = xavier::vector::dot(v0, v1);
-        double sin_alpha = xavier::vector::dot(v1, v2);
+        double cos_alpha = spurt::vector::dot(v0, v1);
+        double sin_alpha = spurt::vector::dot(v1, v2);
         double alpha = acos(cos_alpha);
         if (sin_alpha < 0) {
             alpha *= -1;
@@ -212,14 +212,14 @@ public:
             std::fill(t.begin(), t.end(), std::numeric_limits<double>::max());
             pos_type __b = modulo(b);
             pos_type __x, __y;
-            pos_type dir = d / xavier::vector::norm(d);
+            pos_type dir = d / spurt::vector::norm(d);
             // compute up/down and left/right intersection with boundary
             for (int i = 0 ; i < dimension ; ++i) {
                 double w = (dir[i] > 0 ? traits_type::max(m_bounds)[i] : traits_type::min(m_bounds)[i]);
                 t[i] = (w - __a[i]) / dir[i];
             }
             // which intersection is closest?
-            int imin = xavier::vector::min_id(t);
+            int imin = spurt::vector::min_id(t);
             __x = __a + t[imin] * dir;
             // split segment accordingly
             if (m_periodic[imin]) {

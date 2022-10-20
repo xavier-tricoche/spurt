@@ -87,7 +87,7 @@ double rotation_angle_cubic_predictor(const nvis::vec2& x0, const nvis::vec2& x1
     nvis::vec2 a3 = nvis::inner(j1 - j0 - 2.*(__v1 - __v0), __v0);
 
     std::complex<double> u[3];
-    int nbroots = xavier::cubic_equation(a3, a2, a1, a0, u);
+    int nbroots = spurt::cubic_equation(a3, a2, a1, a0, u);
     for (int i = 0 ; i < nbroots ; ++i) {
         if (u[i].imag()) continue;
         else if (u[i].real() < 0 || u[1].real() > 1) continue;

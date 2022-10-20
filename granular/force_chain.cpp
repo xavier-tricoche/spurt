@@ -49,7 +49,7 @@ void get_neighbors(std::vector<unsigned int>& neighbors, unsigned int i)
 template<typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& values)
 {
-    std::pair<double, double> mv = xavier::meanvariance(values);
+    std::pair<double, double> mv = spurt::meanvariance(values);
     T min = *std::min_element(values.begin(), values.end());
     T max = *std::max_element(values.begin(), values.end());
     os << " \tmin=" << min << ", \tmax=" << max << ", \tmean=" << mv.first
@@ -111,8 +111,8 @@ int main(int argc, const char* argv[])
     std::vector<particle> seed_particles; // all admissible particles from which to start a chain
     
     Nrrd* contacts, *pos;
-    pos = xavier::readNrrd(coord_f);
-    contacts = xavier::readNrrd(force_f);
+    pos = spurt::readNrrd(coord_f);
+    contacts = spurt::readNrrd(force_f);
     max_angle = M_PI * a / 180.;
     
     // convert nrrds to internal data structure
@@ -230,7 +230,7 @@ int main(int argc, const char* argv[])
         dims[1] = N;
         std::vector<double> spc(2);
         spc[0] = spc[1] = airNaN();
-        xavier::writeNrrdFromContainers(stress_data, stress_f, /*nrrdTypeFloat,*/ dims, spc);
+        spurt::writeNrrdFromContainers(stress_data, stress_f, /*nrrdTypeFloat,*/ dims, spc);
         std::cerr << "stress data exported\n";
     }
     

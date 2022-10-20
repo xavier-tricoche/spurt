@@ -34,14 +34,14 @@ struct closer_than {
 };
 }
 
-namespace xavier {
+namespace spurt {
 template <typename Graph_, typename Position_, size_t N>
 void compute_connectivity(Graph_& graph, double radius, const std::vector<Position_>& vertices) {
     
     typedef Graph_ graph_t;
     typedef Position_ vertex_t;
     typedef typename Position_::value_type scalar_t;
-    typedef xavier::point_locator<scalar_t, size_t, N> locator_t;
+    typedef spurt::point_locator<scalar_t, size_t, N> locator_t;
     typedef typename locator_t::point_type point_t;
     typedef typename std::list<point_t> neighborhood_t;
     typedef closer_than<vertex_t, point_t> less_dist;
@@ -54,7 +54,7 @@ void compute_connectivity(Graph_& graph, double radius, const std::vector<Positi
     
     graph.clear();
     
-    xavier::ProgressDisplay progress;
+    spurt::ProgressDisplay progress;
     progress.start(locator.size());
     size_t n=0;
     __norm<vertex_t> length;
@@ -98,8 +98,8 @@ void extract_subgraph(GraphOut_& subg, GraphIn_& g,
     typedef typename boost::graph_traits<graph_input_t>::vertex_iterator vertex_iter_t;
     typedef typename boost::graph_traits<graph_input_t>::edge_iterator edge_iter_t;
     typedef typename boost::graph_traits<graph_output_t>::edge_descriptor edge_t;
-    typedef xavier::vertex_prop_copier<graph_input_t, graph_output_t> vertex_prop_copy_t;
-    typedef xavier::edge_prop_copier<graph_input_t, graph_output_t> edge_prop_copy_t;
+    typedef spurt::vertex_prop_copier<graph_input_t, graph_output_t> vertex_prop_copy_t;
+    typedef spurt::edge_prop_copier<graph_input_t, graph_output_t> edge_prop_copy_t;
         
     subg.clear();
     vertex_iter_t vit, vend;
@@ -140,7 +140,7 @@ size_t connected_components(std::vector<Int_>& cc_ids,Graph_& graph) {
     return boost::connected_components(graph, &cc_ids[0]);
 }
 
-} // namespace xavier
+} // namespace spurt
 
 #endif
 

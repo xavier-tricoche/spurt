@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
 	double delta_y = maxy-miny;
 	double delta_z = maxz-minz;
 	
-	typedef xavier::point_locator<double, int, 3> 	locator_type;
+	typedef spurt::point_locator<double, int, 3> 	locator_type;
 	typedef locator_type::point_type				point_type;
 	
 	locator_type locator;

@@ -9,7 +9,7 @@
 
 #include "avtNek5000FileFormat.hpp"
 
-namespace xavier {
+namespace spurt {
 
 struct vec_equal {
     bool operator()(const nvis::fvec3& a, const nvis::fvec3& b) const {
@@ -90,6 +90,6 @@ private:
     avtNek5000FileFormat __fmt;
 };
 
-} // xavier
+} // spurt
 
 //---------------------------------------------------------------------------

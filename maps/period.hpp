@@ -42,7 +42,7 @@ struct Lt_pair_second {
 
 }
 
-namespace xavier {
+namespace spurt {
 
 void clip(std::list<std::pair<nvis::vec2, nvis::vec2> >& clipped,
           const nvis::vec2& _x, const nvis::vec2& _y,

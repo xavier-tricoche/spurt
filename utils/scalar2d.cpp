@@ -103,7 +103,7 @@ bool ground_truth = false;
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
         
     xcl::option_traits 
             required_group(true, false, "Required Options"), 
@@ -139,7 +139,7 @@ int main(int argc, char* argv[]) {
     
     srand48(seedval);
     
-    std::string filename = xavier::filename::remove_extension(name_out);
+    std::string filename = spurt::filename::remove_extension(name_out);
     
     fname = lower_case(fname);
     
@@ -217,7 +217,7 @@ int main(int argc, char* argv[]) {
         std::cout << "computed values: min=" << *std::min_element(values.begin(), values.end()) << ", max=" << *std::max_element(values.begin(), values.end()) << '\n';
         
         
-        xavier::nrrd_utils::writeNrrdFromContainers(&values[0], filename + ".nrrd", dims, spc, mins);
+        spurt::nrrd_utils::writeNrrdFromContainers(&values[0], filename + ".nrrd", dims, spc, mins);
     }   
     
     return 0;

@@ -63,8 +63,8 @@ void __saveVTK(DataSetPtr_ data, const std::string& name) {
 
 vtkDataSet* readVTK(const std::string& filename)
 {
-    std::string ext = xavier::filename::extension(filename);
-    xavier::lower_case(ext);
+    std::string ext = spurt::filename::extension(filename);
+    spurt::lower_case(ext);
     if      (ext == "vtk") return __readVTK<vtkDataSetReader>(filename);
     else if (ext == "vti") return __readVTK<vtkXMLImageDataReader>(filename);
     else if (ext == "vtu") return __readVTK<vtkXMLUnstructuredGridReader>(filename);
@@ -77,8 +77,8 @@ vtkDataSet* readVTK(const std::string& filename)
 
 template< typename DataSetPtr_ >
 void saveVTK(DataSetPtr_ dataset, const std::string& filename) {
-    std::string ext = xavier::filename::extension(filename);
-    xavier::lower_case(ext);
+    std::string ext = spurt::filename::extension(filename);
+    spurt::lower_case(ext);
     if      (ext == "vtk") __saveVTK<DataSetPtr_, vtkDataSetWriter>(dataset, filename);
     else if (ext == "vti") __saveVTK<DataSetPtr_, vtkXMLImageDataWriter>(dataset, filename);
     else if (ext == "vtu") __saveVTK<DataSetPtr_, vtkXMLUnstructuredGridWriter>(dataset, filename);
@@ -91,22 +91,22 @@ void saveVTK(DataSetPtr_ dataset, const std::string& filename) {
 template< typename DataSetPtr_ >
 void saveVTK_XML(DataSetPtr_ dataset, const std::string& filename) {
     if (vtkImageData::SafeDownCast(dataset)) {
-        xavier::filename::replace_extension(filename, "vti");
+        spurt::filename::replace_extension(filename, "vti");
     }
     else if (vtkUnstructuredGrid::SafeDownCast(dataset)) {
-        xavier::filename::replace_extension(filename, "vtu");
+        spurt::filename::replace_extension(filename, "vtu");
     }
     else if (vtkPolyData::SafeDownCast(dataset)) {
-        xavier::filename::replace_extension(filename, "vtp");
+        spurt::filename::replace_extension(filename, "vtp");
     }
     else if (vtkRectilinearGrid::SafeDownCast(dataset)) {
-        xavier::filename::replace_extension(filename, "vtr");
+        spurt::filename::replace_extension(filename, "vtr");
     }
     else if (vtkStructuredGrid::SafeDownCast(dataset)) {
-        xavier::filename::replace_extension(filename, "vts");
+        spurt::filename::replace_extension(filename, "vts");
     }
     else {
-        xavier::filename::replace_extension(filename, "vtk");
+        spurt::filename::replace_extension(filename, "vtk");
         std::cout << "WARNING: Unrecognized VTK dataset type. Using Legacy format" << '\n';
     }
 
@@ -185,7 +185,7 @@ void save_triangles_VTK(const std::string& name, const std::string& comment,
 }
 
 vtkStructuredPoints* load_nrrd(const std::string& filename) {
-    Nrrd* nin = xavier::nrrd_utils::readNrrd(filename);
+    Nrrd* nin = spurt::nrrd_utils::readNrrd(filename);
     int attribute_type = 0; // scalar
     if (nin->axis[0].size == 2 || nin->axis[0].size == 3) attribute_type = 1;
     else if (nin->axis[0].size == 4 || nin->axis[0].size == 9) attribute_type = 2;
@@ -209,7 +209,7 @@ vtkStructuredPoints* load_nrrd(const std::string& filename) {
     dataset->SetExtent(0, dims[0]-1, 0, dims[1]-1, 0, 0);
     if (nin->type == nrrdTypeFloat) {
         std::vector<float> data;
-        xavier::nrrd_utils::to_vector(data, nin);
+        spurt::nrrd_utils::to_vector(data, nin);
         if (attribute_type == 0)
             add_scalars(dataset, data);
         else if (attribute_type == 1) {
@@ -227,7 +227,7 @@ vtkStructuredPoints* load_nrrd(const std::string& filename) {
     }
     else if (nin->type == nrrdTypeDouble) {
         std::vector<double> data;
-        xavier::nrrd_utils::to_vector(data, nin);
+        spurt::nrrd_utils::to_vector(data, nin);
         if (attribute_type == 0)
             add_scalars(dataset, data);
         else if (attribute_type == 1) {
@@ -245,7 +245,7 @@ vtkStructuredPoints* load_nrrd(const std::string& filename) {
     }
     else {
         std::vector<int> data;
-        xavier::nrrd_utils::to_vector(data, nin);
+        spurt::nrrd_utils::to_vector(data, nin);
         if (attribute_type == 0)
             add_scalars(dataset, data);
         else if (attribute_type == 1) {

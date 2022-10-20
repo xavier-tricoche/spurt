@@ -31,7 +31,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <teem/hest_helper.hpp>
 #include <set>
@@ -109,7 +109,7 @@ struct field {
             __size[i] = nin->axis[nin->dim-3+i].size;
         }
         size_t size = __size[0] * __size[1] * __size[2];
-        __bounds = xavier::nrrd_utils::get_bounds(nin);
+        __bounds = spurt::nrrd_utils::get_bounds(nin);
         __step = __bounds.size() / nvis::vec3(__size - nvis::ivec3(1, 1, 1));
         __data = std::vector<value_type>((T1*)nin->data, (T1*)nin->data + size);
     }
@@ -253,7 +253,7 @@ int main(int argc, char* argv[])
     std::string name(file);
     if (name.substr(name.find_last_of(".") + 1) == "nrrd") {
         std::cerr << "NRRD file extension recognized.\n";
-        Nrrd* nin = xavier::nrrd_utils::readNrrd(file);
+        Nrrd* nin = spurt::nrrd_utils::readNrrd(file);
         nvis::ivec3 size;
         if (nin->dim != 4) {
             throw;
@@ -264,13 +264,13 @@ int main(int argc, char* argv[])
         int sz = size[0] * size[1] * size[2];
         value_type* vdata = new value_type[sz];
         std::vector<float> sdata;
-        xavier::to_vector(sdata, nin);
+        spurt::to_vector(sdata, nin);
         for (int i = 0 ; i < sz ; ++i) {
             data[i][0] = sdata[3*i  ];
             data[i][1] = sdata[3*i+1];
             data[i][2] = sdata[3*i+2];
         }
-        vf = boost::shared_ptr<field_type>(new field_type(data, size, xavier::nrrd_utils::get_bounds(nin)));
+        vf = boost::shared_ptr<field_type>(new field_type(data, size, spurt::nrrd_utils::get_bounds(nin)));
         nrrdNuke(nin);
     } else if (name.substr(name.find_last_of(".") + 1) == "vtk") {
         std::cerr << "VTK file extension recognized.\n";

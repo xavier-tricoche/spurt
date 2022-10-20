@@ -56,9 +56,9 @@ using namespace tokatopo;
 namespace {
 // local functors for adaptive triangulation
 struct error_measure_linear {
-    typedef xavier::point_data      data_type;
+    typedef spurt::point_data      data_type;
     
-    error_measure_linear(unsigned int period, double threshold, const xavier::map_metric& metric)
+    error_measure_linear(unsigned int period, double threshold, const spurt::map_metric& metric)
         : __period(period), __eps(threshold), __metric(metric) {}
         
     double operator()(const data_type& d,
@@ -76,13 +76,13 @@ struct error_measure_linear {
     
     unsigned int __period;
     double __eps;
-    xavier::map_metric __metric;
+    spurt::map_metric __metric;
 };
 
 struct error_measure_norm {
-    typedef xavier::point_data      data_type;
+    typedef spurt::point_data      data_type;
     
-    error_measure_norm(unsigned int period, const xavier::map_metric& metric)
+    error_measure_norm(unsigned int period, const spurt::map_metric& metric)
         : __period(period), __metric(metric) {}
         
     double operator()(const data_type& d,
@@ -104,7 +104,7 @@ struct error_measure_norm {
     }
     
     unsigned int __period;
-    xavier::map_metric __metric;
+    spurt::map_metric __metric;
 };
 
 template<typename T>
@@ -138,19 +138,19 @@ struct poincare_index {
     
     poincare_index() : _log(false) {}
     
-    inline int direct(const xavier::point_data d[3], unsigned int period,
-                      const xavier::map_metric& metric) {
+    inline int direct(const spurt::point_data d[3], unsigned int period,
+                      const spurt::map_metric& metric) {
         double dtheta = 0;
         for (int i = 0 ; i < 3 ; ++i) {
-            dtheta += angle(xavier::vector_value(d[i], period, metric),
-                            xavier::vector_value(d[(i+1)%3], period, metric));
+            dtheta += angle(spurt::vector_value(d[i], period, metric),
+                            spurt::vector_value(d[(i+1)%3], period, metric));
         }
         return (int)round(0.5*dtheta / M_PI);
     }
     
     uncertain_vec_type
     evaluate_step(const nvis::vec2& x, const integrator_type& map,
-                  unsigned int period, const xavier::map_metric& metric) {
+                  unsigned int period, const spurt::map_metric& metric) {
         map2d::value_type result;
         try {
             result = map.map_complete(x, period);
@@ -165,7 +165,7 @@ struct poincare_index {
     double smooth_rotation_angle(const nvis::vec2& x0, const nvis::vec2& x1,
                                  const integrator_type& map, unsigned int period,
                                  double dtheta, double dx,
-                                 const xavier::map_metric& metric) {
+                                 const spurt::map_metric& metric) {
         uncertain_vec_type uv0, uv1;
         uv0 = evaluate_step(x0, map, period, metric);
         uv1 = evaluate_step(x1, map, period, metric);
@@ -184,7 +184,7 @@ struct poincare_index {
     
     int safe(const mesh_type& mesh, unsigned int tri, const Map& map,
              unsigned int period, double dtheta, double dx,
-             const xavier::map_metric& metric) {
+             const spurt::map_metric& metric) {
              
         point_type  p[3];
         data_type   d[3];
@@ -210,19 +210,19 @@ struct poincare_index {
 
 struct angular_variation_priority {
     typedef nvis::vec2                  point_type;
-    typedef xavier::point_data          data_type;
+    typedef spurt::point_data          data_type;
     typedef tokatopo::interval_type     interval_type;
     typedef tokatopo::rational_type     rational_type;
     
     angular_variation_priority(unsigned int period, double eps,
-                               const xavier::map_metric& metric, double dq)
+                               const spurt::map_metric& metric, double dq)
         : _p(period), _eps(eps), _dq(dq), _metric(metric) {
         for (int i = 1 ; i <= period ; ++i) {
             rational_type r(period, i);
             if (r.numerator() != period) {
                 continue;
             }
-            double q = xavier::value(r);
+            double q = spurt::value(r);
             _valid_q.push_back(interval_type(q - dq, q + dq));
         }
     }
@@ -242,23 +242,23 @@ struct angular_variation_priority {
         
         bool valid = false;
         for (int i = 0 ; i < _valid_q.size() && !valid ; ++i) {
-            valid = !(xavier::intersect(span, _valid_q[i]).empty());
+            valid = !(spurt::intersect(span, _valid_q[i]).empty());
         }
         if (!valid) {
             return -1;
         }
         
         for (int i = 0 ; i < 3 ; ++i) {
-            dtheta += fabs(angle(xavier::vector_value(d[i], _p, _metric),
-                                 xavier::vector_value(d[(i+1)%3], _p, _metric)));
+            dtheta += fabs(angle(spurt::vector_value(d[i], _p, _metric),
+                                 spurt::vector_value(d[(i+1)%3], _p, _metric)));
         }
-        return xavier::area(p)*(dtheta - _eps);
+        return spurt::area(p)*(dtheta - _eps);
     }
     
     double _eps, _dq;
     unsigned int _p;
     std::vector<interval_type> _valid_q;
-    const xavier::map_metric& _metric;
+    const spurt::map_metric& _metric;
 };
 
 // hack
@@ -266,13 +266,13 @@ nvis::bbox2 saddle_box(nvis::vec2(84, 31.5), nvis::vec2(86, 33.5));
 
 struct conditional_angular_variation_priority {
     typedef nvis::vec2                  point_type;
-    typedef xavier::point_data          data_type;
-    typedef xavier::interval<double>    interval_type;
+    typedef spurt::point_data          data_type;
+    typedef spurt::interval<double>    interval_type;
     
     conditional_angular_variation_priority(unsigned int period,
                                            const std::vector<double>& qs,
                                            double qeps, double eps,
-                                           const xavier::map_metric& metric)
+                                           const spurt::map_metric& metric)
         : _p(period), _ints(qs.size()), _eps(eps), _metric(metric) {
         for (int i = 0 ; i < qs.size() ; ++i) {
             _ints[i] = interval_type(qs[i] - qeps, qs[i] + qeps);
@@ -295,7 +295,7 @@ struct conditional_angular_variation_priority {
         // interval_type cell_int(min, max);
         // bool relevant = false;
         // for (int i = 0 ; i < _ints.size() && !relevant ; ++i) {
-        //  relevant = !(xavier::intersect(_ints[i], cell_int).empty());
+        //  relevant = !(spurt::intersect(_ints[i], cell_int).empty());
         // }
         
         // if (!relevant) {
@@ -311,8 +311,8 @@ struct conditional_angular_variation_priority {
         double dtheta = 0;
         double maxerror = 0;
         for (int i = 0 ; i < 3 ; ++i) {
-            std::pair<nvis::vec2, nvis::vec2> vecerr0 = xavier::vector_and_error_value(d[i], _p, _metric);
-            std::pair<nvis::vec2, nvis::vec2> vecerr1 = xavier::vector_and_error_value(d[(i+1)%3], _p, _metric);
+            std::pair<nvis::vec2, nvis::vec2> vecerr0 = spurt::vector_and_error_value(d[i], _p, _metric);
+            std::pair<nvis::vec2, nvis::vec2> vecerr1 = spurt::vector_and_error_value(d[(i+1)%3], _p, _metric);
             dtheta += fabs(angle(vecerr0.first, vecerr1.first));
             double err = nvis::norm(vecerr0.second);
             if (err > maxerror) {
@@ -321,7 +321,7 @@ struct conditional_angular_variation_priority {
         }
         
         // // if triangle area is smaller than half of square of side maxerror, bail
-        // if (2*xavier::area(p) < maxerror*maxerror) return 0;
+        // if (2*spurt::area(p) < maxerror*maxerror) return 0;
         
         // if (display_stuff) {
         //  std::cerr << "triangle: " << p[0] << ", " << p[1] << ", " << p[2]
@@ -333,24 +333,24 @@ struct conditional_angular_variation_priority {
     unsigned int _p;
     std::vector<interval_type> _ints;
     double _eps;
-    const xavier::map_metric& _metric;
+    const spurt::map_metric& _metric;
 };
 
 struct triangle_filter {
     typedef nvis::vec2                  point_type;
-    typedef xavier::point_data          data_type;
+    typedef spurt::point_data          data_type;
     typedef tokatopo::interval_type     interval_type;
     typedef tokatopo::rational_type     rational_type;
     
     triangle_filter(unsigned int period, double eps,
-                    const xavier::map_metric& metric, double dq)
+                    const spurt::map_metric& metric, double dq)
         : _p(period), _eps(eps), _dq(dq), _metric(metric) {
         for (int i = 1 ; i <= period ; ++i) {
             rational_type r(period, i);
             if (r.numerator() != period) {
                 continue;
             }
-            double q = xavier::value(r);
+            double q = spurt::value(r);
             _valid_q.push_back(interval_type(q - dq, q + dq));
         }
     }
@@ -369,14 +369,14 @@ struct triangle_filter {
         
         bool valid = false;
         for (int i = 0 ; i < _valid_q.size() && !valid ; ++i) {
-            valid = !(xavier::intersect(span, _valid_q[i]).empty());
+            valid = !(spurt::intersect(span, _valid_q[i]).empty());
         }
         return valid;
     }
     
     unsigned int _p;
     double _eps, _dq;
-    const xavier::map_metric& _metric;
+    const spurt::map_metric& _metric;
     std::vector<interval_type> _valid_q;
 };
 
@@ -430,7 +430,7 @@ inline bool has_zero(int period, const T& mesh, int cellid)
     nvis::vec2 v[3];
     for (int i = 0 ; i < 3 ; ++i) {
         const data_type& d = mesh.get_data(tri[i]);
-        v[i] = xavier::vector_value(d, period, xavier::__default_metric);
+        v[i] = spurt::vector_value(d, period, spurt::__default_metric);
     }
     
     nvis::vec2 col[2] = { v[0] - v[2], v[1] - v[2] };
@@ -464,7 +464,7 @@ inline double min_q_dist(double q, const std::vector<rational_type>& r)
 {
     double _min = std::numeric_limits<double>::max();
     for (int i = 0 ; i < r.size() ; ++i) {
-        _min = std::min(fabs(q - xavier::value(r[i])), _min);
+        _min = std::min(fabs(q - spurt::value(r[i])), _min);
     }
     
     return _min;
@@ -481,7 +481,7 @@ struct Lt_point_norm {
 };
 
 struct p_step_func {
-    typedef xavier::interval<double>    interval_type;
+    typedef spurt::interval<double>    interval_type;
     
     p_step_func(unsigned int period, double eps)
         : __period(period) {
@@ -501,7 +501,7 @@ struct p_step_func {
         return os.str();
     }
     
-    bool is_valid(const xavier::point_data& d) const {
+    bool is_valid(const spurt::point_data& d) const {
         bool is_inside = false;
         for (int i = 0 ; i < qs.size() && !is_inside ; ++i) {
             is_inside = qs[i].inside(d.period());
@@ -510,11 +510,11 @@ struct p_step_func {
             return false;
         }
         
-        nvis::vec2 v = xavier::vector_value(d, __period, xavier::__default_metric);
+        nvis::vec2 v = spurt::vector_value(d, __period, spurt::__default_metric);
         return (v[0] != std::numeric_limits<double>::max());
     }
     
-    std::string value_string(const xavier::point_data& d) const {
+    std::string value_string(const spurt::point_data& d) const {
         bool is_inside = false;
         for (int i = 0 ; i < qs.size() && !is_inside ; ++i) {
             is_inside = qs[i].inside(d.period());
@@ -523,7 +523,7 @@ struct p_step_func {
             return "0 0 0";
         }
         
-        nvis::vec2 v = xavier::vector_value(d, __period, xavier::__default_metric);
+        nvis::vec2 v = spurt::vector_value(d, __period, spurt::__default_metric);
         std::ostringstream os;
         os << v[0] << " " << v[1] << " 0";
         return os.str();
@@ -557,12 +557,12 @@ struct error_func {
         return os.str();
     }
     
-    bool is_valid(const xavier::point_data& d) const {
+    bool is_valid(const spurt::point_data& d) const {
         const nvis::vec2& err = d.error();
         return (err[0] != std::numeric_limits<double>::max());
     }
     
-    std::string value_string(const xavier::point_data& d) const {
+    std::string value_string(const spurt::point_data& d) const {
         nvis::vec2 e = sanitize(d.error());
         std::ostringstream os;
         if (e[0] == std::numeric_limits<double>::max() || nvis::norm(e) > 10.) {
@@ -575,7 +575,7 @@ struct error_func {
 };
 
 void filter_orbits(std::vector<unsigned int>& ids,
-                   const std::vector<xavier::orbit>& orbits,
+                   const std::vector<spurt::orbit>& orbits,
                    double& min, double& max)
 {
     ids.clear();
@@ -600,32 +600,32 @@ void filter_orbits(std::vector<unsigned int>& ids,
 }
 
 inline void orbits_to_points(std::vector<nvis::vec2>& points,
-                             std::vector<xavier::point_data>& data,
-                             const std::vector<xavier::orbit>& orbits,
+                             std::vector<spurt::point_data>& data,
+                             const std::vector<spurt::orbit>& orbits,
                              const std::vector<unsigned int>& valid_ids)
 {
     points.clear();
     data.clear();
     for (unsigned int i = 0 ; i < valid_ids.size() ; ++i) {
-        const xavier::orbit& orb = orbits[valid_ids[i]];
+        const spurt::orbit& orb = orbits[valid_ids[i]];
         for (unsigned int j = 0 ; j < orb.size() ; ++j) {
             points.push_back(orb[j]);
-            data.push_back(xavier::point_data(valid_ids[i], j));
+            data.push_back(spurt::point_data(valid_ids[i], j));
         }
     }
 }
 
 inline void orbits_to_points(std::vector<nvis::vec2>& points,
-                             std::vector<xavier::point_data>& data,
-                             const std::vector<xavier::orbit>& orbits)
+                             std::vector<spurt::point_data>& data,
+                             const std::vector<spurt::orbit>& orbits)
 {
     points.clear();
     data.clear();
     for (unsigned int i = 0 ; i < orbits.size() ; ++i) {
-        const xavier::orbit& orb = orbits[i];
+        const spurt::orbit& orb = orbits[i];
         for (unsigned int j = 0 ; j < orb.size() ; ++j) {
             points.push_back(orb[j]);
-            data.push_back(xavier::point_data(i, j));
+            data.push_back(spurt::point_data(i, j));
         }
     }
 }
@@ -633,7 +633,7 @@ inline void orbits_to_points(std::vector<nvis::vec2>& points,
 int main(int argc, char* argv[])
 {
     typedef boost::rational<int>                rational_type;
-    typedef xavier::point_data                  data_type;
+    typedef spurt::point_data                  data_type;
     typedef std::pair<nvis::vec2, data_type>    data_point_type;
     
     init(argc, argv);
@@ -655,13 +655,13 @@ int main(int argc, char* argv[])
 #endif
     
     bool per[2] = {true, false};
-    xavier::map_metric metric(field->bounds(), per);
+    spurt::map_metric metric(field->bounds(), per);
     
-    xavier::__default_metric = metric;
+    spurt::__default_metric = metric;
     
     poincare_map pmap(field);
     pmap.precision(h);
-    xavier::orbit_integrator<poincare_map> intg(pmap, m, metric);
+    spurt::orbit_integrator<poincare_map> intg(pmap, m, metric);
     
     const nvis::bbox2& bounds = metric.bounds();
     nvis::vec2 diagonal = bounds.size();
@@ -676,38 +676,38 @@ int main(int argc, char* argv[])
 #endif
     
     srand48(time(0));
-    std::vector< std::pair<point_type, xavier::point_data> > all_points;
+    std::vector< std::pair<point_type, spurt::point_data> > all_points;
     
     // reset central orbit repository
-    xavier::__map_orbits.clear();
+    spurt::__map_orbits.clear();
     
     // initialize base triangulation
-    std::pair<nvis::vec2, xavier::point_data> boundary[4];
+    std::pair<nvis::vec2, spurt::point_data> boundary[4];
     std::vector<nvis::vec2> corner(4);
     corner[0] = inflated_bounds.min();
     corner[2] = inflated_bounds.max();
     corner[1] = nvis::vec2(corner[2][0], corner[0][1]);
     corner[3] = nvis::vec2(corner[0][0], corner[2][1]);
-    size_t frame_orbit_id = xavier::__map_orbits.size();
-    xavier::__map_orbits.push_back(xavier::orbit(corner, 0));
+    size_t frame_orbit_id = spurt::__map_orbits.size();
+    spurt::__map_orbits.push_back(spurt::orbit(corner, 0));
     for (int i = 0 ; i < 4 ; ++i) {
         boundary[i].first = corner[i];
-        boundary[i].second = xavier::point_data(frame_orbit_id, i);
+        boundary[i].second = spurt::point_data(frame_orbit_id, i);
     }
-    mesh_type base_mesh(boundary, xavier::point_locator());
+    mesh_type base_mesh(boundary, spurt::point_locator());
     
     unsigned int res[2];
     double ratio = bounds.size()[1] / bounds.size()[0];
     res[0] = ceil(sqrt((double)n1 / ratio));
     res[1] = ceil(res[0] * ratio);
-    xavier::experimental::sample_on_raster(xavier::__map_orbits,
+    spurt::experimental::sample_on_raster(spurt::__map_orbits,
                                            pmap, metric, res, m);
                                            
     // assign period to each orbit
-    for (int i = 0 ; i < xavier::__map_orbits.size() ; ++i) {
-        xavier::orbit& obt = xavier::__map_orbits[i];
-        // double q = (xavier::period_x_periodic(obt.points(), metric)).first;
-        double q = xavier::dist_based_x_period(obt.points(), metric);
+    for (int i = 0 ; i < spurt::__map_orbits.size() ; ++i) {
+        spurt::orbit& obt = spurt::__map_orbits[i];
+        // double q = (spurt::period_x_periodic(obt.points(), metric)).first;
+        double q = spurt::dist_based_x_period(obt.points(), metric);
         for (int j = 0 ; j < obt.size() ; ++j) {
             obt[j] = metric.modulo(obt[j]);
         }
@@ -724,22 +724,22 @@ int main(int argc, char* argv[])
     
     {
         std::vector<nvis::vec2> points;
-        std::vector<xavier::point_data> data;
-        orbits_to_points(points, data, xavier::__map_orbits);
+        std::vector<spurt::point_data> data;
+        orbits_to_points(points, data, spurt::__map_orbits);
         base_mesh.insert_points(points, data);
         
         std::ostringstream os;
         os << outs << "-base_mesh.vtk";
-        xavier::export_VTK(base_mesh, os.str(), "N / A", false);
+        spurt::export_VTK(base_mesh, os.str(), "N / A", false);
     }
     base_mesh.set_tolerance(1.0e-7);
     
-    xavier::map_debug::verbose_level = 1;
+    spurt::map_debug::verbose_level = 1;
     
     for (int period = 1 ; period <= max_period ; ++period) {
         std::cerr << "\nprocessing period " << period << "...\n";
         
-        std::cerr << "there are currently " << xavier::__map_orbits.size()
+        std::cerr << "there are currently " << spurt::__map_orbits.size()
                   << " orbits on record and " << base_mesh.get_nb_triangles() << " points in base triangulation\n";
                   
         double h_p = (period == 1 ? h : 0.25 * h / (double)(period - 1));
@@ -760,7 +760,7 @@ int main(int argc, char* argv[])
         
         std::vector<double> valid_qs;
         for (std::set<rational_type>::iterator it = rationals.begin() ; it != rationals.end() ; ++it) {
-            valid_qs.push_back(xavier::value(*it));
+            valid_qs.push_back(spurt::value(*it));
         }
         
         std::cerr << "there are " << valid_qs.size() << " interesting rational periods:\n";
@@ -789,7 +789,7 @@ int main(int argc, char* argv[])
             std::ostringstream os_name, os_comment;
             os_name << outs << "-pre-mesh_for_p=" << period << ".vtk";
             p_step_func functor_all(period, dq);
-            xavier::export_submesh_VTK(local_mesh, os_name.str(), "N/A", functor_all,
+            spurt::export_submesh_VTK(local_mesh, os_name.str(), "N/A", functor_all,
                                        included_triangles, true);
         }
         
@@ -800,19 +800,19 @@ int main(int argc, char* argv[])
         std::cerr << "refining triangulation around q = " << ref_values[i]
                   << " to reach piecewise linear precision\n";
         error_measure_norm priority(period, metric);
-        bool ok = xavier::experimental::refine_map(local_mesh, intg, priority, max_nb_triangles);
+        bool ok = spurt::experimental::refine_map(local_mesh, intg, priority, max_nb_triangles);
         
 #elif USE_CONDITIONAL_METHOD
         
         std::cerr << "refinement to achieve prescribed max angular variation (conditional)\n";
         conditional_angular_variation_priority priority(period, valid_qs, dq, approx_error, metric);
-        bool ok = xavier::refine(local_mesh, intg, priority, max_nb_triangles);
+        bool ok = spurt::refine(local_mesh, intg, priority, max_nb_triangles);
         
 #else
         
         std::cerr << "refinement to achieve prescribed max angular variation\n";
         angular_variation_priority priority(period, approx_error, metric, dq);
-        bool ok = xavier::refine(local_mesh, intg, priority, max_nb_triangles);
+        bool ok = spurt::refine(local_mesh, intg, priority, max_nb_triangles);
         
 #endif
         
@@ -834,13 +834,13 @@ int main(int argc, char* argv[])
             std::ostringstream os_name;
             os_name << outs << "-" << period << "-specific_mesh.vtk";
             p_step_func functor_all(period, dq);
-            xavier::export_submesh_VTK(local_mesh, os_name.str(), "N/A", functor_all, included_triangles, true);
+            spurt::export_submesh_VTK(local_mesh, os_name.str(), "N/A", functor_all, included_triangles, true);
             
             os_name.clear();
             os_name.str("");
             os_name << outs << "-" << period << "-specific_mesh-error.vtk";
             error_func functor_err;
-            xavier::export_submesh_VTK(local_mesh, os_name.str(), "N/A", functor_err, included_triangles, true);
+            spurt::export_submesh_VTK(local_mesh, os_name.str(), "N/A", functor_err, included_triangles, true);
             
             // export subset of triangles matching period with nonzero index
             poincare_index<mesh_type, poincare_map> pindex;
@@ -890,8 +890,8 @@ int main(int argc, char* argv[])
                                     // std::cerr << "orbit_integrator: unable to integrate from " << x0 << std::endl;
                                 }
                                 if (pos.size() >= 9*period) {
-                                    xavier::push_front(approx_zero, pos);
-                                    double q = xavier::period_x_periodic(pos, metric).first;
+                                    spurt::push_front(approx_zero, pos);
+                                    double q = spurt::period_x_periodic(pos, metric).first;
                                     std::cerr << "rational period at this point is " << q << '\n';
                                 } else {
                                     std::cerr << "something went wrong with the integration\n";
@@ -906,21 +906,21 @@ int main(int argc, char* argv[])
             os_name.clear();
             os_name.str("");
             os_name << outs << "-" << period << "-specific_singular.vtk";
-            xavier::export_submesh_VTK(local_mesh, os_name.str(), "N/A", functor_all, singular_triangles, true);
+            spurt::export_submesh_VTK(local_mesh, os_name.str(), "N/A", functor_all, singular_triangles, true);
         }
         
         if (false) {
-            mesh_type tmp_mesh(boundary, xavier::point_locator());
+            mesh_type tmp_mesh(boundary, spurt::point_locator());
             tmp_mesh.set_tolerance(1.0e-8);
             std::vector<point_type> points;
             std::vector<data_type> data;
-            orbits_to_points(points, data, xavier::__map_orbits);
+            orbits_to_points(points, data, spurt::__map_orbits);
             tmp_mesh.insert_points(points, data);
             
             std::ostringstream os_name, os_comment;
             os_name << outs << "-complete_mesh_after_" << period << "-search.vtk";
             p_step_func functor_all(period, 100);
-            xavier::export_VTK(tmp_mesh, os_name.str(), "N/A", functor_all, true);
+            spurt::export_VTK(tmp_mesh, os_name.str(), "N/A", functor_all, true);
         }
     } // for all periods
 }

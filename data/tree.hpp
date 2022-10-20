@@ -4,7 +4,7 @@
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 
-namespace xavier {
+namespace spurt {
 
 namespace QuadTree {
 struct _Node_base {

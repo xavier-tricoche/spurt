@@ -203,7 +203,7 @@ int main(int argc, char* argv[])
     nvis::vec3 dxy = dx + dy;
     nvis::vec3 dxY = dx - dy;
     
-    typedef xavier::point_locator<double, int, 3>   locator_type;
+    typedef spurt::point_locator<double, int, 3>   locator_type;
     typedef locator_type::point_type                point_type;
     
     locator_type locator;

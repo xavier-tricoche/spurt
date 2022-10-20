@@ -8,7 +8,7 @@
 #include <math/fixed_vector.hpp>
 #include <Eigen/Core>
 
-namespace xavier {
+namespace spurt {
 
 using namespace std;
 
@@ -215,7 +215,7 @@ struct are_all_true<true, true, true, true, true, true, true>
 #define REQSUBTYPE(_type1,_type2) \
     typename = typename enable_if<is_same<typename _type1, _type2>::value>::type
 
-} // xavier
+} // spurt
 
 
 #endif

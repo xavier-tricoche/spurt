@@ -16,7 +16,7 @@ namespace map_analysis {
 struct error_measure_linear {
     typedef point_data  data_type;
     
-    error_measure_linear(unsigned int period, double threshold, const xavier::map_metric& metric)
+    error_measure_linear(unsigned int period, double threshold, const spurt::map_metric& metric)
         : __period(period), __eps(threshold), __metric(metric) {}
         
     double operator()(const data_type& d,
@@ -34,7 +34,7 @@ struct error_measure_linear {
     
     unsigned int __period;
     double __eps;
-    xavier::map_metric __metric;
+    spurt::map_metric __metric;
 };
 
 // goal: piecewise uniform p-map norm
@@ -81,7 +81,7 @@ struct angular_variation_priority {
             if (r.numerator() != period) {
                 continue;
             }
-            double q = xavier::value(r);
+            double q = spurt::value(r);
             _valid_q.push_back(interval_type(q - dq, q + dq));
         }
     }
@@ -111,7 +111,7 @@ struct angular_variation_priority {
         }
         
         for (int i = 0 ; i < 3 ; ++i) {
-            dtheta += fabs(xavier::signed_angle(vector_value(d[i], _p, _metric),
+            dtheta += fabs(spurt::signed_angle(vector_value(d[i], _p, _metric),
                                                 vector_value(d[(i+1)%3], _p, _metric)));
         }
         return area(p)*(dtheta - _eps);
@@ -157,7 +157,7 @@ struct conditional_angular_variation_priority {
         // interval_type cell_int(min, max);
         // bool relevant = false;
         // for (int i = 0 ; i < _ints.size() && !relevant ; ++i) {
-        //  relevant = !(xavier::intersect(_ints[i], cell_int).empty());
+        //  relevant = !(spurt::intersect(_ints[i], cell_int).empty());
         // }
         
         // if (!relevant) {
@@ -175,7 +175,7 @@ struct conditional_angular_variation_priority {
         for (int i = 0 ; i < 3 ; ++i) {
             std::pair<nvis::vec2, nvis::vec2> vecerr0 = vector_and_error_value(d[i], _p, _metric);
             std::pair<nvis::vec2, nvis::vec2> vecerr1 = vector_and_error_value(d[(i+1)%3], _p, _metric);
-            dtheta += fabs(xavier::signed_angle(vecerr0.first, vecerr1.first));
+            dtheta += fabs(spurt::signed_angle(vecerr0.first, vecerr1.first));
             double err = nvis::norm(vecerr0.second);
             if (err > maxerror) {
                 maxerror = err;
@@ -183,7 +183,7 @@ struct conditional_angular_variation_priority {
         }
         
         // // if triangle area is smaller than half of square of side maxerror, bail
-        // if (2*xavier::area(p) < maxerror*maxerror) return 0;
+        // if (2*spurt::area(p) < maxerror*maxerror) return 0;
         
         // if (display_stuff) {
         //  std::cerr << "triangle: " << p[0] << ", " << p[1] << ", " << p[2]
@@ -212,7 +212,7 @@ struct triangle_filter {
             if (r.numerator() != period) {
                 continue;
             }
-            double q = xavier::value(r);
+            double q = spurt::value(r);
             _valid_q.push_back(interval_type(q - dq, q + dq));
         }
     }

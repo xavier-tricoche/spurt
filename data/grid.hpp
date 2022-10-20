@@ -12,7 +12,7 @@
 #include <string>
 
 
-namespace xavier { namespace grid {
+namespace spurt { namespace grid {
     
 template<unsigned int N>
 struct cell_type {
@@ -208,7 +208,7 @@ private:
 };
 
 } // namespace grid
-} // namespace xavier
+} // namespace spurt
 
 
 #endif

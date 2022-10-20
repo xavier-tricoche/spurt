@@ -8,7 +8,7 @@
 #include "core_mantle_io.hpp"
 #include "utils.hpp"
 
-// xavier's utilities
+// spurt's utilities
 #include <format/format.hpp>
 #include <misc/option_parse.hpp>
 
@@ -50,7 +50,7 @@
 
 std::string home_directory;
 
-using namespace xavier::gmig;
+using namespace spurt::gmig;
 
 // **************************************************************************
 // 
@@ -66,7 +66,7 @@ typedef core_mantle::Vertex<scalar_t, integer_t>  vertex_t;
 typedef vertex_t::pos_t    pos_t;
 typedef vertex_t::bbox_t   bbox_t;
 
-typedef xavier::point_locator<scalar_t, integer_t, 3> locator_t;
+typedef spurt::point_locator<scalar_t, integer_t, 3> locator_t;
 typedef locator_t::point_type point_t;
 typedef locator_t::coord_type coord_t;
 typedef nvis::lexicographical_order order_t;
@@ -112,7 +112,7 @@ template<typename Tag_>
     using filter_graph_map_t=property_map<filtered_graph_t, Tag_>;
 }
 
-struct xavier::gmig::TypeAttributes {
+struct spurt::gmig::TypeAttributes {
     TypeAttributes() : graph(new boost::graph_t()) {}
     
     std::vector<integer_t> indices;
@@ -232,7 +232,7 @@ create_color_transfer_function(const std::vector<scalar_t>& values) {
     VTK_CREATE(vtkColorTransferFunction, ctf);
     
     std::vector<color_t> colors(20);
-    xavier::spiral_scale(colors, 20, 0.2);
+    spurt::spiral_scale(colors, 20, 0.2);
     scalar_t dval, minval, maxval;
     if (values.size()) { 
         minval=*std::min_element(values.begin(), values.end());
@@ -255,8 +255,8 @@ create_color_transfer_function(const std::vector<scalar_t>& values) {
 VTK_SMART(OrientationMarkerWidget) 
 coordinate_axes_widget(QVTKWidget* vtk_widget) {
     color_t text_color = 
-        xavier::luminosity(params::bg_color) > 0.5 ?
-        xavier::black : xavier::white;
+        spurt::luminosity(params::bg_color) > 0.5 ?
+        spurt::black : spurt::white;
     color_t text_bg_color = 0.5*(text_color + params::bg_color);
     VTK_CREATE(vtkAxesActor, axes);
     axes->SetCylinderRadius(0.05);
@@ -757,7 +757,7 @@ void mantle_vis_renderer::slot_file_action(QAction* action) {
 
 bool init(int argc, char** argv) {
     std::cout << "init\n" << std::flush;
-    namespace xcl=xavier::command_line;
+    namespace xcl=spurt::command_line;
     
     xcl::option_traits 
         required_group("Required parameters", true, false),

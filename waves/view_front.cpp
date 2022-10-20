@@ -33,7 +33,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <set>
 #include <sstream>
@@ -77,9 +77,9 @@ int main(int argc, char* argv[])
 {
 	initialize(argc, argv);
 	
-	Nrrd* nin = xavier::readNrrd(name_in);
+	Nrrd* nin = spurt::readNrrd(name_in);
 	std::vector<float> data;
-	xavier::to_vector<float>(data, nin);
+	spurt::to_vector<float>(data, nin);
 	
 	size_t npts = data.size()/3;
 	

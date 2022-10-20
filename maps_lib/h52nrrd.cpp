@@ -14,7 +14,7 @@
 #include <math/fixed_matrix.hpp>
 #include <util/wall_timer.hpp>
 
-// xavier
+// spurt
 #include <math/math.hpp>
 
 // christoph

@@ -96,7 +96,7 @@ struct i2x {
             step[i] = nrrd->axis[nrrd->dim-3+i].spacing;
             size[i] = nrrd->axis[nrrd->dim-3+i].size;
         }
-        bounds = xavier::nrrd_utils::get_bounds<3>(nrrd);
+        bounds = spurt::nrrd_utils::get_bounds<3>(nrrd);
     }
     
     nvis::vec3 operator()(int id) const {
@@ -170,20 +170,20 @@ struct euler {
     double _h, _lmax, _eps;
 };
 
-typedef xavier::nrrd_data_traits<Nrrd*>      field_type;
+typedef spurt::nrrd_data_traits<Nrrd*>      field_type;
 typedef right_hand_side<field_type>     rhs_type;
 typedef euler<rhs_type>                 euler_type;
 typedef std::pair<nvis::vec3, double>   curve_point;
 typedef std::list<curve_point>          curve_type;
 typedef nvis::vec3                      value_type;
-typedef xavier::nrrd_data_traits<Nrrd*>      nrrd_data_traits;
+typedef spurt::nrrd_data_traits<Nrrd*>      nrrd_data_traits;
 
 
 struct point_location {
     point_location(const Nrrd* nrrd) {
-        nvis::bbox3 b = xavier::nrrd_utils::get_bounds<3>(nrrd);
+        nvis::bbox3 b = spurt::nrrd_utils::get_bounds<3>(nrrd);
         min = b.min();
-        step = xavier::nrrd_utils::step<3>(nrrd);
+        step = spurt::nrrd_utils::step<3>(nrrd);
         for (int i = 0 ; i < 3 ; ++i) {
             size[i] = nrrd->axis[nrrd->dim-3+i].size;
         }
@@ -239,7 +239,7 @@ int main(int argc, char* argv[])
     std::cerr << "base dir = " << info.base_dir << '\n';
     
     std::string name = info.base_dir + "Efield.nrrd";
-    Nrrd* nin_vec = xavier::nrrd_utils::readNrrd(name);
+    Nrrd* nin_vec = spurt::nrrd_utils::readNrrd(name);
     if (nin_vec->dim != 4) {
         throw;
     }
@@ -251,7 +251,7 @@ int main(int argc, char* argv[])
     std::ostringstream os;
     
     name = info.microstruct;
-    Nrrd* nin_tag = xavier::nrrd_utils::readNrrd(name);
+    Nrrd* nin_tag = spurt::nrrd_utils::readNrrd(name);
     point_location pl(nin_tag);
     int* tags = (int*)nin_tag->data;
     int nb_voxels = pl.size[0] * pl.size[1] * pl.size[2];
@@ -267,7 +267,7 @@ int main(int argc, char* argv[])
         }
     }
     
-    nvis::bbox3 bounds = xavier::nrrd_utils::get_bounds<3>(nin_vec);
+    nvis::bbox3 bounds = spurt::nrrd_utils::get_bounds<3>(nin_vec);
     nvis::vec3 min = bounds.min();
     nvis::vec3 diameter = bounds.size();
     

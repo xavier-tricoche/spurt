@@ -14,7 +14,7 @@
 #include <math/fixed_matrix.hpp>
 #include <util/wall_timer.hpp>
 
-// xavier
+// spurt
 #include <math/math.hpp>
 
 // christoph
@@ -79,7 +79,7 @@ inline int pos(const nvis::vec2& x, unsigned int res)
     return i + j*res;
 }
 
-inline double lmax(int n, const std::vector< nvis::vec2 >& pos, const xavier::map_metric& metric)
+inline double lmax(int n, const std::vector< nvis::vec2 >& pos, const spurt::map_metric& metric)
 {
     static double hx = (maxx - minx) / (double)resx;
     static double hy = (maxy - miny) / (double)resy;
@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
     _map.precision(eps);
     
     bool per[2] = {true, false};
-    xavier::map_metric metric(field->bounds(), per);
+    spurt::map_metric metric(field->bounds(), per);
     _minx = metric.bounds().min()[0];
     _miny = metric.bounds().min()[1];
     _maxx = metric.bounds().max()[0];

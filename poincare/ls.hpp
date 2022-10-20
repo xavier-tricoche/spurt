@@ -4,9 +4,9 @@
 #include <math/fixed_vector.hpp>
 #include <math/matrix.hpp>
 
-namespace xavier {
+namespace spurt {
 
-typedef xavier::matrix<double>  mat;
+typedef spurt::matrix<double>  mat;
 
 bool NR_svddcmp(const mat& A, std::vector<double> w, mat& U, mat& V);
 
@@ -20,7 +20,7 @@ inline nvis::vec4 ls_jacobian(const std::vector< nvis::vec2 >& pos,
     // to solve two equations independently.
     
     // d/dx, d/dy, K
-    xavier::mat3 M;
+    spurt::mat3 M;
     nvis::vec3 rhsx(0, 0, 0), rhsy(0, 0, 0);
     
     for (unsigned int i = 0 ; i < pos.size() ; ++i) {
@@ -48,7 +48,7 @@ inline nvis::vec4 ls_jacobian(const std::vector< nvis::vec2 >& pos,
     M(2, 0) = M(0, 2);
     M(2, 1) = M(1, 2);
     
-    xavier::mat3 Inv = invert(M);
+    spurt::mat3 Inv = invert(M);
     nvis::vec4 J;
     nvis::vec3 tmp = Inv * rhsx;
     J[0] = tmp[0];
@@ -63,7 +63,7 @@ inline nvis::vec4 ls_jacobian(const std::vector< nvis::vec2 >& pos,
 inline nvis::vec2 ls_gradient(const std::vector< nvis::vec2 >& pos, const std::vector< double >& val)
 {
     // d/dx, d/dy, K
-    xavier::mat3 M;
+    spurt::mat3 M;
     nvis::vec3 rhs(0, 0, 0);
     
     for (unsigned int i = 0 ; i < pos.size() ; ++i) {
@@ -87,7 +87,7 @@ inline nvis::vec2 ls_gradient(const std::vector< nvis::vec2 >& pos, const std::v
     M(2, 0) = M(0, 2);
     M(2, 1) = M(1, 2);
     
-    xavier::mat3 Inv = invert(M);
+    spurt::mat3 Inv = invert(M);
     nvis::vec3 tmp = Inv * rhs;
     return nvis::vec2(tmp[0], tmp[1]);
 }

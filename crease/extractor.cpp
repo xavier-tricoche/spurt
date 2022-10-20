@@ -13,60 +13,60 @@
 #include <crease/pvo.hpp>
 
 // for debugging display
-std::vector< std::vector< nvis::vec3 > > xavier::crease::vertices;
-std::vector< nvis::vec3 > xavier::crease::problematic_voxels;
-std::vector< nvis::vec3 > xavier::crease::fixed_voxels;
-std::vector< nvis::vec3 > xavier::crease::current_vertices;
-std::vector< nvis::vec3 > xavier::crease::ok_faces;
-std::vector< unsigned int > xavier::crease::added_vertices;
-std::vector< nvis::vec3 > xavier::crease::crossing_faces;
-std::vector< xavier::crease::point_on_face > xavier::crease::all_points_on_face;
-std::vector< xavier::crease::path > xavier::crease::paths;
-std::vector< nvis::vec3 > xavier::crease::pvo_faces;
-std::map< xavier::FaceId, nvis::vec3 > xavier::crease::reference_points;
-xavier::FaceId xavier::crease::current_face_id;
-std::vector< nvis::vec3 > xavier::crease::show_all;
-std::vector< nvis::vec3 > xavier::crease::intermediate_steps;
-std::vector< nvis::vec3 > xavier::crease::round1, xavier::crease::round2, xavier::crease::round12;
-std::string xavier::crease::flag_file_name;
-bool xavier::crease::bold_move;
+std::vector< std::vector< nvis::vec3 > > spurt::crease::vertices;
+std::vector< nvis::vec3 > spurt::crease::problematic_voxels;
+std::vector< nvis::vec3 > spurt::crease::fixed_voxels;
+std::vector< nvis::vec3 > spurt::crease::current_vertices;
+std::vector< nvis::vec3 > spurt::crease::ok_faces;
+std::vector< unsigned int > spurt::crease::added_vertices;
+std::vector< nvis::vec3 > spurt::crease::crossing_faces;
+std::vector< spurt::crease::point_on_face > spurt::crease::all_points_on_face;
+std::vector< spurt::crease::path > spurt::crease::paths;
+std::vector< nvis::vec3 > spurt::crease::pvo_faces;
+std::map< spurt::FaceId, nvis::vec3 > spurt::crease::reference_points;
+spurt::FaceId spurt::crease::current_face_id;
+std::vector< nvis::vec3 > spurt::crease::show_all;
+std::vector< nvis::vec3 > spurt::crease::intermediate_steps;
+std::vector< nvis::vec3 > spurt::crease::round1, spurt::crease::round2, spurt::crease::round12;
+std::string spurt::crease::flag_file_name;
+bool spurt::crease::bold_move;
 
 // extraction control
-double xavier::crease::value_threshold = 0;
-double xavier::crease::strength_threshold = 0;
-double xavier::crease::value_threshold_select = 0;
-double xavier::crease::strength_threshold_select = 0;
-double xavier::crease::confidence_threshold = 0.5;
-double xavier::crease::gradient_eps = 1.0e-6;
-double xavier::crease::gradient_eps_rel = 0.05;
-bool xavier::crease::apply_filter;
-bool xavier::crease::speedup;
-bool xavier::crease::fixing_voxel;
-bool xavier::crease::display_debug_info = false;
-bool xavier::crease::read_info;
+double spurt::crease::value_threshold = 0;
+double spurt::crease::strength_threshold = 0;
+double spurt::crease::value_threshold_select = 0;
+double spurt::crease::strength_threshold_select = 0;
+double spurt::crease::confidence_threshold = 0.5;
+double spurt::crease::gradient_eps = 1.0e-6;
+double spurt::crease::gradient_eps_rel = 0.05;
+bool spurt::crease::apply_filter;
+bool spurt::crease::speedup;
+bool spurt::crease::fixing_voxel;
+bool spurt::crease::display_debug_info = false;
+bool spurt::crease::read_info;
 
 // spatial accuracy
-unsigned int xavier::crease::max_depth = 4;
-unsigned int xavier::crease::max_depth_fix = 6;
-unsigned int xavier::crease::upsample;
-double xavier::crease::max_int_error = 0.05;
-double xavier::crease::max_align_error = 0.01;
+unsigned int spurt::crease::max_depth = 4;
+unsigned int spurt::crease::max_depth_fix = 6;
+unsigned int spurt::crease::upsample;
+double spurt::crease::max_int_error = 0.05;
+double spurt::crease::max_align_error = 0.01;
 
-unsigned int xavier::crease::nb_crossings;
+unsigned int spurt::crease::nb_crossings;
 
 // crease type
-bool xavier::crease::is_ridge;
-int xavier::crease::crease_kind;
-unsigned int xavier::crease::failed_conv;
-xavier::crease::extraction_method xavier::crease::ext_meth;
+bool spurt::crease::is_ridge;
+int spurt::crease::crease_kind;
+unsigned int spurt::crease::failed_conv;
+spurt::crease::extraction_method spurt::crease::ext_meth;
 
 // interface to gage
-xavier::MeasureWrapper* xavier::crease::the_wrapper;
+spurt::MeasureWrapper* spurt::crease::the_wrapper;
 
-using namespace xavier;
+using namespace spurt;
 
 // global face information
-xavier::crease::face_information xavier::crease::current_face_info;
+spurt::crease::face_information spurt::crease::current_face_info;
 
 namespace voxel_info {
 // multipurpose voxel information
@@ -95,7 +95,7 @@ unsigned int face_pt[3][4][3] = {
 
 };
 
-std::ostream& xavier::crease::operator<<(std::ostream& out, const face_type& face)
+std::ostream& spurt::crease::operator<<(std::ostream& out, const face_type& face)
 {
     out << "face: " << std::endl
     << "positions: 0:" << face.p[0] << ", 1:" << face.p[1]
@@ -111,10 +111,10 @@ std::ostream& xavier::crease::operator<<(std::ostream& out, const face_type& fac
 
 unsigned int write_vertex_info(const Grid& grid, std::vector< bool >& ok)
 {
-    using namespace xavier;
-    using namespace xavier::crease;
+    using namespace spurt;
+    using namespace spurt::crease;
 
-    std::ofstream output(xavier::crease::flag_file_name.c_str(), std::ios::binary);
+    std::ofstream output(spurt::crease::flag_file_name.c_str(), std::ios::binary);
     unsigned int nb_ok_vertices = 0;
 
     unsigned int M, N, P;
@@ -157,7 +157,7 @@ unsigned int write_vertex_info(const Grid& grid, std::vector< bool >& ok)
 
     Nrrd *nrrd = nrrdNew();
     if (nrrdWrap_va(nrrd, buffer, nrrdTypeDouble, 4, 2, M, N, P) ||
-        nrrdSave(xavier::crease::flag_file_name.c_str(), nrrd, NULL)) {
+        nrrdSave(spurt::crease::flag_file_name.c_str(), nrrd, NULL)) {
         char *err = biffGetDone(NRRD);
         std::cout << err << std::endl;
     }
@@ -170,11 +170,11 @@ unsigned int write_vertex_info(const Grid& grid, std::vector< bool >& ok)
 
 int compute_vertex_info(const Grid& grid, std::vector< bool >& ok, std::vector< bool >& conf_ok)
 {
-    using namespace xavier;
-    using namespace xavier::crease;
+    using namespace spurt;
+    using namespace spurt::crease;
 
     std::cout << "computing vertex info..." << std::endl;
-    std::cout << "confidence threshold = " << xavier::crease::confidence_threshold << std::endl;
+    std::cout << "confidence threshold = " << spurt::crease::confidence_threshold << std::endl;
     std::cout << "value threshold = " << value_threshold << std::endl;
     std::cout << "strength threshold = " << strength_threshold << std::endl;
 
@@ -211,7 +211,7 @@ int compute_vertex_info(const Grid& grid, std::vector< bool >& ok, std::vector< 
                 // std::cout << "(" << i << ", " << j << ", " << k << "): " << conf << "; " << val
                 // << "; " << str << std::endl;
 
-                conf_ok[id] = (conf > xavier::crease::confidence_threshold);
+                conf_ok[id] = (conf > spurt::crease::confidence_threshold);
                 // if (!conf_ok[id]) {
                 //     std::cout << "low confidence at (" << i << ", " << j << ", " << k << ")" << std::endl;
                 // }
@@ -234,16 +234,16 @@ int compute_vertex_info(const Grid& grid, std::vector< bool >& ok, std::vector< 
 
 unsigned int read_vertex_info(std::vector< bool >& ok, std::vector< bool >& conf_ok)
 {
-    using namespace xavier;
-    using namespace xavier::crease;
+    using namespace spurt;
+    using namespace spurt::crease;
 
     Nrrd *nrrd = nrrdNew();
-    if (nrrdLoad(nrrd, xavier::crease::flag_file_name.c_str(), NULL)) {
+    if (nrrdLoad(nrrd, spurt::crease::flag_file_name.c_str(), NULL)) {
         char *err = biffGetDone(NRRD);
         std::cout << err << std::endl;
     }
 
-    xavier::nrrd_utils::nrrd_data_wrapper<double> buffer(nrrd);
+    spurt::nrrd_utils::nrrd_data_wrapper<double> buffer(nrrd);
 
     bool has_confidence = (nrrd->dim == 4 && nrrd->axis[0].size == 3);
 
@@ -282,7 +282,7 @@ unsigned int read_vertex_info(std::vector< bool >& ok, std::vector< bool >& conf
 
                 conf_ok[id] = true;
                 if (has_confidence) {
-                    conf_ok[id] = (cfd > xavier::crease::confidence_threshold);
+                    conf_ok[id] = (cfd > spurt::crease::confidence_threshold);
                 }
                 ok[id] =  conf_ok[id] &&
                           (crease::is_ridge ?
@@ -475,7 +475,7 @@ inline void ijk(unsigned int& i, unsigned int& j, unsigned& k, unsigned int id,
 // --------------------------------------------------------------------------
 
 std::map< FaceId, unsigned int > face_found;
-std::vector< nvis::vec3 > xavier::crease::all_face_points;
+std::vector< nvis::vec3 > spurt::crease::all_face_points;
 std::vector< std::pair< unsigned int, unsigned int > > all_edges;
 unsigned int nb_segments;
 
@@ -496,7 +496,7 @@ inline void add_segment(std::vector< unsigned int > ids)
             _vals[l] = crease::the_wrapper->value(crease::all_face_points[ids[l]]);
         }
         std::vector< unsigned int > _ids(np);
-        xavier::sort_ids(_ids, _vals);
+        spurt::sort_ids(_ids, _vals);
         ++nb_segments;
         unsigned int i0 = _ids[np-2];
         unsigned int i1 = _ids.back();
@@ -511,7 +511,7 @@ nvis::vec3 trilinear(const nvis::vec3& p, const std::vector< nvis::vec3 >& v)
     nvis::vec3 u;
     const nvis::vec3& min = v[0];
     const nvis::vec3& max = v[6];
-    if (xavier::crease::display_debug_info)
+    if (spurt::crease::display_debug_info)
         std::cout << "min = " << min << ", max = " << max << std::endl;
     for (unsigned int i = 0; i < 3 ; ++i) {
         u[i] = (p[i] - min[i]) / (max[i] - min[i]);
@@ -586,8 +586,8 @@ bool track_ridge_line(nvis::vec3& out, unsigned int& fid_out,
     // my_path.push_back(p0);
     while (n < 100) {
         ++n;
-        xavier::crease::intermediate_steps.push_back(p0);
-        nvis::vec3 dir = xavier::crease::the_wrapper->eigenvector(p0, crease::is_ridge ? 0 : 2);
+        spurt::crease::intermediate_steps.push_back(p0);
+        nvis::vec3 dir = spurt::crease::the_wrapper->eigenvector(p0, crease::is_ridge ? 0 : 2);
         if (nvis::inner(dir, ref) < 0) dir *= -1;
         p1 = p0 + step * dir; // Euler step in physical space
         nvis::vec3 l1 = trilinear(p1, voxel); // corresponding logical coordinates
@@ -692,7 +692,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
     apply_filter = true;
     nb_crossings = 0;
 
-    xavier::crease::search_face_PVO search_face;
+    spurt::crease::search_face_PVO search_face;
 
     // check if this is a tensor field <-- do we need that?
     bool is_tensor = (nrrd->dim == 4 && nrrd->axis[0].size == 7);
@@ -794,7 +794,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
     double total_found_face_processing_time = 0;
     unsigned int nb_found_face = 0;
     unsigned int nb_empty_face = 0;
-    xavier::ProgressDisplay progress(false);
+    spurt::ProgressDisplay progress(false);
     progress.start();
 
     for (unsigned int f = 0 ; f < n3 ; f++) {
@@ -1008,7 +1008,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                 vals[n] = the_wrapper->value(all_face_points[fpids[n]]);
             }
             std::vector< unsigned int > sorted(np);
-            xavier::sort(vals, sorted);
+            spurt::sort(vals, sorted);
             unsigned int id0, id1;
             if (is_ridge) {
                 id0 = sorted[np-1];
@@ -1143,7 +1143,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                     vals[n] = the_wrapper->value(all_face_points[fpids[n]]);
                 }
                 std::vector< unsigned int > sorted(np);
-                xavier::sort(vals, sorted);
+                spurt::sort(vals, sorted);
                 unsigned int id0, id1;
                 if (is_ridge) {
                     id0 = sorted[np-1];
@@ -1281,17 +1281,17 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                             if (!n) {
                                 if (display_debug_info)
                                     std::cout << "first attempt: bold approach" << std::endl;
-                                xavier::crease::speedup = true;
+                                spurt::crease::speedup = true;
                             }
                             else if (n == 1) {
                                 if (display_debug_info)
                                     std::cout << "first attempt failed: cautious approach on second attempt" << std::endl;
-                                xavier::crease::speedup = false;
+                                spurt::crease::speedup = false;
                             }
                             else {
                                 if (display_debug_info)
                                     std::cout << "everything we tried so far failed. using a smaller area" << std::endl;
-                                xavier::crease::speedup = false;
+                                spurt::crease::speedup = false;
                                 h *= 0.5;
                                 refine_face(out, face, first_guess.second, h);
                             }
@@ -1312,7 +1312,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                                       << face.p[0] << ", " << face.p[1] << ", " << face.p[2] << ", " << face.p[3]
                                       << std::endl;
 
-                        xavier::crease::speedup = false;
+                        spurt::crease::speedup = false;
                         current_vertices.clear();
                         current_face_info.set_info(face.p[0], face.p[1], face.p[2], face.p[3]);
                         found = search_face(points, face.p[0], face.p[1], face.p[2], face.p[3], max_depth_fix,
@@ -1336,8 +1336,8 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                 {
                     __d = max_depth_fix;
                     crease::max_int_error /= 5;
-                    xavier::crease::speedup = false;
-                    xavier::crease::fixing_voxel = true;
+                    spurt::crease::speedup = false;
+                    spurt::crease::fixing_voxel = true;
                     for (unsigned int vf = 0 ; vf < 6 && !found && !found_something; vf++) {
                         if (vf == point_face[0] || // skip position that we already know
                             (crease_kind < 2 && // or face we have already ruled out
@@ -1480,7 +1480,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
               << "number of failed convergences: " << failed_conv << std::endl
               << "percentage of faces containing several zero crossing: "
               << 100*(double)nb_several / (double)all_face_points.size() << std::endl
-              << "number of PVO computations performed: " << xavier::crease::nb_pvo << std::endl;
+              << "number of PVO computations performed: " << spurt::crease::nb_pvo << std::endl;
 
     std::cout << "number of segments = " << all_edges.size()
               << ", number of connected components: " << creases.size()

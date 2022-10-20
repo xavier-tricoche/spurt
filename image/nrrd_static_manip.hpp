@@ -10,7 +10,7 @@
 
 extern double toverhead;
 
-namespace xavier {
+namespace spurt {
     size_t nrrd_size(const Nrrd* A, bool skip_first_col=false) {
         size_t s=1;
         for (int i=(skip_first_col ? 1 : 0); i<A->dim; ++i) {
@@ -42,7 +42,7 @@ namespace xavier {
             if (nin->axis[0].size!=Nrows*Ncols) {
                 throw std::runtime_error("matrix dimensions mismatch");
             }
-            xavier::to_vector<value_t>(_val_array, nin);
+            spurt::to_vector<value_t>(_val_array, nin);
             _mat_array=reinterpret_cast<matrix_t*>(&_val_array[0]);
         }
         
@@ -310,4 +310,4 @@ namespace xavier {
         }
     };
 
-} // xavier
+} // spurt

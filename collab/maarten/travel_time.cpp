@@ -261,7 +261,7 @@ int main(int argc, char* argv[])
     
     // import smoothly reconstructed travel time data
     vtkSmartPointer<vtkDataSet> tt_data;
-    std::string tt_ext = xavier::get_extension(tt_name);
+    std::string tt_ext = spurt::get_extension(tt_name);
     if (tt_ext == "vtk") {
         VTK_CREATE(vtkDataSetReader, tt_reader);
         tt_reader->SetFileName(tt_name.c_str());
@@ -348,7 +348,7 @@ int main(int argc, char* argv[])
     std::vector<nvis::vec2> coords;
     std::vector<double> travel_times;
     std::vector<double> distances;
-    nvis::bbox2 b = xavier::maarten::read_text(coords, travel_times,
+    nvis::bbox2 b = spurt::maarten::read_text(coords, travel_times,
                                                distances, station_name,
                                                verbose);
     nvis::subv<0, 2, double, 3>(source) = coords[0];
@@ -558,7 +558,7 @@ int main(int argc, char* argv[])
         // check if the user already provided us with an image,
         // in which case we will assume that it corresponds to a
         // precomputed LIC texture.
-        std::string ext = xavier::get_extension(gradient_name);
+        std::string ext = spurt::get_extension(gradient_name);
         if (ext == "png" || ext == "jpeg" || ext == "jpg" || ext == "jpg2" ||
                 ext == "bmp" || ext == "jpeg2" || ext == "tiff" || ext == "tif") {
             lic_image = vtk_utils::load_image(gradient_name);

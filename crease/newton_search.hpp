@@ -4,7 +4,7 @@
 #include <math/fixed_vector.hpp>
 #include <face.hpp>
 
-namespace xavier::crease {
+namespace spurt::crease {
 inline nvis::vec2 newton_step_2d(const nvis::vec2& g, const nvis::vec3& h)
 {
     // solve 2x2 system: Hdx = -g
@@ -30,8 +30,8 @@ bool newton(const face_type& face, nvis::vec3& guess, double eps, unsigned int m
     for (unsigned int i = 0 ; i < maxit ; i++) {
         nvis::vec2 dx = newton_step_2d(g, h);
         x += dx;
-        g = project_on_face(xavier::crease::the_wrapper->gradient(global_coord(face, x)), face);
-        h = project_on_face(xavier::crease::the_wrapper->hessian(global_coord(face, x)), face);
+        g = project_on_face(spurt::crease::the_wrapper->gradient(global_coord(face, x)), face);
+        h = project_on_face(spurt::crease::the_wrapper->hessian(global_coord(face, x)), face);
         gm = nvis::norm(g);
         std::cout << "newton #" << i << ": gm=" << gm << " at " << x << std::endl;
         
@@ -51,7 +51,7 @@ struct search_face_newton {
                    unsigned int maxdepth, bool& something_found) const {
         face_type face(p0, p1, p2, p3);
         nvis::vec3 guess = 0.5 * (p0 + p3);
-        if (newton(face, guess, xavier::crease::gradient_eps, 20)) {
+        if (newton(face, guess, spurt::crease::gradient_eps, 20)) {
             xing.push_back(guess);
             return 1;
         }

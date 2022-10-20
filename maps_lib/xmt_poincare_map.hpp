@@ -18,7 +18,7 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 
-namespace xavier {
+namespace spurt {
 class standard_map {
     static constexpr double twopi = 2.*M_PI;
 
@@ -560,6 +560,6 @@ void xmt_poincare_map<Field>::__map_and_jacobian_rk56(const state_type& in,
     }
 }
 
-} // namespace xavier
+} // namespace spurt
 
 #endif // __xmt_poincare_map_hpp

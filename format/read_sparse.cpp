@@ -104,7 +104,7 @@ void run(Nrrd* nrrd_indices, Nrrd* nrrd_values, Nrrd* nrrd_rhs) {
     // Eigen::setNbThreads(6);
     std::cout << "Eigen is using " << Eigen::nbThreads() << " threads\n";
 
-    xavier::ProgressDisplay timer(false), total_timer(false);
+    spurt::ProgressDisplay timer(false), total_timer(false);
     total_timer.start();
     timer.start();
     lscg.compute(A);
@@ -169,13 +169,13 @@ void run(Nrrd* nrrd_indices, Nrrd* nrrd_values, Nrrd* nrrd_rhs) {
     // std::cout << "zerolinf norm: " << zerolinf << '\n';
 
     size_t size = x.rows();
-    xavier::nrrd_utils::writeNrrd(&x(0), name_out, xavier::nrrd_utils::nrrd_value_traits_from_type<Scalar_>::index, 1, &size);
+    spurt::nrrd_utils::writeNrrd(&x(0), name_out, spurt::nrrd_utils::nrrd_value_traits_from_type<Scalar_>::index, 1, &size);
 }
 
 int main(int argc, const char* argv[]) {
 
     std::string name_id, name_coef, name_rhs;
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
     int verbose=0;
 
     xcl::option_traits
@@ -217,9 +217,9 @@ int main(int argc, const char* argv[]) {
     // name_coef = argv[2];
     // name_rhs = argv[3];
 
-    Nrrd* nin_id = xavier::nrrd_utils::readNrrd(name_id);
-    Nrrd* nin_coef = xavier::nrrd_utils::readNrrd(name_coef);
-    Nrrd* nin_rhs = xavier::nrrd_utils::readNrrd(name_rhs);
+    Nrrd* nin_id = spurt::nrrd_utils::readNrrd(name_id);
+    Nrrd* nin_coef = spurt::nrrd_utils::readNrrd(name_coef);
+    Nrrd* nin_rhs = spurt::nrrd_utils::readNrrd(name_rhs);
 
     if (nin_coef->type != nrrdTypeFloat && nin_coef->type != nrrdTypeDouble) {
         std::cerr << "value type " << nin_coef->type << " not supported\n";

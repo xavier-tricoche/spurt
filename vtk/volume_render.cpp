@@ -231,7 +231,7 @@ int main(int argc, char *argv[])
 	// Read the data
 	vtkSmartPointer<vtkImageData> input = vtkSmartPointer<vtkImageData>::New();
 
-	std::string ext = xavier::filename::extension(filename);
+	std::string ext = spurt::filename::extension(filename);
 
 	if (ext == "nrrd" || ext == "NRRD" || ext == "nhdr")
 	{

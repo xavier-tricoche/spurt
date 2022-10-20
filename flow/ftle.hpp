@@ -131,7 +131,7 @@ nvis::vec3 eigen_flow_map(const Field& field, const nvis::vec3& seed, double dt,
             nvis::vec3 step = dt * field.interpolate(x);
             // check orientation consistency
             double dot = nvis::inner(step, ref_dir);
-            step *= xavier::sign(dot);
+            step *= spurt::sign(dot);
             start_dir = step;
 
             // std::cerr << "at " << x << ", t = " << t << ", step = " << step << std::endl;
@@ -198,14 +198,14 @@ template< typename Field >
 double ftle(int n, const Field& flowmap, double length)
 {
     nvis::fixed_vector<nvis::vec3, 3> J(flowmap.derivative(flowmap.grid()(n)));
-    xavier::mat3 M;
+    spurt::mat3 M;
     for (int i = 0 ; i < 3 ; ++i) {
         for (int j = 0 ; j < 3 ; ++j) {
             M(i, j) = J[i][j];
         }
     }
 
-    xavier::mat3 T(transpose(M));
+    spurt::mat3 T(transpose(M));
     M *= T;
     std::vector<double> evals;
     std::vector<nvis::vec3> evecs;
@@ -221,7 +221,7 @@ template< typename Data, typename FlowMap >
 nvis::vec2 eigenftle(int n, const Data& data, const FlowMap flowmaps[2], double length)
 {
     nvis::ivec3 coord = flowmaps[0].grid()(n);
-    xavier::mat3 M[2];
+    spurt::mat3 M[2];
     nvis::vec3 dmap[2];
     OrientationChecker<Data> checker(data, flowmaps[0].grid()(coord));
     for (int r = 0 ; r < 3 ; ++r) {
@@ -233,7 +233,7 @@ nvis::vec2 eigenftle(int n, const Data& data, const FlowMap flowmaps[2], double 
         }
     }
 
-    xavier::mat3 T[2] = { transpose(M[0]), transpose(M[1]) };
+    spurt::mat3 T[2] = { transpose(M[0]), transpose(M[1]) };
     double ftle[2] = { 0, 0 };
     std::vector<double> evals;
     std::vector<nvis::vec3> evecs;

@@ -15,7 +15,7 @@ float r=1;
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
 
     xcl::option_traits
             required_group(true, false, "Required Options"),
@@ -59,17 +59,17 @@ int main(int argc, const char* argv[]) {
 	
 	std::vector<nvis::fvec3> colors;
 	if (scale_name == "spiral") {
-		xavier::spiral_scale(colors, number, 0.2, r, 1, 1, order);
+		spurt::spiral_scale(colors, number, 0.2, r, 1, 1, order);
 	}
 	else if (scale_name == "b2y" || scale_name == "r2g") {
 		nvis::fvec3 col0, col1;
 		if (scale_name == "b2y") {
-			col0 = xavier::blue;
-			col1 = xavier::yellow;
+			col0 = spurt::blue;
+			col1 = spurt::yellow;
 		}
 		else {
-			col0 = xavier::red;
-			col1 = xavier::green;
+			col0 = spurt::red;
+			col1 = spurt::green;
 		}
 		for (int i=0; i<number; ++i) {
 			double u = pow((double)i/(double)(number-1), order);

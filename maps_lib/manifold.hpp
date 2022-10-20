@@ -8,12 +8,12 @@
 #include <poincare/metric.hpp>
 #include <poincare/fixpoints.hpp>
 
-using namespace xavier;
+using namespace spurt;
 
 namespace map_analysis {
 
 struct fp_chain {
-    typedef xavier::fixpoint    fp_type;
+    typedef spurt::fixpoint    fp_type;
     
     fp_chain(const std::vector<fp_type>& _fps, const map_metric& _metric)
         : fixed_points(_fps), metric(_metric) {}
@@ -69,7 +69,7 @@ struct fp_chain {
         return *std::min_element(dist.begin(), dist.end());
     }
     
-    std::vector<xavier::fixpoint>   fixed_points;
+    std::vector<spurt::fixpoint>   fixed_points;
     map_metric                      metric;
 };
 
@@ -162,7 +162,7 @@ BVP_Step(const Map& map,
 template<typename Map>
 inline void ManBVP(manifold_type& manifold, manifold_progress& progress,
                    const Map& map,
-                   const xavier::fixpoint& saddle, bool fwd, double eps,
+                   const spurt::fixpoint& saddle, bool fwd, double eps,
                    double max_length,
                    double delta_min, double alpha_max, double delta_alpha_max)
 {

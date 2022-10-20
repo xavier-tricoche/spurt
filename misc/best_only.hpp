@@ -1,7 +1,7 @@
 #ifndef __XAVIER_BEST_ONLY_HPP__
 #define __XAVIER_BEST_ONLY_HPP__
 
-namespace xavier {
+namespace spurt {
 
 template<typename Type, typename Value, typename Less=std::less<Value> >
 struct best_only {

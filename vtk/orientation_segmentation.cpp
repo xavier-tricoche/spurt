@@ -31,7 +31,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <set>
 #include <sstream>
@@ -200,8 +200,8 @@ int main(int argc, char* argv[])
     edge_reader->Delete();
     std::cerr << edge_name << " loaded.\n";
     
-    Nrrd* __id = xavier::nrrd_utils::readNrrd(info.id_to_tags);
-    xavier::nrrd_utils::nrrd_data_wrapper<int> id(__id);
+    Nrrd* __id = spurt::nrrd_utils::readNrrd(info.id_to_tags);
+    spurt::nrrd_utils::nrrd_data_wrapper<int> id(__id);
     std::cerr << info.id_to_tags << " loaded.\n";
     
     std::string stat_base(info.stat_base);
@@ -211,8 +211,8 @@ int main(int argc, char* argv[])
     
     std::cerr << "there are " << nb_grains << " grains\n";
     
-    Nrrd* __orient = xavier::nrrd_utils::readNrrd(info.orientation);
-    xavier::nrrd_utils::nrrd_data_wrapper<float> orient(__orient);
+    Nrrd* __orient = spurt::nrrd_utils::readNrrd(info.orientation);
+    spurt::nrrd_utils::nrrd_data_wrapper<float> orient(__orient);
     std::cerr << info.orientation << " loaded.\n";
     
     

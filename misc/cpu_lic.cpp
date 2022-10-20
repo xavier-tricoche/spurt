@@ -217,10 +217,10 @@ int main(int argc, char* argv[]) {
     if (in_name.empty()) usage("no input file provided");
     if (out_name.empty()) usage("no output file provided");
     
-    Nrrd* nin = xavier::nrrd_utils::readNrrd(in_name.c_str());
-    bounds_type bounds = xavier::compute_bounds(nin);
+    Nrrd* nin = spurt::nrrd_utils::readNrrd(in_name.c_str());
+    bounds_type bounds = spurt::compute_bounds(nin);
     std::vector<value_type> data;
-    xavier::to_vector(data, nin);
+    spurt::to_vector(data, nin);
     if (w*h == 0) {
         w = nin->axis[1].size;
         h = nin->axis[2].size;

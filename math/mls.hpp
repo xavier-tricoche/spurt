@@ -22,7 +22,7 @@
 #include "RBFbasis.hpp"
 #include <misc/meta_utils.hpp>
 
-namespace xavier { namespace MLS {
+namespace spurt { namespace MLS {
 
 // number of degrees of freedom for requested polynomial precision
 
@@ -251,7 +251,7 @@ struct distance_traits< Eigen::Matrix<T, N, 1> > {
 };
 
 template<typename ValueType, typename PositionType,
-         typename WeightType = xavier::RBF::wendland_function<double>,
+         typename WeightType = spurt::RBF::wendland_function<double>,
          typename DistanceTraits = distance_traits<PositionType> >
 class weighted_least_squares {
 public:
@@ -290,7 +290,7 @@ public:
 
         Eigen::MatrixXd A(npts, nbasisfn);
         Eigen::MatrixXd rhs(npts, m_nrhs);
-        xavier::data_traits<value_type> wrapper;
+        spurt::data_traits<value_type> wrapper;
 
         for (int i=0 ; i<npts ; ++i) {
             double w = weight(points[i], x0, radius);
@@ -343,7 +343,7 @@ public:
         Eigen::MatrixXd rhs(npts, m_nrhs);
 
         distance_traits<nvis::fixed_vector<double, 3> > traits;
-        xavier::data_traits<value_type> wrapper;
+        spurt::data_traits<value_type> wrapper;
 
         for (int i=0 ; i<npts ; ++i) {
             MLS::set_basis(basis, points[i], m_dim, prec);
@@ -366,7 +366,7 @@ protected:
 };
 
 } // MLS
-} // xavier
+} // spurt
 
 
 

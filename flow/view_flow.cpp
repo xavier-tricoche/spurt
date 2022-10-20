@@ -1,7 +1,7 @@
 #include <regex>
 #include <string>
 
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
@@ -39,15 +39,15 @@ constexpr double invalid = -30000;
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
-        
-    xcl::option_traits 
-            required_group(true, false, "Required Options"), 
+    namespace xcl = spurt::command_line;
+
+    xcl::option_traits
+            required_group(true, false, "Required Options"),
             optional_group(false, false, "Optional Group");
-            
+
     xcl::option_parser parser(argv[0],
             "Visualize flow of uniform seeding distribution");
-    
+
     try {
         parser.use_short_symbols(true);
         parser.use_brackets(true);
@@ -66,7 +66,7 @@ void initialize(int argc, const char* argv[])
 		parser.add_flag("track", follow_camera, "Track camera settings", optional_group);
 		parser.add_value("camera", name_camera, "Import camera settings", optional_group);
 		parser.add_value("cmap", name_cmap, "Import color map definition", optional_group);
-        
+
         parser.parse(argc, argv);
         bounds.min() = vec2d(bounds_as_array[0], bounds_as_array[1]);
         bounds.max() = vec2d(bounds_as_array[2], bounds_as_array[3]);
@@ -76,7 +76,7 @@ void initialize(int argc, const char* argv[])
         }
     }
     catch(std::runtime_error& e) {
-        std::cerr << "ERROR(1): " << argv[0] << " threw exception:\n" 
+        std::cerr << "ERROR(1): " << argv[0] << " threw exception:\n"
                   << e.what() << "\n"
                   << "Command line options entered so far:\n"
                   << parser.print_self(false, true, false) << "\n\n\n";
@@ -86,7 +86,7 @@ void initialize(int argc, const char* argv[])
 
 template<typename T = double>
 inline double nrrd_value(const Nrrd* nin, size_t n) {
-    return xavier::nrrd_utils::nrrd_data_wrapper<T>(nin)[n];
+    return spurt::nrrd_utils::nrrd_data_wrapper<T>(nin)[n];
 }
 
 inline vec2d pos(const vec2i& c, const vec2i& res) {
@@ -99,7 +99,7 @@ inline vec2d pos(const vec2i& c, const vec2i& res) {
 inline vec3i color(const vec2d& x, const bbox2d& bounds) {
     double u = x[0];
     double v = x[1];
-    vec3d col = 
+    vec3d col =
         (1.-u)*(1.-v)*vec3d(0,0,0) + // black
         u*(1.-v)*vec3d(255,0,0) +    // red
         u*v*vec3d(255,255,255) +     // white
@@ -120,12 +120,12 @@ vtkSmartPointer<vtkActor> create_points(std::vector<Nrrd*> datasets, const std::
     std::vector< vec3d > points;
 	std::vector< std::vector<size_t> > orbits;
 	std::vector<float> values;
-	
+
 	double threshold = 1./down_factor;
-	
+
 	// longitude: 262 - 279.5
 	// latitude: 18 - 30.74
-	
+
 	for (int t=0; t<datasets.size(); ++t) {
 		size_t orbit_id=0;
 		srand48(123456);
@@ -138,11 +138,11 @@ vtkSmartPointer<vtkActor> create_points(std::vector<Nrrd*> datasets, const std::
 				++nskipped;
 				continue;
 			}
-			
-    	    vec3d x( nrrd_value( datasets[t], natt*i ), nrrd_value( datasets[t], natt*i+1), 
+
+    	    vec3d x( nrrd_value( datasets[t], natt*i ), nrrd_value( datasets[t], natt*i+1),
 					 scale*(times[t]-tinit) );
 			if (!bounds.empty() && !bounds.inside(where(i))) continue;
-					 
+
 			if (t==0) {
 				orbits.push_back(std::vector<size_t>());
 				orbits.back().push_back(points.size());
@@ -150,54 +150,54 @@ vtkSmartPointer<vtkActor> create_points(std::vector<Nrrd*> datasets, const std::
 			else orbits[orbit_id].push_back(points.size());
 			points.push_back(x);
 			values.push_back(nrrd_value( datasets[t], natt*i+2)/(0.1*static_cast<double>(times[t]-tinit)));
-			
+
 			++orbit_id;
     	}
-		std::cout << "after " << t+1 << " iterations: " << points.size() << " points and " 
+		std::cout << "after " << t+1 << " iterations: " << points.size() << " points and "
 			      << orbits.size() << " orbits\n";
 	}
-    
+
     if (verbose) {
         std::cout << nskipped << " skipped entries\n";
     }
-	
+
 	vtkSmartPointer<vtkPolyData> poly = vtk_utils::make_points(points);
 	std::cout << "points added\n";
 	poly = vtk_utils::add_scalars(poly, values);
 	std::cout << "values added\n";
 	poly = vtk_utils::add_polylines(poly, orbits);
 	std::cout << "polylines added\n";
-	
+
 	vtkSmartPointer<vtkTubeFilter> tubes = vtkSmartPointer<vtkTubeFilter>::New();
 	tubes->SetInputData(poly);
 	tubes->SetVaryRadiusToVaryRadiusByScalar();
 	tubes->SetRadius(radius);
 	tubes->SetNumberOfSides(6);
-	
+
 	vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-	
+
 	mapper->SetInputConnection(tubes->GetOutputPort());
 	mapper->ScalarVisibilityOn();
-	
+
 	vtkSmartPointer<vtkColorTransferFunction> ctf = vtkSmartPointer<vtkColorTransferFunction>::New();
-	
+
 	if (name_cmap.empty()) {
 		std::vector<nvis::fvec3> scale;
-		
+
 		// heat map:
 		std::vector<nvis::fvec3> heat_scale;
-		heat_scale.push_back(xavier::black);
-		heat_scale.push_back(xavier::red);
-		// heat_scale.push_back(xavier::orange);
-		heat_scale.push_back(xavier::yellow);
-		heat_scale.push_back(xavier::white);
+		heat_scale.push_back(spurt::black);
+		heat_scale.push_back(spurt::red);
+		// heat_scale.push_back(spurt::orange);
+		heat_scale.push_back(spurt::yellow);
+		heat_scale.push_back(spurt::white);
 		// heat_scale.push_back(nvis::fvec3(0.5, 0.5, 1));
-		// heat_scale.push_back(xavier::blue);
-		
+		// heat_scale.push_back(spurt::blue);
+
 		std::cout << "heat_scale created\n";
-		
-    	xavier::adaptive_color_map<float> cmap(values, heat_scale, true, 20);
-		
+
+    	spurt::adaptive_color_map<float> cmap(values, heat_scale, true, 20);
+
 		std::cout << "heat color map created\n";
 		for (int i=0; i<cmap.t.size() ; ++i) {
 			ctf->AddRGBPoint(cmap.t[i], cmap.colors[i][0], cmap.colors[i][1], cmap.colors[i][2]);
@@ -206,29 +206,29 @@ vtkSmartPointer<vtkActor> create_points(std::vector<Nrrd*> datasets, const std::
 	else {
 		vtk_utils::import_colormap(name_cmap, ctf);
 	}
-	
+
 	std::cout << "color transfer function created\n";
-	
+
 	mapper->SetLookupTable(ctf);
 	vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
 	actor->SetMapper(mapper);
-	
+
 	actor->GetProperty()->SetLineWidth(1);
 	// actor->GetProperty()->EdgeVisibilityOn();
-	
+
 	return actor;
 }
 
 int main(int argc, char* argv[]) {
     initialize(argc, (const char**)argv);
-    
+
 	if (!name_mask.empty()) {
-		mask = xavier::nrrd_utils::readNrrd( name_mask );
+		mask = spurt::nrrd_utils::readNrrd( name_mask );
 	}
-	
+
 	std::regex time_regex("([0-9]+)h");
 	std::smatch time_match;
-	
+
 	std::vector<Nrrd*> datasets;
 	std::vector<int> times;
 	std::fstream input(name_in, std::ios::in);
@@ -239,7 +239,7 @@ int main(int argc, char* argv[]) {
 		std::string name;
 		input >> name;
 		if (input.fail()) break;
-		datasets.push_back(xavier::nrrd_utils::readNrrd(name));
+		datasets.push_back(spurt::nrrd_utils::readNrrd(name));
 		std::cout << "just imported: " << name << '\n';
 		if (std::regex_search(name, time_match, time_regex)) {
 			int t = std::stoi(time_match[1].str());
@@ -248,7 +248,7 @@ int main(int argc, char* argv[]) {
 		}
 	}
 	input.close();
-	
+
 	data_res[0] = datasets[0]->axis[1].size;
     data_res[1] = datasets[0]->axis[2].size;
     npts = data_res[0]*data_res[1];
@@ -257,12 +257,12 @@ int main(int argc, char* argv[]) {
     spc[1] = datasets[0]->axis[2].spacing;
     gbounds.min() = vec2d( datasets[0]->axis[1].min, datasets[0]->axis[2].min );
     gbounds.max() = gbounds.min() + vec2d( data_res-vec2i(1) )*spc;
-    
+
     std::cout << "gbounds.size()=" << gbounds.size() << '\n';
     size_t nskipped=0;
-	
+
 	vtkSmartPointer<vtkActor> actor = create_points(datasets, times);
-    
+
 /*
     std::vector<float> raster(data_res[0]*data_res[1]*3);
     for (size_t i=0; i<npts; ++i) {
@@ -285,23 +285,23 @@ int main(int argc, char* argv[]) {
 		raster[3*id+1] += sy;
         raster[3*id+2]++;
     }
-    
+
     size_t n_nonzero=0;
     for (size_t i=0; i<npts ; ++i) {
         if ( raster[3*i+2] != 0 && raster[3*i+2] != -3000) {
 			raster[3*i  ] /= raster[3*i+2];
-			raster[3*i+1] /= raster[3*i+2]; 
+			raster[3*i+1] /= raster[3*i+2];
         	++n_nonzero;
         }
     }
-    
+
     if (verbose) {
-        std::cout << n_nonzero << " non zero entries (" 
+        std::cout << n_nonzero << " non zero entries ("
                   << 100.*static_cast<float>(n_nonzero)/
                      static_cast<float>(npts) << "%)\n";
         std::cout << nskipped << " skipped entries\n";
     }
-    
+
     std::vector<double> _spc(2);
     std::vector<double> _min(2);
     std::vector<size_t> _dim(2);
@@ -311,13 +311,13 @@ int main(int argc, char* argv[]) {
     _min[1] = gbounds.min()[1];
     _dim[0] = data_res[0];
     _dim[1] = data_res[1];
-    xavier::nrrd_utils::writeNrrd((int*)(&raster[0]), name_out, nrrdTypeInt, _dim, _spc, _min);
-    
+    spurt::nrrd_utils::writeNrrd((int*)(&raster[0]), name_out, nrrdTypeInt, _dim, _spc, _min);
+
     vtkSmartPointer<vtkStructuredPoints> data = vtkSmartPointer<vtkStructuredPoints>::New();
     data->SetDimensions(data_res[0], data_res[1], 1);
     data->SetSpacing(spc[0], spc[1], 1.);
     data->SetOrigin(gbounds.min()[0], gbounds.min()[1], 0);
-	
+
 	vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
 	colors->SetNumberOfComponents(3);
 	colors->SetNumberOfTuples(npts);
@@ -336,7 +336,7 @@ int main(int argc, char* argv[]) {
 		colors->SetTypedTuple(i, (unsigned char*)&c[0]);
 	}
 	data->GetPointData()->SetScalars(colors);
-	
+
 	std::vector<float> values(npts);
 	for (size_t i=0; i<npts; ++i) {
 		if (raster[3*i+2] == -3000) values[i] = -3000;
@@ -351,16 +351,16 @@ int main(int argc, char* argv[]) {
 	if (upper == copy.end()) {
 		id_0 = copy.size()-1;
 		n_ids = 0;
-	} 
+	}
 	else {
 		id_0 = std::distance(copy.begin(), upper);
 		n_ids = values.size() - id_0;
 	}
-	
+
 	std::cout << "id_0 = " << id_0 << ", n_ids = " << n_ids << ", size = " << copy.size() << '\n';
 	nvis::vec3 blue(0,0,1);
 	nvis::vec3 yellow(1,1,0);
-    
+
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
     mapper->SetInputData(data);
     mapper->ScalarVisibilityOn();
@@ -375,11 +375,11 @@ int main(int argc, char* argv[]) {
 	}
 	ctf->AddRGBPoint(copy.back(), 1, 1, 0);
     mapper->SetLookupTable(ctf);
-    
+
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 */
-    
+
     vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
     renderer->SetBackground(0, 0, 0);
     renderer->AddActor(actor);
@@ -387,14 +387,14 @@ int main(int argc, char* argv[]) {
     window->AddRenderer(renderer);
 	window->SetSize(res[0], res[1]);
     vtk_utils::fill_window(renderer, gbounds);
-	
+
 	if (follow_camera) {
 		vtk_utils::track_camera_setting(renderer);
 	}
 	if (!name_camera.empty()) {
 		vtk_utils::import_camera_settings(name_camera, renderer);
 	}
-    
+
     double width=gbounds.size()[0];
     double height=gbounds.size()[1];
     double ratio = width/height;
@@ -406,7 +406,7 @@ int main(int argc, char* argv[]) {
     else if (res[1]==-1) res[1]=res[0]/ratio;
     if (verbose) std::cout << "Setting resolution to " << res << '\n';
     window->SetSize(res[0], res[1]);
-    
+
     if (name_out.empty()) {
         // enter interactive mode
         vtkSmartPointer<vtkRenderWindowInteractor> interactor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
@@ -419,9 +419,6 @@ int main(int argc, char* argv[]) {
         window->Render();
         vtk_utils::save_frame(window, name_out);
     }
-    
+
     return 0;
 }
-
-
-

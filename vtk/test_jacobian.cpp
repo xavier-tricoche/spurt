@@ -1,4 +1,4 @@
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <misc/option_parse.hpp>
 #include <Eigen/Core>
 #include <limits>
@@ -37,7 +37,7 @@ int main(int argc, const char* argv[]) {
     
     std::fill(bounds.begin(), bounds.end(), 0.);
     
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
     
     xcl::option_traits 
         required_group(true, false, "Required Options"), 

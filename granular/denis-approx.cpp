@@ -17,12 +17,12 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-// xavier
+// spurt
 #include "denis.hpp"
 #include <image/nrrd_wrapper.hpp>
 #include <poincare/metric.hpp>
 
-typedef xavier::denis::discrete_holmes   map_type;
+typedef spurt::denis::discrete_holmes   map_type;
 
 // Equation parameters
 double      _omega, _T, _gamma, _rho, _g_star, _a;
@@ -291,7 +291,7 @@ int main(int argc, char* argv[])
     double _nan = airNaN();
     if (_nan == 0) _nan = sqrt(-1);
     
-    xavier::nrrd_params<double, 3> param;
+    spurt::nrrd_params<double, 3> param;
     param.mins()[0]     = _nan;
     param.mins()[1]     = _bounds.min()[0];
     param.mins()[2]     = _bounds.min()[1];
@@ -302,7 +302,7 @@ int main(int argc, char* argv[])
     param.sizes()[1]    = _res[0];
     param.sizes()[2]    = _res[1];
     
-    xavier::writeNrrdFromParams(data, output, param);
+    spurt::writeNrrdFromParams(data, output, param);
     std::cout << output << " has been successfully exported\n";
     
     return 0;

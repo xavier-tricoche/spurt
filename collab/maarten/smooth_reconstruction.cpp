@@ -12,7 +12,7 @@
 #include <util/timer.hpp>
 // teem
 #include <teem/nrrd.h>
-// xavier
+// spurt
 #include <math/RBF.hpp>
 #include <math/RBFbasis.hpp>
 #include <image/nrrd_wrapper.hpp>
@@ -55,7 +55,7 @@ public:
         if (what.size()) _what = what;
     }
 };
-namespace xrbf = xavier::RBF;
+namespace xrbf = spurt::RBF;
 
 typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>  matrix_type;
 typedef Eigen::HouseholderQR<matrix_type>                      solver_type;
@@ -266,7 +266,7 @@ read_nrrd(std::vector<nvis::vec2>& points,
         throw;
     }
     std::vector<float> data;
-    xavier::to_vector(data, nin);
+    spurt::to_vector(data, nin);
     size_t N = nin->axis[0].size;
     bool has_weights = (N == 4);
     size_t nb_pts = data.size()/N;
@@ -301,13 +301,13 @@ void save_rbf(const std::vector<nvis::vec2>& points,
         data[4*i+2] = values[i][0];
         data[4*i+3] = weights[i][0];
     }
-    xavier::nrrd_params<double, 2> params;
+    spurt::nrrd_params<double, 2> params;
     params.sizes()[0] = 4;
     params.sizes()[1] = npts;
     params.description() = "RBF reconstruction data for kernel " + kernel_name;
     params.labels()[0] = "x_rec;y_rec;time;weight";
     params.labels()[1] = "RBF centers";
-    xavier::writeNrrd(data, filename, params);
+    spurt::writeNrrd(data, filename, params);
     std::cout << filename << " has been exported\n";
 }
 
@@ -353,7 +353,7 @@ int main(int argc, char* argv[]) {
 
 #ifndef BPO_WRAPPER_IS_BROKEN
     namespace bpo = boost::program_options;
-    namespace clt = xavier::cmdline_tools;
+    namespace clt = spurt::cmdline_tools;
 
     bpo::options_description desc(
         "Compute anisotropy at vertices of a raster grid\n"
@@ -435,7 +435,7 @@ int main(int argc, char* argv[]) {
         std::cout << "input:  " << input_name << '\n';
         std::cout << "output: " << output_name << '\n';
     }
-    weights_name = xavier::get_basename(weights_name);
+    weights_name = spurt::get_basename(weights_name);
 
     size_t number_of_samples = resolution[0]*resolution[1];
 
@@ -443,7 +443,7 @@ int main(int argc, char* argv[]) {
     std::vector<nvis::vec1> values, weights;
     
     // determine type of file to import
-    std::string ext = xavier::get_extension(input_name);
+    std::string ext = spurt::get_extension(input_name);
     if (ext == "nrrd" || ext == ".nhdr") {
         bounds = read_nrrd(points, values, weights, input_name);
         import_weights = !weights.empty();
@@ -495,7 +495,7 @@ int main(int argc, char* argv[]) {
 #endif
     }
     
-    xavier::nrrd_params<float, 3> params;
+    spurt::nrrd_params<float, 3> params;
     params.sizes()[0] = (do_gradient ? 3 : 1);
     params.sizes()[1] = resolution[0];
     params.sizes()[2] = resolution[1];
@@ -510,7 +510,7 @@ int main(int argc, char* argv[]) {
     else params.labels()[0] = "time";
     params.labels()[1] = "X";
     params.labels()[2] = "Y";
-    xavier::writeNrrd(result, output_name, params);
+    spurt::writeNrrd(result, output_name, params);
     std::cout << output_name << " has been exported\n";
 
     return 0;

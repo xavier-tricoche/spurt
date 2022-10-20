@@ -8,7 +8,7 @@
 
 typedef nvis::fvec3                                 vec3;
 typedef nvis::fixed_vector<float, 6>                sym_mat3;
-typedef xavier::mat3                                mat3;
+typedef spurt::mat3                                mat3;
 
 void to_mat3(mat3& out, const sym_mat3& in)
 {
@@ -67,7 +67,7 @@ void eigenanalysis(nvis::vec3& dir, double& val, double& cl, const sym_mat3& sig
     std::vector<nvis::vec3>     evecs;
     mat3                        mat;
     to_mat3(mat, sigma_mat);
-    xavier::eigen(evals, evecs, mat);
+    spurt::eigen(evals, evecs, mat);
     
     dir = evecs[0];
     val = evals[0];

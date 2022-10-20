@@ -7,7 +7,7 @@
 #include <math/fixed_vector.hpp>
 #include <misc/misc_helper.hpp>
 
-namespace xavier {
+namespace spurt {
 template<typename T>
 inline void push_front(const T& val, std::vector<T>& _in)
 {
@@ -69,7 +69,7 @@ struct Edge {
     size_t i0, i1;
 };
 
-} // xavier
+} // spurt
 
 #endif
 

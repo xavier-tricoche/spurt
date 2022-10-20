@@ -53,7 +53,7 @@ bool test_solution(const std::vector<P>& allpoints, const P& query, const P& ans
 template<int K>
 void test_locator(int n, int ns)
 {
-    typedef xavier::point_locator<double, int, K>   locator_type;
+    typedef spurt::point_locator<double, int, K>   locator_type;
     typedef typename locator_type::point_type       point_type;
     typedef typename locator_type::coord_type       coord_type;
     

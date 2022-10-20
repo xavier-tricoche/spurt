@@ -255,7 +255,7 @@ int main(int argc, char* argv[])
     if (nthreads==1) std::cout << "serial computation\n";
     else std::cout << "parallel computation with " << nthreads << " threads\n";
 
-    xavier::ProgressDisplay progress;
+    spurt::ProgressDisplay progress;
 
     progress.start(nsamples);
     int counter=0;

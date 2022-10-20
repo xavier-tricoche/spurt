@@ -1,13 +1,13 @@
 #include "topology/scalar_topology.hpp"
 #include "image/nrrd_wrapper.hpp"
 
-typedef xavier::topology::scalar::SmoothScalarField<double, 2> scalar_field_t;
-typedef xavier::topology::scalar::planar_topology<double> topology_t;
+typedef spurt::topology::scalar::SmoothScalarField<double, 2> scalar_field_t;
+typedef spurt::topology::scalar::planar_topology<double> topology_t;
 
 int main(int argc, char* argv[]) {
     const std::string name = argv[1];
     
-    Nrrd* nin = xavier::nrrd_utils::readNrrd(name);
+    Nrrd* nin = spurt::nrrd_utils::readNrrd(name);
     scalar_field_t field(nin);
     
     topology_t topology(field);

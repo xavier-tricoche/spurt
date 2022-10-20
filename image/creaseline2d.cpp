@@ -1,10 +1,10 @@
 #include "image/creaseline2d.hpp"
 
-std::vector< double > xavier::crease::crease_strength;
-std::vector< unsigned int > xavier::crease::isolated;
-std::vector< bool > xavier::crease::skipped;
-std::vector< bool > xavier::crease::singular;
-float* xavier::crease::reconstructed_image = 0;
+std::vector< double > spurt::crease::crease_strength;
+std::vector< unsigned int > spurt::crease::isolated;
+std::vector< bool > spurt::crease::skipped;
+std::vector< bool > spurt::crease::singular;
+float* spurt::crease::reconstructed_image = 0;
 
 struct PosOrder {
     bool operator()(const nvis::vec2& p0, const nvis::vec2& p1) const {
@@ -32,7 +32,7 @@ void uniquify(std::map< unsigned int, std::pair< int, int > >& cell2points,
             old2new[i] = id;
             ref[pos[i]] = id;
             unique.push_back(pos[i]);
-            str.push_back(xavier::crease::crease_strength[i]);
+            str.push_back(spurt::crease::crease_strength[i]);
             ++id;
         }
     }
@@ -49,7 +49,7 @@ void uniquify(std::map< unsigned int, std::pair< int, int > >& cell2points,
     }
 
     std::swap(pos, unique);
-    std::swap(xavier::crease::crease_strength, str);
+    std::swap(spurt::crease::crease_strength, str);
 
     std::cout << "after uniquification: " << pos.size() << " positions instead of "
               << N << std::endl;
@@ -159,7 +159,7 @@ void connect_segments(std::vector< std::list< unsigned int > >& creases,
     }
 }
 
-void xavier::crease::
+void spurt::crease::
 extract(const Nrrd* nrrd,
         const raster_grid<2>& grid,
         double threshold,

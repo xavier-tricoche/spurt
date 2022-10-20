@@ -50,7 +50,7 @@ bool valid_range() {
 
 void initialize(int argc, const char* argv[])
 {
-    namespace xcl = xavier::command_line;
+    namespace xcl = spurt::command_line;
         
     xcl::option_traits 
             required(true, false, "Required Options"), 
@@ -117,7 +117,7 @@ void make_abc(const std::string& name, const nvis::bbox3& domain, const nvis::ve
 	mins[1] = 0;
 	mins[2] = 0;
 	mins[3] = 0;
-	xavier::nrrd_utils::writeNrrdFromContainers(data, name, size, spacing, mins);
+	spurt::nrrd_utils::writeNrrdFromContainers(data, name, size, spacing, mins);
 }
 
 int main(int argc, const char* argv[]) {
@@ -132,12 +132,12 @@ int main(int argc, const char* argv[]) {
 				
 		double mint, maxt, dt;
 		if (!valid_range()) {
-			make_abc(xavier::filename::replace_extension(name_out, "nrrd"), domain, step, 0);
+			make_abc(spurt::filename::replace_extension(name_out, "nrrd"), domain, step, 0);
 		}
 		else {
 			for (double t=range[0]; t<=range[1]; t+=range[2]) {
 				std::ostringstream os;
-				os << xavier::filename::remove_extension(name_out) << "_t=" << std::setprecision(3) << t << ".nrrd";
+				os << spurt::filename::remove_extension(name_out) << "_t=" << std::setprecision(3) << t << ".nrrd";
 				make_abc(os.str(), domain, step, t);
 			}
 		}

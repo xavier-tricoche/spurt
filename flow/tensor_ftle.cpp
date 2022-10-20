@@ -26,7 +26,7 @@ char* tl_out;
 int nb_seeds;
 
 typedef Eigen::Matrix<double, 7, 1> tensor_type;
-typedef xavier::nrrd_field< tensor_type, 3, double > tensor_field_type;
+typedef spurt::nrrd_field< tensor_type, 3, double > tensor_field_type;
 
 #define __EXPORT_FTLE__
 // #define __EXPORT_SEED__
@@ -127,10 +127,10 @@ int main(int argc, const char* argv[])
     
     nvis::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
     std::cerr << "Resolution = " << res << std::endl;
-    xavier::raster_grid<3> sampling_grid(res, efield->bounds());
-    xavier::raster_data<nvis::vec3, 3> flowmaps[2]
-        = { xavier::raster_data<nvis::vec3, 3>(sampling_grid),
-            xavier::raster_data<nvis::vec3, 3>(sampling_grid)
+    spurt::raster_grid<3> sampling_grid(res, efield->bounds());
+    spurt::raster_data<nvis::vec3, 3> flowmaps[2]
+        = { spurt::raster_data<nvis::vec3, 3>(sampling_grid),
+            spurt::raster_data<nvis::vec3, 3>(sampling_grid)
           };
           
     nvis::timer timer;
@@ -306,10 +306,10 @@ int main(int argc, const char* argv[])
     
     std::cout << "\ntotal computation time for eigen flow map was " << timer.elapsed() << '\n';
     
-    xavier::nrrd_utils::nrrd_params<int, 3>    p3i;
-    xavier::nrrd_utils::nrrd_params<int, 4>    p4i;
-    xavier::nrrd_utils::nrrd_params<float, 3>  p3f;
-    xavier::nrrd_utils::nrrd_params<float, 4>  p4f;
+    spurt::nrrd_utils::nrrd_params<int, 3>    p3i;
+    spurt::nrrd_utils::nrrd_params<int, 4>    p4i;
+    spurt::nrrd_utils::nrrd_params<float, 3>  p3f;
+    spurt::nrrd_utils::nrrd_params<float, 4>  p4f;
     const nvis::vec3& s = sampling_grid.spacing();
     p4i.sizes()[0] = p4f.sizes()[0] = airNaN();
     for (int i = 0 ; i < 3 ; ++i) {
@@ -328,24 +328,24 @@ int main(int argc, const char* argv[])
     }
     
 #ifdef __EXPORT_ENDPOINT__
-    xavier::nrrd_utils::writeNrrd(endpt_f, "endpoints_f.nrrd", p4f);
-    xavier::nrrd_utils::writeNrrd(endpt_b, "endpoints_b.nrrd", p4f);
+    spurt::nrrd_utils::writeNrrd(endpt_f, "endpoints_f.nrrd", p4f);
+    spurt::nrrd_utils::writeNrrd(endpt_b, "endpoints_b.nrrd", p4f);
 #endif
     
 #ifdef __EXPORT_EVEC__
-    xavier::nrrd_utils::writeNrrdFromParams(evec, "evec0.nrrd", p4f);
+    spurt::nrrd_utils::writeNrrdFromParams(evec, "evec0.nrrd", p4f);
 #endif
     
 #ifdef __EXPORT_SEED__
-    xavier::nrrd_utils::writeNrrdFromParams(start, "seeds.nrrd", p4f);
+    spurt::nrrd_utils::writeNrrdFromParams(start, "seeds.nrrd", p4f);
 #endif
     
 #ifdef __EXPORT_ERROR__
-    xavier::nrrd_utils::writeNrrdFromParams(err, "error.nrrd", p4i);
+    spurt::nrrd_utils::writeNrrdFromParams(err, "error.nrrd", p4i);
 #endif
     
 #ifdef __EXPORT_LENGTH__
-    xavier::nrrd_utils::writeNrrdFromParams(len, "length.nrrd", p3i);
+    spurt::nrrd_utils::writeNrrdFromParams(len, "length.nrrd", p3i);
 #endif
     
 #ifdef __EXPORT_FTLE__
@@ -387,7 +387,7 @@ int main(int argc, const char* argv[])
     }
     std::cout << "\ntotal computation time for ftle was " << timer.elapsed() << '\n';
     
-    xavier::nrrd_utils::writeNrrdFromParams(ftle, name_out, p3f);
+    spurt::nrrd_utils::writeNrrdFromParams(ftle, name_out, p3f);
 #endif
     
     if (procedural) {

@@ -13,7 +13,7 @@ inline double sign(const double& x)
 }
 }
 
-namespace xavier {
+namespace spurt {
 const double TWO_PI = 2*M_PI;
 
 inline double signed_angle(const nvis::vec2& x)

@@ -11,7 +11,7 @@
 #include <sstream>
 #include <string>
 
-namespace xavier {
+namespace spurt {
 typedef std::pair< nvis::vec3, nvis::vec3 > Edge;
 typedef std::pair< unsigned int, unsigned int > EdgeId;
 
@@ -122,7 +122,7 @@ int FaceId::operator==(const FaceId& fid) const
 }
 
 inline
-std::ostream& operator<<(std::ostream& os, const xavier::FaceId& fid)
+std::ostream& operator<<(std::ostream& os, const spurt::FaceId& fid)
 {
     os << "[ " << fid.is[0] << ", " << fid.is[1] << ", "
        << fid.is[2] << ", " << fid.is[3] << "]";
@@ -133,7 +133,7 @@ inline
 Grid::Grid(const Nrrd* nrrd, unsigned int upsample)
 {
     assert(nrrd->dim >= 3);
-    bounds = xavier::nrrd_utils::get_bounds<3>(nrrd);
+    bounds = spurt::nrrd_utils::get_bounds<3>(nrrd);
     
     for (unsigned int i = 0 ; i < 3 ; i++) {
         size[i] = nrrd->axis[nrrd->dim-3+i].size * upsample;
@@ -190,7 +190,7 @@ Slice::Slice(const Nrrd* nrrd, unsigned int dim, unsigned int pos,
     assert(nrrd->dim >= 3);
     assert(dim < nrrd->dim);
     assert(pos < upsample*nrrd->axis[nrrd->dim-3+dim].size);
-    bounds = xavier::nrrd_utils::get_bounds<3>(nrrd);
+    bounds = spurt::nrrd_utils::get_bounds<3>(nrrd);
     
     for (unsigned int j = 0 ; j < 3 ; j++) {
         unsigned int i = idx[dim][j];

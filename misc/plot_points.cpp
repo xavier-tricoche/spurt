@@ -30,7 +30,7 @@
 #define ARMA_USE_LAPACK
 #include "armadillo"
 
-using namespace xavier;
+using namespace spurt;
 using namespace GLUT_helper;
 int main_window;
 nvis::vec2 wc;
@@ -69,7 +69,7 @@ std::vector<nvis::vec2> pts;
 static void init()
 {
     Nrrd* nin = nrrdNew();
-    nin = xavier::nrrd_utils::readNrrd(in);
+    nin = spurt::nrrd_utils::readNrrd(in);
     
     assert(nin->dim == 2 &&
            xaxis >= 0 && yaxis >= 0 &&
@@ -77,7 +77,7 @@ static void init()
            std::max(xaxis, yaxis) < 6);
            
     std::vector<double> array;
-    xavier::to_vector(array, nin);
+    spurt::to_vector(array, nin);
     
     int npts = nin->axis[1].size;
     bbox.reset();

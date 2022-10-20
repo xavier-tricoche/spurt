@@ -8,11 +8,11 @@ namespace nvis {
     typedef bounding_box<vec1> bbox1;
 }
 
-#include <VTK/vtk_macros.hpp>
-#include <VTK/vtk_data_helper.hpp>
-#include <VTK/vtk_camera_helper.hpp>
-#include <VTK/vtk_colorbar_helper.hpp>
-#include <VTK/vtk_image_helper.hpp>
-#include <VTK/vtk_io_helper.hpp>
+#include <vtk/vtk_macros.hpp>
+#include <vtk/vtk_data_helper.hpp>
+#include <vtk/vtk_camera_helper.hpp>
+#include <vtk/vtk_colorbar_helper.hpp>
+#include <vtk/vtk_image_helper.hpp>
+#include <vtk/vtk_io_helper.hpp>
 
 #endif

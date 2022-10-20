@@ -160,7 +160,7 @@ struct orbit_integrator {
     
     size_t                      __nsteps;
     integrator_type&            __integ;
-    xavier::default_metric_type __metric;
+    spurt::default_metric_type __metric;
 };
 
 inline nvis::vec2 vector_value(const point_data& pt, int period, const metric_type& metric)

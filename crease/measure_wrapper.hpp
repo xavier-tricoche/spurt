@@ -12,7 +12,7 @@
 
 //#define DEBUG
 
-namespace xavier {
+namespace spurt {
 
 struct measured_values {
     nvis::vec3 g, Hg, e[3];
@@ -73,7 +73,7 @@ private:
 void test_derivatives(const Nrrd* nrrd, int aniso = 0);
 };
 
-inline double xavier::MeasureWrapper::
+inline double spurt::MeasureWrapper::
 my_directional_derivative(const nvis::vec3& p, const unsigned int dim, double eps) const
 {
     nvis::vec3 q(p);
@@ -84,7 +84,7 @@ my_directional_derivative(const nvis::vec3& p, const unsigned int dim, double ep
     return (vplus -vminus) / (2*eps);
 }
 
-inline nvis::vec3 xavier::MeasureWrapper::my_gradient(const nvis::vec3& p, double eps) const
+inline nvis::vec3 spurt::MeasureWrapper::my_gradient(const nvis::vec3& p, double eps) const
 {
     nvis::vec3 g;
     for (unsigned int i = 0 ; i < 3 ; ++i) {
@@ -93,7 +93,7 @@ inline nvis::vec3 xavier::MeasureWrapper::my_gradient(const nvis::vec3& p, doubl
     return g;
 }
 
-inline nvis::vec6 xavier::MeasureWrapper::my_hessian(const nvis::vec3& p, double eps) const
+inline nvis::vec6 spurt::MeasureWrapper::my_hessian(const nvis::vec3& p, double eps) const
 {
     nvis::vec6 h;
     nvis::vec3 g[6];
@@ -114,7 +114,7 @@ inline nvis::vec6 xavier::MeasureWrapper::my_hessian(const nvis::vec3& p, double
     return h;
 }
 
-inline nvis::vec3 xavier::MeasureWrapper::
+inline nvis::vec3 spurt::MeasureWrapper::
 my_eigenvector(const nvis::vec3& p, unsigned int idx, double eps) const
 {
     nvis::vec6 h = my_hessian(p, eps);
@@ -130,25 +130,25 @@ my_eigenvector(const nvis::vec3& p, unsigned int idx, double eps) const
 // --------------------------------------------------------------------------
 // --------------------------------------------------------------------------
 
-inline int xavier::MeasureWrapper::what_measure() const
+inline int spurt::MeasureWrapper::what_measure() const
 {
     return _measure;
 }
 
 // --------------------------------------------------------------------------
 
-inline void xavier::MeasureWrapper::turn_buffer_on() const
+inline void spurt::MeasureWrapper::turn_buffer_on() const
 {
     active_buffer = true;
 }
 
-inline void xavier::MeasureWrapper::turn_buffer_off() const
+inline void spurt::MeasureWrapper::turn_buffer_off() const
 {
     buffer.clear();
     active_buffer = false;
 }
 
-inline bool xavier::MeasureWrapper::is_stored(measured_values& values, const nvis::vec3& p) const
+inline bool spurt::MeasureWrapper::is_stored(measured_values& values, const nvis::vec3& p) const
 {
     std::map< nvis::vec3, measured_values, eps_order >::const_iterator it =
         buffer.find(p);
@@ -160,12 +160,12 @@ inline bool xavier::MeasureWrapper::is_stored(measured_values& values, const nvi
     return false;
 }
 
-inline void xavier::MeasureWrapper::store(measured_values& mv, const nvis::vec3& p) const
+inline void spurt::MeasureWrapper::store(measured_values& mv, const nvis::vec3& p) const
 {
     mv.conf = this->_confidence(p);
     mv.val = this->_value(p);
     mv.g = this->_gradient(p);
-    mv.Hg = xavier::crease::prod(this->hessian(p), mv.g);
+    mv.Hg = spurt::crease::prod(this->hessian(p), mv.g);
     for (unsigned int i = 0 ; i < 3 ; ++i) {
         mv.e[i] = this->_eigenvector(p, i);
         mv.eval[i] = this->_eigenvalue(p, i);
@@ -176,7 +176,7 @@ inline void xavier::MeasureWrapper::store(measured_values& mv, const nvis::vec3&
 
 // --------------------------------------------------------------------------
 
-inline double xavier::MeasureWrapper::confidence(const nvis::vec3& p) const
+inline double spurt::MeasureWrapper::confidence(const nvis::vec3& p) const
 {
     if (active_buffer) {
         measured_values mv;
@@ -190,7 +190,7 @@ inline double xavier::MeasureWrapper::confidence(const nvis::vec3& p) const
 
 // --------------------------------------------------------------------------
 
-inline double xavier::MeasureWrapper::_confidence(const nvis::vec3& p) const
+inline double spurt::MeasureWrapper::_confidence(const nvis::vec3& p) const
 {
     double v;
     switch (_measure) {
@@ -216,7 +216,7 @@ inline double xavier::MeasureWrapper::_confidence(const nvis::vec3& p) const
 
 // --------------------------------------------------------------------------
 
-inline double xavier::MeasureWrapper::value(const nvis::vec3& p) const
+inline double spurt::MeasureWrapper::value(const nvis::vec3& p) const
 {
     if (active_buffer) {
         measured_values mv;
@@ -230,7 +230,7 @@ inline double xavier::MeasureWrapper::value(const nvis::vec3& p) const
 
 // --------------------------------------------------------------------------
 
-inline double xavier::MeasureWrapper::_value(const nvis::vec3& p) const
+inline double spurt::MeasureWrapper::_value(const nvis::vec3& p) const
 {
     double v;
 
@@ -257,7 +257,7 @@ inline double xavier::MeasureWrapper::_value(const nvis::vec3& p) const
 
 // --------------------------------------------------------------------------
 
-inline nvis::vec3 xavier::MeasureWrapper::eigenvector(const nvis::vec3& p, unsigned int idx) const
+inline nvis::vec3 spurt::MeasureWrapper::eigenvector(const nvis::vec3& p, unsigned int idx) const
 {
     if (active_buffer) {
         measured_values mv;
@@ -273,7 +273,7 @@ inline nvis::vec3 xavier::MeasureWrapper::eigenvector(const nvis::vec3& p, unsig
 // --------------------------------------------------------------------------
 
 inline nvis::vec3
-xavier::MeasureWrapper::_eigenvector(const nvis::vec3& p, unsigned int idx) const
+spurt::MeasureWrapper::_eigenvector(const nvis::vec3& p, unsigned int idx) const
 {
 #ifndef DEBUG
     switch (_measure) {
@@ -313,7 +313,7 @@ xavier::MeasureWrapper::_eigenvector(const nvis::vec3& p, unsigned int idx) cons
 
 // --------------------------------------------------------------------------
 
-inline double xavier::MeasureWrapper::eigenvalue(const nvis::vec3& p, unsigned int idx) const
+inline double spurt::MeasureWrapper::eigenvalue(const nvis::vec3& p, unsigned int idx) const
 {
     if (active_buffer) {
         measured_values mv;
@@ -329,7 +329,7 @@ inline double xavier::MeasureWrapper::eigenvalue(const nvis::vec3& p, unsigned i
 // --------------------------------------------------------------------------
 
 inline double
-xavier::MeasureWrapper::_eigenvalue(const nvis::vec3& p, unsigned int idx) const
+spurt::MeasureWrapper::_eigenvalue(const nvis::vec3& p, unsigned int idx) const
 {
     nvis::vec3 _tmp;
 
@@ -369,7 +369,7 @@ xavier::MeasureWrapper::_eigenvalue(const nvis::vec3& p, unsigned int idx) const
 
 // --------------------------------------------------------------------------
 
-inline nvis::vec3 xavier::MeasureWrapper::gradient(const nvis::vec3& p) const
+inline nvis::vec3 spurt::MeasureWrapper::gradient(const nvis::vec3& p) const
 {
     if (active_buffer) {
         measured_values mv;
@@ -384,7 +384,7 @@ inline nvis::vec3 xavier::MeasureWrapper::gradient(const nvis::vec3& p) const
 
 // --------------------------------------------------------------------------
 
-inline nvis::vec3 xavier::MeasureWrapper::Hgradient(const nvis::vec3& p) const
+inline nvis::vec3 spurt::MeasureWrapper::Hgradient(const nvis::vec3& p) const
 {
     if (active_buffer) {
         measured_values mv;
@@ -394,12 +394,12 @@ inline nvis::vec3 xavier::MeasureWrapper::Hgradient(const nvis::vec3& p) const
         return mv.Hg;
     }
 
-    return xavier::crease::prod(this->hessian(p), this->_gradient(p));
+    return spurt::crease::prod(this->hessian(p), this->_gradient(p));
 }
 
 // --------------------------------------------------------------------------
 
-inline nvis::vec3 xavier::MeasureWrapper::_gradient(const nvis::vec3& p) const
+inline nvis::vec3 spurt::MeasureWrapper::_gradient(const nvis::vec3& p) const
 {
 #ifndef DEBUG
     switch (_measure) {
@@ -431,7 +431,7 @@ inline nvis::vec3 xavier::MeasureWrapper::_gradient(const nvis::vec3& p) const
 
 // --------------------------------------------------------------------------
 
-inline nvis::vec6 xavier::MeasureWrapper::hessian(const nvis::vec3& p) const
+inline nvis::vec6 spurt::MeasureWrapper::hessian(const nvis::vec3& p) const
 {
     nvis::vec6 _tmp;
 

@@ -144,7 +144,7 @@ int main(int argc, char* argv[]) {
     ssize[1] = npts;
     std::string sample_name = basename;
     sample_name += "-samples.nrrd";
-    xavier::writeNrrd(sdata, sample_name, nrrdTypeDouble, ssize);
+    spurt::writeNrrd(sdata, sample_name, nrrdTypeDouble, ssize);
     std::cout << "Made -samples.nrrd" << std::endl;
 
     int n_runs = resolution*resolution*resolution;
@@ -286,12 +286,12 @@ int main(int argc, char* argv[]) {
     size[2] = resolution;
     std::string output_name = basename;
     output_name += "-results.nrrd";
-    xavier::writeNrrd(data, output_name, nrrdTypeDouble, size, spacing);
+    spurt::writeNrrd(data, output_name, nrrdTypeDouble, size, spacing);
     std::cerr << "output results.NRRD file exported\n";
 
     output_name = basename;
     output_name += "-ml.nrrd";
-    xavier::writeNrrd(ground_truth, output_name, nrrdTypeFloat, size, spacing);
+    spurt::writeNrrd(ground_truth, output_name, nrrdTypeFloat, size, spacing);
     std::cerr << "output ml.NRRD file exported\n";
     return 0;
 }
