@@ -8,7 +8,7 @@ set( FORMAT_NETCDF_SRC
 
 set( FORMAT_VTK_NETCDF_SRC
     NCOM2nrrd
-    DLR2VTK
+    dlr2vtk
 )
 
 set( FORMAT_VTK_SRC

@@ -1,7 +1,7 @@
 #ifndef __XAVIER_GEOMETRY_BOUNDARY_EXTRACTION_HPP__
 #define __XAVIER_GEOMETRY_BOUNDARY_EXTRACTION_HPP__
 
-#include <format/DLRreader.hpp>
+#include <format/dlr_reader.hpp>
 #include <list>
 #include <map>
 #include <algorithm>
@@ -33,7 +33,7 @@ struct subvector {
 
 class mesh {
 public:
-    typedef DLRreader::cell_type cell_kind;
+    typedef dlr_reader::cell_type cell_kind;
     typedef long int index_type;
     static constexpr index_type invalid_index = std::numeric_limits<index_type>::max();
     typedef nvis::fixed_vector<float, 3> vertex_type;
@@ -72,7 +72,7 @@ public:
     };
 
     mesh() {}
-    mesh(const std::vector<vertex_type>& vertices, const std::vector<long>& cell_indices, const std::vector<std::pair<DLRreader::cell_type, long>>& cell_offsets)
+    mesh(const std::vector<vertex_type>& vertices, const std::vector<long>& cell_indices, const std::vector<std::pair<dlr_reader::cell_type, long>>& cell_offsets)
         : m_vertices(vertices), m_cell_indices(cell_indices), m_cell_offsets(cell_offsets), m_ncells(cell_offsets.size()-1) {}
 
     void load_mesh(const std::string& mesh_name);
@@ -103,7 +103,7 @@ private:
     std::vector<vertex_type> m_vertices; // 3D mesh vertices
     std::vector<vec3_type>   m_velocity; // velocity vector field
     std::vector<long>  m_cell_indices;   // 1D list of all cells's vertices
-    std::vector<std::pair<DLRreader::cell_type, long>> m_cell_offsets; // per-cell access in cell_indices
+    std::vector<std::pair<dlr_reader::cell_type, long>> m_cell_offsets; // per-cell access in cell_indices
     size_t m_ncells; // number of cells
     std::map<face, std::list<index_type>> m_face_to_cells; // face-to-cell incidence information
     std::vector<std::pair<face, index_type>> m_boundary_to_cell; // boundary to cells relationship
@@ -153,10 +153,10 @@ static std::ostream& operator<<(std::ostream& os, const mesh::subvector_type& sv
 static std::ostream& operator<<(std::ostream& os, const mesh::cell_type c) {
     std::string cellname;
     switch (c.first) {
-        case DLRreader::TETRAHEDRON: cellname="tetrahedron"; break;
-        case DLRreader::HEXAHEDRON: cellname="hexahedron"; break;
-        case DLRreader::PYRAMID: cellname="pyramid"; break;
-        case DLRreader::PRISM: cellname="prism"; break;
+        case dlr_reader::TETRAHEDRON: cellname="tetrahedron"; break;
+        case dlr_reader::HEXAHEDRON: cellname="hexahedron"; break;
+        case dlr_reader::PYRAMID: cellname="pyramid"; break;
+        case dlr_reader::PRISM: cellname="prism"; break;
         default: cellname="unknown cell";
     }
     os << "(" << cellname << "," << c.second << ")";
@@ -265,13 +265,13 @@ int& mesh::face::face_id() { return m_id; }
 // --- mesh ----
 
 void mesh::load_mesh(const std::string& mesh_name) {
-    spurt::DLRreader reader(mesh_name, "");
+    spurt::dlr_reader reader(mesh_name, "");
     reader.read_mesh(false, m_vertices, m_cell_indices, m_cell_offsets);
     m_ncells = m_cell_offsets.size()-1; // last entry is not an actual cell
 }
 
 void mesh::load_data(const std::string& data_name) {
-    spurt::DLRreader reader("", data_name);
+    spurt::dlr_reader reader("", data_name);
     reader.read_vector_data("velocity", m_velocity);
 }
 
@@ -290,7 +290,7 @@ const std::vector<mesh::vec3_type>& mesh::get_velocity() const {
 }
 
 mesh::cell_type mesh::get_cell(const index_type& id) const {
-    DLRreader::cell_type kind = m_cell_offsets[id].first;
+    dlr_reader::cell_type kind = m_cell_offsets[id].first;
     auto begin = m_cell_indices.begin() + m_cell_offsets[id].second;
     auto end = m_cell_indices.begin() + m_cell_offsets[id+1].second;
     return std::make_pair(kind, subvector_type(begin, end));
@@ -298,10 +298,10 @@ mesh::cell_type mesh::get_cell(const index_type& id) const {
 
 const std::vector<mesh::face>& mesh::reference_faces(mesh::cell_kind kind) {
     switch (kind) {
-        case DLRreader::TETRAHEDRON: return _tetrahedron;
-        case DLRreader::PYRAMID: return _pyramid;
-        case DLRreader::PRISM: return _prism;
-        case DLRreader::HEXAHEDRON: return _hexahedron;
+        case dlr_reader::TETRAHEDRON: return _tetrahedron;
+        case dlr_reader::PYRAMID: return _pyramid;
+        case dlr_reader::PRISM: return _prism;
+        case dlr_reader::HEXAHEDRON: return _hexahedron;
         default: throw std::runtime_error("Unknown cell type" + std::to_string(kind));
     }
 }
@@ -414,13 +414,13 @@ void mesh::extract_boundary(bool verbose) {
                 get_actual_face(cell, _f.face_id(), f);
                 // std::cout << "actual face is " << f << '\n';
                 m_boundary_to_cell.push_back(std::make_pair(f, cell_id));
-                if (cell.first == DLRreader::PRISM && _f.face_id()>=0 && _f.face_id()<2) {
+                if (cell.first == dlr_reader::PRISM && _f.face_id()>=0 && _f.face_id()<2) {
                     face of;
                     ++ntri_prisms;
                     get_actual_face(cell, _f.face_id() == 0 ? 1 : 0, of);
                     m_offset_to_boundary.push_back(std::make_pair(of, m_boundary_to_cell.size()-1));
                 }
-                else if (cell.first == DLRreader::HEXAHEDRON) {
+                else if (cell.first == dlr_reader::HEXAHEDRON) {
                     int id=-1;
                     switch (_f.face_id()) {
                         case 0: id=1; break;

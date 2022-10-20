@@ -22,12 +22,12 @@
 #include <math/bounding_box.hpp>
 #include <math/fixed_vector.hpp>
 
-#include "DLRreader.hpp"
+#include "dlr_reader.hpp"
 #include <vtk/vtk_utils.hpp>
 
 typedef nvis::fvec3                     point_type;
 typedef nvis::bounding_box<point_type>  box_type;
-typedef spurt::DLRreader::cell_type    cell_type;
+typedef spurt::dlr_reader::cell_type    cell_type;
 typedef std::pair<cell_type, long>      cell_entry;
 
 typedef std::pair< std::vector<double>, std::string > pair_type;
@@ -203,22 +203,22 @@ vtk_cellarray(const cell_array_helper& helper)
     for (long cell_id=0 ; cell_id<helper.nb_cells() ; ++cell_id) {
         unsigned char type_name;
         switch(helper.type(cell_id)) {
-            case DLRreader::TRIANGLE:
+            case dlr_reader::TRIANGLE:
                 type_name = VTK_TRIANGLE;
                 break;
-            case DLRreader::QUADRILATERAL:
+            case dlr_reader::QUADRILATERAL:
                 type_name = VTK_QUAD;
                 break;
-            case DLRreader::TETRAHEDRON:
+            case dlr_reader::TETRAHEDRON:
                 type_name = VTK_TETRA;
                 break;
-            case DLRreader::HEXAHEDRON:
+            case dlr_reader::HEXAHEDRON:
                 type_name = VTK_HEXAHEDRON;
                 break;
-            case DLRreader::PRISM:
+            case dlr_reader::PRISM:
                 type_name = VTK_WEDGE;
                 break;
-            case DLRreader::PYRAMID:
+            case dlr_reader::PYRAMID:
                 type_name = VTK_PYRAMID;
                 break;
             default:
@@ -406,7 +406,7 @@ int main(int argc, char* argv[])
         re = false;
     }
 
-    spurt::DLRreader reader(grid_filename, data_filename);
+    spurt::dlr_reader reader(grid_filename, data_filename);
     std::vector<point_type> points;
     std::vector<long> cell_indices;
     std::vector<cell_entry> cell_types;

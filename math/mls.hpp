@@ -19,7 +19,7 @@
 #include <Eigen/Core>
 #include <Eigen/SVD>
 
-#include "RBFbasis.hpp"
+#include "rbf_basis.hpp"
 #include <misc/meta_utils.hpp>
 
 namespace spurt { namespace MLS {
@@ -262,7 +262,7 @@ public:
 
     weighted_least_squares(int dimension, int precision, int nrhs)
         : m_dim(dimension), m_prec(precision), m_nrhs(nrhs) {}
-    
+
     inline double weight(const pos_type& p, const pos_type& x0, double radius) const {
         traits_type traits;
         weight_type w(radius);
@@ -318,7 +318,7 @@ class least_squares {
 public:
     typedef ValType value_type;
     typedef PosType pos_type;
-    
+
     least_squares(int dimension, int precision, int nrhs)
         : m_dim(dimension), m_prec(precision), m_nrhs(nrhs) {}
 

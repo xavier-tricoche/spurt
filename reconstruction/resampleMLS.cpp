@@ -1,7 +1,7 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-#include <math/MLS.hpp>
+#include <math/mls.hpp>
 #include <kdtree++/kdtree.hpp>
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
@@ -108,7 +108,7 @@ bool load_DLR_or_Nek3D(celltree::mesh** m, celltree::variable** s, celltree::var
     *m = nullptr;
     *s = nullptr;
     *v = nullptr;
-    
+
     celltree::dataset* ds;
     try {
         ds = celltree::dataset::create(filename);
@@ -178,7 +178,7 @@ void initialize(int argc, char* argv[])
                 << parser.print_self(false, true, false) << "\n\n\n";
         exit(1);
     }
-    
+
     bounds.first << b[0], b[2], b[4];
     bounds.second << b[1], b[3], b[5];
 }
@@ -202,7 +202,7 @@ public:
     vector_type& pos() {
         return m_pos;
     }
-    
+
     scalar_type* get_pointer() {
         return &m_pos[0];
     }
@@ -244,41 +244,41 @@ fbox3 compute_bounds(const float* points, unsigned int npoints) {
 }
 
 template<int NRHS>
-void do_fit(const tree_type& tree, const std::vector<double>& rhs, 
+void do_fit(const tree_type& tree, const std::vector<double>& rhs,
             VTK_SMART(vtkDataSet) target, std::vector<double>& soln)
 {
     typedef Eigen::Matrix<double, NRHS, 1> value_type;
-    
+
     const value_type* val_rhs = (const value_type*)&rhs[0];
 
     spurt::MLS::weighted_least_squares<value_type, vector_type> wls(3, 0, NRHS);
-    
+
     soln.resize(NRHS*target->GetNumberOfPoints());
     std::fill(soln.begin(), soln.end(), 0);
-    
+
     int count = 0;
-    
-    
+
+
     std::vector<box3> neighborhoods(target->GetNumberOfPoints());
     std::cout << "Computing size of each vertex's neighborhood\n";
-    
+
     // special case: vtkImageData and descendents: no neighborhood info available.
     if (vtkImageData::SafeDownCast(target) != nullptr) {
         double dx, dy, dz;
         // vtkImageData* = vtkImageData::SafeDownCast(target);
     }
-    
-    
+
+
     for (size_t i=0; i<target->GetNumberOfPoints(); i++) {
-        
+
     }
-    
+
 
     std::cout << "Fitting in progress" << std::endl;
     for (size_t i=0; i<target->GetNumberOfPoints(); ++i) {
         point_type p;
         target->GetPoint(i, p.get_pointer());
-        
+
         // in radius box find
         std::vector<point_type> in_cube, in_radius;
         clock_t sinit, sfinal;
@@ -292,7 +292,7 @@ void do_fit(const tree_type& tree, const std::vector<double>& rhs,
             }
         }
         if (!in_cube.empty() && in_radius.size() > 5) {
-            std::cout << in_radius.size() << " vertices in sphere neighborhood (" 
+            std::cout << in_radius.size() << " vertices in sphere neighborhood ("
                     << 100*in_radius.size()/in_cube.size() << "%)\n";
         }
         search_time += clock()-sinit;
@@ -327,7 +327,7 @@ int main(int argc, char* argv[]) {
     const int dim = 3;
 
     initialize(argc, argv);
-    
+
     vec3 span = bounds.second - bounds.first;
     bool valid_bounds = std::all_of(&span[0], &span[3], [&](double s) { return s>0; });
 
@@ -349,11 +349,11 @@ int main(int argc, char* argv[]) {
         std::cerr << "Unrecognized input filename extension: " << in_name << '\n';
         exit(1);
     }
-    
+
     bool has_scalars = s != nullptr;
     bool has_vectors = v != nullptr;
     bool has_geometry = !geom_name.empty();
-    
+
     VTK_SMART(vtkDataSet) target_mesh;
     if (has_geometry) {
         target_mesh = vtk_utils::readVTK(geom_name);
@@ -367,7 +367,7 @@ int main(int argc, char* argv[]) {
             bounds.second << b.max()[0], b.max()[1], b.max()[2];
         }
         std::cout << "bounds = \n" << bounds.first << '\n' << bounds.second << '\n';
-        
+
         vec3 step = ((bounds.second-bounds.first).array() / (resolution.cast<double>() - vec3::Constant(1)).array()).matrix();
         target_mesh = VTK_SMART(vtkUniformGrid)::New();
         vtkUniformGrid::SafeDownCast(target_mesh)->SetDimensions(resolution[0], resolution[1], resolution[2]);
@@ -382,9 +382,9 @@ int main(int argc, char* argv[]) {
     int nrhs = (has_scalars ? 1 : 0) + (has_vectors ? 3 : 0);
     int offset = 0;
     if (has_scalars && has_vectors) offset = 1;
-    
+
     tree_type tree;
-    
+
     clock_t init = clock();
 
     std::vector<double> values(npts * nrhs);
@@ -403,7 +403,7 @@ int main(int argc, char* argv[]) {
 
     int n_samples = target_mesh->GetNumberOfPoints();
     std::vector<double> solution;
-    
+
     switch (nrhs) {
         case 1: do_fit<1>(tree, values, target_mesh, solution); break;
         case 3: do_fit<3>(tree, values, target_mesh, solution); break;
@@ -413,14 +413,14 @@ int main(int argc, char* argv[]) {
             std::cerr << "Only scalar and/or vector attributes are supported\n";
             exit(1);
         }
-        
+
     }
     clock_t elapsed = clock()-init;
-    std::cout << "Algorithm time : " 
-        << (double)elapsed / ((double)CLOCKS_PER_SEC) 
+    std::cout << "Algorithm time : "
+        << (double)elapsed / ((double)CLOCKS_PER_SEC)
         << " s. for " << n_samples << " samples, on "
         << npts << " points"  <<std::endl;
-    std::cout << "Tree building time: " 
+    std::cout << "Tree building time: "
         << (double)tree_build_time / (double)CLOCKS_PER_SEC << " s.";
     std::cout << search_time << " seconds spent finding points" << std::endl;
     std::cout << solve_time << " seconds spent doing SVD" << std::endl;
@@ -447,7 +447,7 @@ int main(int argc, char* argv[]) {
         }
         target_mesh->GetPointData()->SetVectors(vectors);
     }
-    
+
     vtk_utils::saveVTK_XML(target_mesh, out_name);
     return 0;
 }

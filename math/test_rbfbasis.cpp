@@ -1,4 +1,4 @@
-#include "RBFbasis.hpp"
+#include "rbf_basis.hpp"
 #include <iostream>
 #include <limits>
 #include <util/timer.hpp>
@@ -62,13 +62,13 @@ template<typename T>
 void compare(size_t N) {
     double time_mono = 0;
     double time_ref  = 0;
-    
+
     const T LARGE = pow(std::numeric_limits<T>::max(), 1./6.);
-    
+
     srand48(time(0));
-    
+
     std::cout << "Performance comparison for type=" << type_traits<T>::name() << ":\n";
-    
+
     nvis::timer _timer;
     T x, y, r, err=0;
     double tic, toc;
@@ -89,12 +89,12 @@ void compare(size_t N) {
         }
     }
     err /= (T)N;
-    
+
     std::cout << "Quadratic:\n";
     std::cout << "\ttemplated monomial computation took " << time_mono << " s. (" << (double)N/time_mono << " Hz)\n";
     std::cout << "\thardcoded expression took " << time_ref << " s. (" << (double)N/time_ref << " Hz)\n";
     std::cout << "\taverage discrepancy = " << err << '\n';
-    
+
     time_mono = 0;
     time_ref  = 0;
     err = 0;
@@ -111,12 +111,12 @@ void compare(size_t N) {
         err += fabs(r-y)/fabs(r);
     }
     err /= (T)N;
-    
+
     std::cout << "Cubic:\n";
     std::cout << "\ttemplated monomial computation took " << time_mono << " s. (" << (double)N/time_mono << " Hz)\n";
     std::cout << "\thardcoded expression took " << time_ref << " s. (" << (double)N/time_ref << " Hz)\n";
     std::cout << "\taverage discrepancy = " << err << '\n';
-    
+
     time_mono = 0;
     time_ref  = 0;
     err = 0;
@@ -133,12 +133,12 @@ void compare(size_t N) {
         err += fabs(r-y)/fabs(r);
     }
     err /= (T)N;
-    
+
     std::cout << "Quartic:\n";
     std::cout << "\ttemplated monomial computation took " << time_mono << " s. (" << (double)N/time_mono << " Hz)\n";
     std::cout << "\thardcoded expression took " << time_ref << " s. (" << (double)N/time_ref << " Hz)\n";
     std::cout << "\taverage discrepancy = " << err << '\n';
-    
+
     time_mono = 0;
     time_ref  = 0;
     err = 0;
@@ -155,7 +155,7 @@ void compare(size_t N) {
         err += fabs(r-y)/fabs(r);
     }
     err /= (T)N;
-    
+
     std::cout << "Quintic:\n";
     std::cout << "\ttemplated monomial computation took " << time_mono << " s. (" << (double)N/time_mono << " Hz)\n";
     std::cout << "\thardcoded expression took " << time_ref << " s. (" << (double)N/time_ref << " Hz)\n";
@@ -165,9 +165,8 @@ void compare(size_t N) {
 int main(int argc, char* argv[]) {
     size_t ntries = 1000000;
     if (argc == 2) ntries = atoi(argv[1]);
-    
+
     compare<float>(ntries);
     compare<double>(ntries);
     return 0;
 }
-

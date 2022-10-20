@@ -11,10 +11,10 @@
 #include <math/fixed_vector.hpp>
 #include <math/fixed_matrix.hpp>
 #include <math/bounding_box.hpp>
-#include <format/DLRreader.hpp>
+#include <format/dlr_reader.hpp>
 #include <teem/nrrd.h>
 #include <image/nrrd_wrapper.hpp>
-#include <math/MLS.hpp>
+#include <math/mls.hpp>
 #include <Eigen/Core>
 #include <Eigen/SVD>
 #include <util/timer.hpp>
@@ -31,23 +31,23 @@ nvis::ivec3        resolution;
 std::string        in_name, in_name2, out_name;
 nvis::bbox3        bbox;
 
-void printUsageAndExit( const std::string& argv0, const std::string& offending="", 
+void printUsageAndExit( const std::string& argv0, const std::string& offending="",
                         bool doExit = true )
 {
     if (offending != "") {
         std::cerr << "ERROR: " << offending << std::endl;
     }
-      std::cerr 
+      std::cerr
     << "Usage  : " << argv0 << " [parameters] [options]\n"
     << "Synopsis: resample given dataset through global least squares\n"
     << "Parameters:\n"
     << "    -i  | --input <string> [x2]     Input file name(s)\n"
     << "    -o  | --output <string>         Output file name\n"
     << "    -r  | --resolution <int> (x3)   Resampling resolution in X, Y, and Z\n"
-    << "Options:\n"                         
+    << "Options:\n"
     << "    -b  | --bounds <float> (x6)     Bounding box of region (in world coordinates). Default: all\n"
     << std::endl;
-    
+
     if (doExit) exit(1);
 }
 
@@ -68,7 +68,7 @@ void load_VTK(const std::string& name, const std::string& me) {
     all_points.resize(npts);
     for (int i=0 ; i<npts ; ++i) {
         dataset->GetPoint(i, all_points[i].begin());
-    }    
+    }
     vtkDataArray* scalars = dataset->GetPointData()->GetScalars();
     if (scalars != NULL) {
         all_scalars.resize(npts);
@@ -93,7 +93,7 @@ void load_VTK(const std::string& name, const std::string& me) {
             tensors->GetTuple(i, t);
             int n=0;
             for (int r=0 ; r<3 ; ++r) {
-                for (int c=0 ; c<3 ; ++c) 
+                for (int c=0 ; c<3 ; ++c)
                     all_tensors[i][r][c] = t[n++];
             }
         }
@@ -101,7 +101,7 @@ void load_VTK(const std::string& name, const std::string& me) {
     }
     dataset->Delete();
     reader->Delete();
-}    
+}
 
 void load_NRRD(const std::string& name, const std::string& me) {
     Nrrd* nin = nrrdNew();
@@ -176,10 +176,10 @@ void load_NRRD(const std::string& name, const std::string& me) {
 }
 
 void load_DLR(const std::string& grid_name, const std::string data_name, const std::string& me) {
-    spurt::DLRreader reader(grid_name, data_name);
+    spurt::dlr_reader reader(grid_name, data_name);
     std::vector<nvis::fvec3> vertices;
     std::vector<long int> cell_indices;
-    std::vector<std::pair<spurt::DLRreader::cell_type, long int> >cell_types;
+    std::vector<std::pair<spurt::dlr_reader::cell_type, long int> >cell_types;
     reader.read_mesh(false, vertices, cell_indices, cell_types);
     int npts = vertices.size();
     all_points.resize(npts);
@@ -231,24 +231,24 @@ void interpolate(std::vector<entry>& A, int n, const nvis::vec3& index) {
         r[0]*r[1]+r[0]+1, // (1,1,1)
         r[0]*r[1]+r[0]    // (0,1,1)
     };
-    
+
     // vertex local coordinates
     nvis::ivec3 id(floor(index[0]), floor(index[1]), floor(index[2]));
     nvis::vec3 pos = index - nvis::vec3(id);
     const double& u = pos[0];
     const double& v = pos[1];
     const double& w = pos[1];
-    double weights[] = {    
-        (1-u)*(1-v)*(1-w), 
-        u*(1-v)*(1-w), 
-        u*v*(1-w), 
+    double weights[] = {
+        (1-u)*(1-v)*(1-w),
+        u*(1-v)*(1-w),
+        u*v*(1-w),
         (1-u)*v*(1-w),
-        (1-u)*(1-v)*w, 
-        u*(1-v)*w, 
-        u*v*w, 
+        (1-u)*(1-v)*w,
+        u*(1-v)*w,
+        u*v*w,
         (1-u)*v*w
     };
-    
+
     int base_id = id[0] + r[0]*(id[1] + r[1]*id[2]);
     for (int i=0 ; i<8 ; ++i) {
         A.push_back(entry());
@@ -265,7 +265,7 @@ int main(int argc, char* argv[]) {
     out_name = "none";
     resolution = nvis::ivec3(0);
     bbox.min() = bbox.max() = nvis::vec3(0);
-    
+
     for (int i=1; i<argc ; ++i) {
         std::string arg(argv[i]);
         if (arg == "-i" || arg == "--input") {
@@ -280,13 +280,13 @@ int main(int argc, char* argv[]) {
                     ++i;
                 }
             }
-        } 
+        }
         else if (arg == "-o" || arg == "--output") {
             if (i == argc-1) {
                 printUsageAndExit(argv[0], "missing output");
             }
             out_name = argv[++i];
-        }        
+        }
         else if (arg == "-h" || arg == "--help") {
             printUsageAndExit(argv[0]);
         }
@@ -302,14 +302,14 @@ int main(int argc, char* argv[]) {
             printUsageAndExit(argv[0], "invalid argument");
         }
     }
-    
+
     if (in_name == "none" || out_name == "none") {
         printUsageAndExit(argv[0], "missing input or output file name");
     }
     else if (*std::min_element(resolution.begin(), resolution.end()) <= 0) {
         printUsageAndExit(argv[0], "missing / invalid resolution information");
     }
-    
+
     // user reader appropriate for input file type
     std::string ext = extension(in_name);
     nvis::timer _timer;
@@ -332,7 +332,7 @@ int main(int argc, char* argv[]) {
         printUsageAndExit(argv[0], "unrecognized file type");
     }
     std::cerr << "dataset imported in " << _timer.elapsed() << " seconds\n";
-    
+
     if (nvis::norm(bbox.size())) {
         nvis::bbox3 tmp = bounds();
         for (int i=0 ; i<3 ; ++i) {
@@ -345,37 +345,37 @@ int main(int argc, char* argv[]) {
     bbox.min() -= 0.001*diameter;
     bbox.max() += 0.001*diameter;
     std::cout << "bounding box = " << bbox << std::endl;
-    
+
     nvis::vec3 spacing = bbox.size() / nvis::vec3(resolution - nvis::ivec3(1,1,1));
     std::cout << "spacing = " << spacing << std::endl;
-    
+
     size_t nrhs = 0;
     if (all_scalars.size()) nrhs++;
     if (all_vectors.size()) nrhs += 3;
     if (all_tensors.size()) nrhs += 9;
-    
+
     size_t nrows = all_points.size();
     size_t ncols = resolution[0]*resolution[1]*resolution[2];
-    
+
     std::vector<float> rhs_mat(nrows*nrhs);
-    
+
     size_t nb_threads = 1;
-    
+
 #if _OPENMP
     nb_threads = omp_get_max_threads();
-#endif    
+#endif
     std::cout << nb_threads << " threads available\n";
     std::vector<entry> ls_mat[nb_threads];
-    
+
 #pragma omp parallel
     {
-#pragma omp for schedule (dynamic, 1) 
+#pragma omp for schedule (dynamic, 1)
     for (size_t n=0 ; n<nrows ; ++n) {
         size_t thread_id = 0;
 #if _OPENMP
         thread_id = omp_get_thread_num();
 #endif
-        
+
         const nvis::vec3& x = all_points[n];
         nvis::vec3 y = x - bbox.min();
         nvis::vec3 u = y / spacing;
@@ -388,20 +388,20 @@ int main(int argc, char* argv[]) {
             rhs_mat[offset++] = all_vectors[n][2];
         }
         if (all_tensors.size()) {
-            for (int r=0 ; r<3 ; ++r) 
+            for (int r=0 ; r<3 ; ++r)
                 for (int c=0 ; c<3 ; ++c)
                     rhs_mat[offset++] = all_tensors[n](r,c);
         }
-        
+
         if (!thread_id) {
-            std::cout << "\rProgress: " << std::setw(7) << std::setfill(' ') << n << " rows (" 
+            std::cout << "\rProgress: " << std::setw(7) << std::setfill(' ') << n << " rows ("
             << std::setw(3) << std::setfill(' ') << 100*n/nrows << "%) in "
             << _timer.elapsed() << " seconds (" << (double)n/_timer.elapsed() << " Hz)   ";
         }
     }
     }
     std::cout << std::endl;
-    
+
     std::cout << "\nComputing reindexing... " << std::flush;
     std::map<int, int> old2new;
     size_t ndof = 0;
@@ -413,7 +413,7 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "done.\n";
     std::cout << "there are " << ndof << " (" << 100*ndof/ncols << "%) degrees of freedom in this problem\n";
-    
+
     std::cout << "exporting reindexing array... " << std::flush;
     std::string ind_name;
     {
@@ -426,7 +426,7 @@ int main(int argc, char* argv[]) {
         idf << it->first << " " << it->second << '\n';
     }
     idf.close();
-    
+
     std::cout << "exporting LS matrix..." << std::flush;
     std::string ls_name;
     {
@@ -449,7 +449,7 @@ int main(int argc, char* argv[]) {
         std::ostringstream os;
         os << out_name << "_RHS.txt";
         rhs_name = os.str();
-    }    
+    }
     std::fstream rhsf(rhs_name.c_str(), std::ios::out);
     for (size_t i=0 ; i<rhs_mat.size()/nrhs ; ++i) {
         size_t offset = i*nrhs;
@@ -458,9 +458,9 @@ int main(int argc, char* argv[]) {
             if (j<nrhs-1) rhsf << " \t";
         }
         rhsf << '\n';
-    } 
+    }
     rhsf.close();
     std::cout << " done.\n";
-    
+
     return 0;
 }

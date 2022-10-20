@@ -16,7 +16,8 @@
 
 #include <data/locator.hpp>
 #include <misc/meta_utils.hpp>
-#include "RBFbasis.hpp"
+#include "rbf_basis.hpp"
+#include "polynomial.hpp"
 
 // using Eigen SVD-based LS solution
 #include <Eigen/Core>

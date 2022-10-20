@@ -2,7 +2,7 @@
 #include <vtk/vtk_utils.hpp>
 #include <misc/option_parse.hpp>
 #include <image/nrrd_wrapper.hpp>
-#include <format/DLRreader.hpp>
+#include <format/dlr_reader.hpp>
 
 std::string grid_name, data_name, out_name, boundary_name;
 bool verbose = false;

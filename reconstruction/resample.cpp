@@ -13,10 +13,10 @@
 #include <math/fixed_vector.hpp>
 #include <math/fixed_matrix.hpp>
 #include <math/bounding_box.hpp>
-#include <format/DLRreader.hpp>
+#include <format/dlr_reader.hpp>
 #include <teem/nrrd.h>
 #include <image/nrrd_wrapper.hpp>
-#include <math/MLS.hpp>
+#include <math/mls.hpp>
 #include <Eigen/Core>
 #include <Eigen/SVD>
 #include <util/timer.hpp>
@@ -177,10 +177,10 @@ void load_NRRD(const std::string& name, const std::string& me) {
 }
 
 void load_DLR(const std::string& grid_name, const std::string data_name, const std::string& me) {
-    spurt::DLRreader reader(grid_name, data_name);
+    spurt::dlr_reader reader(grid_name, data_name);
     std::vector<nvis::fvec3> vertices;
     std::vector<long int> cell_indices;
-    std::vector<std::pair<spurt::DLRreader::cell_type, long int> >cell_types;
+    std::vector<std::pair<spurt::dlr_reader::cell_type, long int> >cell_types;
     reader.read_mesh(false, vertices, cell_indices, cell_types);
     int npts = vertices.size();
     all_points.resize(npts);

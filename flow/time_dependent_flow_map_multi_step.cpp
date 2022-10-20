@@ -15,7 +15,7 @@
 #include <flow/time_dependent_field.hpp>
 #include <flow/vector_field.hpp>
 #include <flow/vector_field.hpp>
-#include <format/DLRreader.hpp>
+#include <format/dlr_reader.hpp>
 #include <format/filename.hpp>
 #include <math/bounding_box.hpp>
 #include <math/dopri5.hpp>
@@ -1209,20 +1209,20 @@ shared_ptr<unstructured_field_type> load_DLR_time_steps() {
         steps.swap(new_steps);
     }
 
-    spurt::DLRreader reader(mesh_name, "");
+    spurt::dlr_reader reader(mesh_name, "");
     std::vector<nvis::fvec3> vertices;
     std::vector<long> cell_indices;
-    std::vector<std::pair<DLRreader::cell_type, long> > cell_types;
+    std::vector<std::pair<dlr_reader::cell_type, long> > cell_types;
     reader.read_mesh(false, vertices, cell_indices, cell_types);
 
     if (split_prisms) {
         std::vector<long> new_cell_indices;
-        std::vector<std::pair<DLRreader::cell_type, long> > new_cell_types;
+        std::vector<std::pair<dlr_reader::cell_type, long> > new_cell_types;
         for (long n=0; n<cell_types.size()-1; ++n) {
             auto cell_type = cell_types[n];
             long first = cell_type.second;
             long next = cell_types[n+1].second;
-            if (cell_type.first != DLRreader::PRISM) {
+            if (cell_type.first != dlr_reader::PRISM) {
                 new_cell_types.push_back(cell_type);
                 new_cell_types.back().second = new_cell_indices.size();
                 for (long k=first; k<next; ++k) {
@@ -1255,7 +1255,7 @@ shared_ptr<unstructured_field_type> load_DLR_time_steps() {
                 if (std::min(rotated_ids[prism_cases[0][0]], rotated_ids[prism_cases[0][1]]) <
                     std::min(rotated_ids[prism_cases[0][2]], rotated_ids[prism_cases[0][3]])) {
                     for (int t=0; t<3; ++t) {
-                        new_cell_types.push_back(std::make_pair(DLRreader::TETRAHEDRON, new_cell_indices.size()));
+                        new_cell_types.push_back(std::make_pair(dlr_reader::TETRAHEDRON, new_cell_indices.size()));
                         for (int id=0; id<4; ++id) {
                             new_cell_indices.push_back(rotated_ids[prism_tets[0][t][id]]);
                         }
@@ -1264,7 +1264,7 @@ shared_ptr<unstructured_field_type> load_DLR_time_steps() {
                 else {
                     // tets case 1
                     for (int t=0; t<3; ++t) {
-                        new_cell_types.push_back(std::make_pair(DLRreader::TETRAHEDRON, new_cell_indices.size()));
+                        new_cell_types.push_back(std::make_pair(dlr_reader::TETRAHEDRON, new_cell_indices.size()));
                         for (int id=0; id<4; ++id) {
                             new_cell_indices.push_back(rotated_ids[prism_tets[1][t][id]]);
                         }
@@ -1289,7 +1289,7 @@ shared_ptr<unstructured_field_type> load_DLR_time_steps() {
         size_t size = end-start;
         cells->InsertNextCell(size);
         // reorder vertices if cell is a prism
-        if (cell_types[cell_id].first == DLRreader::PRISM) {
+        if (cell_types[cell_id].first == dlr_reader::PRISM) {
             cells->InsertCellPoint(cell_indices[start]);
             cells->InsertCellPoint(cell_indices[start+2]);
             cells->InsertCellPoint(cell_indices[start+1]);
@@ -1312,22 +1312,22 @@ shared_ptr<unstructured_field_type> load_DLR_time_steps() {
     for (long cell_id=0 ; cell_id<ncells ; ++cell_id) {
         unsigned char type_name;
         switch(cell_types[cell_id].first) {
-            case DLRreader::TRIANGLE:
+            case dlr_reader::TRIANGLE:
                 type_name = VTK_TRIANGLE;
                 break;
-            case DLRreader::QUADRILATERAL:
+            case dlr_reader::QUADRILATERAL:
                 type_name = VTK_QUAD;
                 break;
-            case DLRreader::TETRAHEDRON:
+            case dlr_reader::TETRAHEDRON:
                 type_name = VTK_TETRA;
                 break;
-            case DLRreader::HEXAHEDRON:
+            case dlr_reader::HEXAHEDRON:
                 type_name = VTK_HEXAHEDRON;
                 break;
-            case DLRreader::PRISM:
+            case dlr_reader::PRISM:
                 type_name = VTK_WEDGE;
                 break;
-            case DLRreader::PYRAMID:
+            case dlr_reader::PYRAMID:
                 type_name = VTK_PYRAMID;
                 break;
             default:
