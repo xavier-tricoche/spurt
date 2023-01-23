@@ -31,7 +31,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <vtk/vtk_utils.hpp>
+#include <VTK/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <teem/hest_helper.hpp>
 #include <set>
@@ -64,7 +64,7 @@ void initialize(int argc, char* argv[])
     hestParm* hparm;
     airArray* mop;
     char* me;
-    
+
     mop = airMopNew();
     me = argv[0];
     hparm = hestParmNew();
@@ -79,7 +79,7 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "e",      "eps",              airTypeFloat,   0, 1, &eps,                 "1.0e-6",   "integration precision");
     hestOptAdd(&hopt, "min",    "min step",         airTypeFloat,   0, 1, &min_step,            "1.0e-8",   "step size underflow threshold");
     hestOptAdd(&hopt, "d",      "discretization",   airTypeInt,     0, 1, &discretization,      "20",       "number of lines");
-    
+
     __hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
                      me, "Compute and visualize streamlines in 3D vector field",
                      AIR_TRUE, AIR_TRUE, AIR_TRUE);
@@ -91,7 +91,7 @@ template<typename T>
 struct field {
 
     typedef T       value_type;
-    
+
     template<typename T1>
     field(const std::vector<T1>& data,
           const nvis::ivec3& size,
@@ -102,7 +102,7 @@ struct field {
         }
         __step = __bounds.size() / nvis::vec3(__size - nvis::ivec3(1, 1, 1));
     }
-    
+
     template<typename T1>
     field(const Nrrd* nin) {
         for (int i = 0 ; i < 3 ; ++i) {
@@ -113,29 +113,29 @@ struct field {
         __step = __bounds.size() / nvis::vec3(__size - nvis::ivec3(1, 1, 1));
         __data = std::vector<value_type>((T1*)nin->data, (T1*)nin->data + size);
     }
-    
+
     vector_field(const vtkSmartPointer<vtkDataSet>& dataset)
         : __data(dataset->GetNumberOfPoints()) {
         if (__vtk_data->GetDataDimension() != 3) {
             throw;
         }
-        
+
         dataset->GetDimensions(__size.begin());
         double bounds[6];
         dataset->GetBounds(bounds);
         __bounds.min() = nvis::vec3(bounds[0], bounds[2], bounds[4]);
         __bounds.max() = nvis::vec3(bounds[1], bounds[3], bounds[5]);
         __step = __bounds.size() / nvis::vec3(__size - nvis::ivec3(1, 1, 1));
-        
+
         double* val;
         for (int i = 0 ; i < __data.size() ; ++i) {
             val = dataset->GetPointData()->GetVectors()->GetTuple(i);
             __data[i] = value_type(val[0], val[1], val[2]);
         }
     }
-    
+
     ~vector_field() {}
-    
+
     bool g2l(nvis::vec3& l, const nvis::vec3& g) const {
         if (!__bounds.inside(g)) {
             return false;
@@ -143,11 +143,11 @@ struct field {
         l = (g - __bounds.min()) / __step;
         return true;
     }
-    
+
     int index(const nvis::ivec3& id) const {
         return id[0] + __size[0]*(id[1] + __size[1]*id[2]);
     }
-    
+
     bool operator()(double, const nvis::vec3& x, value_type& v) const {
         nvis::vec3 y;
         if (!g2l(y, x)) {
@@ -172,10 +172,10 @@ struct field {
             w[5] * __data[index(id+nvis::ivec3(1, 0, 1))] +
             w[6] * __data[index(id+nvis::ivec3(1, 1, 1))] +
             w[7] * __data[index(id+nvis::ivec3(0, 1, 1))];
-            
+
         return true;
     }
-    
+
     std::vector<value_type>     __data;
     nvis::ivec3                 __size;
     nvis::bbox3                 __bounds;
@@ -198,7 +198,7 @@ inline vtkSmartPointer<vtkPolyData> to_polydata(const std::list<nvis::vec3>& lin
         vtkIdType ids[] = { i, i + 1 };
         lines->InsertNextCell(n, ids);
     }
-    
+
     vtkSmartPointer<vtkPolyData> pd = vtkSmartPointer<vtkPolyData>::New();
     pd->SetPoints(pts);
     pd->SetLines(lines);
@@ -210,9 +210,9 @@ struct stop {
         LEFT_DOMAIN,
         CRITICAL_POINT,
     } state;
-    
+
     stop(double eps = 0.) : __eps(eps) {}
-    
+
     bool operator()(const nvis::streamline::int_step& step) {
         if (step.y1()[4] != 0) {
             state = LEFT_DOMAIN;
@@ -224,7 +224,7 @@ struct stop {
             return false;
         }
     }
-    
+
     double __eps;
 };
 
@@ -243,12 +243,12 @@ std::ostream& operator<<(std::ostream& os, const stop& __stop)
 int main(int argc, char* argv[])
 {
     initialize(argc, argv);
-    
+
     typedef nvis::fvec3         value_type;
     typedef field<value_type>   field_type;
-    
+
     boost::shared_ptr<field_type> vf;
-    
+
     // determine extension
     std::string name(file);
     if (name.substr(name.find_last_of(".") + 1) == "nrrd") {
@@ -283,20 +283,20 @@ int main(int argc, char* argv[])
         std::cerr << "file extension in " << name << " was not recognized.\n";
         return 1;
     }
-    
+
     bool use_norm = (scalar == NULL);
     if (!use_norm) {
-    
+
     }
-    
+
     vtkSmartPointer<vtkRenderer> ren = vtkSmartPointer<vtkRenderer>::New();
     ren->SetUseDepthPeeling(1);
     ren->SetMaximumNumberOfPeels(100);
     ren->SetOcclusionRatio(0.1);
     ren->SetBackground(0, 0, 0);
-    
+
     std::cerr << "Camera set\n";
-    
+
     vtkSmartPointer<vtkRenderWindow> ren_win = vtkSmartPointer<vtkRenderWindow>::New();
     // ren_win->PointSmoothingOn();
     // ren_win->LineSmoothingOn();
@@ -305,29 +305,29 @@ int main(int argc, char* argv[])
     // ren_win->SetMultiSamples(10);
     ren_win->AddRenderer(ren);
     ren_win->SetSize(1600, 1200);
-    
+
     vtkSmartPointer<vtkRenderWindowInteractor> iren = vtkSmartPointer<vtkRenderWindowInteractor>::New();
     iren->SetRenderWindow(ren_win);
-    
-    
+
+
     nvis::vec3 min(center[0] - radius[0],
                    center[1] - radius[1],
                    center[2] - radius[2]);
     nvis::vec3 r(2.*radius[0], 2.*radius[1], 2.*radius[2]);
-    
+
     srand48(0);
     for (int i = 0 ; i < nblines ; ++i) {
         std::list<nvis::vec3> line;
-        
+
         nvis::vec3 seed = min + nvis::vec3(drand48(), drand48(), drand48()) * r;
-        
+
         std::cerr << "seeding streamline #" << i << "/" << nblines << " at " << seed << '\n';
-        
+
         nvis::streamline sl(seed);
         sl.record = true;
         sl.reltol = sl.abstol = eps;
         sl.stepsz = 1.;
-        
+
         stop stop_criterion(min_step);
         int fwd = sl.advance(*vf, length, stop_criterion);
         if (fwd == nvis::streamline::CUSTOM) {
@@ -337,98 +337,35 @@ int main(int argc, char* argv[])
         if (bwd == nvis::streamline::CUSTOM) {
             std::cerr << "backward integration stopped because " << stop_criterion << '\n';
         }
-        
+
         double dt = (sl.t_max() - sl.t_min()) / (float)discretization;
         for (double t = sl.t_min() ; t <= sl.t_max() ; t += dt) {
             line.push_back(sl(t));
             // std::cerr << "added position sl(" << t << ") = " << line.back() << '\n';
         }
         vtkSmartPointer<vtkPolyData> pd = to_polydata(line);
-        
+
         vtkSmartPointer<vtkTubeFilter> tubes = vtkSmartPointer<vtkTubeFilter>::New();
         tubes->SetInput(pd);
         tubes->SetRadius(1);
         tubes->SetNumberOfSides(6);
-        
+
         vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
         mapper->SetInputConnection(tubes->GetOutputPort());
         vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
         actor->SetMapper(mapper);
         actor->GetProperty()->SetColor(1, 1, 1);
-        
+
         ren->AddActor(actor);
     }
-    
+
     std::cerr << "done.\n";
-    
+
     ren->ResetCamera();
-    
+
     ren_win->Render();
     iren->Initialize();
     iren->Start();
-    
+
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

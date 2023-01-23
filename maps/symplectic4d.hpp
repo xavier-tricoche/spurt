@@ -188,18 +188,9 @@ public:
         orbit.clear();
         hits.push_back(seed);
         orbit.push_back(seed);
-        int nsteps;
-        if (nhits > 0) {
-            nsteps = max_iter/10;
-        }
-        else {
-            nsteps = max_iter;
-        }
         state_type s = seed;
         map.to_domain(s);
-        for (int i=0; i<max_iter; i+=nsteps) {
-            s = _run(hits, orbit, map, s, nsteps);
-        }
+        s = _run(hits, orbit, map, s, max_iter);
     }
 
 private:

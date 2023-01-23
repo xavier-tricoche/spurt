@@ -31,7 +31,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <vtk/vtk_utils.hpp>
+#include <VTK/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <set>
 #include <sstream>
@@ -61,7 +61,7 @@ void initialize(int argc, char* argv[])
     hestParm* hparm;
     airArray* mop;
     char* me;
-    
+
     mop = airMopNew();
     me = argv[0];
     hparm = hestParmNew();
@@ -74,7 +74,7 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "g",      "gamma",            airTypeFloat,   0, 1, &param_g,             "1",        "color scale gamma factor");
     hestOptAdd(&hopt, "grain",  "show grains",      airTypeBool,    0, 0, &param_grains,        "0",        "show intersected grains");
     hestOptAdd(&hopt, "v",      "verbose",          airTypeBool,    0, 0, &param_v,             "0",        "verbose mode (debugging)");
-    
+
     hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
                    (const char*)me, "Visualize stress field in granular microstructure",
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
@@ -83,10 +83,10 @@ void initialize(int argc, char* argv[])
 int main(int argc, char* argv[])
 {
     initialize(argc, argv);
-    
+
     using namespace Garcia_vis_helper;
     set_paths();
-    
+
     dataset_info* __info;
     switch (param_id) {
         case 0:
@@ -112,18 +112,18 @@ int main(int argc, char* argv[])
             return 1;
     }
     const dataset_info& info = *__info;
-    
+
     std::cerr << "mesh base = " << info.mesh_base << '\n';
     std::cerr << "base dir = " << info.base_dir << '\n';
     std::cerr << "grain = " << (param_grains ? "true" : "false") << '\n';
-    
+
     std::string mesh_name(info.mesh_base), edge_name(info.mesh_base), corner_name(info.mesh_base),
         vertex_tag_name(info.mesh_base);
     mesh_name.append("-mesh.vtk");
     edge_name.append("-edges.vtk");
     corner_name.append("-corners.vtk");
     vertex_tag_name.append("-point-attributes.txt");
-    
+
     vtkSmartPointer<vtkDataSetReader> mesh_reader = vtkSmartPointer<vtkDataSetReader>::New();
     mesh_reader->SetFileName(mesh_name.c_str());
     mesh_reader->Update();
@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
     std::cerr << "mesh contains " << std::flush << mesh->GetNumberOfCells() << " cells\n";
     mesh_reader->Delete();
     std::cerr << mesh_name << " loaded.\n";
-    
+
     vtkSmartPointer<vtkPolyDataReader> edge_reader = vtkSmartPointer<vtkPolyDataReader>::New();
     edge_reader->SetFileName(edge_name.c_str());
     edge_reader->Update();
@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
     std::cerr << "there are " << lines->GetNumberOfCells() << " edges in input\n";
     edge_reader->Delete();
     std::cerr << edge_name << " loaded.\n";
-    
+
     vtkSmartPointer<vtkPolyDataReader> corner_reader = vtkSmartPointer<vtkPolyDataReader>::New();
     corner_reader->SetFileName(corner_name.c_str());
     corner_reader->Update();
@@ -151,24 +151,24 @@ int main(int argc, char* argv[])
     corners->DeepCopy(corner_reader->GetOutput());
     corner_reader->Delete();
     std::cerr << corner_name << " loaded.\n";
-    
+
     vtkSmartPointer<vtkStructuredPointsReader> field_reader = vtkSmartPointer<vtkStructuredPointsReader>::New();
     field_reader->SetFileName(info.dfield_norm.c_str());
     field_reader->Update();
     vtkStructuredPoints* field = field_reader->GetOutput();
     std::cerr << info.dfield_norm << " loaded.\n";
-    
+
     Nrrd* __ids = spurt::nrrd_utils::readNrrd(info.id_to_tags);
     spurt::nrrd_utils::nrrd_data_wrapper<int> ids(__ids);
     std::cerr << info.id_to_tags << " loaded.\n";
-    
+
     Nrrd* __span = spurt::nrrd_utils::readNrrd(info.dfield_span);
     spurt::nrrd_utils::nrrd_data_wrapper<float> grain_field(__span);
     std::cerr << info.dfield_span << " loaded.\n";
     int nb_grains = __span->axis[1].size;
-    
+
     typedef color_map<double>::color_type   color_type;
-    
+
     double mins, maxs, ds;
     std::vector<double> vals;
     {
@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
         }
         mins = std::max(mins, *std::min_element(vals.begin(), vals.end()));
         maxs = std::min(maxs, *std::max_element(vals.begin(), vals.end()));
-        
+
         ds = param_ds * (maxs - mins);
     }
     std::cerr << "min value = " << mins << ", max value = " << maxs << ", delta val = " << ds << '\n';
@@ -206,7 +206,7 @@ int main(int argc, char* argv[])
     color_bar->SetWidth(0.35);
     color_bar->SetHeight(0.05);
     color_bar->SetNumberOfLabels(7);
-    
+
     std::map<int, tag_type> vertex_tags;
     std::fstream attributes(vertex_tag_name.c_str());
     while (!attributes.eof()) {
@@ -221,7 +221,7 @@ int main(int argc, char* argv[])
     }
     attributes.close();
     std::cerr << vertex_tag_name << " loaded.\n";
-    
+
     // selected triangles
     vtkSmartPointer<vtkDoubleArray> coords = vtkSmartPointer<vtkDoubleArray>::New();
     coords->SetNumberOfComponents(3);
@@ -233,14 +233,14 @@ int main(int argc, char* argv[])
     vtkSmartPointer<vtkPoints> pts = vtkSmartPointer<vtkPoints>::New();
     pts->SetData(coords);
     std::cerr << "mesh vertices duplicated.\n";
-    
+
     vtkSmartPointer<vtkRenderer> ren = vtkSmartPointer<vtkRenderer>::New();
     ren->SetUseDepthPeeling(1);
     ren->SetMaximumNumberOfPeels(100);
     ren->SetOcclusionRatio(0.1);
     ren->SetBackground(0, 0, 0);
     ren->ResetCamera();
-    
+
     nvis::bbox3 bounds;
     {
         double tmp[6];
@@ -251,46 +251,46 @@ int main(int argc, char* argv[])
     vtkSmartPointer<vtkActor> frame_actor = draw_frame(bounds, 0.1);
     ren->AddActor(frame_actor);
     std::cerr << "cube created\n";
-    
+
     if (param_v) {
         vtk_utils::camera_setting_callback* cb = vtk_utils::camera_setting_callback::New();
         ren->AddObserver(vtkCommand::StartEvent, cb);
         cb->Delete();
     }
-    
+
     ren->GetActiveCamera()->SetPosition(info.position.begin());
     ren->GetActiveCamera()->SetFocalPoint(info.focal_point.begin());
     ren->GetActiveCamera()->SetViewUp(info.up.begin());
     ren->GetActiveCamera()->SetClippingRange(info.near, info.far);
     std::cerr << "Camera set\n";
-    
+
     vtkSmartPointer<vtkRenderWindow> ren_win = vtkSmartPointer<vtkRenderWindow>::New();
     ren_win->SetAlphaBitPlanes(1);
     ren_win->SetMultiSamples(0);
     ren_win->AddRenderer(ren);
     ren_win->SetSize(1600, 1200);
-    
+
     vtkSmartPointer<vtkRenderWindowInteractor> iren = vtkSmartPointer<vtkRenderWindowInteractor>::New();
     iren->SetRenderWindow(ren_win);
-    
+
     vtkSmartPointer<vtkContourFilter> contour = vtkSmartPointer<vtkContourFilter>::New();
     contour->SetNumberOfContours(1);
     contour->ComputeNormalsOn();
     contour->SetInputConnection(field_reader->GetOutputPort());
-    
+
     std::cerr << "contour filter initialized\n";
     std::cerr << "min val = " << mins << ", max val = " << maxs << '\n';
-    
+
     int frame_counter = 0;
     for (double s = mins ; s < maxs + 0.1*ds ; s += ds) {
         std::cerr << "isovalue = " << s << '\n';
         contour->SetValue(0, s);
         contour->Update();
-        
+
         std::cerr << "current isosurface comprises "
                   << contour->GetOutput()->GetPolys()->GetNumberOfCells()
                   << " cells\n";
-                  
+
         if (!contour->GetOutput()->GetPolys()->GetNumberOfCells()) {
             std::cerr << "skipping\n";
             continue;
@@ -298,16 +298,16 @@ int main(int argc, char* argv[])
         vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
         normals->SetInputConnection(contour->GetOutputPort());
         normals->SplittingOff();
-        
+
         vtkSmartPointer<vtkSmoothPolyDataFilter> smooth = vtkSmartPointer<vtkSmoothPolyDataFilter>::New();
         smooth->SetInputConnection(normals->GetOutputPort());
         smooth->SetRelaxationFactor(0.25);
         smooth->SetNumberOfIterations(10);
-        
+
         vtkSmartPointer<vtkPolyDataMapper> iso_mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
         iso_mapper->SetInputConnection(smooth->GetOutputPort());
         iso_mapper->ScalarVisibilityOff();
-        
+
         vtkSmartPointer<vtkActor> iso_actor = vtkSmartPointer<vtkActor>::New();
         iso_actor->SetMapper(iso_mapper);
         nvis::vec3 col = cmap(s, color_map<double>::REDUNDANT_RAINBOW);
@@ -315,7 +315,7 @@ int main(int argc, char* argv[])
         iso_actor->GetProperty()->SetOpacity(1);
         iso_actor->GetProperty()->SetInterpolationToPhong();
         vtkSmartPointer<vtkActor> mesh_actor, edge_actor;
-        
+
         if (param_grains) {
             std::cerr << "we are showing grains\n";
             // included grains
@@ -327,7 +327,7 @@ int main(int argc, char* argv[])
                 }
             }
             std::cerr << selected_grains.size() << " from " << nb_grains << " grains passed the test.\n";
-            
+
             // included vertices
             std::set<int> selected_vertices;
             for (int i = 0 ; i < vertex_tags.size() ; ++i) {
@@ -341,7 +341,7 @@ int main(int argc, char* argv[])
                 }
             }
             std::cerr << selected_vertices.size() << " vertices passed the test.\n";
-            
+
             // included triangles
             vtkSmartPointer<vtkCellArray> selected_triangles = vtkSmartPointer<vtkCellArray>::New();
             for (int n = 0 ; n < mesh->GetNumberOfCells() ; ++n) {
@@ -352,11 +352,11 @@ int main(int argc, char* argv[])
                 }
             }
             std::cerr << selected_triangles->GetNumberOfCells() << " triangles passed the test\n";
-            
+
             vtkSmartPointer<vtkPolyData> selected_mesh = vtkSmartPointer<vtkPolyData>::New();
             selected_mesh->SetPoints(pts);
             selected_mesh->SetPolys(selected_triangles);
-            
+
             vtkSmartPointer<vtkCellArray> selected_lines = vtkSmartPointer<vtkCellArray>::New();
             lines->InitTraversal();
             while (true) {
@@ -369,7 +369,7 @@ int main(int argc, char* argv[])
                 }
             }
             std::cerr << selected_lines->GetNumberOfCells() << " edges passed the test\n";
-            
+
             //
             vtkSmartPointer<vtkPolyDataMapper> mesh_mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
             mesh_mapper->SetInput(selected_mesh);
@@ -377,14 +377,14 @@ int main(int argc, char* argv[])
             mesh_actor->SetMapper(mesh_mapper);
             mesh_actor->GetProperty()->SetColor(1, 1, 1);
             mesh_actor->GetProperty()->SetOpacity(0.5);
-            
+
             vtkSmartPointer<vtkPolyData> selected_edges = vtkSmartPointer<vtkPolyData>::New();
             selected_edges->SetPoints(edges->GetPoints());
             selected_edges->SetLines(selected_lines);
             //
             vtkSmartPointer<vtkTubeFilter> tubes = vtkSmartPointer<vtkTubeFilter>::New();
             tubes->SetInput(selected_edges);
-            
+
             double radius = 0.05 * nvis::norm(info.step);
             tubes->SetRadius(radius);
             tubes->SetNumberOfSides(6);
@@ -393,28 +393,28 @@ int main(int argc, char* argv[])
             edge_actor = vtkSmartPointer<vtkActor>::New();
             edge_actor->SetMapper(edge_mapper);
             edge_actor->GetProperty()->SetColor(0.5, 0, 0);
-            
+
             ren->AddActor(mesh_actor);
             ren->AddActor(edge_actor);
         }
         ren->AddActor2D(color_bar);
         ren->AddActor(iso_actor);
         ren_win->Render();
-        
+
         vtkSmartPointer<vtkWindowToImageFilter> capture = vtkSmartPointer<vtkWindowToImageFilter>::New();
         capture->SetInput(ren_win);
-        
+
         vtkSmartPointer<vtkTIFFWriter> writer = vtkSmartPointer<vtkTIFFWriter>::New();
         writer->SetInputConnection(capture->GetOutputPort());
-        
+
         std::ostringstream os;
         os << info.movie_path << (param_grains ? "grains/" : "no-grains/")
            << "frame_with_color_bar" << std::setw(3) << std::setfill('0') << frame_counter++ << ".tiff";
-           
+
         writer->SetFileName(os.str().c_str());
         std::cerr << "about to write to file " << os.str() << '\n';
         writer->Write();
-        
+
         ren->RemoveActor(iso_actor);
         ren->RemoveActor(color_bar);
         if (param_grains) {
@@ -423,38 +423,3 @@ int main(int argc, char* argv[])
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

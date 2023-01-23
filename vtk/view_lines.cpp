@@ -3,8 +3,8 @@
 #include <fstream>
 #include <memory>
 
-#include <vtk/vtk_utils.hpp>
-#include <vtk/vtk_camera_helper.hpp>
+#include <VTK/vtk_utils.hpp>
+#include <VTK/vtk_camera_helper.hpp>
 #include <misc/option_parse.hpp>
 #include <math/fixed_vector.hpp>
 

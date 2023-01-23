@@ -38,7 +38,7 @@ void initialize(int argc, char* argv[])
     hestParm* hparm;
     airArray* mop;
     char* me;
-    
+
     mop = airMopNew();
     me = argv[0];
     hparm = hestParmNew();
@@ -52,7 +52,7 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "min",    "min step",         airTypeFloat,   0, 1, &min_step,            "1.0e-8",   "step size underflow threshold");
     hestOptAdd(&hopt, "d",      "discretization",   airTypeInt,     0, 1, &discretization,      "20",       "number of lines");
     hestOptAdd(&hopt, "g",      "gamma",            airTypeFloat,   0, 1, &col_gamma,           "1.",       "gamma factor for color scale");
-    
+
     hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
                    (const char*)me, "Compute streamline density per grain for bottom face seeding",
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
@@ -68,24 +68,24 @@ struct check {
 
     check(size_t max_count, const nvis::bbox3& box)
         : _counter(0), _max_count(max_count), _bounds(box) {}
-        
+
     void reset() {
         _counter = 0;
     }
-    
+
     bool operator()(const nvis::streamline::int_step& step) {
         // std::cerr << _counter << nvis::subv<0, 3>(step.y1()) << '\n';
-        
+
         if (++_counter >= _max_count) {
             return true;
         } else if (!_bounds.inside(nvis::subv<0, 3>(step.y1()))) {
             return true;
         }
-        
+
         // std::cerr << "continue\n";
         return false;
     }
-    
+
     size_t _counter, _max_count;
     nvis::bbox3 _bounds;
 };
@@ -98,7 +98,7 @@ struct i2x {
         }
         bounds = spurt::nrrd_utils::get_bounds<3>(nrrd);
     }
-    
+
     nvis::vec3 operator()(int id) const {
         int i = id % size[0];
         id /= size[0];
@@ -106,7 +106,7 @@ struct i2x {
         int k = id / size[1];
         return bounds.min() + nvis::vec3(i, j, k)*step;
     }
-    
+
     nvis::vec3  step;
     nvis::ivec3 size;
     nvis::bbox3 bounds;
@@ -115,14 +115,14 @@ struct i2x {
 template<typename T>
 struct right_hand_side {
     typedef T   field_type;
-    
+
     right_hand_side(const field_type& field)
         : _field(field) {}
-        
+
     bool operator()(const nvis::vec3& x, nvis::vec3& f) const {
         return _field.get_value(x, f);
     }
-    
+
     const field_type& _field;
 };
 
@@ -130,15 +130,15 @@ template<typename RHS>
 struct euler {
 
     typedef RHS     rhs_type;
-    
+
     enum state {
         OK = 0,
         LEFT_DOMAIN,
         STOPPED,
     };
-    
+
     euler(const rhs_type& rhs, double h, double lmax, double eps = 1.0e-6) : _rhs(rhs), _h(h), _lmax(lmax), _eps(eps) {}
-    
+
     state advance(const nvis::vec3& in, std::list<nvis::vec3>& out, double length, double& actual_length) const {
         double h = (length < 0 ? -_h : _h);
         actual_length = 0;
@@ -165,7 +165,7 @@ struct euler {
         }
         return OK;
     }
-    
+
     const rhs_type& _rhs;
     double _h, _lmax, _eps;
 };
@@ -188,7 +188,7 @@ struct point_location {
             size[i] = nrrd->axis[nrrd->dim-3+i].size;
         }
     }
-    
+
     int index(const nvis::vec3& x) const {
         nvis::vec3 y = (x - min) / step;
         nvis::ivec3 n;
@@ -197,7 +197,7 @@ struct point_location {
         }
         return n[0] + size[0]*(n[1] + size[1]*n[2]);
     }
-    
+
     nvis::vec3  min, step;
     nvis::ivec3 size;
 };
@@ -205,11 +205,11 @@ struct point_location {
 int main(int argc, char* argv[])
 {
     initialize(argc, argv);
-    
+
     using namespace Garcia_vis_helper;
-    
+
     set_paths();
-    
+
     dataset_info* __info;
     switch (dataset) {
         case 0:
@@ -235,9 +235,9 @@ int main(int argc, char* argv[])
             return 1;
     }
     const dataset_info& info = *__info;
-    
+
     std::cerr << "base dir = " << info.base_dir << '\n';
-    
+
     std::string name = info.base_dir + "Efield.nrrd";
     Nrrd* nin_vec = spurt::nrrd_utils::readNrrd(name);
     if (nin_vec->dim != 4) {
@@ -246,10 +246,10 @@ int main(int argc, char* argv[])
     field_type      vf(nin_vec);
     rhs_type        rhs(vf);
     euler_type      integrator(rhs, h, lmax);
-    
+
     std::string base(out);
     std::ostringstream os;
-    
+
     name = info.microstruct;
     Nrrd* nin_tag = spurt::nrrd_utils::readNrrd(name);
     point_location pl(nin_tag);
@@ -266,49 +266,49 @@ int main(int argc, char* argv[])
             ++grain_size[id];
         }
     }
-    
+
     nvis::bbox3 bounds = spurt::nrrd_utils::get_bounds<3>(nin_vec);
     nvis::vec3 min = bounds.min();
     nvis::vec3 diameter = bounds.size();
-    
+
     std::map<int, int> hit_counter;
-    
+
     srand48(time(0));
     double intg_time = 0;
     float length = std::numeric_limits<double>::max();
-    
+
     int nx, ny, nz;
     nx = ny = nz = round(pow(nblines, 1./3.));
     nblines = nx * ny * nz;
     double dx = diameter[0] / (double)nx;
     double dy = diameter[1] / (double)ny;
     double dz = diameter[2] / (double)nz;
-    
+
     for (int i = 0 ; i < nblines ; ++i) {
-    
+
         int _i = i % nx;
         int _j = (i / nx) % ny;
         int _k = i / (nx*ny);
         double _x = min[0] + ((double)_i + 0.5 + drand48()) * dx;
         double _y = min[1] + ((double)_j + 0.5 + drand48()) * dy;
         double _z = min[2] + ((double)_k + 0.5 + drand48()) * dz;
-        
+
         // nvis::vec3 seed = min + nvis::vec3(drand48(), drand48(), 0.001) * diameter;
         nvis::vec3 seed(_x, _y, _z);
         std::cerr << "seeding streamline #" << i << "/" << nblines << " at " << seed << '\n';
-        
+
         std::list<nvis::vec3>   line, aux;
         double                  actual_l;
-        
+
         integrator.advance(seed, line, length, actual_l);
         integrator.advance(seed, aux, -length, actual_l);
         if (aux.size()) {
             aux.pop_front();
         }
         line.insert(line.begin(), aux.rbegin(), aux.rend());
-        
+
         std::cerr << line.size() << " points in line\n";
-        
+
         int last_id = -5;
         for (std::list<nvis::vec3>::const_iterator it = line.begin() ; it != line.end() ; ++it) {
             nvis::vec3 x = *it;
@@ -325,7 +325,7 @@ int main(int argc, char* argv[])
             }
         }
     }
-    
+
     // normalize results
     std::map<int, float> freq;
     for (std::map<int, int>::const_iterator it = hit_counter.begin() ;
@@ -334,7 +334,7 @@ int main(int argc, char* argv[])
         float fq = (float)it->second / (float)grain_size[id] / (float)nblines;
         freq[id] = fq;
     }
-    
+
     float* __freq_in_place = (float*)calloc(nb_voxels, sizeof(float));
     for (int i = 0 ; i < nb_voxels ; ++i) {
         int id = tags[i];
@@ -352,7 +352,7 @@ int main(int argc, char* argv[])
     if (__nout) {
         nrrdNuke(__nout);
     }
-    
+
     float* __freq = (float*)calloc(2 * freq.size(), sizeof(float));
     int counter = 0;
     for (std::map<int, float>::const_iterator it = freq.begin() ; it != freq.end() ; ++it) {
@@ -366,7 +366,7 @@ int main(int argc, char* argv[])
     os.str("");
     os << base << "-n=" << nblines << ".nrrd";
     nrrdSave(os.str().c_str(), nout, NULL);
-    
+
     if (nin_vec) {
         nrrdNuke(nin_vec);
     }
@@ -376,137 +376,6 @@ int main(int argc, char* argv[])
     if (nout) {
         nrrdNuke(nout);
     }
-    
+
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

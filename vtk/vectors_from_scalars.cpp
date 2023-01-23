@@ -44,39 +44,39 @@ std::string input_name, output_name;
 // }
 
 int main(int argc, char* argv[]) {
-    
+
     vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
     reader->SetFileName(argv[1]);
     reader->Update();
-	
+
 	vtkUnstructuredGrid* data = vtkUnstructuredGrid::SafeDownCast(reader->GetOutput());
-	
+
 	size_t npts = data->GetNumberOfPoints();
-	
+
 	vtkSmartPointer<vtkFloatArray> vecs = vtkSmartPointer<vtkFloatArray>::New();
 	vecs->SetNumberOfComponents(3);
 	vecs->SetNumberOfTuples(npts);
-	
+
 	data->GetPointData()->SetActiveAttribute("x_array", vtkDataSetAttributes::SCALARS);
 	vtkDataArray* scl1 = reader->GetOutput()->GetPointData()->GetScalars();
 	data->GetPointData()->SetActiveAttribute("y_array", vtkDataSetAttributes::SCALARS);
 	vtkDataArray* scl2 = reader->GetOutput()->GetPointData()->GetScalars();
 	data->GetPointData()->SetActiveAttribute("z_array", vtkDataSetAttributes::SCALARS);
 	vtkDataArray* scl3 = reader->GetOutput()->GetPointData()->GetScalars();
-	
+
 	for (size_t i=0; i<npts; ++i) {
 		double x = scl1->GetTuple1(i);
 		double y = scl2->GetTuple1(i);
 		double z = scl3->GetTuple1(i);
 		vecs->SetTuple3(i, x, y, z);
 	}
-	
+
 	data->GetPointData()->SetVectors(vecs);
-	
+
 	vtkSmartPointer<vtkDataSetWriter> writer = vtkSmartPointer<vtkDataSetWriter>::New();
 	writer->SetInputData(data);
 	writer->SetFileName(argv[2]);
 	writer->Write();
-    
+
     return 0;
 }

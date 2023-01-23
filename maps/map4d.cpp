@@ -135,13 +135,21 @@ int main(int argc, const char* argv[]) {
 
             std::pair<double, double> meanvar = compute_gaps(hits);
             const double& mean = meanvar.first;
-            // std::cout << "mean gap = " << mean << '\n';
             if (max_mean_gap > 0 && mean > max_mean_gap) continue;
 
             std::array<int, 2> dims{ {4, (int)hits.size()} };
             std::string name = filename + "_hits_n=" + std::to_string(n)
                 + "_g=" + std::to_string(mean) + "_s=" + std::to_string(val) + ".nrrd";
             nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&hits[0]), name, dims);
+
+            dims[1] = (int)orbit.size();
+            name = filename + "_whole_orbit_n=" + std::to_string(n)
+                + "_g=" + std::to_string(mean) + "_s=" + std::to_string(val) + ".nrrd";
+            nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&orbit[0]), name, dims);
+
+            std::cout << "\nhits contains " << hits.size() << " points and "
+                << "orbit contains " << orbit.size() << " points\n";
+
         }
     });
     // for (int n=0; n<nsamples; ++n) {

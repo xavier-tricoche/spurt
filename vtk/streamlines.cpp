@@ -32,7 +32,7 @@
 
 #include <string>
 #include <math/fixed_vector.hpp>
-#include <vtk/vtk_utils.hpp>
+#include <VTK/vtk_utils.hpp>
 #include <math/bounding_box.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <set>
