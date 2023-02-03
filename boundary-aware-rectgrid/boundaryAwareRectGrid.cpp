@@ -16,8 +16,6 @@
 
 #include <stdexcept>
 
-using namespace std;
-
 vtkStandardNewMacro(boundaryAwareRectGrid);
 
 bool boundaryAwareRectGrid::prepare_knot_array() {

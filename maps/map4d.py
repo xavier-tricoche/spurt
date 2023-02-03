@@ -9,7 +9,7 @@ from scipy import spatial
 import random
 from tqdm import tqdm
 import re
-import colors
+import vtk_colors
 
 from vtk.util.numpy_support import *
 
@@ -200,7 +200,7 @@ def visualize_orbit(input, scale=False, scale_factor=0.001, colorby=None, sres=6
 
     if colorby == 'order' or colorby == 'index' or colorby == 'random':
         m.ScalarVisibilityOn()
-        cmap = colors.make_colormap('viridis', attribute.GetRange())
+        cmap = vtk_colors.make_colormap('viridis', attribute.GetRange())
         m.SetLookupTable(cmap)
     elif colorby in ['p1', 'p2', 'q1', 'q2', 'r'] or colorby in name_to_column.keys():
         m.ScalarVisibilityOn()
@@ -211,7 +211,7 @@ def visualize_orbit(input, scale=False, scale_factor=0.001, colorby=None, sres=6
             cmap.AddRGBPoint(0, 1, 1, 1)
             cmap.AddRGBPoint(range[1], 1, 0, 0)
         else:
-            cmap = colors.make_colormap('viridis', [range[0], range[1]])
+            cmap = vtk_colors.make_colormap('viridis', [range[0], range[1]])
         m.SetLookupTable(cmap)
     else:
         m.ScalarVisibilityOff()
@@ -296,9 +296,9 @@ def visualize_4d(name, scale=False, scale_factor=0.001, min_length=2, colorby=No
     #
     # counter = 0
     # colors = vtk.vtkUnsignedCharArray()
-    # colors.SetNumberOfComponents(3)
-    # colors.SetNumberOfTuples(npts)
-    # colors.SetName('colors')
+    # vtk_colors.SetNumberOfComponents(3)
+    # vtk_colors.SetNumberOfTuples(npts)
+    # vtk_colors.SetName('colors')
 
 
     # coherence = []
@@ -309,7 +309,7 @@ def visualize_4d(name, scale=False, scale_factor=0.001, min_length=2, colorby=No
     #     for i, row in tqdm(sub.iterrows()):
     #         ids.SetTuple1(counter, row['index'])
     #         dist.SetTuple1(counter, row['ydot'])
-    #         colors.SetTuple3(counter, col[0], col[1], col[2])
+    #         vtk_colors.SetTuple3(counter, col[0], col[1], col[2])
     #         counter = counter+1
     #     coherence.append(mindist(sub[['x', 'y', 'xdot', 'ydot']))
 
