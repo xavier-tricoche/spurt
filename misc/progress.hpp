@@ -85,21 +85,22 @@ struct ProgressDisplay {
     std::tm *m_begin_date, *m_end_date;
 
     std::ostream& m_os;
-    std::string m_str;
+    std::string m_str, m_update_str;
     int m_pos;
     size_t m_at, m_delta_at;
 
     ProgressDisplay(bool activate=true, std::ostream& _os=std::cout)
         : m_active(activate), m_progress(0), m_bar_width(60), m_precision(3),
-          m_os(_os), m_str(""), m_fraction(false), m_stopped(false) {
+          m_os(_os), m_str(""), m_update_str(""), m_fraction(false), m_stopped(false) {
               m_cpu_time_begin = std::clock();
               m_wall_time_begin = std::chrono::high_resolution_clock::now();
               std::time_t now = std::time(nullptr);
               m_begin_date = std::gmtime(&now);
           }
 
-    void begin(size_t size=0, const std::string& str="", size_t nb_updates=1000) {
+    void begin(size_t size=0, const std::string& str="", size_t nb_updates=1000, const std::string& update_str="") {
         m_str=str;
+        m_update_str=update_str;
         m_size=size;
         m_progress=0;
         m_at = 0;
@@ -140,7 +141,10 @@ struct ProgressDisplay {
         m_fraction = true;
     }
 
-    void update(size_t at) {
+    void update(size_t at, const std::string& str="") {
+        if (!str.empty()) {
+            m_update_str = str;
+        }
         if (at - m_at >= m_delta_at || at+1 == m_size) {
             m_progress=(float)(at+1)/(float)m_size;
             m_at = at;
@@ -186,6 +190,7 @@ struct ProgressDisplay {
             optional = " (" + std::to_string(m_at) + " / " + std::to_string(m_size) + ")";
         }
         if (!m_str.empty()) m_os << m_str << ": ";
+        if (!m_update_str.empty()) m_os << m_update_str << ": ";
         m_os << "[";
         int pos=m_bar_width * m_progress;
         m_os << std::string(pos, '=') << '>'
