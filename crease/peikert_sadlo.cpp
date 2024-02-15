@@ -1406,7 +1406,8 @@ int main(int argc, char* argv[]) {
     }
 
 
-#if DO_SCALARS
+#if 1 || DO_SCALARS
+    std::cout << "scalar case selected at compile time\n";
     VTK_SMART(vtkDataArray) scalars;
     VTK_SMART(vtkDataArray) gradient;
     VTK_SMART(vtkDataArray) hessian;
@@ -1497,6 +1498,7 @@ int main(int argc, char* argv[]) {
         extract_ridges<boundaryAwareRectGrid>(BARG_dataset, scalar_name);
     }
 #else
+    std::cout << "Vector case selected at compile time\n"; 
     VTK_SMART(vtkDataArray) vectors;
     VTK_SMART(vtkDataArray) jacobian;
 

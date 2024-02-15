@@ -19,5 +19,23 @@ if ( VTK_FOUND )
                            ${NetCDF_LIBRARIES}
                            ${VTK_LIBRARIES}
                            BARG)
-    install( TARGETS ${name} RUNTIME DESTINATION bin )
+    install( TARGETS peikert_sadlo RUNTIME DESTINATION bin )
 endif()
+
+add_executable( peikert ${EXECUTABLE_FLAG} peikert.cpp )
+target_link_libraries( peikert
+                       ${Teem_LIBRARIES}
+                       ${Boost_LIBRARIES} )
+install( TARGETS peikert RUNTIME DESTINATION bin )
+
+add_executable( schultz ${EXECUTABLE_FLAG} schultz.cpp )
+target_link_libraries( schultz
+                       ${Teem_LIBRARIES}
+                       ${Boost_LIBRARIES} )
+install( TARGETS schultz RUNTIME DESTINATION bin )
+
+add_executable( multires_peikert ${EXECUTABLE_FLAG} multires_peikert.cpp )
+target_link_libraries( multires_peikert
+                       ${Teem_LIBRARIES}
+                       ${Boost_LIBRARIES} )
+install( TARGETS multires_peikert RUNTIME DESTINATION bin )
