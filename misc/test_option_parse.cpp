@@ -194,7 +194,7 @@ int main(int argc, const char* argv[]) {
         << "sh    = " << sh << '\n'
         << "i     = " << i << '\n'
         << "f     = " << f << '\n'
-        << "d     = " << d << '\n'
+        << "d     = " << dd << '\n'
         << "st    = " << str << '\n'
         << "st2   = " << str2 << '\n'
         << "iv    = " << iv << '\n'

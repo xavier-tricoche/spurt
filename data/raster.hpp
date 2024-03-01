@@ -97,11 +97,12 @@ public:
     typedef raster_grid<dim, scalar_type, size_type>  self_type;
 
     // constructors
+    raster_grid();
+    raster_grid(const self_type& other) = default;
     raster_grid(const coord_type& resolution, const bounds_type& bounds,
                 bool cell_based=false);
     raster_grid(const coord_type& resolution, const point_type& origin,
                 const vec_type& spacing, bool cell_based=false);
-
     // vertex access
     point_type operator()(size_type i) const;
     point_type operator()(size_type i, size_type j) const;
@@ -178,13 +179,13 @@ public:
     typedef raster_data<value_type, dim, scalar_type, size_type> self_type;
 
     // constructors
+    raster_data() {}
+	raster_data(const self_type& other) = default;
     raster_data(const grid_type& grid);
     raster_data(const grid_type& grid, const std::vector<value_type>& data);
     raster_data(const grid_type& grid, value_type init_val);
     template<typename _Iterator>
     raster_data(const grid_type& grid, _Iterator begin, _Iterator end);
-    raster_data(const self_type& other);
-	raster_data(self_type&& other);
 
     ~raster_data() {}
 
@@ -243,7 +244,7 @@ public:
 
 protected:
     typedef typename grid_type::shifter_type shifter_type;
-    const grid_type&          m_grid;
+    grid_type                 m_grid;
     std::vector<value_type>   m_data;
     vec_type                  m_max_coord;
 };
@@ -291,6 +292,7 @@ public:
     typedef nvis::fixed_vector<value_type, 4>    val4;
     typedef typename base_type::iterator         iterator;
     typedef typename base_type::const_iterator   const_iterator;
+    typedef image<value_type, dim, scalar_type, size_type> self_type;
 
 private:
     // interpolation
@@ -335,6 +337,8 @@ private:
     }
 
 public:
+    image() {}
+    image(const self_type& other) = default;
     image(const grid_type& grid) : base_type(grid) {}
     image(const grid_type& grid, const std::vector<value_type>& data)
         : base_type(grid, data) {}
@@ -347,9 +351,11 @@ public:
 
     // interpolation
     value_type value(const point_type& p) const;
+    value_type value_in_voxel(const coord_type& vid, const point_type& p) const;
 
     // derivative at arbitrary locations
-    deriv_type derivative(const vec_type& p) const ;
+    deriv_type derivative(const point_type& p) const ;
+    deriv_type derivative_in_voxel(const coord_type& vid, const point_type& p) const;
 
     // derivative at vertices
     val1 derivative(size_type i) const ;

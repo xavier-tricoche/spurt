@@ -20,6 +20,13 @@
 #include <misc/progress.hpp>
 #include <spline/spline.h>
 
+#include <vtkDoubleArray.h>
+#include <vtkCellArray.h>
+#include <vtkPoints.h>
+#include <vtkPolyData.h>
+#include <vtkXMLPolyDataWriter.h>
+#include <vtkPointData.h>
+
 // idea:
 // 1. Use Peikert's determinant idea to find ridge pouints along edges
 // 2. Do no rely on linear variation of the determinant, instead
@@ -69,6 +76,25 @@ struct Less
         else if (a[1] < b[1]) return true;
         else if (b[1] < a[1]) return false;
         else return a[2] < b[2];
+    }
+};
+
+
+struct PosLexico
+{
+    static constexpr double eps = 1.0e-9;
+    bool operator()(const vec3& p0, const vec3& p1) const
+    {
+        if (p0[0] < p1[0]-eps)
+            return true;
+        else if (p1[0] < p0[0]-eps)
+            return false;
+        else if (p0[1] < p1[1]-eps)
+            return true;
+        else if (p1[1] < p0[1]-eps)
+            return false;
+        else
+            return p0[2] < p1[2]-eps;
     }
 };
 
@@ -1282,6 +1308,17 @@ std::ostream& operator<<(std::ostream& os, const mat3& m) {
     return os;
 }
 
+template<typename T, size_t N>
+std::ostream& operator<<(std::ostream& os, const std::array<T, N>& a)
+{
+    os << "[";
+    std::for_each(a.begin(), a.end(), [&](T v) {
+        os << v << ", ";
+    });
+    os << "]";
+    return os;
+}
+
 std::ostream &
 operator<<(std::ostream &os, const EdgeID &e)
 {
@@ -1307,6 +1344,16 @@ std::ostream& operator<<(std::ostream& os, const Voxel::VertexInfo& vinfo) {
     return os;
 }
 
+std::ostream &operator<<(std::ostream &os, const Voxel &v)
+{
+    os << "min-max: " << v.m_min << ", " << v.m_max << '\n';
+    os << "coord: " << v.coord << '\n';
+    os << "values: " << v.values << '\n';
+    os << "gradients: " << v.gradients << '\n';
+    os << "hessians: " << v.hessians << '\n';
+    return os;
+}
+
 template<typename T>
 T invlinear(const T& f0, const T& f1, double umin=0, double umax=1) {
     // f = f0 + (u - umin) / (umax - umin) * (f1 - f0)
@@ -1323,9 +1370,14 @@ T linear(double u, const T& v0, const T& v1) {
 std::pair<double, vec3> evmin(const mat3& H) {
     eigensolver_type solver;
     // std::cout << "About to compute eigenvalues for " << H << '\n';
+    mat3 M = H;
     solver.compute(H);
     // std::cout << "done.\n";
-    if (H.maxCoeff() > 1000.) throw std::runtime_error("Invalid hessian value");
+    if (H.maxCoeff() > 1000.) {
+        std::cout << "matrix H is " << H << '\n';
+        std::cout << "copy of H is " << M << '\n';
+        throw std::runtime_error("Invalid hessian value: " + std::to_string(H.maxCoeff()));
+    }
     return std::make_pair(solver.eigenvalues()[0], solver.eigenvectors().col(0));
 }
 
@@ -1436,16 +1488,6 @@ bool check_solution(double u, const vector_function& gfunc, const matrix_functio
     Eigen::Index which;
     double minval = coords.minCoeff(&which);
     return (which == 0) && minval < 1.0e-6*coords.mean();
-}
-
-template<typename T, size_t N>
-std::ostream& operator<<(std::ostream& os, const std::array<T,N>& a) {
-    os << "[";
-    for (uint i=0; i<N-1; ++i) {
-        os << a[i] << ", ";
-    }
-    os << a[N-1] << "]";
-    return os;
 }
 
 uint case_number(const std::array<bool, 12>& edges) {
@@ -2073,10 +2115,14 @@ int check_voxel(const Voxel &voxel, double minval, double minstr)
 {
     // check if current voxel satisfies threshold requirements
     std::vector<double> s_values(8);
-    for (uint i = 0; i < 8; ++i)
-    {
-        s_values[i] = evmin(voxel.hessian(i)).first;
-    }
+    s_values[0] = evmin(voxel.hessian(0)).first;
+    s_values[1] = evmin(voxel.hessian(1)).first;
+    s_values[2] = evmin(voxel.hessian(2)).first;
+    s_values[3] = evmin(voxel.hessian(3)).first;
+    s_values[4] = evmin(voxel.hessian(4)).first;
+    s_values[5] = evmin(voxel.hessian(5)).first;
+    s_values[6] = evmin(voxel.hessian(6)).first;
+    s_values[7] = evmin(voxel.hessian(7)).first;
     if (*std::max_element(&voxel.values[0], &voxel.values[8]) < minval) return -1;
     if (*std::min_element(&s_values[0], &s_values[8]) > minstr) return -2;
     else return 1;
@@ -2110,6 +2156,72 @@ void make_voxel(Voxel& avoxel, const coord3& index, uint depth, const BlockOfSca
     }
 }
 
+void export_triangles(const std::vector<triangle_type> &triangles,  
+                      const std::vector<std::array<double, 2>>& attributes,
+                      const std::string &filename)
+{
+    std::map<vec3, size_t, PosLexico> pos_to_id;
+    std::map<size_t, size_t> new_to_old_id;
+    std::vector<std::array<size_t, 3>> tris;
+    size_t id = 0;
+    for (size_t i = 0; i < triangles.size(); ++i)
+    {
+        std::array<size_t, 3> atri;
+        for (int j = 0; j < 3; ++j)
+        {
+            const vec3 &p = triangles[i][j];
+            auto iter = pos_to_id.find(p);
+            if (iter != pos_to_id.end())
+            {
+                atri[j] = iter->second;
+            }
+            else
+            {
+                atri[j] = id;
+                new_to_old_id[id] = 3*i+j;
+                pos_to_id[p] = id++;
+            }
+        }
+        tris.push_back(atri);
+    }
+    vtkDoubleArray *coords = vtkDoubleArray::New();
+    coords->SetNumberOfComponents(3);
+    coords->SetNumberOfTuples(pos_to_id.size());
+    vtkDoubleArray *vals = vtkDoubleArray::New();
+    vals->SetName("Values");
+    vals->SetNumberOfComponents(1);
+    vals->SetNumberOfTuples(pos_to_id.size());
+    vtkDoubleArray *strs = vtkDoubleArray::New();
+    strs->SetNumberOfComponents(1);
+    strs->SetNumberOfTuples(pos_to_id.size());
+    strs->SetName("Strength");
+    for (auto iter = pos_to_id.begin(); iter != pos_to_id.end(); ++iter)
+    {
+        coords->SetTuple3(iter->second, iter->first[0], iter->first[1], iter->first[2]);
+        vals->SetTuple1(iter->second, attributes[new_to_old_id[iter->second]][0]);
+        strs->SetTuple1(iter->second, attributes[new_to_old_id[iter->second]][1]);
+    }
+    vtkPoints *points = vtkPoints::New();
+    points->SetData(coords);
+    vtkCellArray *cells = vtkCellArray::New();
+    for (size_t i = 0; i < triangles.size(); ++i)
+    {
+        cells->InsertNextCell(3);
+        cells->InsertCellPoint(tris[i][0]);
+        cells->InsertCellPoint(tris[i][1]);
+        cells->InsertCellPoint(tris[i][2]);
+    }
+    vtkPolyData *poly = vtkPolyData::New();
+    poly->SetPoints(points);
+    poly->SetPolys(cells);
+    poly->GetPointData()->AddArray(vals);
+    poly->GetPointData()->AddArray(strs);
+    vtkXMLPolyDataWriter *writer = vtkXMLPolyDataWriter::New();
+    writer->SetFileName(filename.c_str());
+    writer->SetInputData(poly);
+    writer->Write();
+}
+
 int main(int argc, const char *argv[])
 {
     std::string data_name, gradient_name, hessian_name, output_name;
@@ -2120,6 +2232,7 @@ int main(int argc, const char *argv[])
     std::pair<coord3, coord3> bounds;
     std::string voxel_str = "(-1, -1, -1)";
     std::string bounds_str = "(0, -1; 0, -1; 0, -1)";
+    int maxdepth = 3;
     
 
     namespace cl = spurt::command_line;
@@ -2148,6 +2261,7 @@ int main(int argc, const char *argv[])
         parser.add_value("niter", niter, 100, "Max number of iterations of the zero crossing algorithm", optional_group);
         parser.add_value("voxel", voxel_str, voxel_str, "Coordinates of single voxel to process");
         parser.add_value("bounds", bounds_str, bounds_str, "Bounds of domain to consider");
+        parser.add_value("maxdepth", maxdepth, maxdepth, "Maximum refinement depth");
         parser.parse(argc, argv);
     }
     catch (std::runtime_error &e)
@@ -2269,7 +2383,7 @@ int main(int argc, const char *argv[])
     int nfound = 0;
 
     srand48(130819751900);
-    for (uint depth=0; depth<3; ++depth)
+    for (uint depth=0; depth<maxdepth; ++depth)
     {
         std::cout << "\nProcessing depth=" << depth << '\n';
         // we reset the edge information at each new depth since we have not encountered
@@ -2497,6 +2611,7 @@ int main(int argc, const char *argv[])
         sizes[0] = 2;
         spurt::nrrd_utils::writeNrrd((void*)&attributes[0], output_name + "_attributes.nrrd",
                                      nrrdTypeDouble, 3, sizes);
+        export_triangles(all_triangles, attributes, output_name + "_polydata.vtp");
     }
     else 
     {

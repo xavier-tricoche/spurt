@@ -17,7 +17,12 @@
 #include <misc/option_parse.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <misc/progress.hpp>
-#include <spline/spline.h>
+
+#include <vtkXMLPolyDataWriter.h>
+#include <vtkDoubleArray.h>
+#include <vtkCellArray.h>
+#include <vtkPolyData.h>
+#include <vtkPoints.h>
 
 // idea: store all ridge points, weak or even numbered with a
 // corresponding code to indicate why they were not included for
@@ -25,14 +30,6 @@
 // figure out if some of these points should have been used anyway,
 // and, if so, how to make that determination ahead of time, if at
 // all possible.
-
-// Edges containing multiple ridge points need to be refined, yielding 2 edges that are shared by 4 
-// regular voxels or 8 refined voxels. 
-// Algorithm:
-// - If an edge is found to have 2 or more rige points:
-//    all its surrounding voxels are marked for subdivision.
-// - Afterwards: 
-//    all unique subdivision voxels are processed and subdivided as needed
 
 int verbose = 1;
 
@@ -54,30 +51,11 @@ constexpr int not_enough_edges = 5;
 typedef Eigen::Matrix<double, 3, 1> vec3;
 typedef Eigen::Matrix<int, 3, 1> ivec3;
 typedef Eigen::Matrix<double, 3, 3> mat3;
-typedef Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic> dyn_mat_type;
 typedef Eigen::SelfAdjointEigenSolver<mat3> eigensolver_type;
 typedef boost::multi_array<double, 3> scalar_raster;
 typedef boost::multi_array<vec3, 3> vector_raster;
 typedef boost::multi_array<mat3, 3> matrix_raster;
-typedef Eigen::Matrix<double, 4, 1> vec4;
-
-typedef Eigen::Vector<int, 3> CoordID;
-struct CoordLexico
-{
-    bool operator()(const CoordID &c0, const CoordID &c1) const
-    {
-        if (c0[0] < c1[0])
-            return true;
-        else if (c1[0] < c0[0])
-            return false;
-        else if (c0[1] < c1[1])
-            return true;
-        else if (c1[1] < c0[1])
-            return false;
-        else
-            return (c0[2] < c1[2]);
-    }
-};
+typedef Eigen::Matrix<double, 4, 1> vec4; 
 
 constexpr double invalid = std::numeric_limits<double>::max();
 
@@ -847,7 +825,7 @@ struct BlockOfValues {
                 else if (nin->axis[3].size <= 9) {
                     // individual scalar entries are in outermost dim
                     spacemin = 0;
-                    innerstride = nin->axis[0].size*nin->axis[1].size*nin->axis[2].size;
+                    innerstride = nin->axis[0].size*nin->axis[1].size*nin->axis[2].size*nin->axis[3].size;
                     outerstride = 1;
                 }
                 else {
@@ -864,7 +842,7 @@ struct BlockOfValues {
                 else if (nin->axis[3].size*nin->axis[4].size <= 9) {
                     // individual scalar entries are in outermost dim
                     spacemin = 0;
-                    innerstride = nin->axis[0].size*nin->axis[1].size*nin->axis[2].size;
+                    innerstride = nin->axis[0].size * nin->axis[1].size * nin->axis[2].size;
                     outerstride = 1;
                 }
                 else {
@@ -875,19 +853,6 @@ struct BlockOfValues {
         m_sizes = { nin->axis[spacemin].size, 
                     nin->axis[spacemin+1].size, 
                     nin->axis[spacemin+2].size };
-        m_origin = vec3(0,0,0);
-        m_spacings = vec3(1,1,1);
-        for (int d=0; d<3; ++d)
-        {
-            if (!std::isnan(nin->axis[spacemin+d].min))
-            {
-                m_origin[d] = nin->axis[spacemin+d].min;
-            }
-            if (!std::isnan(nin->axis[spacemin+d].spacing))
-            {
-                m_spacings[d] = nin->axis[spacemin+d].spacing;
-            }
-        }
         size_t nvalues = m_sizes[0] * m_sizes[1] * m_sizes[2];
 
         m_data.resize(nvalues);
@@ -901,8 +866,6 @@ struct BlockOfValues {
     self_type& operator=(const self_type& other) {
         m_sizes = other.m_sizes;
         m_data = other.m_data;
-        m_spacings = other.m_spacings;
-        m_origin = other.m_origin;
         return *this;
     }
 
@@ -914,52 +877,12 @@ struct BlockOfValues {
         return m_data[i + m_sizes[0] * (j + m_sizes[1] * k)];
     }
 
-    value_type& operator()(const CoordID& c) 
-    {
-        return (*this)(c[0], c[1], c[2]);
-    }
-
-    value_type operator()(const CoordID& c) const
-    {
-        return (*this)(c[0], c[1], c[2]);
-    }
-
-    value_type evaluate(double x, double y, double z) const 
-    {
-        // convert to local (fractional) index coordinates
-        vec3 p = (vec3(x,y,z).array() / m_spacings.array()).matrix();
-        ivec3 cellid = p.cast<int>();
-        for (int d=0; d<3; ++d)
-        {
-            cellid[d] = std::min(cellid[d], m_sizes[d]-2);
-        }
-
-        double u = p[0] - cellid[0];
-        double v = p[1] - cellid[1];
-        double w = p[2] - cellid[2];
-        return (1. - u) * (1. - v) * (1. - w) * (*this)(cellid[0],     cellid[1],     cellid[2]    ) + 
-                     u  * (1. - v) * (1. - w) * (*this)(cellid[0] + 1, cellid[1],     cellid[2]    ) +
-                     u  *       v  * (1. - w) * (*this)(cellid[0] + 1, cellid[1] + 1, cellid[2]    ) +
-               (1. - u) *       v  * (1. - w) * (*this)(cellid[0],     cellid[1] + 1, cellid[2]    ) +
-               (1. - u) * (1. - v) *       w  * (*this)(cellid[0],     cellid[1],     cellid[2] + 1) + 
-                     u  * (1. - v) *       w  * (*this)(cellid[0] + 1, cellid[1],     cellid[2] + 1) +
-                     u  *       v  *       w  * (*this)(cellid[0] + 1, cellid[1] + 1, cellid[2] + 1) + 
-               (1. - u) *       v  *       w  * (*this)(cellid[0],     cellid[1] + 1, cellid[2] + 1);
-    }
-
-    value_type evaluate(const vec3& p) const
-    {
-        return this->evaluate(p[0], p[1], p[2]);
-    }
-
-    const ivec3& shape() const {
+    const std::array<size_t, 3>& shape() const {
         return m_sizes;
     }
 
-    ivec3 m_sizes;
+    std::array<size_t, 3> m_sizes;
     std::vector<value_type> m_data;
-    vec3 m_spacings;
-    vec3 m_origin;
 };
 typedef BlockOfValues<double> BlockOfScalars;
 typedef BlockOfValues<double, vec3> BlockOfVectors;
@@ -986,13 +909,32 @@ T sign(const T& value) {
     else return T(-1);
 }
 
+typedef Eigen::Vector<int, 3> CoordID;
+struct CoordLexico {
+    bool operator()(const CoordID& c0, const CoordID& c1) const {
+        if          (c0[0] < c1[0]) return true;
+        else if     (c1[0] < c0[0]) return false;
+        else if     (c0[1] < c1[1]) return true;
+        else if     (c1[1] < c0[1]) return false;
+        else return (c0[2] < c1[2]);
+    }
+};
 
-int distance(const CoordID& c0, const CoordID& c1) {
-    return (c1-c0).lpNorm<Eigen::Infinity>();
-}
+struct PosLexico {
+    static constexpr double eps = 1.0e-9;
+    bool operator()(const vec3& p0, const vec3& p1) const 
+    {
+        if          (p0[0] < p1[0]-eps) return true;
+        else if     (p1[0] < p0[0]-eps) return false;
+        else if     (p0[1] < p1[1]-eps) return true;
+        else if     (p1[1] < p0[1]-eps) return false;
+        else return (p0[2] < p1[2]-eps);
+    }
 
-struct EdgeID 
-{
+    double m_eps;
+};
+
+struct EdgeID {
     EdgeID(const CoordID& c0, const CoordID& c1)
         : m_c0(c0), m_c1(c1) {
         CoordLexico less;
@@ -1326,7 +1268,6 @@ int triangulate(std::vector<triangle_type>& out,
         {
             out.push_back(triangle_type({{edges[indices[i]][0], edges[indices[i+1]][0], edges[indices[i+2]][0]}}));
             const triangle_type& t = out.back();
-            os << "added triangle: " << t << '\n';
         }
         os << "A valid MC case was found and " << out.size() << " triangles "
            << "were created.\n";
@@ -1340,94 +1281,6 @@ int triangulate(std::vector<triangle_type>& out,
     }
 }
 
-void fit_spline(tk::spline& spline, const std::vector<double>& u, C0Criterion& f) {
-    std::vector<double> values;
-    std::for_each(u.begin(), u.end(), [&](double x){ values.push_back(f(x)); });
-    spline.set_points(u, values);
-}
-
-std::vector<double> bisection_spline_local_extremum(tk::spline &, double, double, bool);
-
-std::vector<double> newton_spline_local_extremum(tk::spline &spline, double u0, double u1, bool verbose)
-{
-    // Newton:
-    // f(x+dx) = 0 = f(x) + f'(x)dx <=> dx = -f(x)/f'(x)
-    double f0 = spline(u0);
-    double f1 = spline(u1);
-    double u = -f0/(f1-f0); // initial guess (linear solution)
-    double f = spline.deriv(1, u);
-    int iter = 0;
-    std::vector<double> all_us;
-    if (verbose)
-    {
-        std::cout << "Looking for local extremum\n";
-    }
-    while (std::abs(f) > 1.0e-6 && iter < 10)
-    {
-        double d2f = spline.deriv(2, u);
-        all_us.push_back(u);
-        if (d2f == 0)
-        {
-            if (verbose) std::cout << "vanishing 2nd derivative: resorting to bisection\n";
-            return bisection_spline_local_extremum(spline, u0, u1, verbose);
-        }
-        double dx = -f / d2f;
-        double uu = u + dx;
-        if (uu > u1) u = u1;
-        else if (uu < u0) u = u0;
-        else u = uu;
-        if (verbose)
-        {
-            std::cout << "u=" << u << ", df/dt=" << f << ", d2f/dt2=" << d2f << ", dx=" << dx << '\n';
-        }
-        f = spline.deriv(1, u);
-        if (verbose)
-        {
-            std::cout << "df/dt=" << f << '\n';
-        }
-        iter += 1;
-    }
-    return all_us;
-}
-
-std::vector<double> bisection_spline_local_extremum(tk::spline& spline, double u0, double u1, bool verbose) 
-{
-    double f0 = spline.deriv(1, u0);
-    double f1 = spline.deriv(1, u1);
-    double u, t;
-    std::vector<double> all_us;
-    for (int i=0; i<10; ++i) 
-    {
-        t = -f0/(f1-f0);
-        u = (1-t)*u0 + t*u1;
-        all_us.push_back(u);
-        double f = spline.deriv(1, u);
-        if (verbose)
-        {
-            std::cout << "bisection search: iteration " << i << ", df/dt=" << f << ", u0=" << u0 << ", u1=" << u1 << '\n';
-        }
-        if (f*f0 > 0)
-        {
-            u0 = u;
-            f0 = f;
-        }
-        else
-        {
-            u1 = u;
-            f1 = f;
-        }
-    }
-    t = -f0/(f1-f0);
-    u = (1 - t) * u0 + t * u1;
-    all_us.push_back(u);
-    double f = spline.deriv(1, u);
-    if (verbose)
-    {
-        std::cout << "final derivative: " << f << '\n';
-    }
-    return all_us;
-}
-
 std::pair<int, std::vector<double>>
 analyze_edge(const EdgeID &e,
              const BlockOfVectors &gradient,
@@ -1436,7 +1289,6 @@ analyze_edge(const EdgeID &e,
              bool verbose = false,
              const int sampling_res = 10,
              const double delta = 0.05,
-             const double mind = 0.001,
              const double min_value = 0,
              const double min_strength = 1.0e-9,
              const double min_criterion = 1.0e-9,
@@ -1463,80 +1315,17 @@ analyze_edge(const EdgeID &e,
     
     double du = 1./static_cast<double>(sampling_res-1);
     std::map<double, double> values;
-    std::vector<double> xs;
-    
+    if (verbose) 
+        std::cout << "Initial samples values are\n";
     for (int i=0; i<sampling_res; ++i) {
-        xs.push_back(std::min(i*du, 1.));
-    }
-    tk::spline init_spline;
-    fit_spline(init_spline, xs, cfunc);
-    std::vector<double> derivs;
-    for (int i=0; i<xs.size(); ++i) {
-        derivs.push_back(init_spline.deriv(1, xs[i]));
-        values[xs[i]] = init_spline(xs[i]);
-    }
-
-    // check if derivative has constant sign in which case we are good
-    double asign = sign(derivs[0]);
-    std::vector<int> where;
-    if (verbose)
-    {
-        std::cout << "sampling spline derivative along edge\n";
-        std::cout << "sample #0: "  << derivs[0] << '\n';
-    }
-    for (int i=1; i<derivs.size(); ++i) {
+        double u = std::min(i*du, 1.);
+        values[u] = cfunc(u);
         if (verbose)
-        {
-            std::cout << "sample #" << i << ": " << derivs[i] << '\n';
-        }
-        double newsign = sign(derivs[i]);
-        if (asign * newsign < 0) {
-            if (verbose)
-            {
-                std::cout << "sign change\n";
-            }
-            where.push_back(i-1);
-            asign = newsign;
-        }
-    }
-    if (verbose)
-        std::cout << "spline derivative changed sign " << where.size() << " times\n";
-    if (!where.empty()) {
-        for (int i=0; i<where.size(); ++i) {
-            // find root of derivative
-            double u0 = xs[where[i]];
-            double u1 = xs[where[i]+1];
-            // double u = bisection_spline_local_extremum(init_spline, u0, u1, verbose);
-            std::vector<double> new_us = newton_spline_local_extremum(init_spline, u0, u1, verbose);
-            // found zero crossing of derivative
-            std::for_each(new_us.begin(), new_us.end(), [&](double u)
-            {
-                values[u] = cfunc(u);
-            });
-            // for (double c=0.1; c<=0.5; c+=0.1) 
-            // {
-            //     double v = (1-c)*u + c*u0;
-            //     values[v] = cfunc(v);
-            // }
-            // for (double c=0.1; c<=0.5; c+=0.1)
-            // {
-            //     double v = (1-c)*u + c*u1;
-            //     values[v] = cfunc(v);
-            // }
-        }
+            std::cout << "f(" << u << ") = " << values[u] << '\n';
     }
 
-    if (verbose) {
-        std::cout << "After spline-based refinement, samples are:\n";
-        for (auto iter=values.begin(); iter!=values.end(); ++iter) {
-            std::cout << std::setprecision(32) << iter->first << ": " << iter->second << '\n';
-        }
-    }
-
-    /*
     std::vector<std::pair<double, double>> active_intervals;
-    for (int i=0; i<sampling_res-1; ++i)
-    {
+    for (int i=0; i<sampling_res-1; ++i) {
         active_intervals.push_back(std::make_pair(i*du, std::min((i+1)*du, 1.)));
     }
     
@@ -1546,45 +1335,30 @@ analyze_edge(const EdgeID &e,
         if (verbose)
         {
             std::cout << "Starting new linearization round\n";
-            std::cout << "\t" << active_intervals.size() << " intervals to process\n";
-            std::cout << "current sampled values are:\n";
-            for (auto iter=values.begin(); iter!=values.end(); ++iter)
-            {
-                std::cout << std::setprecision(32) << iter->first << ": " << iter->second << '\n';
-            }
         }
         for (int i=0; i<active_intervals.size(); ++i)
         {   
             double u0 = active_intervals[i].first;
             double u1 = active_intervals[i].second;
-            if (u1-u0 < mind) {
-                if (verbose)
-                    std::cout << "declining to refine between " << u0 << " and " << u1 << " because their distance is smaller than " << mind << '\n';
-                continue;
-            }
-            double f0 = values[u0];
-            double f1 = values[u1];
-            double u = 0.5*(u0 + u1);
-            double truth = cfunc(u);
-            double approx = 0.5*(f0 + f1);
+            double f0 = iter->second;
+            double f1 = next->second;
+            double umed = 0.5*(u0 + u1);
+            double fmed = cfunc(umed);
+            double linear = 0.5*(f0 + f1);
             double range = std::abs(f1-f0);
-            double rel_error = std::abs(approx-truth)/range;
+            double rel_error = std::abs(linear-fmed)/range;
             if (rel_error > delta)
             {
                 if (verbose)
                 {
-                    std::cout << "section between " << std::setprecision(32) << u0 << " and " << u1 << " is nonlinear: error=" << rel_error << '\n';
-                    std::cout << "interpolated value between " << std::setprecision(32) << f0 << " and " << f1 << " was " << approx << " but actual value is " << truth << '\n';
-                    std::cout << "\tadding f(" << std::setprecision(32) << u << ")=" << truth << '\n';
+                    std::cout << "section between " << u0 << " and " << u1 << " nonlinear: error=" << rel_error << '\n';
+                    std::cout << "\tadding f(" << umed << ")=" << fmed << '\n';
                 }
-                values[u] = truth;
-                new_intervals.push_back(std::make_pair(u0, u));
-                new_intervals.push_back(std::make_pair(u, u1));
+                values[umed] = fmed;
+                linearized = false;
             }
         }
-        new_intervals.swap(active_intervals);
     }
-    */
 
     std::vector<double> ridge_points;
 
@@ -1599,18 +1373,10 @@ analyze_edge(const EdgeID &e,
         double f1 = next->second;
         if (f0*f1 < 0)
         {
-            if (verbose) {
-                std::cout << "zero crossing found between " << u0 << " and " << u1 << '\n';
-            }
             double u = find_zero_crossing(cfunc, u0, u1);
             if (check_solution(u, gfunc, hfunc, verbose))
             {
-                if (verbose)
-                    std::cout << "ridge point found\n";
                 ridge_points.push_back(u);
-            }
-            else if (verbose) {
-                std::cout << "no ridge point found\n";
             }
         }
     }
@@ -1621,35 +1387,6 @@ analyze_edge(const EdgeID &e,
         return std::make_pair(several_ridge_points, ridge_points);
     else
         return std::make_pair(no_ridge_points, std::vector<double>());
-}
-
-std::pair<double, double> evaluate(const vec3& point,
-                                   const BlockOfScalars& values, 
-                                   const BlockOfMatrices& hessian) 
-{
-    vec3 low;
-    int dim = -1;
-    for (int i=0; i<3; ++i) {
-        low[i] = std::trunc(point[i]);
-        if (point[i] - low[i] > 1.0e-6) { // we are working in index space
-            dim = i;
-        }
-    }
-    if (dim == -1) {
-        std::ostringstream os;
-        os << "Invalid edge coordinate: " << point;
-        throw std::runtime_error(os.str());
-    }
-    vec3 high = low;
-    high[dim] += 1;
-    mat3 H0 = hessian(low[0], low[1], low[2]);
-    double v0 = values(low[0], low[1], low[2]);
-    mat3 H1 = hessian(high[0], high[1], high[2]);
-    double v1 = values(high[0], high[1], high[2]);
-    scalar_function v(v0, v1);
-    matrix_function h(H0, H1);
-    double u = (point[dim]-low[dim])/(high[dim]-low[dim]);
-    return std::make_pair(v(u), evmin(h(u)).first);
 }
 
 std::pair<int, std::vector<double>> process_edge(const EdgeID &e,
@@ -1685,8 +1422,7 @@ std::pair<int, std::vector<double>> process_edge(const EdgeID &e,
     matrix_function hfunc = matrix_function(hs[0], hs[1]);
     C0Criterion cfunc(gfunc, hfunc);
     
-    if (verbose) 
-    {
+    if (verbose) {
         std::cout << "\n";
         std::cout << "criterion: " << std::fabs(cs[0]) << ", " << std::fabs(cs[1]) << " (" << min_criterion << ")\n";
         std::cout << "hessian:   " << hs[0] << ", " << hs[1] << '\n'; 
@@ -1697,72 +1433,58 @@ std::pair<int, std::vector<double>> process_edge(const EdgeID &e,
 
     // check if we are dealing with a degenerate case or one that
     // does not meet prescribed filtering criteria
-    if (std::max(std::fabs(cs[0]), std::fabs(cs[1])) < min_criterion) 
-    {
+    if (std::max(std::fabs(cs[0]), std::fabs(cs[1])) < min_criterion) {
         return std::make_pair(criterion_underflow, solutions);
     }
-    else if (std::max(lmins[0], lmins[1]) > -std::fabs(min_strength)) 
-    {
+    else if (std::max(lmins[0], lmins[1]) > -std::fabs(min_strength)) {
         return std::make_pair(weak_ridge, solutions);
     }
-    else if (std::max(fs[0], fs[1]) < min_value) 
-    {
+    else if (std::max(fs[0], fs[1]) < min_value) {
         return std::make_pair(low_ridge, solutions);
     }
     
     // initial uniform sampling
     std::vector<double> dets;
     double step = 1./double(sampling_res-1);
-    for (double u=0; u<1+step; u+=step) 
-    {
+    for (double u=0; u<1+step; u+=step) {
         dets.push_back(cfunc(u));
-        if (verbose) 
-        {
+        if (verbose) {
             std::cout << "det[" << u << "] = " << dets.back() << '\n';
         }
     }
     
     // adaptive zero-crossing search
-    for (int i=0; i<dets.size()-1; ++i) 
-    {
+    for (int i=0; i<dets.size()-1; ++i) {
         double u0 = i*step;
         double u1 = u0 + step;
         const double& det0 = dets[i];
         const double& det1 = dets[i+1];
-        if (det0 * det1 < 0) 
-        {
-            if (verbose) 
-            {
+        if (det0 * det1 < 0) {
+            if (verbose) {
                 std::cout << "zero crossing found between " << u0 << " and " << u1 << '\n';
             }
             double u = find_zero_crossing(cfunc, u0, u1);
-            if (verbose) 
-            {
+            if (verbose) {
                 std::cout << "zero crossing found at u=" << u << '\n';
             }
-            if (u>=0 && check_solution(u, gfunc, hfunc, verbose)) 
-            {
+            if (u>=0 && check_solution(u, gfunc, hfunc, verbose)) {
                 solutions.push_back(u);
                 if (verbose)
                     std::cout << "zero crossing found to be a ridge point\n";
             }
-            else if (verbose) 
-            {
+            else if (verbose) {
                 std::cout << "zero crossing is not a valid ridge point\n";
             }
         }
     }
 
-    if (solutions.size() == 1) 
-    {
+    if (solutions.size() == 1) {
         return std::make_pair(one_ridge_points, solutions);
     }
-    else if (solutions.size() == 0) 
-    {
+    else if (solutions.size() == 0) {
         return std::make_pair(no_ridge_points, solutions); // code for nothing found
     }
-    else 
-    {
+    else {
         return std::make_pair(several_ridge_points, solutions);
     }
 }
@@ -1771,21 +1493,18 @@ template<typename T>
 struct parser_traits;
 
 template<>
-struct parser_traits<int> 
-{
+struct parser_traits<int> {
     static std::regex get()
     {
         return std::regex("([-0-9]+)");
     }
-    static int cast(const std::string& s) 
-    {
+    static int cast(const std::string& s) {
         return std::stoi(s);
     }
 };
 
 template<>
-struct parser_traits<double> 
-{
+struct parser_traits<double> {
     static std::regex get()
     {
         return std::regex("([+-]? *[0-9]+(\\.[0-9]+)?)");
@@ -1797,8 +1516,7 @@ struct parser_traits<double>
 };
 
 template<typename T=int>
-void parse_values(std::vector<T>& out, const std::string& str, size_t n) 
-{
+void parse_values(std::vector<T>& out, const std::string& str, size_t n) {
     std::regex myregex = parser_traits<T>::get();
     auto begin = std::sregex_iterator(str.begin(), str.end(), myregex);
     auto end = std::sregex_iterator();
@@ -1813,108 +1531,72 @@ void parse_values(std::vector<T>& out, const std::string& str, size_t n)
             out.push_back(parser_traits<T>::cast(match.str()));
         }
     }
-    else 
-    {
+    else {
         throw std::runtime_error("invalid input");
     }
 }
 
-void edge_neighbors(std::vector<CoordID>& neighbors, const EdgeID& eid) 
+void export_triangles(const std::vector<triangle_type>& all_triangles, 
+                      const std::string& filename)
 {
-    CoordID i0 = eid[0];
-    CoordID i1 = eid[1];
-    int dim=0;
-    for (int i=0; i<3; ++i) 
+    std::map<vec3, size_t, PosLexico> pos_to_id;
+    std::vector<std::array<size_t, 3>> triangles;
+    size_t id=0;
+    for (int i=0; i<all_triangles.size(); ++i) 
     {
-        if (i0[i] != i1[i]) 
+        std::array<size_t, 3> atri;
+        for (int j=0; j<3; ++j)
         {
-            dim = i;
-            break;
-        }
-    }
-    neighbors.resize(4);
-    int low = std::min(i0[dim], i1[dim]);
-    CoordID ref = eid[0];
-    ref[dim] = low;
-    std::fill(neighbors.begin(), neighbors.end(), ref);
-    neighbors[1][(dim+1)%3]--;
-    neighbors[2][(dim+2)%3]--;
-    neighbors[3][(dim+1)%3]--;
-    neighbors[3][(dim+2)%3]--;
-}
-
-void grow_cluster(std::set<int>& cluster, int start, const dyn_mat_type& dist) 
-{
-    if (cluster.find(start) == cluster.end())
-    {
-        cluster.insert(start);
-        for (int i=start+1; i<dist.cols(); ++i) {
-            if (dist(start, i) == 1)
+            const vec3& p = all_triangles[i][j];
+            auto iter = pos_to_id.find(p);
+            if (iter != pos_to_id.end())
             {
-                if (cluster.find(i) == cluster.end())
-                {
-                    grow_cluster(cluster, i, dist);
-                }
+                atri[j] = iter->second;
+            }
+            else
+            {
+                atri[j] = id;
+                pos_to_id[p] = id++;
             }
         }
+        triangles.push_back(atri);
     }
+    vtkDoubleArray* coords = vtkDoubleArray::New();
+    coords.SetNumberOfComponents(3);
+    coords.SetNumberOfTuples(pos_to_id.size());
+    for (auto iter=pos_to_id.begin(); iter!=pos_to_id.end(); ++iter)
+    {
+        coords->SetTuple3(iter->second, iter->first[0], iter->first[1], iter->first[2]);
+    }
+    vtkPoints* points = vtkPoints::New();
+    points->SetData(coords);
+    vtkCellArray* cells = vtkCellArray::New();
+    for (size_t i=0; i<triangles.size(); ++i)
+    {
+        cells->InsertNextCell(3);
+        cells->InsertCellPoint(triangles[i][0]);
+        cells->InsertCellPoint(triangles[i][1]);
+        cells->InsertCellPoint(triangles[i][2]);
+    }
+    vtkPolyData* poly = vtkPolyData::New();
+    poly->SetPoints(points);
+    poly->SetPolys(cells);
+    vtkXMLPolyDataWriter* writer = vtkXMPolyDataWriter::New();
+    writer->SetFileName(filename);
+    writer->SetInputData(poly);
+    writer->Write();
 }
-
-void find_neighbors(std::vector<std::vector<CoordID>>& neighbors, 
-                    const std::map<CoordID, std::vector<int>, CoordLexico> voxels) 
-{
-    std::vector<CoordID> all_voxels;
-    std::cout << "creating an array of voxels\n";
-    for (auto iter=voxels.begin(); iter!=voxels.end(); ++iter)
-    {
-        all_voxels.push_back(iter->first);
-    }
-    int nvoxels = all_voxels.size();
-    std::cout<< "done. creating a distance matrix\n";
-    dyn_mat_type dist = dyn_mat_type::Zero(nvoxels, nvoxels);
-    for (int i=0; i<nvoxels-1; ++i)
-    {
-        for (int j=i+1; j<nvoxels; ++j)
-        {
-            dist(i,j) = dist(j,i) = distance(all_voxels[i], all_voxels[j]);
-        }
-    }
-    std::cout << "done.\n";
-    std::vector<int> cluster_id(nvoxels, -1);
-    for (int i=0; i<nvoxels; ++i)
-    {
-        if (cluster_id[i] >= 0) continue;
-        std::set<int> acluster;
-        acluster.insert(i);
-        for (int j=i+1; j<nvoxels; ++j)
-        {
-            if (dist(i,j) == 1)
-            {
-                grow_cluster(acluster, j, dist);
-            }
-        }
-        std::vector<CoordID> ids;
-        std::for_each(acluster.begin(), acluster.end(), [&](int n) {
-            ids.push_back(all_voxels[n]);
-        });
-        neighbors.push_back(ids);
-        std::for_each(acluster.begin(), acluster.end(), [&](int n) {
-            cluster_id[n] = neighbors.size()-1;
-        });
-    }
-}
-
+    
 int main(int argc, const char* argv[]) 
 {
     std::string data_name, gradient_name, hessian_name, output_name;
-    double minval, minstr, eps, mind;
+    double minval, minstr, eps;
     int res, niter;
     bool verbose;
     CoordID voxel_id;
     std::pair<vec3, vec3> bounds;
     std::string voxel_str = "(-1, -1, -1)";
     std::string bounds_str = "(0, -1; 0, -1; 0, -1)";
-    
 
     namespace cl = spurt::command_line;
     cl::option_traits
@@ -1936,7 +1618,6 @@ int main(int argc, const char* argv[])
         parser.add_value("minval", minval, 0., "Min scalar value", optional_group);
         parser.add_value("minstr", minstr, 0., "Min ridge strength", optional_group);
         parser.add_value("eps", eps, 1.0e-9, "Numerical precision", optional_group);
-        parser.add_value("mindist", mind, 0.02, "Min sampling distance", optional_group);
         parser.add_value("verbose", verbose, false, "Verbose output", optional_group);
         parser.add_value("res", res, 10, "Initial (coarse) sampling resolution to find ridge points", optional_group);
         parser.add_value("niter", niter, 100, "Max number of iterations of the zero crossing algorithm", optional_group);
@@ -1974,6 +1655,8 @@ int main(int argc, const char* argv[])
         bounds.second = { dv[1], dv[3], dv[5] };
     }
 
+
+
     BlockOfScalars values;
     BlockOfVectors gradient;
     BlockOfMatrices hessian;
@@ -1987,7 +1670,6 @@ int main(int argc, const char* argv[])
     {
         voxels.clear();
         voxels.push_back(voxel_id);
-        verbose = true;
     }
     else if (bounds.first[0] < bounds.second[0])
     {
@@ -2035,51 +1717,9 @@ int main(int argc, const char* argv[])
     int nweak = 0;
     int nlow = 0;
     int nunderflow = 0;
-    int nfiltered = 0;
-    // keep track of what triangles stem from what voxels to remove them 
-    // if neededin case their containing voxels are subdivided. 
-    std::map<CoordID, std::vector<int>, CoordLexico> voxel_to_triangles;
     std::vector<triangle_type> all_triangles;
+    std::vector< std::array< EdgeID, 3 >> all_edge_triangles;
     std::vector<vec4> rejected;
-
-    if (voxel_id[0] != -1)
-    {
-        std::vector<mat3> H(8);
-        std::vector<vec3> g(8);
-        for (int i=0; i<8; ++i)
-        {
-            auto shift = vertices[i];
-            CoordID pid = voxel_id + CoordID(shift[0], shift[1], shift[2]);
-            H[i] = hessian(pid[0], pid[1], pid[2]);
-            g[i] = gradient(pid[0], pid[1], pid[2]);
-        }
-        std::vector<double> det_values(2*101*101*101);
-        for (int k=0; k<=100; ++k)
-        {
-            double z = k*0.01;
-            double Z = 1.-z;
-            for (int j=0; j<=100; ++j)
-            {
-                double y = j*0.01;
-                double Y = 1.-y;
-                for (int i=0; i<=100; ++i)
-                {
-                    double x = i*0.01;
-                    double X = 1.-x;
-                    mat3 theH = X * Y * Z * H[0] + x * Y * Z * H[1] + x * y * Z * H[2] + X * y * Z * H[3] +
-                                X * Y * z * H[4] + x * Y * z * H[5] + x * y * z * H[6] + X * y * z * H[7];
-                    vec3 theg = X * Y * Z * g[0] + x * Y * Z * g[1] + x * y * Z * g[2] + X * y * Z * g[3] +
-                                X * Y * z * g[4] + x * Y * z * g[5] + x * y * z * g[6] + X * y * z * g[7];
-                    det_values[2 * (i + 101 * (j + 101 * k))    ] = determinant(theg, theH);
-                    det_values[2 * (i + 101 * (j + 101 * k)) + 1] = (project(theg, theH).first)[0];
-                }
-            }
-        }
-        size_t sizes[4] = {2, 101, 101, 101};
-        std::ostringstream os;
-        os << output_name << "_voxel_" << voxel_id[0] << "_" << voxel_id[1] << "_" << voxel_id[2] << ".nrrd";
-        spurt::nrrd_utils::writeNrrd((void *)&det_values[0], os.str(), nrrdTypeDouble, 4, sizes);
-    }
 
     spurt::ProgressDisplay progress;
 
@@ -2092,49 +1732,18 @@ int main(int argc, const char* argv[])
         std::map<int, std::vector<vec3> > edge_points;
     };
     std::vector<broken_voxel> broken_voxels;
-    std::vector<EdgeID> double_edges;
-    std::vector<CoordID> failed_voxels;
-    std::vector<int> voxel_to_edge;
-    std::map<CoordID, std::vector<int>, CoordLexico> voxel_counter;
 
     srand48(130819751900);
     progress.begin(voxels.size(), "Extract ridges", 10000, "tris: 0, done: 0, ok: 0, skip: 0, underflow: 0, weak: 0, low: 0, none: 0, even: 0, failed: 0");
     for (int n=0; n<voxels.size(); ++n) 
     {
         CoordID id = voxels[n];
-        bool voxel_failed = false;
-        // verbose = (id == CoordID(6, 14, 13));
-        // verbose = (id[0] >= 150 && id[0] <= 160 && id[1] >= 60 && id[1] <= 75 && id[2] >= 60 && id[2] <=65);
-        if (verbose)
-        {
-            std::cout << "processing voxel: " << id << '\n';
-        }
-
-        // check if current voxel satisfies threshold requirements
-        std::vector<double> v_values(8);
-        std::vector<double> s_values(8);
-        for (int i=0; i<8; ++i)
-        {
-            auto shift = vertices[i];
-            CoordID v = id + CoordID(shift[0], shift[1], shift[2]);
-            v_values[i] = values(id[0], id[1], id[2]);
-            auto h = hessian(id[0], id[1], id[2]);
-            s_values[i] = evmin(h).first;
-        }
-        if ((*std::min_element(&s_values[0], &s_values[8]) > minstr) ||
-            (*std::max_element(&v_values[0], &v_values[8]) < minval))
-        {
-            nnone++;
-            continue;
-        }
-
-        // verbose = (id[0] >= 8 && id[0]<=10 && id[1]>=14 && id[1]<=19 && id[2]>=14 && id[2]<=17);
         std::map<int, std::vector<vec3>> found;
         std::string update_str = "tris: " + std::to_string(all_triangles.size()) + 
             ", ok: " + std::to_string(nsucceeded) + 
             ", skip: " + std::to_string(nskipped) + 
-            // ", weak: " + std::to_string(nweak) +
-            // ", low: " + std::to_string(nlow) +
+            ", weak: " + std::to_string(nweak) +
+            ", low: " + std::to_string(nlow) +
             ", none: " + std::to_string(nnone) +
             ", failed: " + std::to_string(nfailed_to_triangulate) +
             ", insuf:" + std::to_string(nnot_enough_points);
@@ -2176,14 +1785,10 @@ int main(int argc, const char* argv[])
                 if (verbose) 
                     std::cout << "\n\nedge #" << i << " of voxel " << id << ": " << edgeid << " is being processed" << '\n';
                 // auto result = process_edge(edgeid, gradient, hessian, values, verbose, res, minval, minstr, eps, eps);
-                auto result = analyze_edge(edgeid, gradient, hessian, values, verbose, res, 0.05, mind, minval, minstr, eps, eps);
+                auto result = analyze_edge(edgeid, gradient, hessian, values, verbose, res, 0.05, minval, minstr, eps, eps);
 
                 auto coordinates = result.second;
                 if (!coordinates.empty()) {
-                    if (coordinates.size() > 1) {
-                        voxel_failed = true;
-                        break;
-                    }
                     found[i] = std::vector<vec3>();
                     if (verbose)
                         std::cout << "process_edge returned " << coordinates.size() << " solutions\n";
@@ -2233,12 +1838,8 @@ int main(int argc, const char* argv[])
                 nprocessed++;
             }
         }
-        if (voxel_failed)
-        {
-            failed_voxels.push_back(id);
-            continue;
-        }
-        else if (found.size() >= 3) 
+
+        if (found.size() >= 3) 
         {
             if (verbose) 
             {
@@ -2246,10 +1847,6 @@ int main(int argc, const char* argv[])
                 for (auto iter = found.begin(); iter!=found.end(); ++iter)
                 {
                     std::cout << "Edge #" << iter->first << " contains " << iter->second << '\n';
-                    for (auto jter=iter->second.begin(); jter!=iter->second.end(); ++jter) {
-                        auto r = evaluate(*jter, values, hessian);
-                        std::cout << "ridge point at " << *jter << " has value " << r.first << " and ridge strength " << r.second << '\n';
-                    }
                 }
             }
             std::vector<triangle_type> tris;
@@ -2264,6 +1861,7 @@ int main(int argc, const char* argv[])
                 std::for_each(tris.begin(), tris.end(), [&](auto T) 
                 {
                     all_triangles.push_back(T);
+                    // std::cout << "\nTriangle is " << T << '\n';
                 });
                 nsucceeded++;
             }
@@ -2272,40 +1870,64 @@ int main(int argc, const char* argv[])
                 if (verbose)
                     std::cout << "Triangulation failed\n";
                 nfailed_to_triangulate++;
-                failed_voxels.push_back(id);
-                continue;
+                // store rejected points with triangulation diagnostics
+                for (auto iter=found.begin(); iter!=found.end(); ++iter) 
+                {
+                    for (int l=0; l<iter->second.size(); ++l)
+                    {
+                        const vec3& p = iter->second[l];
+                        vec4 q({p[0], p[1], p[2], tri_case});
+                        rejected.push_back(q);
+                    }
+                }
+                broken_voxel voxel;
+                voxel.id = id;
+                voxel.edge_points = found;
+                for (int vid=0; vid<8; ++vid) {
+                    CoordID pid = id + CoordID(vertices[vid]);
+                    voxel.values.push_back(values(pid[0], pid[1], pid[2]));
+                    voxel.gradients.push_back(gradient(pid[0], pid[1], pid[2]));
+                    voxel.hessians.push_back(hessian(pid[0], pid[1], pid[2]));
+                    voxel.strengths.push_back(evmin(voxel.hessians.back()).first);
+                }
+                broken_voxels.push_back(voxel);
             }
         }
         else if (found.size() > 0) 
         {
             nnot_enough_points++;
-            failed_voxels.push_back(id);
-            continue;
-        }
-    }
-    std::cout << "There were " << failed_voxels.size() << " failed voxels\n";
+            for (auto iter = found.begin(); iter != found.end(); ++iter)
+            {
+                for (int l=0; l<iter->second.size(); ++l)
+                {
+                    const vec3& p = iter->second[l];
+                    vec4 q({p[0], p[1], p[2], not_enough_edges});
+                    rejected.push_back(q);
+                }
+            }
 
-    std::vector<vec3> all_edge_points;
-    for (auto iter=all_processed_edges.begin(); iter!=all_processed_edges.end(); ++iter)
-    {
-        auto pts = iter->second;
-        if (pts.empty())
-            continue;
-        all_edge_points.insert(all_edge_points.end(), pts.begin(), pts.end());
-    }
-    {
-        size_t sizes[3] = { 3, all_edge_points.size() };
-        spurt::nrrd_utils::writeNrrd((void*)&all_edge_points[0], output_name + "_all_points.nrrd", 
-                                     nrrdTypeDouble, 2, sizes);
+            broken_voxel voxel;
+            voxel.id = id;
+            voxel.edge_points = found;
+            for (int vid = 0; vid < 8; ++vid)
+            {
+                CoordID pid = id + CoordID(vertices[vid]);
+                voxel.values.push_back(values(pid[0], pid[1], pid[2]));
+                voxel.gradients.push_back(gradient(pid[0], pid[1], pid[2]));
+                voxel.hessians.push_back(hessian(pid[0], pid[1], pid[2]));
+                voxel.strengths.push_back(evmin(voxel.hessians.back()).first);
+            }
+            broken_voxels.push_back(voxel);
+        }
     }
 
     progress.end();
     int nfailed = 0;
     int nfixed = 0;
-    progress.begin(failed_voxels.size(), "Repair ridges", 10000, "tris: 0, done: 0, ok: 0, skip: 0, underflow: 0, weak: 0, low: 0, none: 0, even: 0, failed: 0");
-    for (int n = 0; n < failed_voxels.size(); ++n)
+    progress.begin(broken_voxels.size(), "Repair ridges", 10000, "tris: 0, done: 0, ok: 0, skip: 0, underflow: 0, weak: 0, low: 0, none: 0, even: 0, failed: 0");
+    for (int n = 0; n < broken_voxels.size(); ++n)
     {
-        CoordID id = failed_voxels[n];
+        CoordID id = broken_voxels[n].id;
         std::map<int, std::vector<vec3>> found;
         std::string update_str = "fixed: " + std::to_string(nfixed) +
                                  ", failed: " + std::to_string(nfailed);
@@ -2317,9 +1939,10 @@ int main(int argc, const char* argv[])
             CoordID v1 = id + CoordID(canonical_edge_coordinates[i][1]);
             EdgeID edgeid(v0, v1);
             auto iter = all_processed_edges.find(edgeid);
-            if (iter != all_processed_edges.end() && !iter->second.empty())
-	    {
-                found[i] = iter->second;;
+            assert(iter != all_processed_edges.end());
+            auto solutions = iter->second;
+            if (!solutions.empty()) {
+                found[i] = solutions;
             }
             else
             {
@@ -2418,33 +2041,14 @@ int main(int argc, const char* argv[])
         }
     }
     progress.end();
-    std::cout << nfixed << " / " << failed_voxels.size() << " broken voxels were fixed\n";
+    std::cout << nfixed << " / " << broken_voxels.size() << " broken voxels were fixed\n";
 
     if (!all_triangles.empty()) 
     {
         size_t sizes[3] = { 3, 3, all_triangles.size() };
-        spurt::nrrd_utils::writeNrrd((void*)&all_triangles[0], output_name + "_mesh.nrrd", 
+        spurt::nrrd_utils::writeNrrd((void*)&all_triangles[0], output_name, 
                                      nrrdTypeDouble, 3, sizes);
-        std::vector<std::array<double, 2>> attributes(3*all_triangles.size());
-        std::cout << "interpolating value and ridge strength...\n";
-        std::cout << "there are " << all_triangles.size() << " triangles\n";
-        for (size_t n=0; n<all_triangles.size(); ++n)
-        {
-            auto tri = all_triangles[n];
-            for (int k=0; k<3; ++k)
-            {
-                auto p = tri[k];
-                // compute value and ridge strength at that position
-                auto v = values.evaluate(p);
-                auto h = hessian.evaluate(p);
-                auto l3_ev3 = evmin(h);
-                attributes[3*n+k] = {v, l3_ev3.first};
-            }
-        }
-        std::cout << "\ndone\n";
-        sizes[0] = 2;
-        spurt::nrrd_utils::writeNrrd((void*)&attributes[0], output_name + "_attributes.nrrd",
-                                     nrrdTypeDouble, 3, sizes);
+        export_triangles(all_triangles, output_name + ".vtp");
     }
     else 
     {
@@ -2461,7 +2065,7 @@ int main(int argc, const char* argv[])
         std::cout << "No rejected points\n";
     }
 
-    if (false && !broken_voxels.empty()) {
+    if (!broken_voxels.empty()) {
         std::cout << "There were " << broken_voxels.size() << " broken voxels (" << nfailed_to_triangulate << ")\n";
         std::ofstream output("broken_voxels.txt");
         for (int n=0; n<broken_voxels.size(); ++n) 

@@ -25,7 +25,8 @@ endif()
 add_executable( peikert ${EXECUTABLE_FLAG} peikert.cpp )
 target_link_libraries( peikert
                        ${Teem_LIBRARIES}
-                       ${Boost_LIBRARIES} )
+                       ${Boost_LIBRARIES}
+                       ${VTK_LIBRARIES} )
 install( TARGETS peikert RUNTIME DESTINATION bin )
 
 add_executable( schultz ${EXECUTABLE_FLAG} schultz.cpp )
@@ -37,5 +38,20 @@ install( TARGETS schultz RUNTIME DESTINATION bin )
 add_executable( multires_peikert ${EXECUTABLE_FLAG} multires_peikert.cpp )
 target_link_libraries( multires_peikert
                        ${Teem_LIBRARIES}
-                       ${Boost_LIBRARIES} )
+                       ${Boost_LIBRARIES}
+                       ${VTK_LIBRARIES}  )
 install( TARGETS multires_peikert RUNTIME DESTINATION bin )
+
+add_executable( crease_surface ${EXECUTABLE_FLAG} crease_surface.cpp )
+target_link_libraries( crease_surface
+                       ${Teem_LIBRARIES}
+                       ${Boost_LIBRARIES}
+                       ${VTK_LIBRARIES} )
+install( TARGETS crease_surface RUNTIME DESTINATION bin )
+
+add_executable( crease_surface_v2 ${EXECUTABLE_FLAG} crease_surface_v2.cpp )
+target_link_libraries( crease_surface_v2
+                       ${Teem_LIBRARIES}
+                       ${Boost_LIBRARIES}
+                       ${VTK_LIBRARIES} )
+install( TARGETS crease_surface_v2 RUNTIME DESTINATION bin )

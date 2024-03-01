@@ -186,10 +186,13 @@ public:
   //--------------------------------------
   //Dereference Operator
   //--------------------------------------
-  value_type operator*()
+  reference operator*()
   {
-    //cout << "operator*" << endl;
-    return value_type(iter1, iter2);
+    // cout << "operator*" << endl;
+    std::shared_ptr<Mypair<Iter1, Iter2> > ref(new Mypair<Iter1,Iter2>());
+    ref->iter1 = iter1;
+    ref->iter2 = iter2;
+    return *ref;
     //return *iter1;
   };
   value_type& operator[](int n)

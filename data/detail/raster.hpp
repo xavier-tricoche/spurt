@@ -82,6 +82,7 @@ index_shifter<Dim_, Size_>::local_coords(size_t local_id) const {
 template<size_t Dim_, typename Size_>
 index_shifter<Dim_, Size_>::index_shifter(const array_type& sizes)
     : m_sizes(sizes) {
+    std::cout << "shifter m_sizes=" << m_sizes << '\n';
     size_type shift = 1;
     for (size_t i=0 ; i<dimension ; ++i) {
         m_dim_shifts[i] = shift;
@@ -90,6 +91,7 @@ index_shifter<Dim_, Size_>::index_shifter(const array_type& sizes)
 
     size_t points_per_cell = 1;
     points_per_cell = points_per_cell << dimension;
+    std::cout << "shifter: points_per_cell=" << points_per_cell << '\n';
     m_cell_shifts.resize(points_per_cell);
     std::fill(m_cell_shifts.begin(), m_cell_shifts.end(), 0);
 
@@ -181,6 +183,10 @@ raster_grid(const coord_type& resolution, const bounds_type& bounds,
         m_cell_res[i] = m_res[i]-1;
     }
 }
+
+template<size_t Dim_, typename Scalar_, typename Size_>
+inline raster_grid<Dim_, Scalar_, Size_>::
+raster_grid() : m_res(), m_bounds(), m_shifter(), m_spacing(), m_npos(0), m_cell_res() {}
 
 template<size_t Dim_, typename Scalar_, typename Size_>
 inline raster_grid<Dim_, Scalar_, Size_>::
@@ -398,20 +404,6 @@ raster_data(const grid_type& grid, _Iterator begin, _Iterator end)
     std::copy(begin, end, std::back_inserter(m_data));
     assert(m_data.size() == m_grid.size());
     m_max_coord = vec_type(m_grid.resolution()) - vec_type(1.);
-}
-
-template<typename Value_, size_t Dim_, typename Scalar_, typename Size_>
-raster_data<Value_, Dim_, Scalar_, Size_>::raster_data(const self_type& other)
-    : m_grid(other.m_grid), m_data(other.m_data)
-{
-    m_max_coord = other.m_max_coord;
-}
-
-template<typename Value_, size_t Dim_, typename Scalar_, typename Size_>
-raster_data<Value_, Dim_, Scalar_, Size_>::raster_data(self_type&& other)
-    : m_grid(other.m_grid), m_data(std::move(other.m_data))
-{
-    m_max_coord = other.m_max_coord;
 }
 
 template<typename Value_, size_t Dim_, typename Scalar_, typename Size_>
@@ -741,13 +733,32 @@ value(const point_type& p) const
 }
 
 template<typename Value_, size_t Dim_, typename Scalar_, typename Size_>
+typename image<Value_, Dim_, Scalar_, Size_>::value_type
+image<Value_, Dim_, Scalar_, Size_>::
+value_in_voxel(const coord_type& vid, const point_type& p) const
+{
+    return interpolate(p, vid);
+}
+
+template<typename Value_, size_t Dim_, typename Scalar_, typename Size_>
 typename image<Value_, Dim_, Scalar_, Size_>::deriv_type
 image<Value_, Dim_, Scalar_, Size_>::
-derivative(const vec_type& p) const
+derivative(const point_type& p) const
 {
     std::pair<coord_type, vec_type> r = this->m_grid.locate(p);
     size_type id = this->m_grid.index(r.first);
     deriv_type d = dmultilinear(r.second, id);
+    for (size_type i=0 ; i<dim ; ++i) d[i] /= this->m_grid.spacing()[i];
+    return d;
+}
+
+template<typename Value_, size_t Dim_, typename Scalar_, typename Size_>
+typename image<Value_, Dim_, Scalar_, Size_>::deriv_type
+image<Value_, Dim_, Scalar_, Size_>::
+derivative_in_voxel(const coord_type& vid, const point_type& p) const
+{
+    size_type id = this->m_grid.index(vid);
+    deriv_type d = dmultilinear(p, id);
     for (size_type i=0 ; i<dim ; ++i) d[i] /= this->m_grid.spacing()[i];
     return d;
 }

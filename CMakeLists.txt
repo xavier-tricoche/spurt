@@ -121,42 +121,6 @@ set( CGARTH_TOKAMAK_LIBRARIES tokamak )
 
 if( VTK_FOUND )
     list( APPEND ${AVAILABLE_PACKAGES} "VTK" )
-	if (VTK_MODULES_ENABLED MATCHES "LIC")
-        set( VTK_LIC_FOUND TRUE )
-        add_definitions( -D__VTK_HAS_LIC__ )
-        list( APPEND ${AVAILABLE_PACKAGES} "VTK_LIC" )
-    else()
-        set( VTK_LIC_FOUND FALSE )
-        list( APPEND ${MISSING_PACKAGES} "VTK_LIC" )
-    endif()
-
-    find_path( VTK_DAG
-        NAMES vtkDirectedAcyclicGraph.h
-        HINTS ${VTK_INCLUDE_DIRS}
-    )
-    if ( VTK_DAG )
-        set( VTK_DAG_FOUND TRUE )
-        add_definitions( -D__VTK_HAS_DAG__ )
-        list( APPEND ${AVAILABLE_PACKAGES} "VTK_DAG" )
-    else()
-        set( VTK_DAG_FOUND FALSE )
-        list( APPEND ${MISSING_PACKAGES} "VTK_DAG" )
-    endif()
-
-    find_path( VTK_AXIS
-        NAMES vtkAxisActor.h
-        HINTS ${VTK_INCLUDE_DIRS}
-    )
-    if( VTK_AXIS )
-        set( VTK_AXISACTOR_FOUND TRUE )
-        add_definitions( -D__VTK_HAS_AXIS_ACTOR__ )
-        list( APPEND ${AVAILABLE_PACKAGES} "VTK_AXIS" )
-    else()
-        set( VTK_AXISACTOR_FOUND FALSE )
-        list( APPEND ${MISSING_PACKAGES} "VTK_AXIS" )
-    endif()
-else()
-    list( APPEND ${MISSING_PACKAGES} "VTK" )
 endif()
 
 # GL* bundle
