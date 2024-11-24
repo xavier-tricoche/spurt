@@ -1,110 +1,93 @@
-#ifndef __XAVIER_LOCATOR_HPP__
-#define __XAVIER_LOCATOR_HPP__
+#ifndef __XAVIER_KDTREE_HPP__
+#define __XAVIER_KDTREE_HPP__
 
 #include <kdtree++/kdtree.hpp>
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
+#include <iostream>
 #include <stdexcept>
-#include <limits>
-#include <list>
 
 namespace spurt {
-    
 // defines a data point associating a spatial coordinate with a value
-template<typename T, typename V, int K>
+template<typename T, typename V, int N>
 class data_point {
 public:
-    typedef T                         value_type;
-    typedef nvis::fixed_vector<T, K>  coord_type;
-    typedef V                         data_type;
-
+    typedef T                           value_type;
+    typedef nvis::fixed_vector<T, N>    position_type;
+    typedef V                           data_type;
+    
     data_point() {}
-    data_point(const coord_type& c) : __c(c) {}
-    data_point(const coord_type& c, const data_type& d) : __c(c), __d(d) {}
-    data_point(const data_point& p) : __c(p.__c), __d(p.__d) {}
-    const coord_type& coordinate() const {
-        return __c;
+    data_point(const position_type& p) : __p(p) {}
+    data_point(const position_type& p, const data_type& d) : __p(p), __d(d) {}
+    data_point(const data_point& dp) : __p(dp.__p), __d(dp.__d) {}
+    
+    const position_type& position() const {
+        return __p;
     }
-    coord_type& coordinate() {
-        return __c;
+    
+    position_type& position() {
+        return __p;
     }
+    
     const data_type& data() const {
         return __d;
     }
+    
     data_type& data() {
         return __d;
     }
+    
     value_type distance_to(const data_point& dp) const {
-        return nvis::norm(dp.__c - __c);
+        return nvis::norm(dp.__p - __p);
     }
+    
     value_type operator[](size_t n) const {
-        return __c[n];
+        return __p[n];
     }
     
 private:
-    coord_type __c;
-    data_type  __d;
+    position_type   __p;
+    data_type       __d;
 };
 
 // kdtree-based point locator - can be used for query and insertion
-template<typename T, typename V, int K>
+template<typename T, typename V, int N>
 class point_locator {
 public:
-    typedef data_point<T, V, K>                  point_type;
-    typedef typename point_type::value_type      value_type;
-    typedef typename point_type::coord_type      coord_type;
-    typedef typename point_type::data_type       data_type;
-    typedef KDTree::KDTree<K, point_type>        tree_type;
-    typedef typename tree_type::const_iterator   const_iterator;
-    typedef typename tree_type::_Region_         region_type;
+    typedef V                                           data_type;
+    typedef nvis::fixed_vector<T, N>                    vec_type;
+    typedef data_point<T, V, N>                         data_point_type;
+    typedef KDTree::KDTree<N, data_point_type>          kdtree_type;
+    typedef typename kdtree_type::const_iterator        const_iterator;
     
     point_locator() {}
     
-    point_locator(const point_locator& pl) : t(pl.t) {}
+    point_locator(const point_locator& pl) : kdtree(pl.kdtree) {}
     
-    template<typename Iterator_>
-    point_locator(const Iterator_& begin, const Iterator_& end) 
-        : t(begin, end) {}
-        
-    void insert(const point_type& p) const {
-        t.insert(p);
+    void insert(const data_point_type& dp) const {
+        kdtree.insert(dp);
     }
-
-    size_t size() const {
-        return t.size();
-    }
-
-    point_type find_nearest_point(const coord_type& c) {
-        if (t.empty()) throw std::runtime_error("invalid query on empty tree");
-
-        std::pair<const_iterator, value_type> found = t.find_nearest(point_type(c), std::numeric_limits<value_type>::max());
-        return *found.first;
-    }
-
-    bool find_nearest_within_range(point_type& p, const coord_type& c, const value_type& dist) {
-        if (t.empty()) return false;
-        std::pair<const_iterator, value_type> found = t.find_nearest(point_type(c), dist);
-        if (found.first == t.end()) return false;
-        else {
-            p = *found.first;
-            return true;
+    
+    data_type find_close_point(const vec_type& x) {
+        if (kdtree.empty()) {
+            throw std::runtime_error("invalid query on empty tree");
         }
+        
+        std::pair<const_iterator, T> nearest = kdtree.find_nearest(data_point_type(x));
+        return (nearest.first)->data();
     }
     
-    void find_within_range(std::list<point_type>& n, const coord_type& c, const value_type& dist) {
-        t.find_within_range(point_type(c), dist, std::back_inserter(n));
-    }
-
-    void find_within_range(std::list<point_type>& n, const region_type& r) {
-        t.find_within_range(r, std::back_inserter(n));
-    }
-    
-    const_iterator begin() const { return t.begin(); }
-    const_iterator end() const { return t.end(); }
-
-    mutable tree_type t;
+    mutable kdtree_type kdtree;
 };
+
+
+
 }
 
 
 #endif
+
+
+
+
+
