@@ -5,7 +5,7 @@
 #include <Eigen/Core>
 #include <Eigen/SVD>
 
-#include <util/timer.hpp>
+#include <misc/progress.hpp>
 
 double toverhead;
 
@@ -169,7 +169,7 @@ void test_transpose(size_t n=50) {
     // process each matrix individually
     std::vector<trans_t> transposes;
 
-    nvis::timer timer;
+    spurt::timer timer;
     compute_transpose<Nrows, Ncols>(transposes, matrices);
     double t1=timer.elapsed();
 
@@ -210,7 +210,7 @@ void test_product(size_t n=50) {
     // process each matrix individually
     std::vector<res_mat_t> product;
 
-    nvis::timer timer;
+    spurt::timer timer;
     compute_prod<Nrows, Ncols1, Ncols2>(product, left, right);
     double t1=timer.elapsed();
 
@@ -251,7 +251,7 @@ void test_SVD(size_t n=50) {
     std::vector<Lmat_t> leftvecs;
     std::vector<Rmat_t> rightvecs;
 
-    nvis::timer timer;
+    spurt::timer timer;
     compute_SVD<Nrows, Ncols, P>(singvals, leftvecs, rightvecs, matrices);
     double t1=timer.elapsed();
 

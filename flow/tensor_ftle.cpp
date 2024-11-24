@@ -3,8 +3,8 @@
 #include <teem/hest.h>
 #include <teem/unrrdu.h>
 
-#include <math/fixed_vector.hpp>
-#include <util/wall_timer.hpp>
+#include <math/types.hpp>
+#include <misc/progress.hpp>
 #include <image/nrrd_field.hpp>
 #include "ftle.hpp"
 #include <tensor/double_point.hpp>
@@ -36,6 +36,8 @@ typedef spurt::nrrd_field< tensor_type, 3, double > tensor_field_type;
 #define __EXPORT_LENGTH__
 
 #define __SLICE__
+
+using namespace spurt;
 
 void initialize(int argc, const char* argv[], hestOpt* hopt)
 {
@@ -75,28 +77,28 @@ struct field_wrapper {
         : dpl(0), nrrd(new EigenvectorField<tensor_field_type>(field)),
           procedural(false), bbox(field.bounds()) {}
           
-    nvis::vec3 interpolate(const nvis::vec3& x) const {
-        nvis::vec4 ev;
+    vec3 interpolate(const vec3& x) const {
+        vec4 ev;
         if (procedural) {
             ev = dpl->eigen(x, eigen);
         } else {
             ev = nrrd->eigen(x, eigen);
         }
-        nvis::vec3 e = nvis::subv<0, 3>(ev);
+        vec3 e(ev[0], ev[1], ev[2]);
         if (eval_weight) {
             e *= ev[3];
         }
         return e;
     }
     
-    const nvis::bbox3& bounds() const {
+    const bbox3& bounds() const {
         return bbox;
     }
     
     const EigenvectorField<DoublePointLoad>*    dpl;
     const EigenvectorField<tensor_field_type>*  nrrd;
     const bool                                  procedural;
-    nvis::bbox3                                 bbox;
+    bbox3                                       bbox;
 };
 
 int main(int argc, const char* argv[])
@@ -125,20 +127,20 @@ int main(int argc, const char* argv[])
         std::cerr << "processing nrrd file: " << name_in << std::endl;
     }
     
-    nvis::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
+    ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
     std::cerr << "Resolution = " << res << std::endl;
-    spurt::raster_grid<3> sampling_grid(res, efield->bounds());
-    spurt::raster_data<nvis::vec3, 3> flowmaps[2]
-        = { spurt::raster_data<nvis::vec3, 3>(sampling_grid),
-            spurt::raster_data<nvis::vec3, 3>(sampling_grid)
+    rgrid3 sampling_grid(res, efield->bounds());
+    spurt::raster3d<vec3> flowmaps[2]
+        = { spurt::raster3d<vec3>(sampling_grid),
+            spurt::raster3d<vec3>(sampling_grid)
           };
           
-    nvis::timer timer;
+    spurt::timer timer;
     int npoints = sampling_grid.size();
     
-    const nvis::vec3 zero(0.);
+    const vec3 zero = 0;
     for (int i = 0 ; i < npoints ; ++i) {
-        nvis::ivec3 c = flowmaps[0].grid()[i];
+        ivec3 c = flowmaps[0].grid()[i];
         flowmaps[0](c) = flowmaps[1](c) = zero;
     }
     
@@ -167,7 +169,7 @@ int main(int argc, const char* argv[])
 #ifdef __EXPORT_ENDPOINT__
     float* endpt_f = (float*)calloc(3 * npoints, sizeof(float));
     float* endpt_b = (float*)calloc(3 * npoints, sizeof(float));
-    nvis::lexicographical_order lexorder;
+    lexicographical_order lexorder;
     std::cerr << "top reached positions will be exported" << std::endl;
 #endif
     
@@ -219,8 +221,8 @@ int main(int argc, const char* argv[])
                 __c = counter;
 #endif
                 
-                nvis::ivec3 c = sampling_grid[n];
-                nvis::vec3 seed = sampling_grid(c);
+                ivec3 c = sampling_grid[n];
+                vec3 seed = sampling_grid(c);
                 
                 if (!thread) {
                     std::cerr << '\r' << 100*__c / npoints << "% completed in "
@@ -239,11 +241,11 @@ int main(int argc, const char* argv[])
                 
 #ifdef __EXPORT_EVEC__
                 {
-                    nvis::vec3 ev;
+                    vec3 ev;
                     try {
                         ev = efield->interpolate(seed);
                     } catch (...) {
-                        ev = nvis::vec3(0, 0, 0);
+                        ev = vec3(0, 0, 0);
                     }
                     for (int k = 0 ; k < 3 ; ++k) {
                         evec[3*n+k] = fabs(ev[k]);
@@ -256,8 +258,8 @@ int main(int argc, const char* argv[])
                     try {
                         double length_io = length;
                         flowmaps[dir](c) = ftle::eigen_flow_map(*efield, seed, h, length_io, error, nmax);
-                        const nvis::vec3& z = flowmaps[dir](c);
-                        if (std::isinf(nvis::norm(z)) || std::isnan(nvis::norm(z))) {
+                        const vec3& z = flowmaps[dir](c);
+                        if (any(isinvalid(z)) {
                             flowmaps[dir](c) = zero;
                         }
 #ifdef __EXPORT_LENGTH__
@@ -287,7 +289,7 @@ int main(int argc, const char* argv[])
 #endif
                 }
 #ifdef __EXPORT_ENDPOINT__
-                nvis::vec3 end_f, end_b;
+                vec3 end_f, end_b;
                 if (lexorder(flowmaps[0](c), flowmaps[1](c))) {
                     end_f = flowmaps[1](c);
                     end_b = flowmaps[0](c);
@@ -310,7 +312,7 @@ int main(int argc, const char* argv[])
     spurt::nrrd_utils::nrrd_params<int, 4>    p4i;
     spurt::nrrd_utils::nrrd_params<float, 3>  p3f;
     spurt::nrrd_utils::nrrd_params<float, 4>  p4f;
-    const nvis::vec3& s = sampling_grid.spacing();
+    const vec3& s = sampling_grid.spacing();
     p4i.sizes()[0] = p4f.sizes()[0] = airNaN();
     for (int i = 0 ; i < 3 ; ++i) {
         p3i.sizes()[i] =
@@ -372,7 +374,7 @@ int main(int argc, const char* argv[])
                           << std::flush;
             }
             
-            nvis::vec2 ans;
+            vec2 ans;
             try {
                 ans = ftle::eigenftle(n, *efield, flowmaps, length);
             } catch (...) {

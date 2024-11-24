@@ -3,29 +3,11 @@
 #include <Eigen/Core>
 #include <limits>
 #include <iostream>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 
-
-struct Vector : public Eigen::Matrix<double, 3, 1> {
-    typedef Eigen::Matrix<double, 3, 1> base_t;
-
-    Vector() : base_t() {}
-
-    Vector(double a, double b, double c) : base_t() {
-        base_t::operator()(0) = a;
-        base_t::operator()(1) = b;
-        base_t::operator()(2) = c;
-    }
-
-    Vector(const base_t& other) : base_t(other) {}
-
-    static size_t size() { return 3; }
-    double operator[](int i) const { return base_t::operator()(i); }
-    double& operator[](int i) { return base_t::operator()(i); }
-};
-
-typedef Eigen::Matrix<double, 3, 3> matrix_t;
-typedef Vector vector_t;
+typedef spurt::mat3 matrix_t;
+typedef spurt::vec3 vector_t;
 
 int main(int argc, const char* argv[]) {
 
@@ -75,12 +57,12 @@ int main(int argc, const char* argv[]) {
     nvis::bbox3 domain;
     if (*std::min_element(bounds.begin(), bounds.end()) ==
         *std::max_element(bounds.begin(), bounds.end())) {
-        domain.min() = nvis::vec3(-1, -1, -1);
-        domain.max() = nvis::vec3(1, 1, 1);
+        domain.min() = vector_t(-1, -1, -1);
+        domain.max() = vector_t(1, 1, 1);
     }
     else {
-        domain.min() = nvis::vec3(bounds[0], bounds[2], bounds[4]);
-        domain.max() = nvis::vec3(bounds[1], bounds[3], bounds[5]);
+        domain.min() = vector_t(bounds[0], bounds[2], bounds[4]);
+        domain.max() = vector_t(bounds[1], bounds[3], bounds[5]);
     }
 
     if (verbose) {
@@ -91,10 +73,10 @@ int main(int argc, const char* argv[]) {
     vectors.resize(N);
 
     srand((unsigned int)time(0));
-    matrix_t A = matrix_t::Random();
+    matrix_t A = matrix_t::random();
     std::cout << "A=" << A << '\n';
-    Eigen::Vector3d blah = Eigen::Vector3d::Random();
-    Eigen::Vector3d blih = A*blah;
+    vector_t blah = vector_t::random();
+    vector_t blih = A*blah;
 
     srand48(time(0));
     for (size_t i=0; i<N; ++i) {
@@ -103,7 +85,7 @@ int main(int argc, const char* argv[]) {
         double z = domain.min()[2] + drand48()*(domain.max()[2]-domain.min()[2]);
 
         vector_t p(x,y,z);
-        vector_t v = Eigen::Vector3d(A*p);
+        vector_t v = A*p;
         points[i] = p;
         vectors[i] = v;
     }

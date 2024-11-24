@@ -6,9 +6,9 @@ namespace spurt {
 
 class symplectic4D {
 public:
-    typedef Eigen::Matrix<double, 4, 1> state_type;
-    typedef Eigen::Matrix<double, 4, 4> deriv_type;
-    typedef nvis::bounding_box<state_type> bounds_type;
+    typedef vec4 state_type;
+    typedef mat4 deriv_type;
+    typedef spurt::bounding_box<state_type> bounds_type;
 
     static constexpr double onepi = 3.1415926535897932384626433;
     static constexpr double twopi = 6.2831853071795864769252868;
@@ -32,7 +32,7 @@ private:
     deriv_type forwardJ(double p1, double p2, double q1, double q2) const {
         q1 += p1;
         q2 += p2;
-        deriv_type J = deriv_type::Zero();
+        deriv_type J = 0;
         J(0,0) = 1; // dp1'/dp1
         J(0,2) = k1 * cos(twopi * q1) + eps * cos(twopi * (q1 + q2)); // dp1'/dq1
         J(0,3) = J(1,2) = eps*cos(twopi*(q1+q2)); // dp1'/dq2 = dp2'/dq1
@@ -44,7 +44,7 @@ private:
     }
 
     deriv_type backwardJ(double p1, double p2, double q1, double q2) const {
-        deriv_type J = deriv_type::Zero();
+        deriv_type J = 0;
         J(0,0) = 1; // dp1/dp1'
         J(0,2) = -k1 * cos(twopi * q1) - eps * cos(twopi * (q1 + q2)); // dp1/dq1'
         J(0,3) = J(1,2) = -eps * cos(twopi*( q1 + q2)); // dp1/dq2' = dp2/dq1'
@@ -101,7 +101,7 @@ public:
     }
 
     void map(const state_type& x, std::vector< state_type >& hits, int n = 1) const {
-        hits.resize(abs(n));
+        hits.resize(std::abs<int>(n));
         state_type y(x);
         if (n>0) {
             for (int i=0; i<n; ++i) {
@@ -122,7 +122,7 @@ public:
     void map(const state_type& x,
              std::vector<std::pair<state_type, deriv_type> >& out, int niter,
              double eps=0) const {
-        out.resize(abs(niter));
+        out.resize(std::abs<int>(niter));
         state_type y = x;
         if (niter > 0) {
             for (int i=0; i<niter; ++i) {
@@ -174,8 +174,8 @@ class slab_map {
 public:
     double thickness;
     int section_dim;
-    typedef Eigen::Matrix<double, 3, 1> point_type;
-    typedef Eigen::Matrix<double, 4, 1> state_type;
+    typedef vec3 point_type;
+    typedef vec4 state_type;
 
     slab_map(int _dim=3, double _thickness=1.0e-4)
         : thickness(_thickness), section_dim(_dim) {}

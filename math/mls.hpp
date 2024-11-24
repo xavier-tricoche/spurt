@@ -8,9 +8,9 @@
 #include <iostream>
 #include <sstream>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
-#include <util/timer.hpp>
+#include <misc/progress.hpp>
 
 // Boost
 #include <boost/math/special_functions/binomial.hpp>
@@ -230,13 +230,13 @@ inline void set_basis(std::vector<double>& b, const V& p, int dim, int prec)
 template<typename T>
 struct distance_traits {};
 
-template<typename T, nvis::size_type N>
-struct distance_traits< nvis::fixed_vector<T, N> > {
+template<typename T, size_t N>
+struct distance_traits< small_vector<T, N> > {
     typedef double                      value_type;
-    typedef nvis::fixed_vector<T, N>    vec_type;
+    typedef small_vector<T, N>    vec_type;
 
     static value_type dist(const vec_type& v0, const vec_type& v1) {
-        return nvis::norm(v1-v0);
+        return norm(v1-v0);
     }
 };
 
@@ -342,7 +342,7 @@ public:
         Eigen::MatrixXd A(npts, nbasisfn);
         Eigen::MatrixXd rhs(npts, m_nrhs);
 
-        distance_traits<nvis::fixed_vector<double, 3> > traits;
+        distance_traits<vec3> traits;
         spurt::data_traits<value_type> wrapper;
 
         for (int i=0 ; i<npts ; ++i) {

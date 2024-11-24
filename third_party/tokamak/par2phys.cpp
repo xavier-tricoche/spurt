@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include <GLUT/glut.h>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 #include <boost/program_options.hpp>
 
@@ -10,7 +10,7 @@
 
 #include <teem/nrrd.h>
 
-using namespace nvis;
+using namespace spurt;
 
 bbox2 bounds;
 GLuint list, tex;

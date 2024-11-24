@@ -3,11 +3,10 @@ set( MISC_SRC
     point2tris
     lmpd2vtk
     lmpd2vcl
-    filter_degenerate_lines
 )
 foreach( src ${MISC_SRC} )
     add_executable( ${src} ${src}.cpp )
-    target_link_libraries( ${src} ${TEEM_LIBRARIES} spurt_crease)
+    target_link_libraries( ${src} ${Teem_LIBRARIES} )
     install( TARGETS ${src} RUNTIME DESTINATION bin )
 endforeach()
 

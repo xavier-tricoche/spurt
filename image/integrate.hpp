@@ -30,7 +30,7 @@
 #define _INTEGRATE_HPP_
 
 #include "teem/ten.h"
-#include "math/fixed_vector.hpp"
+#include "math/types.hpp"
 #include <map>
 #include <vector>
 #include <assert.h>
@@ -43,7 +43,7 @@ namespace ten_interface {
 
 // Fiber: basic data structure to store tracks after integration
 
-typedef nvis::vec3 point3;
+typedef vec3 point3;
 
 struct HalfFiber : public std::vector< point3 > {
     HalfFiber() : total_length(0) {}

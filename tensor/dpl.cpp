@@ -5,15 +5,17 @@
 #include <teem/nrrd.h>
 #include <teem/unrrdu.h>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include "double_point.hpp"
-#include <data/raster.hpp>
+#include <data/image.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <format/filename.hpp>
 
 char* name_out;
 size_t nsamples[3];
 double rel;
+
+using namespace spurt;
 
 void initialize(int argc, char* argv[], hestOpt* hopt)
 {
@@ -44,25 +46,26 @@ int main(int argc, char* argv[])
     initialize(argc, argv, hopt);
 
     DoublePointLoad *dpl = new DoublePointLoad(50, 50, 20, rel);
+    typedef raster_grid<long, double, 3, lvec3, vec3> grid_type;
     dpl->set_check_inside(false);
     std::cerr << "generating a synthetic double point load tensor field" << std::endl;
-    nvis::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
+    grid_type::coord_type res(nsamples[0], nsamples[1], nsamples[2]);
     std::cerr << "Resolution = " << res << std::endl;
-    raster_grid<3> sampling_grid(res, dpl->bounds());
+    grid_type sampling_grid(res, dpl->bounds());
     int npoints = sampling_grid.size();
 
     float *data = (float*)calloc(7 * npoints, sizeof(float));
     for (int i = 0 ; i < npoints ; ++i) {
-        nvis::ivec3 c = sampling_grid.coordinates(i);
-        nvis::vec3 x = sampling_grid(c);
-        nvis::fixed_vector<double, 7> t = (*dpl)(x);
+        auto c = sampling_grid.coordinates(i);
+        auto x = sampling_grid(c);
+        auto t = (*dpl)(x);
         for (int j = 0 ; j < 7 ; ++j) {
             data[i*7+j] = t[j];
         }
     }
 
     spurt::nrrd_utils::nrrd_params<float, 3> params;
-    nvis::vec3 st = sampling_grid.spacing();
+    auto st = sampling_grid.spacing();
     params.spacings()[0] = std::numeric_limits<float>::quiet_NaN();
     params.sizes()[0] = 7;
     params.mins()[0] = std::numeric_limits<float>::quiet_NaN();

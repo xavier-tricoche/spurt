@@ -5,8 +5,8 @@
 #include <exception>
 #include <iostream>
 
-#include <math/fixed_vector.hpp>
-#include <math/bounding_box.hpp>
+#include <nvis-math/fixed_vector.hpp>
+#include <nvis-math/bounding_box.hpp>
 
 #include "tokamak_field.hpp"
 #include "map2d.hpp"

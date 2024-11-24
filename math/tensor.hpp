@@ -1,81 +1,41 @@
-#include <math/math.hpp>
-#include <teem/ell.h>
-#include <math/fixed_vector.hpp>
+#include <math/basic_math.hpp>
+#include <math/types.hpp>
+#include <algorithm>
 
 namespace spurt {
-template<typename V, typename T>
-inline T outer(const V& v1, const V& v2)
+
+template<typename Matrix>
+inline Matrix deviatoric(const Matrix& tensor) {
+    double lambda = trace(tensor) / static_cast<double>(tensor.nrows);
+    return tensor - lambda*Matrix::identity();
+}
+
+template < typename Matrix, typename T=typename Matrix::value_type >
+inline T FA(const Matrix& tensor)
 {
-    int N = v1.size();
-    T out;
-    for (int i = 0 ; i < N ; ++i) {
-        for (int j = 0 ; j < N ; ++j) {
-            out(i, j) = v1[i] * v2[j];
-        }
-    }
-    return out;
+    Matrix D = deviatoric(tensor);
+    return sqrt(1.5) * norm(D) / norm(tensor);
 }
 
 template < typename T >
-inline double frob_norm(const T& tensor)
+inline small_vector<T, 3> westin_aniso(const small_square_matrix<T, 3>& tensor)
 {
-    double n = 0;
-    int N = tensor.size();
-    for (int i = 0 ; i < N ; ++i) {
-        for (int j = 0 ; j < N ; ++j) {
-            n += tensor(i, j) * tensor(i, j);
-        }
-    }
-    return sqrt(n);
-}
-
-template < typename T >
-inline double trace(const T& tensor)
-{
-    double tr = 0;
-    int N = tensor.size();
-    for (int i = 0 ; i < N ; ++i) {
-        tr += tensor(i, i);
-    }
-    return tr;
-}
-
-template<typename T>
-inline T deviatoric(const T& tensor)
-{
-    T D(tensor);
-    double lambda = trace(tensor) / (float)tensor.size();
-    for (int i = 0 ; i < 3 ; ++i) {
-        D(i, i) -= lambda;
-    }
-    return D;
-}
-
-template < typename T >
-inline double FA(const T& tensor)
-{
-    typedef T   tensor_type;
+    typedef small_square_matrix<T, 3> mat_t;
+    typedef small_vector<T, 3> vec_t;
+    mat_t D = deviatoric(tensor);
     
-    tensor_type D = deviatoric(tensor);
-    return sqrt(1.5)*frob_norm(D) / frob_norm(tensor);
-}
-
-template < typename T >
-inline nvis::vec3 westin_aniso(const T& tensor)
-{
-    double tr = trace(tensor);
-    T D = deviatoric(tensor);
-    std::vector<double> eval;
-    eigenvalues(eval, D);
+    vec_t lambdas;
+    mat_t evecs;
+    sym_eigensystem(lambdas, evecs, D);
     
-    double cl = eval[0] - eval[1];
-    double cp = 2.*(eval[1] - eval[2]);
-    double cs = 3.*eval[2];
-    nvis::vec3 ans(cl, cp, cs);
-    return ans / tr;
+    double cl = lambdas[0] - lambdas[1];
+    double cp = 2.*(lambdas[1] - lambdas[2]);
+    double cs = 3.*lambdas[2];
+    vec_t ans(cl, cp, cs);
+    return ans / trace(D);
 }
 
-}
+} // namespace spurt
 
 
 

@@ -1,7 +1,6 @@
 set(IMAGE_SRC
     probe.cpp
     integrate.cpp
-    creaseline2d.cpp
 )
 add_library( spurt_image ${LIBMODE} ${IMAGE_SRC} )
 target_link_libraries( spurt_image ${Teem_LIBRARIES} )

@@ -2,8 +2,7 @@
 #define __GRID__HPP__
 
 #include <teem/nrrd.h>
-#include <math/fixed_vector.hpp>
-#include <math/bounding_box.hpp>
+#include <math/types.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <vector>
 #include <map>
@@ -12,7 +11,7 @@
 #include <string>
 
 namespace spurt {
-typedef std::pair< nvis::vec3, nvis::vec3 > Edge;
+typedef std::pair< vec3, vec3 > Edge;
 typedef std::pair< unsigned int, unsigned int > EdgeId;
 
 // unique identification of a voxel face
@@ -36,16 +35,16 @@ struct Grid {
     Grid(const Nrrd* nrrd, unsigned int upsampling = 1);
     
     unsigned int id(unsigned int i, unsigned int j, unsigned int k) const;
-    nvis::vec3 operator()(unsigned int i, unsigned int j, unsigned int k) const;
-    nvis::vec3 operator()(const nvis::vec3& p) const;
-    nvis::vec3 globalc(const nvis::vec3& p) const;
+    vec3 operator()(unsigned int i, unsigned int j, unsigned int k) const;
+    vec3 operator()(const vec3& p) const;
+    vec3 globalc(const vec3& p) const;
     
-    void voxel(std::vector< nvis::vec3 >& v,
+    void voxel(std::vector< vec3 >& v,
                unsigned int i, unsigned int j, unsigned int k) const;
                
-    nvis::bbox3 bounds;
-    nvis::ivec3 size;
-    nvis::vec3 d;
+    bbox3 bounds;
+    ivec3 size;
+    vec3 d;
 };
 
 struct Slice {
@@ -53,11 +52,11 @@ struct Slice {
           unsigned int upsampling = 1);
           
     unsigned int id(unsigned int i, unsigned int j) const;
-    nvis::vec3 operator()(unsigned int i, unsigned int j) const;
+    vec3 operator()(unsigned int i, unsigned int j) const;
     
-    nvis::bbox3 bounds;
-    nvis::ivec3 size;
-    nvis::vec3 d;
+    bbox3 bounds;
+    ivec3 size;
+    vec3 d;
     unsigned int dim;
     double z;
 };
@@ -150,23 +149,23 @@ id(unsigned int i, unsigned int j, unsigned int k) const
 }
 
 inline
-nvis::vec3
+vec3
 Grid::
 operator()(unsigned int i, unsigned int j, unsigned int k) const
 {
-    return bounds.min() + nvis::vec3(i,j,k)*d;
+    return bounds.min() + vec3(i,j,k)*d;
 }
 
 inline
-nvis::vec3
+vec3
 Grid::
-operator()(const nvis::vec3& p) const
+operator()(const vec3& p) const
 {
     return bounds.min() + p*d;
 }
 
 inline
-void Grid::voxel(std::vector< nvis::vec3 >& v,
+void Grid::voxel(std::vector< vec3 >& v,
                  unsigned int i, unsigned int j, unsigned int k) const
 {
     v.resize(8);
@@ -212,13 +211,13 @@ id(unsigned int i, unsigned int j) const
 }
 
 inline
-nvis::vec3
+vec3
 Slice::
 operator()(unsigned int i, unsigned int j) const
 {
     double u = bounds.min()[0] + i * d[0];
     double v = bounds.min()[1] + j * d[1];
-    nvis::vec3 p;
+    vec3 p;
     p[idx[dim][0]] = u;
     p[idx[dim][1]] = v;
     p[idx[dim][2]] = z;

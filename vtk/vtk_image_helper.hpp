@@ -8,7 +8,7 @@
 
 #include <string>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 
 #include <vtkAxesActor.h>
 #include <vtkBMPReader.h>
@@ -42,9 +42,9 @@ namespace vtk_utils {
 
 inline vtkOrientationMarkerWidget* coord_axes_widget(
     vtkRenderWindowInteractor* inter,
-    const nvis::vec3& txt_col=nvis::vec3(1,1,1),
-    const nvis::vec3& bg_color=nvis::vec3(0,0,0),
-    const nvis::vec4& viewport=nvis::vec4(0,0,0.4,0.4),
+    const spurt::vec3& txt_col=spurt::vec3(1,1,1),
+    const spurt::vec3& bg_color=spurt::vec3(0,0,0),
+    const spurt::vec4& viewport=spurt::vec4(0,0,0.4,0.4),
     double radius=0.05,
     const std::string& Xlabel="X",
     const std::string& Ylabel="Y",
@@ -78,11 +78,11 @@ inline vtkOrientationMarkerWidget* coord_axes_widget(
 
 template<typename T>
 inline vtkImageData* expr_to_image(const std::vector<std::string>& expr_str,
-                                   const nvis::bbox3& bounds,
-                                   const nvis::ivec3& res) {
+                                   const spurt::bbox3& bounds,
+                                   const spurt::ivec3& res) {
 
     typedef T                                              value_t;
-    typedef nvis::fixed_vector<value_t, 3>                  vec3_t;
+    typedef spurt::small_vector<value_t, 3>                  vec3_t;
     typedef typename vtk_array_traits<value_t>::array_type array_t;
     typedef exprtk::symbol_table<double >           symbol_table_t;
     typedef exprtk::expression<double>                expression_t;
@@ -122,7 +122,7 @@ inline vtkImageData* expr_to_image(const std::vector<std::string>& expr_str,
     vtkSmartPointer<array_t> values(array_t::New());
     values->SetNumberOfComponents(deg);
     if (deg==1) values->SetNumberOfTuples(res[0]*res[1]*res[2]);
-    nvis::vec3 delta=bounds.size()/(nvis::vec3(res)-nvis::vec3(1.));
+    spurt::vec3 delta=bounds.size()/(res-1);
 
     if (res[2]==1) delta[2]=1.;
 
@@ -137,7 +137,7 @@ inline vtkImageData* expr_to_image(const std::vector<std::string>& expr_str,
         x=std::min(bounds.min()[0]+i*delta[0], bounds.max()[0]);
         y=std::min(bounds.min()[1]+j*delta[1], bounds.max()[1]);
         z=std::min(bounds.min()[2]+k*delta[2], bounds.max()[2]);
-        // std::cout << "evaluation at " << nvis::vec3(x,y,z) << '\n';
+        // std::cout << "evaluation at " << spurt::vec3(x,y,z) << '\n';
         if (deg==1) {
             value_t v=static_cast<value_t>(expr[0].value());
             values->SetValue(counter, v);
@@ -156,13 +156,13 @@ inline vtkImageData* expr_to_image(const std::vector<std::string>& expr_str,
     for (z=bounds.min()[2]; z<=bounds.max()[2]; z+=delta[2]) {
         for (y=bounds.min()[1]; y<=bounds.max()[1]; y+=delta[1]) {
             for (x=bounds.min()[0]; x<=bounds.max()[0]; x+=delta[0], ++counter) {
-                std::cout << "evaluation at " << nvis::vec3(x,y,z) << '\n';
+                std::cout << "evaluation at " << spurt::vec3(x,y,z) << '\n';
                 if (deg==1) {
                     double v=expr[0].value();
                     values->SetValue(counter, v);
                 }
                 else if (deg==3) {
-                    nvis::vec3 v;
+                    spurt::vec3 v;
                     v[0]=expr[0].value();
                     v[1]=expr[1].value();
                     v[2]=expr[2].value();
@@ -364,9 +364,9 @@ inline void save_frame(vtkRenderWindow* window,
 // }
 #endif
 
-inline vtkRenderer* fill_window(vtkRenderer* inout, const nvis::bbox2& bounds) {
+inline vtkRenderer* fill_window(vtkRenderer* inout, const spurt::bbox2& bounds) {
     inout->GetActiveCamera()->SetParallelProjection(1);
-    nvis::vec2 center=bounds.center();
+    spurt::vec2 center=bounds.center();
     inout->GetActiveCamera()->SetPosition(center[0], center[1], 1);
     inout->GetActiveCamera()->SetFocalPoint(center[0], center[1], 0);
     inout->GetActiveCamera()->SetViewUp(0, 1, 0);

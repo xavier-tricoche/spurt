@@ -1,7 +1,7 @@
 #include <array>
 #include <iomanip>
 
-#include <util/timer.hpp>
+#include <misc/progress.hpp>
 
 #include <image/nrrd_wrapper.hpp>
 #include <image/nrrd_matrix_manip.hpp>
@@ -18,6 +18,8 @@ std::vector<std::string> output_file_names;
 std::vector<int> dims;
 std::string opname="none";
 std::string tname="implicit";
+
+using namespace spurt;
 
 template<typename T> 
 void transposer(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input, 
@@ -212,7 +214,7 @@ int main(int argc, const char* argv[]) {
     tname=spurt::lower_case(tname);
     opname=spurt::lower_case(opname);
     
-    nvis::timer _timer;
+    timer _timer;
     
     // determine selected operator
     try {

@@ -6,18 +6,30 @@
 #include <matio.h>
 #include <format/filename.hpp>
 
+#include <math/types.hpp>
+#include <utils/functions.hpp>
+#include <misc/cxxopts.hpp>
 
-constexpr double PI = 3.14159265358979323846264338;
+using namespace spurt;
 
-double z_marschner_lobb(double x, double y) {
-    double r = sqrt(x*x + y*y);
-    return 2/PI*asin(cos(12*PI*cos(PI*r/2))/4);
-}
-
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
     
-    size_t n = std::atoi(argv[1]);
-    std::string filename = argv[2];
+    cxxopts::Options options("marschner_lobb", "Sample Marschner-Lobb function on regular lattice grid and create a random set of samples");
+    options.add_options()
+        ("r,resolution", "Sampling resolution", cxxopts::value<size_t>())
+        ("o,output", "Output files basename", cxxopts::value<std::string>())
+        ("h,help", "Print usage information");
+    
+    auto result = options.parse(argc, argv);
+
+    if (!result.count("resolution") || !result.count("output") || result.count("help"))
+    {
+      std::cout << options.help() << std::endl;
+      exit(0);
+    }
+    
+    size_t n = result["resolution"].as<size_t>();
+    std::string filename = result["output"].as<std::string>();
     
     filename = spurt::filename::remove_extension(filename);
     
@@ -28,21 +40,18 @@ int main(int argc, char* argv[]) {
         double y = -1 + j*step;
         for (size_t i=0; i<n; ++i) {
             double x = -1 + i*step;
-            z[i+j*n] = z_marschner_lobb(x,y);
+            z[i+j*n] = spurt::functions2d::z_marschner_lobb(vec2(x,y));
         }
     }
     
-    std::array<size_t, 2> dims({n, n});
-    std::array<double, 2> spcs({step, step});
-    std::array<double, 2> mins({-1, -1});
-    spurt::writeNrrdFromContainers(reinterpret_cast<double *>(&z[0]), filename + ".nrrd", dims, spcs, mins);
+    spurt::nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&z[0]), filename + ".nrrd", svec2(n), vec2(step), vec2(-1));
     
     std::vector<std::array<double, 3>> vertices(n*n);
     srand48(time(0));
     for (size_t i=0; i<n*n; ++i) {
         double x = -1 + drand48();
         double y = -1 + drand48();
-        double f = z_marschner_lobb(x, y);
+        double f = spurt::functions2d::z_marschner_lobb(vec2(x, y));
         vertices[i][0] = x;
         vertices[i][1] = y;
         vertices[i][2] = f;

@@ -18,17 +18,18 @@
 #include <vtkPoints.h>
 #include <vtkUnsignedCharArray.h>
 #include <vtkUnstructuredGrid.h>
-// nvis
-#include <math/bounding_box.hpp>
-#include <math/fixed_vector.hpp>
 
+
+#include <math/types.hpp>
 #include "dlr_reader.hpp"
 #include <vtk/vtk_utils.hpp>
 
-typedef nvis::fvec3                     point_type;
-typedef nvis::bounding_box<point_type>  box_type;
-typedef spurt::dlr_reader::cell_type    cell_type;
-typedef std::pair<cell_type, long>      cell_entry;
+using namespace spurt;
+
+typedef fvec3                       point_type;
+typedef bounding_box<fvec3>         box_type;
+typedef dlr_reader::cell_type       cell_type;
+typedef std::pair<cell_type, long>  cell_entry;
 
 typedef std::pair< std::vector<double>, std::string > pair_type;
 std::vector< pair_type > all_vector_fields;
@@ -104,7 +105,7 @@ void split_cc(std::vector<std::set<long> >& components,
     std::vector<int> cc(num_vertices(G));
     int num = connected_components(G, &cc[0]);
 
-    std::vector<std::set<long> > tmp_cc(num);
+    std::vector< std::set<long> > tmp_cc(num);
     for (long cell_id=0 ; cell_id<helper.nb_cells() ; ++cell_id) {
         // component id of first vertex is component id of entire cell
         long vert_id = helper.vertex(0, cell_id);

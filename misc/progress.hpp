@@ -214,6 +214,82 @@ std::ostream& operator<<(std::ostream& os, const ProgressDisplay& pd) {
     return os;
 }
 
+struct timer
+{
+    typedef std::chrono::high_resolution_clock hr_clock_t;
+    typedef hr_clock_t::time_point time_point_t;
+    
+    std::clock_t m_cpu_time_begin, m_cpu_time_end;
+    time_point_t m_wall_time_begin, m_wall_time_end;
+    bool m_stopped;
+
+    timer(bool run=true) : m_stopped(!run) {
+        if (run) start();
+    }
+
+    void start() {
+        m_stopped = false;
+        m_cpu_time_begin = std::clock();
+        m_wall_time_begin = std::chrono::high_resolution_clock::now();
+    }
+    
+    void restart() {
+        start();
+    }
+    void tic() {
+        start();
+    }
+    void begin() {
+        start();
+    }
+
+    void stop() {
+        m_stopped = true;
+        m_cpu_time_end = std::clock();
+        m_wall_time_end = std::chrono::high_resolution_clock::now();
+    }
+    void toc() {
+        stop();
+    }
+    void end() { 
+        stop();
+    }
+
+    double wall_time() const {
+        if (!m_stopped) 
+            return std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now()-m_wall_time_begin).count();
+        else
+            return std::chrono::duration<double, std::milli>(m_wall_time_end-m_wall_time_begin).count();
+    }
+    
+    double cpu_time() const {
+        if (!m_stopped)
+            return 1000.*(std::clock()-m_cpu_time_begin)/CLOCKS_PER_SEC;
+        else
+            return 1000.*(m_cpu_time_end-m_cpu_time_begin)/CLOCKS_PER_SEC;
+            
+    }
+    
+    std::pair<double, double> all_elapsed() const {
+        return std::make_pair(wall_time(), cpu_time());
+    }
+    double elapsed() const {
+        return cpu_time();
+    }
+
+    void print_self(std::ostream &os = std::cout) const {
+        double wt = wall_time();
+        double ct = cpu_time();
+        os << "wall time: " << human_readable_duration(wt);
+        os << ", cpu time: " << human_readable_duration(ct);
+    }
+};
+
+std::ostream& operator<<(std::ostream& os, const timer& t) {
+    t.print_self(os);
+    return os;
+}
+
 } // namespace spurt
 
 #endif

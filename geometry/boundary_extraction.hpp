@@ -9,7 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <misc/progress.hpp>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <image/nrrd_wrapper.hpp>
 
 namespace spurt {
@@ -36,8 +36,7 @@ public:
     typedef dlr_reader::cell_type cell_kind;
     typedef long int index_type;
     static constexpr index_type invalid_index = std::numeric_limits<index_type>::max();
-    typedef nvis::fixed_vector<float, 3> vertex_type;
-    typedef nvis::fixed_vector<float, 3> vec3_type;
+    typedef fvec3 vertex_type;
     typedef subvector<index_type> subvector_type;
     typedef std::pair<cell_kind, const subvector_type> cell_type;
 
@@ -88,10 +87,10 @@ public:
     void extract_boundary(bool verbose=false);
     std::vector<face> get_boundary();
     std::vector<face> get_offset();
-    std::vector<vec3_type> get_shear_stress(bool verbose=false);
+    std::vector<vertex_type> get_shear_stress(bool verbose=false);
     const std::vector<vertex_type>& get_vertices() const;
-    const std::vector<vec3_type>& get_velocity() const;
-    const std::vector<vec3_type>& get_normals() const;
+    const std::vector<vertex_type>& get_velocity() const;
+    const std::vector<vertex_type>& get_normals() const;
     void save_boundary(const std::string& basename, bool verbose=false);
     void load_boundary(const std::string& basename, bool verbose=false);
 
@@ -101,14 +100,14 @@ private:
     static const std::vector<face> _prism;
     static const std::vector<face> _hexahedron;
     std::vector<vertex_type> m_vertices; // 3D mesh vertices
-    std::vector<vec3_type>   m_velocity; // velocity vector field
+    std::vector<vertex_type> m_velocity; // velocity vector field
     std::vector<long>  m_cell_indices;   // 1D list of all cells's vertices
     std::vector<std::pair<dlr_reader::cell_type, long>> m_cell_offsets; // per-cell access in cell_indices
     size_t m_ncells; // number of cells
     std::map<face, std::list<index_type>> m_face_to_cells; // face-to-cell incidence information
     std::vector<std::pair<face, index_type>> m_boundary_to_cell; // boundary to cells relationship
     std::vector<std::pair<face, index_type>> m_offset_to_boundary; // offset surface to boundary correspondence
-    std::vector<vec3_type> m_normals; // computed boundary normals
+    std::vector<vertex_type> m_normals; // computed boundary normals
 };
 
 namespace {
@@ -282,7 +281,7 @@ const std::vector<mesh::vertex_type>& mesh::get_vertices() const {
     return m_vertices;
 }
 
-const std::vector<mesh::vec3_type>& mesh::get_velocity() const {
+const std::vector<mesh::vertex_type>& mesh::get_velocity() const {
     if (m_velocity.empty()) {
         throw std::runtime_error("Error: No velocity data available. Did you forget to load the data?");
     }
@@ -329,38 +328,38 @@ void mesh::get_actual_face(const mesh::cell_type& cell, int id, mesh::face& f) {
 }
 
 namespace {
-    double norm(const mesh::vec3_type& n) {
-        return nvis::norm(n);
+    double norm(const mesh::vertex_type& n) {
+        return norm(n);
     }
 
-    mesh::vec3_type& normalize(mesh::vec3_type& v) {
-        v /= nvis::norm(v);
+    mesh::vertex_type& normalize(mesh::vertex_type& v) {
+        v /= norm(v);
         return v;
     }
 
-    mesh::vec3_type& match(mesh::vec3_type& v, const mesh::vec3_type& r) {
-        double d = nvis::inner(v, r);
+    mesh::vertex_type& match(mesh::vertex_type& v, const mesh::vertex_type& r) {
+        double d = inner(v, r);
         if (d < 0) {
             v *= -1;
         }
         return v;
     }
 
-    bool is_zero(const mesh::vec3_type& v) {
+    bool is_zero(const mesh::vertex_type& v) {
         return v[0]==0 && v[1]==0 && v[2]==0;
     }
 
-    mesh::vec3_type normal(const mesh::vertex_type& v0,
+    mesh::vertex_type normal(const mesh::vertex_type& v0,
                            const mesh::vertex_type& v1,
                            const mesh::vertex_type& v2) {
-        mesh::vec3_type v10 = v1-v0;
-        mesh::vec3_type v20 = v2-v0;
-        mesh::vec3_type n = nvis::cross(v10, v20);
+        mesh::vertex_type v10 = v1-v0;
+        mesh::vertex_type v20 = v2-v0;
+        mesh::vertex_type n = cross(v10, v20);
         return normalize(n);
     }
 
-    double dot(const mesh::vec3_type& v0, const mesh::vec3_type& v1) {
-        return nvis::inner(v0, v1);
+    double dot(const mesh::vertex_type& v0, const mesh::vertex_type& v1) {
+        return inner(v0, v1);
     }
 }
 
@@ -447,7 +446,7 @@ void mesh::extract_boundary(bool verbose) {
     std::map<index_type, std::list<index_type>> vertex_to_cells;
     typedef std::map<index_type, std::list<index_type>>::value_type id_to_ids_type;
 
-    std::vector<vec3_type> face_normals(m_boundary_to_cell.size());
+    std::vector<vertex_type> face_normals(m_boundary_to_cell.size());
     // compute connectivity information and cell-wise normals on the boundary
     progress.start(m_boundary_to_cell.size(), "Computing triangle-based normals", 1000);
     for (size_t i=0; i<m_boundary_to_cell.size(); ++i) {
@@ -468,8 +467,8 @@ void mesh::extract_boundary(bool verbose) {
             face_normals[i] = normal(verts[0], verts[1], verts[2]);
         }
         else {
-            vec3_type n012 = normal(verts[0], verts[1], verts[2]);
-            vec3_type n023 = normal(verts[0], verts[2], verts[3]);
+            vertex_type n012 = normal(verts[0], verts[1], verts[2]);
+            vertex_type n023 = normal(verts[0], verts[2], verts[3]);
             face_normals[i] = n012 + n023;
             normalize(face_normals[i]);
         }
@@ -477,8 +476,8 @@ void mesh::extract_boundary(bool verbose) {
     progress.end();
 
     // compute boundary normals
-    std::map<index_type, vec3_type> boundary_normals;
-    typedef std::map<index_type, vec3_type>::value_type id2vec_type;
+    std::map<index_type, vertex_type> boundary_normals;
+    typedef std::map<index_type, vertex_type>::value_type id2vec_type;
     size_t dcount=0;
     progress.start(vertex_to_cells.size(), "Compute vertex-based normals", 1000);
     std::for_each(vertex_to_cells.begin(), vertex_to_cells.end(),
@@ -489,14 +488,14 @@ void mesh::extract_boundary(bool verbose) {
             const std::list<index_type>& cids = i2is.second;
             if (cids.empty()) {
                 if (verbose) std::cerr << "Error: no face incident to boundary vertex\n";
-                boundary_normals[vid] = vec3_type(0,0,0);
+                boundary_normals[vid] = vertex_type(0,0,0);
             }
             else {
                 auto iter = cids.begin();
-                vec3_type n0 = face_normals[*iter];
-                vec3_type sum = n0;
+                vertex_type n0 = face_normals[*iter];
+                vertex_type sum = n0;
                 for (++iter; iter!=cids.end(); ++iter) {
-                    vec3_type n1 = face_normals[*iter];
+                    vertex_type n1 = face_normals[*iter];
                     n1 = match(n1, n0);
                     sum += n1;
                 }
@@ -508,7 +507,7 @@ void mesh::extract_boundary(bool verbose) {
     progress.end();
 
     m_normals.resize(m_vertices.size());
-    std::fill(m_normals.begin(), m_normals.end(), vec3_type(0,0,0));
+    std::fill(m_normals.begin(), m_normals.end(), vertex_type(0,0,0));
     std::for_each(boundary_normals.begin(), boundary_normals.end(), [&](const id2vec_type& id2v) {
        m_normals[id2v.first] = id2v.second;
     });
@@ -536,12 +535,12 @@ std::vector<mesh::face> mesh::get_offset() {
     return offset;
 }
 
-const std::vector<mesh::vec3_type>& mesh::get_normals() const {
+const std::vector<mesh::vertex_type>& mesh::get_normals() const {
     if (m_normals.empty()) throw std::runtime_error("No normals available");
     return m_normals;
 }
 
-std::vector<mesh::vec3_type> mesh::get_shear_stress(bool verbose) {
+std::vector<mesh::vertex_type> mesh::get_shear_stress(bool verbose) {
     if (verbose) std::cout << "\nentering mesh::get_shear_stress()\n";
     if (m_velocity.empty()) {
         throw std::runtime_error("Error: Unable to compute shear stress: no velocity data available");
@@ -550,9 +549,9 @@ std::vector<mesh::vec3_type> mesh::get_shear_stress(bool verbose) {
 
     spurt::ProgressDisplay progress;
     progress.fraction_on();
-    std::map<index_type, vec3_type> boundary_velocity;
-    std::vector<vec3_type> shear_stress(m_velocity.size());
-    std::fill(shear_stress.begin(), shear_stress.end(), vec3_type(0,0,0));
+    std::map<index_type, vertex_type> boundary_velocity;
+    std::vector<vertex_type> shear_stress(m_velocity.size());
+    std::fill(shear_stress.begin(), shear_stress.end(), vertex_type(0,0,0));
     size_t nn=0;
     progress.start(m_offset_to_boundary.size(), "Computing shear stress vector field", 100);
     std::for_each(m_offset_to_boundary.begin(), m_offset_to_boundary.end(),
@@ -566,7 +565,7 @@ std::vector<mesh::vec3_type> mesh::get_shear_stress(bool verbose) {
             for (int i=0; i<bf.size(); ++i) {
                 auto iter = boundary_velocity.find(bf[i]);
                 if (iter == boundary_velocity.end()) {
-                    vec3_type v = m_velocity[of[i]]; // velocity at matching offset vertex
+                    vertex_type v = m_velocity[of[i]]; // velocity at matching offset vertex
                     v -= dot(v, m_normals[bf[i]])*m_normals[bf[i]];
                     boundary_velocity[bf[i]] = v;
                     shear_stress[bf[i]] = v;

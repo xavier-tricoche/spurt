@@ -10,7 +10,7 @@
 #include <format/filename.hpp>
 #include <misc/strings.hpp>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 
 #include <vtkDataSetReader.h>
 
@@ -127,7 +127,7 @@ void saveVTK_XML(DataSetPtr_ dataset, const std::string& filename) {
 // }
 
 void save_lines_VTK(const std::string& name, const std::string& comment,
-                    const std::vector<std::vector<nvis::vec3> >& lines)
+                    const std::vector<std::vector<spurt::vec3> >& lines)
 {
     int npts = 0;
     for (int i = 0 ; i < lines.size() ; ++i) {
@@ -142,7 +142,7 @@ void save_lines_VTK(const std::string& name, const std::string& comment,
          << "POINTS " << npts  << " float\n";
     for (int i = 0 ; i < lines.size() ; ++i) {
         for (int j = 0 ; j < lines[i].size() ; ++j) {
-            const nvis::vec3& x = lines[i][j];
+            const spurt::vec3& x = lines[i][j];
             file << x[0] << " " << x[1] << " " << x[2] << '\n';
         }
     }
@@ -160,8 +160,8 @@ void save_lines_VTK(const std::string& name, const std::string& comment,
 }
 
 void save_triangles_VTK(const std::string& name, const std::string& comment,
-                        const std::vector<nvis::vec3>& points,
-                        const std::vector<nvis::ivec3>& triangles)
+                        const std::vector<spurt::vec3>& points,
+                        const std::vector<spurt::ivec3>& triangles)
 {
     int npts = points.size();
 
@@ -172,12 +172,12 @@ void save_triangles_VTK(const std::string& name, const std::string& comment,
          << "DATASET POLYDATA\n"
          << "POINTS " << npts  << " float\n";
     for (int i = 0 ; i < points.size() ; ++i) {
-        const nvis::vec3& x = points[i];
+        const spurt::vec3& x = points[i];
         file << x[0] << " " << x[1] << " " << x[2] << '\n';
     }
     file << "POLYGONS " << triangles.size() << " " << 4*triangles.size() << '\n';
     for (int i = 0 ; i < triangles.size() ; ++i) {
-        const nvis::ivec3& t = triangles[i];
+        const spurt::ivec3& t = triangles[i];
         file << "3 " << t[0] << " " << t[1] << " " << t[2] << '\n';
     }
 
@@ -267,7 +267,7 @@ vtkStructuredPoints* load_nrrd(const std::string& filename) {
 }
 
 vtkSliderRepresentation*
-make_slider_representation(const std::string& text, const nvis::vec2& range,
+make_slider_representation(const std::string& text, const spurt::vec2& range,
                            double value, double x, double dx, double y=0.07,
                            const std::string& format="") {
     VTK_PTR(vtkSliderRepresentation2D, rep);

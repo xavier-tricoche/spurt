@@ -7,9 +7,9 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include <math/fixed_vector.hpp>
-#include <math/bounding_box.hpp>
-#include <math/bezier_spline.hpp>
+#include <nvis-math/fixed_vector.hpp>
+#include <nvis-math/bounding_box.hpp>
+#include <nvis-math/bezier_spline.hpp>
 
 #include "tokamak_field.hpp"
 

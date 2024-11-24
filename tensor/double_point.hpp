@@ -2,28 +2,32 @@
 #define __DPL_HPP__
 
 #include <limits>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 #include <stdexcept>
 
+
+using namespace spurt;
+
+typedef small_vector<double, 7> vec7;
 
 class DoublePointLoad {
     
 public:
     DoublePointLoad(double length, double width, double depth, double l = 1.)
         : check_inside(true) {
-        _bounds.min() = nvis::vec3(-0.5 * length, -0.5 * width, -depth);
-        _bounds.max() = nvis::vec3(0.5 * length, 0.5 * width, 0.);
+        _bounds.min() = vec3(-0.5 * length, -0.5 * width, -depth);
+        _bounds.max() = vec3(0.5 * length, 0.5 * width, 0.);
         std::cerr << "bounds = " << _bounds << std::endl;
-        const nvis::vec3& origin = _bounds.min();
-        center[0] = origin + nvis::vec3(0.25 * length, 0.5 * width, depth);
-        center[1] = origin + nvis::vec3(0.75 * length, 0.5 * width, depth);
+        const vec3& origin = _bounds.min();
+        center[0] = origin + vec3(0.25 * length, 0.5 * width, depth);
+        center[1] = origin + vec3(0.75 * length, 0.5 * width, depth);
         twoPi = 2.*M_PI;
         load = l;
         nu = 0.4;
     }
     
-    const nvis::bbox3& bounds() const {
+    const bbox3& bounds() const {
         return _bounds;
     }
     
@@ -31,14 +35,14 @@ public:
         check_inside = check;
     }
     
-    nvis::fixed_vector<double, 7> operator()(const nvis::vec3& x) const {
+    vec7 operator()(const vec3& x) const {
         if (check_inside && !_bounds.inside(x)) {
             // std::cerr << "DoublePointLoad::tensor(): invalid position = " << x << std::endl;
             throw std::runtime_error("1"); // outside
         }
         
-        nvis::fixed_vector<double, 7> t(0.);
-        nvis::vec3 s;
+        vec7 t = 0;
+        vec3 s;
         double P, rho, rho2, rho3, rho5;
         double rhoPlusz2, zPlus2rho, txy, txz, tyz;
         t[0] = 1.;
@@ -46,9 +50,9 @@ public:
         for (unsigned int n = 0 ; n < 2 ; ++n) {
             // points are evaluated in local coordinate system of applied force.
             P = -load;
-            nvis::vec3 p = center[n] - x;
+            vec3 p = center[n] - x;
             p[0] *= -1.;
-            rho = nvis::norm(p);
+            rho = p.norm();
             if (rho < 1.0e-10) {
                 throw std::runtime_error("100"); // singular tensor (for practical purposes)
             }
@@ -91,9 +95,9 @@ public:
     }
     
 private:
-    nvis::vec3 center[2];
+    vec3 center[2];
     double twoPi, load, poisson_ratio, nu;
-    nvis::bbox3 _bounds;
+    bbox3 _bounds;
     bool check_inside;
 };
 

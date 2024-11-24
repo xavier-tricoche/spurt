@@ -1,9 +1,9 @@
 #include "poincare_map.hpp"
 
-#include <math/dopri5.hpp>
 #include <assert.h>
-#include <math/fixed_vector.hpp>
-#include <math/bounding_box.hpp>
+#include <nvis-math/fixed_vector.hpp>
+#include <nvis-math/bounding_box.hpp>
+#include <nvis-math/dopri5.hpp>
 
 #include <fstream>
 
@@ -15,7 +15,6 @@ void poincare_map::map_RK56(const vec2& in, std::vector<value_type>& out, int ni
 {
 	out.clear();
 	out.reserve(std::abs(niter));
-
 	dopri5<vec3> intg;
 
 	intg.t = 0;

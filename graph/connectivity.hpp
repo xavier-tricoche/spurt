@@ -5,43 +5,76 @@
 #include <graph/definitions.hpp>
 #include <data/locator.hpp>
 #include <misc/progress.hpp>
-
-namespace {
-template<typename Pos_>
-struct __norm {};
-
-template<typename T, size_t N>
-struct __norm< nvis::fixed_vector<T, N> > {
-    typedef nvis::fixed_vector<T, N> vector_t;
-    T operator()(const vector_t& v) const {
-        return nvis::norm(v);
-    }
-};
+#include <misc/meta_utils.hpp>
 
 template<typename Pos_, typename Point_>
 struct closer_than {
+    typedef spurt::data_traits<Pos_> traits_type;
+
     closer_than() : from(0,0,0) {}
     closer_than(const Pos_& _from) : from(_from) {}
-    closer_than(const Point_& _point) : from(_point.coordinate()) {}
+    closer_than(const Point_& _point) : from(_point.position()) {}
 
     bool operator()(const Point_& a, const Point_& b) const {
-        return length(a.coordinate()-from) < 
-                          length(b.coordinate()-from);
+        return traits_type::norm(a.position()-from) < 
+                          traits_type::norm(b.position()-from);
     }
 
     Pos_ from;
-    __norm<Pos_> length;
 };
-}
 
 namespace spurt {
+    
+template <typename Graph_, typename Position_, size_t N>
+void compute_knn_connectivity(Graph_& graph, size_t knn, const std::vector<Position_>& vertices) {
+    typedef Graph_ graph_t;
+    typedef Position_ vertex_t;
+    typedef data_traits<Position_> traits_t;
+    typedef typename traits_t::value_type scalar_t;
+    typedef spurt::point_locator<vertex_t, size_t> locator_t;
+    typedef typename locator_t::point_type point_t;
+    typedef typename std::list<point_t> neighborhood_t;
+    typedef closer_than<vertex_t, point_t> less_dist;
+    
+    size_t npts = vertices.size();
+    
+    std::vector<point_t> data_pts(npts);
+    for (size_t i=0; i<npts; ++i) {
+        data_pts[i] = point_t(vertices[i], i);
+    }
+    locator_t locator(data_pts.begin(), data_pts.end());
+
+    graph.clear();
+    
+    spurt::ProgressDisplay progress;
+    progress.start(npts);
+    size_t n=0;
+    typedef std::list<point_t> neighbors_t;
+    std::for_each(data_pts.begin(), data_pts.end(), 
+                  [&] (const point_t& p) {
+        neighbors_t nns;
+        size_t i = p.data();
+        locator.find_n_nearest_points(nns, p.position(), knn);
+        nns.sort(less_dist(p));
+        typename neighbors_t::iterator it=nns.begin();
+        for (++it; it!=nns.end(); ++it) {
+            scalar_t dist=traits_t::norm(p.position()-it->position());
+            boost::add_edge(i, it->data(), dist, graph);
+        }
+        progress.update(n++);
+    });
+    progress.end();
+}
+
+
 template <typename Graph_, typename Position_, size_t N>
 void compute_connectivity(Graph_& graph, double radius, const std::vector<Position_>& vertices) {
     
     typedef Graph_ graph_t;
     typedef Position_ vertex_t;
-    typedef typename Position_::value_type scalar_t;
-    typedef spurt::point_locator<scalar_t, size_t, N> locator_t;
+    typedef data_traits<Position_> traits_t;
+    typedef typename traits_t::value_type scalar_t;
+    typedef spurt::point_locator<vertex_t, size_t> locator_t;
     typedef typename locator_t::point_type point_t;
     typedef typename std::list<point_t> neighborhood_t;
     typedef closer_than<vertex_t, point_t> less_dist;
@@ -57,17 +90,16 @@ void compute_connectivity(Graph_& graph, double radius, const std::vector<Positi
     spurt::ProgressDisplay progress;
     progress.start(locator.size());
     size_t n=0;
-    __norm<vertex_t> length;
     std::for_each(locator.begin(), locator.end(), 
                   [&] (const point_t& p) {
         neighborhood_t neighbors;
         size_t i=p.data();
-        const vertex_t& x=p.coordinate();
+        const vertex_t& x=p.position();
         locator.find_within_range(neighbors, x, radius);
         neighbors.sort(less_dist(x));
         typename neighborhood_t::iterator it=neighbors.begin();
         for (++it; it!=neighbors.end(); ++it) {
-            scalar_t dist=length(x-it->coordinate());
+            scalar_t dist=traits_t::norm(x-it->position());
             if (dist>radius) break;
             boost::add_edge(i, it->data(), dist, graph);
         }

@@ -10,9 +10,10 @@
 #include <math.h>
 
 #ifndef STANDALONE_TEST
-    #include "math/fixed_vector.hpp"
-    #include <math/dopri5.hpp>
+    #include <nvis-math/fixed_vector.hpp>
+    #include <nvis-math/dopri5.hpp>
 #endif
+#include "point.h"
 
 #include <stdexcept>
 
@@ -143,7 +144,7 @@ int boundaryAwareRectGrid::get_degree() const
   /******************************************************************************************************************************/
 
 void get_marching_triangles(int code, vtkSmartPointer<vtkIdList> grid_vid,
-	vtkSmartPointer<vtkFloatArray> u_valFloatArray, std::vector<Point>& tricoords_ls)
+	vtkSmartPointer<vtkFloatArray> u_valFloatArray, std::vector<Point3>& tricoords_ls)
 {
 	const int* T_list = triTable[code]; //list of the edges the marching triangles lie on
 
@@ -164,16 +165,16 @@ void get_marching_triangles(int code, vtkSmartPointer<vtkIdList> grid_vid,
 		double u = u_valFloatArray->GetComponent(rect_pt_index, edge_dir);
 
         //find correspoinging vertices of the edge
-		Point& pt1 = unit_cube_coords.at(cube_edge2vertex[edge_i][0]);
-		Point& pt2 = unit_cube_coords.at(cube_edge2vertex[edge_i][1]);
-		Point interp_pt = interpolate_linear(pt1, pt2, u);
+		Point3& pt1 = unit_cube_coords.at(cube_edge2vertex[edge_i][0]);
+		Point3& pt2 = unit_cube_coords.at(cube_edge2vertex[edge_i][1]);
+		Point3 interp_pt = interpolate_linear(pt1, pt2, u);
 
 		tricoords_ls[i] = interp_pt;
 	}
 }
 
 void get_marching_lines(int code, vtkSmartPointer<vtkIdList> grid_vid,
-	vtkSmartPointer<vtkFloatArray> u_valFloatArray, std::vector<Point>& tricoords_ls)
+	vtkSmartPointer<vtkFloatArray> u_valFloatArray, std::vector<Point3>& tricoords_ls)
 {
 	const int* T_list = marching_square_table[code]; //list of the edges the marching triangles lie on
 	vtkIdType grid_vid_ordered[4];
@@ -202,9 +203,9 @@ void get_marching_lines(int code, vtkSmartPointer<vtkIdList> grid_vid,
 		assert(u != -1);
 
 		//find correspoinging vertices of the edge
-		Point& pt1 = unit_square_coords.at(square_edge2vert[edge_i][0]);
-		Point& pt2 = unit_square_coords.at(square_edge2vert[edge_i][1]);
-		Point interp_pt = interpolate_linear(pt1, pt2, u);
+		Point3& pt1 = unit_square_coords.at(square_edge2vert[edge_i][0]);
+		Point3& pt2 = unit_square_coords.at(square_edge2vert[edge_i][1]);
+		Point3 interp_pt = interpolate_linear(pt1, pt2, u);
 
 		tricoords_ls[i] = interp_pt;
 	}
@@ -240,11 +241,11 @@ boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_3d(double x[3
 	this->GetCellPoints(ci, rcell_vids);
 
 	//determine inside/outside through marching triangles
-	std::vector<Point> triangle_list;
+	std::vector<Point3> triangle_list;
 	get_marching_triangles(code, rcell_vids, u_val_float_array, triangle_list);
 	assert(triangle_list.size() > 0);
 
-	Point pcoords_pt(pcoords);
+	Point3 pcoords_pt(pcoords);
 
 	int num_tri = triangle_list.size() / 3;
 	std::vector<double> dir_list(num_tri);
@@ -254,18 +255,18 @@ boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_3d(double x[3
 	for (int i = 0; i < triangle_list.size(); i += 3)
 	{
 		//dot product the normal of the triangle
-		Point& p1 = triangle_list[i];
-		Point& p2 = triangle_list[i + 1];
-		Point& p3 = triangle_list[i + 2];
-		Point v1 = p2 - p1;
-		Point v2 = p3 - p1;
-		Point N = crossProduct(v1, v2);
-		N = N / sqrt(dotproduct(N, N));  //normalize the normal vector
-		N_avg[0] += N.x; N_avg[1] += N.y; N_avg[2] += N.z;
-		Point v_query = pcoords_pt - p1;
-		double  v_query_norm = sqrt(dotproduct(v_query, v_query));
+		Point3& p1 = triangle_list[i];
+		Point3& p2 = triangle_list[i + 1];
+		Point3& p3 = triangle_list[i + 2];
+		Point3 v1 = p2 - p1;
+		Point3 v2 = p3 - p1;
+		Point3 N = crossProduct(v1, v2);
+		N = N / sqrt(dotProduct(N, N));  //normalize the normal vector
+		N_avg[0] += N[0]; N_avg[1] += N[1]; N_avg[2] += N[2];
+		Point3 v_query = pcoords_pt - p1;
+		double  v_query_norm = sqrt(dotProduct(v_query, v_query));
 		v_query = v_query / v_query_norm;
-		dir = -1 * dotproduct(N, v_query);
+		dir = -1 * dotProduct(N, v_query);
 		dir_list[ii++] = dir;
 	}
 
@@ -309,11 +310,11 @@ boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_2d(double x[3
 	this->GetCellPoints(ci, rcell_vids);
 
 	//determine inside/outside through marching triangles
-	std::vector<Point> triangle_list;
+	std::vector<Point3> triangle_list;
 	triangle_list.reserve(4);
 	get_marching_lines(code, rcell_vids, u_val_float_array, triangle_list);
 
-	Point pcoords_pt(pcoords[0], pcoords[1], pcoords[2]);
+	Point3 pcoords_pt(pcoords[0], pcoords[1], pcoords[2]);
 
 	int num_tri = triangle_list.size() / 2;
 	std::vector<double> dir_list(num_tri);
@@ -322,11 +323,11 @@ boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_2d(double x[3
 	for (int i = 0; i < triangle_list.size(); i += 2)
 	{
 		//dot product the normal of the triangle
-		Point p1 = triangle_list[i];
-		Point p2 = triangle_list[i + 1];
+		Point3 p1 = triangle_list[i];
+		Point3 p2 = triangle_list[i + 1];
 
-		mat[0][0] = pcoords_pt.x; mat[1][0] = p1.x; mat[2][0] = p2.x;
-		mat[0][1] = pcoords_pt.y; mat[1][1] = p1.y; mat[2][1] = p2.y;
+		mat[0][0] = pcoords_pt[0]; mat[1][0] = p1[0]; mat[2][0] = p2[0];
+		mat[0][1] = pcoords_pt[1]; mat[1][1] = p1[1]; mat[2][1] = p2[1];
 		mat[0][2] = 1;            mat[1][2] = 1;    mat[2][2] = 1;
 		double dir = determinant_3x3(mat) / 2;
 		dir_list[ii++] = dir;

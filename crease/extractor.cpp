@@ -2,7 +2,6 @@
 #include <crease/extractor.hpp>
 #include <math/math.hpp>
 #include <misc/sort.hpp>
-#include <math/matrix.hpp>
 #include <crease/grid.hpp>
 #include <set>
 #include <list>
@@ -11,62 +10,33 @@
 #include <teem/hest.h>
 #include <misc/progress.hpp>
 #include <crease/pvo.hpp>
-
-// for debugging display
-std::vector< std::vector< nvis::vec3 > > spurt::crease::vertices;
-std::vector< nvis::vec3 > spurt::crease::problematic_voxels;
-std::vector< nvis::vec3 > spurt::crease::fixed_voxels;
-std::vector< nvis::vec3 > spurt::crease::current_vertices;
-std::vector< nvis::vec3 > spurt::crease::ok_faces;
-std::vector< unsigned int > spurt::crease::added_vertices;
-std::vector< nvis::vec3 > spurt::crease::crossing_faces;
-std::vector< spurt::crease::point_on_face > spurt::crease::all_points_on_face;
-std::vector< spurt::crease::path > spurt::crease::paths;
-std::vector< nvis::vec3 > spurt::crease::pvo_faces;
-std::map< spurt::FaceId, nvis::vec3 > spurt::crease::reference_points;
-spurt::FaceId spurt::crease::current_face_id;
-std::vector< nvis::vec3 > spurt::crease::show_all;
-std::vector< nvis::vec3 > spurt::crease::intermediate_steps;
-std::vector< nvis::vec3 > spurt::crease::round1, spurt::crease::round2, spurt::crease::round12;
-std::string spurt::crease::flag_file_name;
-bool spurt::crease::bold_move;
-
-// extraction control
-double spurt::crease::value_threshold = 0;
-double spurt::crease::strength_threshold = 0;
-double spurt::crease::value_threshold_select = 0;
-double spurt::crease::strength_threshold_select = 0;
-double spurt::crease::confidence_threshold = 0.5;
-double spurt::crease::gradient_eps = 1.0e-6;
-double spurt::crease::gradient_eps_rel = 0.05;
-bool spurt::crease::apply_filter;
-bool spurt::crease::speedup;
-bool spurt::crease::fixing_voxel;
-bool spurt::crease::display_debug_info = false;
-bool spurt::crease::read_info;
-
-// spatial accuracy
-unsigned int spurt::crease::max_depth = 4;
-unsigned int spurt::crease::max_depth_fix = 6;
-unsigned int spurt::crease::upsample;
-double spurt::crease::max_int_error = 0.05;
-double spurt::crease::max_align_error = 0.01;
-
-unsigned int spurt::crease::nb_crossings;
-
-// crease type
-bool spurt::crease::is_ridge;
-int spurt::crease::crease_kind;
-unsigned int spurt::crease::failed_conv;
-spurt::crease::extraction_method spurt::crease::ext_meth;
-
-// interface to gage
-spurt::MeasureWrapper* spurt::crease::the_wrapper;
+#include <math/bounding_box.hpp>
 
 using namespace spurt;
+using namespace spurt::crease;
 
-// global face information
-spurt::crease::face_information spurt::crease::current_face_info;
+
+void extractor::initialize()
+{
+    // extraction control
+    value_threshold = 0;
+    strength_threshold = 0;
+    value_threshold_select = 0;
+    strength_threshold_select = 0;
+    confidence_threshold = 0.5;
+    gradient_eps = 1.0e-6;
+    gradient_eps_rel = 0.05;
+    display_debug_info = false;
+    
+    // spatial accuracy
+    max_depth = 4;
+    max_depth_fix = 6;
+    upsample;
+    max_int_error = 0.05;
+    max_align_error = 0.01;
+}
+
+using namespace spurt;
 
 namespace voxel_info {
 // multipurpose voxel information
@@ -140,7 +110,7 @@ unsigned int write_vertex_info(const Grid& grid, std::vector< bool >& ok)
                     prev_pct = pct;
                 }
 
-                nvis::vec3 q = grid(i, j, k);
+                vec3 q = grid(i, j, k);
                 double val = the_wrapper->value(q);
                 double str = the_wrapper->eigenvalue(q, 1);
 
@@ -188,7 +158,7 @@ int compute_vertex_info(const Grid& grid, std::vector< bool >& ok, std::vector< 
 
     unsigned int nb_ok_vertices = 0;
 
-    nvis::vec3 p;
+    vec3 p;
     double val, conf, str;
 
     int prev_pct = -1;
@@ -232,7 +202,7 @@ int compute_vertex_info(const Grid& grid, std::vector< bool >& ok, std::vector< 
     return nb_ok_vertices;
 }
 
-unsigned int read_vertex_info(std::vector< bool >& ok, std::vector< bool >& conf_ok)
+unsigned int extractor::read_vertex_info(std::vector< bool >& ok, std::vector< bool >& conf_ok)
 {
     using namespace spurt;
     using namespace spurt::crease;
@@ -285,7 +255,7 @@ unsigned int read_vertex_info(std::vector< bool >& ok, std::vector< bool >& conf
                     conf_ok[id] = (cfd > spurt::crease::confidence_threshold);
                 }
                 ok[id] =  conf_ok[id] &&
-                          (crease::is_ridge ?
+                          (is_ridge ?
                            (val > value_threshold && str < strength_threshold) :
                            (val < value_threshold && str > strength_threshold));
 
@@ -301,7 +271,7 @@ unsigned int read_vertex_info(std::vector< bool >& ok, std::vector< bool >& conf
 // ---------------------------------------------------------------------------
 
 // compute PCA of a set of non-oriented vectors
-void crease::PCA(std::vector< nvis::vec3 >& evec, const std::vector< nvis::vec3 >& dirs)
+void PCA(std::vector< vec3 >& evec, const std::vector< vec3 >& dirs)
 {
     double mat[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -327,32 +297,32 @@ void crease::PCA(std::vector< nvis::vec3 >& evec, const std::vector< nvis::vec3 
 }
 
 // Stetten's average direction
-nvis::vec3 crease::average(const std::vector< nvis::vec3 >& dirs)
+vec3 average(const std::vector< vec3 >& dirs)
 {
-    std::vector< nvis::vec3 > tmp(3);
+    std::vector< vec3 > tmp(3);
     PCA(tmp, dirs);
     return tmp[0];
 }
 
 // ---------------------------------------------------------------------------
 // Furst's eigenvector orientation method
-void crease::Furst_orientation(nvis::vec3& ev1, const nvis::vec3& ev0)
+void Furst_orientation(vec3& ev1, const vec3& ev0)
 {
-    std::vector< nvis::vec3 > vecs(2);
+    std::vector< vec3 > vecs(2);
     vecs[0] = ev0;
     vecs[1] = ev1;
-    nvis::vec3 avg = average(vecs);
-    double dot0 = nvis::inner(ev0, avg);
-    double dot1 = nvis::inner(ev1, avg);
+    vec3 avg = average(vecs);
+    double dot0 = inner(ev0, avg);
+    double dot1 = inner(ev1, avg);
     if (dot0*dot1 < 0)
         ev1 *= -1;
 }
 
 // ---------------------------------------------------------------------------
 // Naive eigenvector orientation method
-void crease::Naive_orientation(nvis::vec3& ev1, const nvis::vec3& ev0)
+void Naive_orientation(vec3& ev1, const vec3& ev0)
 {
-    if (nvis::inner(ev0, ev1) < 0)
+    if (inner(ev0, ev1) < 0)
         ev1 *= -1;
 }
 
@@ -361,8 +331,8 @@ void crease::Naive_orientation(nvis::vec3& ev1, const nvis::vec3& ev0)
 // 0: OK
 // 1: invalid value(s)
 // 2: invalid strength(s)
-int crease::filter(const std::vector< double >& vals,
-                   const std::vector< double >& strs)
+int extractor::filter(const std::vector< double >& vals,
+                      const std::vector< double >& strs)
 {
     if (!apply_filter) return 0;
 
@@ -401,9 +371,9 @@ int crease::filter(const std::vector< double >& vals,
 // 1: invalid value(s)
 // 2: invalid strength(s)
 // 3: invalid confidence
-int crease::filter(const std::vector< double >& vals,
-                   const std::vector< double >& strs,
-                   const std::vector< double >& cfds)
+int extractor::filter(const std::vector< double >& vals,
+                      const std::vector< double >& strs,
+                      const std::vector< double >& cfds)
 {
     if (!apply_filter) return 0;
 
@@ -415,20 +385,20 @@ int crease::filter(const std::vector< double >& vals,
     bool bs = false; // is there one invalid strength?
 
     for (unsigned int i = 0 ; i < vals.size() ; i++) {
-        if (cfds[i] < crease::confidence_threshold) return 3;
+        if (cfds[i] < confidence_threshold) return 3;
 
         const double& val = vals[i];
         const double& str = strs[i];
 
         bool val_ok = (crease::is_ridge ?
-                       val > crease::value_threshold :
-                       val < crease::value_threshold);
+                       val > value_threshold :
+                       val < value_threshold);
         gv = (gv || val_ok);
         bv = (bs || !val_ok);
 
         bool str_ok = (crease::is_ridge ?
-                       str < crease::strength_threshold :
-                       str > crease::strength_threshold);
+                       str < strength_threshold :
+                       str > strength_threshold);
         gs = (gs || str_ok);
         bs = (bs || !str_ok);
     }
@@ -474,14 +444,7 @@ inline void ijk(unsigned int& i, unsigned int& j, unsigned& k, unsigned int id,
 
 // --------------------------------------------------------------------------
 
-std::map< FaceId, unsigned int > face_found;
-std::vector< nvis::vec3 > spurt::crease::all_face_points;
-std::vector< std::pair< unsigned int, unsigned int > > all_edges;
-unsigned int nb_segments;
-
-// --------------------------------------------------------------------------
-
-inline void add_segment(std::vector< unsigned int > ids)
+inline void extractor::add_segment(std::vector< unsigned int > ids)
 {
     if (ids.size() < 2) return;
     else if (ids.size() == 2) {
@@ -493,7 +456,7 @@ inline void add_segment(std::vector< unsigned int > ids)
         unsigned int np = ids.size();
         std::vector< double > _vals(np);
         for (unsigned int l = 0 ; l < np ; l++) {
-            _vals[l] = crease::the_wrapper->value(crease::all_face_points[ids[l]]);
+            _vals[l] = crease::the_wrapper->value(all_face_points[ids[l]]);
         }
         std::vector< unsigned int > _ids(np);
         spurt::sort_ids(_ids, _vals);
@@ -506,12 +469,12 @@ inline void add_segment(std::vector< unsigned int > ids)
     std::cout << "found a segment" << std::endl;
 }
 
-nvis::vec3 trilinear(const nvis::vec3& p, const std::vector< nvis::vec3 >& v)
+vec3 trilinear(const vec3& p, const std::vector< vec3 >& v, bool display_debug_info=false)
 {
-    nvis::vec3 u;
-    const nvis::vec3& min = v[0];
-    const nvis::vec3& max = v[6];
-    if (spurt::crease::display_debug_info)
+    vec3 u;
+    const vec3& min = v[0];
+    const vec3& max = v[6];
+    if (display_debug_info)
         std::cout << "min = " << min << ", max = " << max << std::endl;
     for (unsigned int i = 0; i < 3 ; ++i) {
         u[i] = (p[i] - min[i]) / (max[i] - min[i]);
@@ -519,19 +482,19 @@ nvis::vec3 trilinear(const nvis::vec3& p, const std::vector< nvis::vec3 >& v)
     return u;
 }
 
-bool inside(const nvis::vec3& local)
+bool inside(const vec3& local)
 {
     return (local[0] > 0 && local[0] < 1 &&
             local[1] > 0 && local[1] < 1 &&
             local[2] > 0 && local[2] < 1);
 }
 
-void intersect(nvis::vec3& xp, unsigned int& fid,
-               const nvis::vec3& p0, const nvis::vec3& p1)
+void intersect(vec3& xp, unsigned int& fid,
+               const vec3& p0, const vec3& p1)
 {
     static const unsigned int table[][2] = { { 5, 3 }, { 2, 4 }, { 0, 1 } };
 
-    double l = nvis::norm(p1 - p0);
+    double l = norm(vec3(p1 - p0));
     double t[] = { 0, 0, 0 };
     int c[] = { 0, 0, 0 };
     for (unsigned int i = 0 ; i < 3 ; i++) {
@@ -560,41 +523,41 @@ void intersect(nvis::vec3& xp, unsigned int& fid,
 
 // --------------------------------------------------------------------------
 
-bool track_ridge_line(nvis::vec3& out, unsigned int& fid_out,
-                      const std::vector< nvis::vec3 >& voxel,
-                      const nvis::vec3& entry,
+bool track_ridge_line(vec3& out, unsigned int& fid_out,
+                      const std::vector< vec3 >& voxel,
+                      const vec3& entry,
                       const unsigned int fid_in)
 {
     // get initial location
-    nvis::vec3 start = entry;
-    double step = 0.05 * nvis::norm(voxel[6] - voxel[0]); // 5% of voxel diagonal
+    vec3 start = entry;
+    double step = 0.05 * norm(vec3(voxel[6] - voxel[0])); // 5% of voxel diagonal
     // initialize orientation
     unsigned int f = fid_in;
     const unsigned int* face = voxel_info::faces[f];
-    nvis::vec3 fp[4];
+    vec3 fp[4];
     for (unsigned int l = 0 ; l < 4 ; l++) {
         fp[l] = voxel[face[l]];
     }
     // inward pointing face normal
-    nvis::vec3 ref = nvis::cross(fp[1] - fp[0], fp[3] - fp[0]);
+    vec3 ref = cross(fp[1] - fp[0], fp[3] - fp[0]);
 
     // Euler integration along eigenvector
-    nvis::vec3 p0 = start;
-    nvis::vec3 l0 = trilinear(p0, voxel);
-    nvis::vec3 p1;
+    vec3 p0 = start;
+    vec3 l0 = trilinear(p0, voxel);
+    vec3 p1;
     unsigned int n = 0;
     // my_path.push_back(p0);
     while (n < 100) {
         ++n;
         spurt::crease::intermediate_steps.push_back(p0);
-        nvis::vec3 dir = spurt::crease::the_wrapper->eigenvector(p0, crease::is_ridge ? 0 : 2);
-        if (nvis::inner(dir, ref) < 0) dir *= -1;
+        vec3 dir = spurt::crease::the_wrapper->eigenvector(p0, crease::is_ridge ? 0 : 2);
+        if (inner(dir, ref) < 0) dir *= -1;
         p1 = p0 + step * dir; // Euler step in physical space
-        nvis::vec3 l1 = trilinear(p1, voxel); // corresponding logical coordinates
+        vec3 l1 = trilinear(p1, voxel); // corresponding logical coordinates
 
         // did we leave the voxel?
         if (!inside(l1)) {
-            nvis::vec3 stop;
+            vec3 stop;
             intersect(stop, fid_out, l0, l1);
             out = voxel[0] +
                   stop[0] * (voxel[1] - voxel[0]) +
@@ -612,18 +575,18 @@ bool track_ridge_line(nvis::vec3& out, unsigned int& fid_out,
 
 // --------------------------------------------------------------------------
 
-bool trace_ray(nvis::vec3& out, unsigned int& fid_out,
-               const std::vector< nvis::vec3 >& voxel,
-               const nvis::vec3& entry,
-               const nvis::vec3& ray,
+bool trace_ray(vec3& out, unsigned int& fid_out,
+               const std::vector< vec3 >& voxel,
+               const vec3& entry,
+               const vec3& ray,
                const unsigned int fid_in)
 {
 // determine step length that ensures crossing
-    double diag = nvis::norm(voxel[0] - voxel[6]);
+    double diag = norm(vec3(voxel[0] - voxel[6]));
 // solve for intersection point in local coordinates
-    nvis::vec3 uvw0 = trilinear(entry, voxel);
-    nvis::vec3 uvw1 = trilinear(entry + 1.5 * diag * ray, voxel);
-    nvis::vec3 x;
+    vec3 uvw0 = trilinear(entry, voxel);
+    vec3 uvw1 = trilinear(entry + 1.5 * diag * ray, voxel);
+    vec3 x;
     intersect(x, fid_out, uvw0, uvw1);
 // convert to spatial coordinates
     out = voxel[0] +
@@ -675,7 +638,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
     struct pvo_solution {
         pvo_solution() : p(), local_fid(0), global_fid() {}
 
-        nvis::vec3 p;
+        vec3 p;
         unsigned int local_fid;
         FaceId global_fid;
     };
@@ -723,7 +686,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
     unsigned int nb_wrong_eval = 0;
 
     // voxel data
-    std::vector< nvis::vec3 > v(4); // vertex coordinates
+    std::vector< vec3 > v(4); // vertex coordinates
     std::vector< double > val(4);   // associated values
     std::vector< double > str(4);   // associated strength
     std::vector< double > cfd(4);   // associated confidence
@@ -840,7 +803,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
 
         // do the actual work
         current_face_id = fid;
-        std::vector< nvis::vec3 > points;
+        std::vector< vec3 > points;
         current_face_info.set_info(v[0], v[1], v[2], v[3]);
         bool found_something;
 
@@ -863,7 +826,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
         if (res) {
             std::cout << "extractor: PVO successful in " << dt << "sec. on face " << fid
                       << std::endl;
-            nvis::vec3 refpos = points.front();
+            vec3 refpos = points.front();
             double refval = the_wrapper->value(points.front());
             if (points.size() > 1) {
                 ++nb_several;
@@ -924,7 +887,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
     std::vector< bool > is_fixed(nb_voxels, false);
 
     // store tangent vectors of crease points as induced by their cell neighbor
-    std::map< FaceId, nvis::vec3 > tangents;
+    std::map< FaceId, vec3 > tangents;
 
     int delta_x, delta_y, delta_z;
     delta_x = 1;
@@ -984,16 +947,16 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
         else if (np == 2) {
             ++nb_good;
             std::cout << "segment found in voxel #" << v << std::endl;
-            nvis::vec3 p0 = all_face_points[fpids[0]];
-            nvis::vec3 p1 = all_face_points[fpids[1]];
+            vec3 p0 = all_face_points[fpids[0]];
+            vec3 p1 = all_face_points[fpids[1]];
 
             // debug code begins...
             round1.push_back(p0);
             round1.push_back(p1);
             // ...debug code ends
 
-            nvis::vec3 dpdt = p0 - p1;
-            dpdt /= nvis::norm(dpdt);
+            vec3 dpdt = p0 - p1;
+            dpdt /= norm(dpdt);
             add_segment(fpids);
             tangents[face_ids[0]] = dpdt;
             tangents[face_ids[1]] = -1 * dpdt; // orientation points to next voxel
@@ -1020,16 +983,16 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
             }
 
             std::cout << "TRICKY segment found in voxel #" << v << std::endl;
-            nvis::vec3 p0 = all_face_points[fpids[id0]];
-            nvis::vec3 p1 = all_face_points[fpids[id1]];
+            vec3 p0 = all_face_points[fpids[id0]];
+            vec3 p1 = all_face_points[fpids[id1]];
 
             // debug code begins...
             round1.push_back(p0);
             round1.push_back(p1);
             // ...debug code ends
 
-            nvis::vec3 dpdt = p0 - p1;
-            dpdt /= nvis::norm(dpdt);
+            vec3 dpdt = p0 - p1;
+            dpdt /= norm(dpdt);
             add_segment(fpids);
             tangents[face_ids[id0]] = dpdt;
             tangents[face_ids[id1]] = -1 * dpdt; // orientation points to next voxel
@@ -1121,16 +1084,16 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                 // this case corresponds to a secondary fix/addition of a voxel as a side effect
                 // of fixing its neighbor(s): we have killed two birds with one stone!
                 std::cout << "segment found in voxel #" << v << std::endl;
-                nvis::vec3 p0 = all_face_points[fpids[0]];
-                nvis::vec3 p1 = all_face_points[fpids[1]];
+                vec3 p0 = all_face_points[fpids[0]];
+                vec3 p1 = all_face_points[fpids[1]];
 
                 // debug code begins...
                 round12.push_back(p0);
                 round12.push_back(p1);
                 // ...debug code ends
 
-                nvis::vec3 dpdt = p0 - p1;
-                dpdt /= nvis::norm(dpdt);
+                vec3 dpdt = p0 - p1;
+                dpdt /= norm(dpdt);
                 add_segment(fpids);
                 tangents[face_ids[0]] = dpdt;
                 tangents[face_ids[1]] = -1. * dpdt; // orientation points to next voxel
@@ -1155,16 +1118,16 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                 }
 
                 std::cout << "TRICKY segment found in voxel #" << v << std::endl;
-                nvis::vec3 p0 = all_face_points[fpids[id0]];
-                nvis::vec3 p1 = all_face_points[fpids[id1]];
+                vec3 p0 = all_face_points[fpids[id0]];
+                vec3 p1 = all_face_points[fpids[id1]];
 
                 // debug code begins...
                 round1.push_back(p0);
                 round1.push_back(p1);
                 // ...debug code ends
 
-                nvis::vec3 dpdt = p0 - p1;
-                dpdt /= nvis::norm(dpdt);
+                vec3 dpdt = p0 - p1;
+                dpdt /= norm(dpdt);
                 add_segment(fpids);
                 tangents[face_ids[id0]] = dpdt;
                 tangents[face_ids[id1]] = -1 * dpdt; // orientation points to next voxel
@@ -1188,7 +1151,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                 progress.start();
 
                 // build up voxel geometry
-                std::vector< nvis::vec3 > vert(8);
+                std::vector< vec3 > vert(8);
                 sample_grid.voxel(vert, i, j, k);
                 if (display_debug_info)
                     std::cout << "voxel is: 0=" << vert[0] << ", 1=" << vert[1] << ", 2=" << vert[2]
@@ -1197,17 +1160,17 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
 
                 fixing_voxel = true;
 
-                std::pair< int, nvis::vec3 > first_guess; // face id / position on face
+                std::pair< int, vec3 > first_guess; // face id / position on face
                 first_guess.first = -1;   // no first guess so far
 
                 // check if we have a tangent available at this position
-                std::map< FaceId, nvis::vec3 >::iterator tang_it = tangents.find(face_ids[0]);
+                std::map< FaceId, vec3 >::iterator tang_it = tangents.find(face_ids[0]);
 
                 // tracking solution specific to crease lines of mode
                 double h = 0.25;
                 if (crease_kind == 2) {
                     unsigned int fid_out;
-                    nvis::vec3 out;
+                    vec3 out;
                     if (track_ridge_line(out, fid_out, vert, all_face_points[fpids[0]], point_face[0])) {
                         double val = the_wrapper->value(out);
                         if (display_debug_info)
@@ -1226,7 +1189,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                 }
                 else if (tang_it != tangents.end()) {
                     unsigned int fid_out;
-                    nvis::vec3 out;
+                    vec3 out;
                     trace_ray(out, fid_out, vert, all_face_points[fpids[0]], tang_it->second, point_face[0]);
                     double val = the_wrapper->value(out);
                     if (display_debug_info)
@@ -1238,7 +1201,7 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
 
                 bool found = false;
                 bool found_something = false;
-                std::vector< nvis::vec3 > points;
+                std::vector< vec3 > points;
                 pvo_solution the_solution;
 
                 // if we choose to trust the tracking outcome we take it as solution
@@ -1391,16 +1354,16 @@ void crease::extract_lines(std::vector< line >& creases, const Nrrd* nrrd)
                     face_ids.push_back(the_solution.global_fid);
 
                     // update tangent information
-                    nvis::vec3 p0 = all_face_points[fpids[0]];
-                    nvis::vec3 p1 = all_face_points[fpids[1]];
+                    vec3 p0 = all_face_points[fpids[0]];
+                    vec3 p1 = all_face_points[fpids[1]];
 
                     // debug code begins...
                     round2.push_back(p0);
                     round2.push_back(p1);
                     // ...debug code ends
 
-                    nvis::vec3 dpdt = p0 - p1;
-                    dpdt /= nvis::norm(dpdt);
+                    vec3 dpdt = p0 - p1;
+                    dpdt /= norm(dpdt);
                     add_segment(fpids);
                     tangents[face_ids[0]] = dpdt;
                     tangents[face_ids[1]] = -1 * dpdt; // orientation points to next voxel

@@ -1,5 +1,4 @@
-#ifndef __XAVIER_OPTION_PARSE_ARRAY_HPP__
-#define __XAVIER_OPTION_PARSE_ARRAY_HPP__
+#pragma once
 
 #include <boost/lexical_cast.hpp>
 #include <boost/config.hpp>
@@ -11,8 +10,7 @@
 #define __CPP11_ARRAY__
 #include <array>
 // #endif
-// nvis
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <Eigen/Core>
 
 namespace spurt { namespace command_line {
@@ -34,6 +32,36 @@ struct array_validator {
             throw po::invalid_syntax(po::invalid_syntax::missing_parameter);
         else if (s.size() > N) 
             throw po::invalid_syntax(po::invalid_syntax::extra_parameter);
+        
+        if (v.empty()) {
+            v = boost::any(arrayT());
+        }
+        arrayT* tv = boost::any_cast<arrayT>(&v);
+        assert(NULL != tv);
+        for (size_t i = 0; i < N; ++i)
+        {
+            try {
+                // Use type-specific validator, if available, to validate
+                // individual array entries
+                boost::any a;
+                std::vector<std::string> cv;
+                cv.push_back(s[i]);
+                po::validate(a, cv, (value_type*)0, 0);                
+                (*tv)[i] = boost::any_cast<value_type>(a);
+            }
+            catch(const boost::bad_lexical_cast& /*e*/) {
+                boost::throw_exception(po::invalid_option_value(s[i]));
+            }
+        }
+    }
+};
+
+template<typename T, size_t N>
+struct array_validator<spurt::small_vector<T, N>, N>{
+    static void validate(boost::any& v, 
+                         const std::vector<std::string>& s) {                             
+        typedef T value_type;
+        typedef spurt::small_vector<T, N> arrayT;
         
         if (v.empty()) {
             v = boost::any(arrayT());
@@ -180,12 +208,6 @@ namespace boost { namespace program_options {
 #define X(_Type, _Size) \
     template<> \
     void validate<>(boost::any& v, const std::vector<std::string>& s, \
-                    nvis::fixed_vector<_Type, _Size>*, long) { \
-        using namespace spurt::command_line; \
-        array_validator<nvis::fixed_vector<_Type, _Size>, _Size>::validate(v, s); \
-    } \
-    template<> \
-    void validate<>(boost::any& v, const std::vector<std::string>& s, \
                     boost::array<_Type, _Size>*, long) { \
         using namespace spurt::command_line; \
         array_validator<boost::array<_Type, _Size>, _Size>::validate(v, s); \
@@ -195,12 +217,13 @@ namespace boost { namespace program_options {
                     Eigen::Matrix<_Type, _Size, 1>*, long) { \
         using namespace spurt::command_line; \
         array_validator<Eigen::Matrix<_Type, _Size, 1>, _Size>::validate(v, s); \
-    }
-XAVIER_COMMAND_LINE_ARRAY_TYPES_AND_SIZES
-#undef X
-
-#ifdef __CPP11_ARRAY__
-#define X(_Type, _Size) \
+    } \
+    template<> \
+    void validate<>(boost::any& v, const std::vector<std::string>& s, \
+                    spurt::small_vector<_Type, _Size>*, long) { \
+        using namespace spurt::command_line; \
+            array_validator<spurt::small_vector<_Type, _Size>, _Size>::validate(v, s); \
+    } \
     template<> \
     void validate<>(boost::any& v, const std::vector<std::string>& s, \
                     std::array<_Type, _Size>*, long) { \
@@ -209,7 +232,6 @@ XAVIER_COMMAND_LINE_ARRAY_TYPES_AND_SIZES
     } 
 XAVIER_COMMAND_LINE_ARRAY_TYPES_AND_SIZES
 #undef X
-#endif
 
 } // program_options
 } // boost
@@ -304,5 +326,3 @@ inline std::string type_as_string(bool use_brackets=true, bool use_short=false) 
 
 } // commandline
 } // spurt
-
-#endif // __XAVIER_OPTION_PARSE_ARRAY_HPP__

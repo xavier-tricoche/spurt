@@ -1,7 +1,7 @@
 #ifndef __METRIC_HPP__
 #define __METRIC_HPP__
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 
 namespace spurt {
@@ -27,10 +27,10 @@ class metric {
     }
     
 public:
-    typedef T                                   scalar_type;
-    typedef nvis::fixed_vector<scalar_type, N>  vec_type;
-    typedef nvis::fixed_vector<bool, N>         bvec_type;
-    typedef nvis::bounding_box<vec_type>        bounds_type;
+    typedef T                                    scalar_type;
+    typedef spurt::small_vector<scalar_type, N>  vec_type;
+    typedef spurt::small_vector<bool, N>         bvec_type;
+    typedef spurt::bounding_box<vec_type>        bounds_type;
     
     metric() :
         __bounds(vec_type(0), vec_type(0)), __periodic(false) {}
@@ -82,7 +82,7 @@ public:
     }
     
     scalar_type distance(const vec_type& a, const vec_type& b) const {
-        return nvis::norm(displacement(a, b));
+        return spurt::norm(displacement(a, b));
     }
     
 private:

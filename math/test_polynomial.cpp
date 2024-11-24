@@ -2,9 +2,9 @@
 #include <iostream>
 #include <limits>
 #include <string>
-#include <util/timer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <math/polynomial.hpp>
+#include <misc/progress.hpp>
 
 
 template<typename T>
@@ -23,15 +23,15 @@ struct type_traits<double> {
 template<typename T, size_t Dim, size_t Order>
 void compare(size_t n) {
     typedef T                                                       val_t;
-    typedef nvis::fixed_vector<T, Dim>                              vec_t;
-    typedef spurt::polynomial::polynomial_basis<T, Dim>            poly_t;
+    typedef spurt::small_vector<T, Dim>                             vec_t;
+    typedef spurt::polynomial::polynomial_basis<T, Dim, vec_t>      poly_t;
     typedef typename poly_t::monomial_type                          mono_t;
     typedef typename poly_t::derivative_type                        deriv_t;
-    typedef spurt::polynomial::alt_polynomial_basis<T, Dim, Order> alt_poly_t;
+    typedef spurt::polynomial::alt_polynomial_basis<T, Dim, vec_t, Order> alt_poly_t;
     
     const val_t max_value = 1000.;
     
-    nvis::timer _timer;
+    spurt::timer _timer;
     double t=0, t_alt=0;
     double err_val=0, err_deriv=0;
     
@@ -62,7 +62,7 @@ void compare(size_t n) {
         derivatives.clear();
         derivatives_alt.clear();
         
-        _timer.restart();
+        _timer.start();
         values.resize(basis_monos.size());
         derivatives.resize(basis_monos.size());
         for (size_t i=0 ; i<basis_monos.size() ; ++i) {
@@ -73,7 +73,7 @@ void compare(size_t n) {
         }
         t += _timer.elapsed();
         
-        _timer.restart();
+        _timer.start();
         alt_poly_t::eval(values_alt, x);
         alt_poly_t::derivative(derivatives_alt, x);
         t_alt += _timer.elapsed();
@@ -126,9 +126,10 @@ void compare(size_t n) {
         // compute delta in derivatives
         err = 0;
         for (size_t i=0 ; i<derivatives.size() ; ++i) {
-            if (nvis::norm(derivatives_alt[i]))
-                err += nvis::norm(derivatives[i] - derivatives_alt[i])/
-                                  nvis::norm(derivatives_alt[i]);
+            if (spurt::norm(derivatives_alt[i])) {
+                vec_t delta = derivatives[i] - derivatives_alt[i];
+                err += spurt::norm(delta) / spurt::norm(derivatives_alt[i]);
+            }
         }
         if (err > 1.0e-8) {
             std::cerr << "\n\nLarge derivative error detected:\n"

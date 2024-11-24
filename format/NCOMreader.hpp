@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <stdexcept>
 #include <sstream>
 
@@ -95,7 +95,7 @@ void var_info(int file, const std::string& var_name) {
     std::cout << var_name << " has " << var_natts << " attributes\n";
 }
 
-void load_velocity(std::vector<nvis::vec2>& uv, 
+void load_velocity(std::vector<vec2>& uv, 
                    size_t nlat, size_t nlon, int file) {
     int id;
     uv.resize(nlat*nlon);
@@ -159,7 +159,7 @@ double load_time(int file) {
 
 void load_dataset(const std::string& filename, 
                   std::vector<double>& lat, std::vector<double>& lon,
-                  std::vector<nvis::vec2>& vel, double& t) {
+                  std::vector<vec2>& vel, double& t) {
     int file;
     check_nc( nc_open( filename.c_str(), NC_NOWRITE, &file ) );
     load_coordinates(lat, lon, file);
@@ -168,7 +168,7 @@ void load_dataset(const std::string& filename,
 }
 
 void load_dataset(const std::string& filename, size_t& nlat, size_t& nlon,
-                  std::vector<nvis::vec2>& vel, double& t) {
+                  std::vector<vec2>& vel, double& t) {
     int file;
     check_nc( nc_open( filename.c_str(), NC_NOWRITE, &file ) );
     load_dim_value(nlon, nlat, file);
@@ -177,7 +177,7 @@ void load_dataset(const std::string& filename, size_t& nlat, size_t& nlon,
 }
 
 void load_dataset(const std::string& filename, std::vector<double>& lat, std::vector<double>& lon,
-                  std::vector<nvis::vec2>& vel, const std::vector<std::string>& var_names, 
+                  std::vector<vec2>& vel, const std::vector<std::string>& var_names, 
                   std::vector< std::vector<double> >& variables, double& t) {
     int file;
     check_nc( nc_open( filename.c_str(), NC_NOWRITE, &file ) );

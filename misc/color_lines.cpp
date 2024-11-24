@@ -1,13 +1,13 @@
 #include <iostream>
 #include <fstream>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <vector>
 #include <list>
 #include <teem/nrrd.h>
 
 
-std::vector<nvis::fvec3> points;
-std::vector<nvis::fvec3> colors;
+std::vector<spurt::fvec3> points;
+std::vector<spurt::fvec3> colors;
 std::vector<std::vector<unsigned int> > lines;
 
 char* input, *output;
@@ -37,12 +37,12 @@ void initialize(int argc, char* argv[])
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
 }
 
-nvis::fvec3 color(unsigned int lid, unsigned int pid)
+spurt::fvec3 color(unsigned int lid, unsigned int pid)
 {
     const std::vector<unsigned int>& l = lines[lid];
-    nvis::fvec3 dir;
+    spurt::fvec3 dir;
     if (l.size() < 2) {
-        return nvis::fvec3(0, 0, 0);
+        return spurt::fvec3(0, 0, 0);
     }
     if (pid == 0) {
         dir = points[l[pid+1]] - points[l[pid]];
@@ -52,10 +52,10 @@ nvis::fvec3 color(unsigned int lid, unsigned int pid)
         dir = points[l[pid+1]] - points[l[pid-1]];
     }
     
-    if (nvis::norm(dir) == 0) {
-        return nvis::fvec3(0, 0, 0);
+    if (spurt::norm(dir) == 0) {
+        return spurt::fvec3(0, 0, 0);
     }
-    return nvis::abs(dir / nvis::norm(dir));
+    return spurt::abs(dir / spurt::norm(dir));
 }
 
 int main(int argc, char* argv[])
@@ -82,9 +82,9 @@ int main(int argc, char* argv[])
     std::getline(vtk_in, buffer);
     points.resize(npts);
     colors.resize(npts);
-    std::fill(colors.begin(), colors.end(), nvis::fvec3(0, 0, 0));
+    std::fill(colors.begin(), colors.end(), spurt::fvec3(0, 0, 0));
     for (int i = 0 ; i < npts ; ++i) {
-        nvis::fvec3& p = points[i];
+        spurt::fvec3& p = points[i];
         vtk_in >> p[0] >> p[1] >> p[2];
         vtk_out << p[0] << " " << p[1] << " " << p[2] << '\n';
     }

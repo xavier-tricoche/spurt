@@ -73,14 +73,14 @@ int main(int argc, const char* argv[]) {
     // std::cout << "done
 
     std::cout << "Computing shear stress values on boundary..." << std::flush;
-    std::vector<mesh_type::vec3_type> newfield = m.get_shear_stress(verbose);
+    std::vector<mesh_type::vertex_type> newfield = m.get_shear_stress(verbose);
     std::cout << " done\n";
 
     std::cout << "Merging velocity and shear stress vector fields..." << std::flush;
-    const std::vector<mesh_type::vec3_type>& velocity = m.get_velocity();
+    const std::vector<mesh_type::vertex_type>& velocity = m.get_velocity();
     for (size_t i=0; i<newfield.size(); ++i) {
-        const mesh_type::vec3_type& v = newfield[i];
-        if (nvis::norm(v) == 0) {
+        const mesh_type::vertex_type& v = newfield[i];
+        if (spurt::norm(v) == 0) {
             newfield[i] = velocity[i];
         }
     }

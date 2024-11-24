@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <stdexcept>
 #include <sstream>
 
@@ -12,8 +12,8 @@
 namespace spurt {
 
 struct vec_equal {
-    bool operator()(const nvis::fvec3& a, const nvis::fvec3& b) const {
-        return nvis::all(a == b);
+    bool operator()(const fvec3& a, const fvec3& b) const {
+        return all(a == b);
     }
 };
 
@@ -37,11 +37,11 @@ public:
         int npts = hexpts.size() / 3;
         std::cout << npts << " points in total\n";
 
-        nvis::fvec3 *pts = (nvis::fvec3*) & hexpts.front();
+        fvec3 *pts = (fvec3*) & hexpts.front();
 
-        std::vector<nvis::fvec3> spts(pts, pts + npts);
+        std::vector<fvec3> spts(pts, pts + npts);
 
-        std::sort(spts.begin(), spts.end(), nvis::lexicographical_order());
+        std::sort(spts.begin(), spts.end(), lexicographical_order());
         spts.resize(std::unique(spts.begin(), spts.end(), vec_equal()) - spts.begin());
 
         std::cout << spts.size() << " unique points = " << (100*spts.size()) / npts << "%%\n";
@@ -53,7 +53,7 @@ public:
         std::vector<unsigned int> new2old(spts.size()); // new to old indices
 
         for (unsigned int i = 0; i < npts; ++i) {
-            old2new[i] = std::lower_bound(spts.begin(), spts.end(), pts[i], nvis::lexicographical_order()) - spts.begin();
+            old2new[i] = std::lower_bound(spts.begin(), spts.end(), pts[i], lexicographical_order()) - spts.begin();
             new2old[old2new[i]] = i;
         }
         for (std::vector<unsigned int>::iterator ii = hexind.begin(); ii != hexind.end(); ++ii)
@@ -62,14 +62,14 @@ public:
 
         hexpts = std::vector<float>();
         hexpts.resize(spts.size()*3);
-        std::copy(spts.begin(), spts.end(), (nvis::fvec3*)&hexpts[0]);
+        std::copy(spts.begin(), spts.end(), (fvec3*)&hexpts[0]);
         rindex.swap(new2old);
         std::cout << rindex.size() << " entries in new2old. Min=" 
             << *std::min_element(rindex.begin(), rindex.end()) << ". Max="
             << *std::max_element(rindex.begin(), rindex.end()) << '\n';
     }
 
-    void read_vectors(std::vector<nvis::fvec3>& vals, int timestep,
+    void read_vectors(std::vector<fvec3>& vals, int timestep,
                       const std::vector<unsigned int>& rindex) {
         std::vector<float> vec;
         __fmt.GetVectorVar(timestep, vec);

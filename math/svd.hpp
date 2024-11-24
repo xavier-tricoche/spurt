@@ -1,21 +1,21 @@
 #ifndef __NR_SVD_HPP__
 #define __NR_SVD_HPP__
 
-#include "math/fixed_matrix.hpp"
-#include "math/fixed_vector.hpp"
+#include <math/types.hpp>
 #include <Eigen/Dense>
 #include <float.h>
 
 namespace spurt {
+    
 template<typename T, int M, int N>
-nvis::fixed_matrix<T, N, M> pseudo_inv_diag(const nvis::fixed_matrix<T, M, N>& Sigma)
+small_matrix<T, N, M> pseudo_inv_diag(const small_matrix<T, M, N>& Sigma)
 {
     const double eps = DBL_EPSILON;
     T max = 0;
     for (int i=0 ; i<std::min(M, N) ; ++i) {
         max = std::max(max, Sigma(i,i));
     }
-    nvis::fixed_matrix<T, N, M> inv(0);
+    small_matrix<T, N, M> inv(0);
     for (int i=0 ; i<std::min(M, N); ++i) {
         inv(i,i) = (Sigma(i,i)/max > eps ? 1./Sigma(i,i) : 0.);
     }
@@ -26,6 +26,7 @@ nvis::fixed_matrix<T, N, M> pseudo_inv_diag(const nvis::fixed_matrix<T, M, N>& S
 namespace eigen_svd {
 
 using namespace Eigen;
+using namespace spurt;
 
 template<typename Type1, typename Type2, typename Type3>
 void svdcmp(const MatrixBase<Type1>& A, MatrixBase<Type2>& U,
@@ -42,6 +43,9 @@ void svdcmp(const MatrixBase<Type1>& A, MatrixBase<Type2>& U,
 }
 
 namespace nr_svd {
+    
+using namespace spurt;
+    
 #define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
 #define SQR(a) (a == 0.0 ? 0.0 : a*a)
 
@@ -58,8 +62,8 @@ inline double pythag(double a, double b)
 }
 
 template<typename T, int M, int N>
-void svdcmp(const nvis::fixed_matrix<T, M, N>& A, nvis::fixed_vector<T, N>& w,
-            nvis::fixed_matrix<T, M, N>& U, nvis::fixed_matrix<T, N>& V, double eps=1.0e-12)
+void svdcmp(const small_matrix<T, M, N>& A, small_vector<T, N>& w,
+            small_matrix<T, M, N>& U, small_square_matrix<T, N>& V, double eps=1.0e-12)
 {
     // From Numerical Recipes:
     //
@@ -67,12 +71,12 @@ void svdcmp(const nvis::fixed_matrix<T, M, N>& A, nvis::fixed_vector<T, N>& w,
     // singular value decomposition, A = U.W.V^T and stores the results in the
     // matrices U and V, and the vector w.
     
-    nvis::fixed_matrix<T, M, N> u(A);
+    small_matrix<T, M, N> u(A);
     
     bool flag;
     int i, its, j, jj, k, l, nm;
     double anorm, c, f, g, h, s, scale, x, y, z;
-    nvis::fixed_vector<T, N> rv1(0);
+    small_vector<T, N> rv1(0);
     g = scale = anorm = 0.0;
     int m = M;
     int n = N;
@@ -84,28 +88,28 @@ void svdcmp(const nvis::fixed_matrix<T, M, N>& A, nvis::fixed_vector<T, N>& w,
         if(i < m) {
             // Householder reduction to bidiagonal form.
             for(k = i; k < m; k++) {
-                scale += fabs(u[k][i]);
+                scale += fabs(u(k,i));
             }
             if(scale != 0.0) {
                 for(k = i; k < m; k++) {
-                    u[k][i] /= scale;
-                    s += u[k][i] * u[k][i];
+                    u(k,i) /= scale;
+                    s += u(k,i) * u(k,i);
                 }
-                f = u[i][i];
+                f = u(i,i);
                 g = -SIGN(sqrt(s), f);
                 h = f * g - s;
-                u[i][i] = f - g;
+                u(i,i) = f - g;
                 for(j = l - 1; j < n; j++) {
                     for(s = 0.0, k = i; k < m; k++) {
-                        s += u[k][i] * u[k][j];
+                        s += u(k,i) * u(k,j);
                     }
                     f = s / h;
                     for(k = i; k < m; k++) {
-                        u[k][j] += f * u[k][i];
+                        u(k,j) += f * u(k,i);
                     }
                 }
                 for(k = i; k < m; k++) {
-                    u[k][i] *= scale;
+                    u(k,i) *= scale;
                 }
             }
         }
@@ -113,30 +117,30 @@ void svdcmp(const nvis::fixed_matrix<T, M, N>& A, nvis::fixed_vector<T, N>& w,
         g = s = scale = 0.0;
         if(i + 1 <= m && i + 1 != n) {
             for(k = l - 1; k < n; k++) {
-                scale += fabs(u[i][k]);
+                scale += fabs(u(i,k));
             }
             if(scale != 0.0) {
                 for(k = l - 1; k < n; k++) {
-                    u[i][k] /= scale;
-                    s += u[i][k] * u[i][k];
+                    u(i,k) /= scale;
+                    s += u(i,k) * u(i,k);
                 }
-                f = u[i][l - 1];
+                f = u(i,l - 1);
                 g = -SIGN(sqrt(s), f);
                 h = f * g - s;
-                u[i][l - 1] = f - g;
+                u(i,l - 1) = f - g;
                 for(k = l - 1; k < n; k++) {
-                    rv1[k] = u[i][k] / h;
+                    rv1[k] = u(i,k) / h;
                 }
                 for(j = l - 1; j < m; j++) {
                     for(s = 0.0, k = l - 1; k < n; k++) {
-                        s += u[j][k] * u[i][k];
+                        s += u(j,k) * u(i,k);
                     }
                     for(k = l - 1; k < n; k++) {
-                        u[j][k] += s * rv1[k];
+                        u(j,k) += s * rv1[k];
                     }
                 }
                 for(k = l - 1; k < n; k++) {
-                    u[i][k] *= scale;
+                    u(i,k) *= scale;
                 }
             }
         }
@@ -146,22 +150,22 @@ void svdcmp(const nvis::fixed_matrix<T, M, N>& A, nvis::fixed_vector<T, N>& w,
         if(i < n - 1) {
             if(g != 0.0) {
                 for(j = l; j < n; j++) { // Double division to avoid possible underflow.
-                    V[j][i]=(u[i][j]/u[i][l])/g;
+                    V(j,i)=(u(i,j)/u(i,l))/g;
                 }
                 for(j = l; j < n; j++) {
                     for(s = 0.0, k = l; k < n; k++) {
-                        s += u[i][k] * V[k][j];
+                        s += u(i,k) * V(k,j);
                     }
                     for(k = l; k < n; k++) {
-                        V[k][j] += s * V[k][i];
+                        V(k,j) += s * V(k,i);
                     }
                 }
             }
             for(j = l; j < n; j++) {
-                V[i][j] = V[j][i] = 0.0;
+                V(i,j) = V(j,i) = 0.0;
             }
         }
-        V[i][i] = 1.0;
+        V(i,i) = 1.0;
         g = rv1[i];
         l = i;
     }
@@ -169,27 +173,27 @@ void svdcmp(const nvis::fixed_matrix<T, M, N>& A, nvis::fixed_vector<T, N>& w,
         l = i + 1;
         g = w[i];
         for(j = l; j < n; j++) {
-            u[i][j] = 0.0;
+            u(i,j) = 0.0;
         }
         if(g != 0.0) {
             g = 1.0 / g;
             for(j = l; j < n; j++) {
                 // Accumulation of left-hand transformations.
                 for(s = 0.0, k = l; k < m; k++) {
-                    s += u[k][i] * u[k][j];
+                    s += u(k,i) * u(k,j);
                 }
-                f = (s / u[i][i]) * g;
+                f = (s / u(i,i)) * g;
                 for(k = i; k < m; k++) {
-                    u[k][j] += f * u[k][i];
+                    u(k,j) += f * u(k,i);
                 }
             }
             for(j = i; j < m; j++) {
-                u[j][i] *= g;
+                u(j,i) *= g;
             }
         } else for(j = i; j < m; j++) {
-                u[j][i] = 0.0;
+                u(j,i) = 0.0;
             }
-        ++u[i][i];
+        ++u(i,i);
     }
     for(k = n - 1; k >= 0; k--) {
         for(its = 0; its < 30; its++) {
@@ -222,10 +226,10 @@ void svdcmp(const nvis::fixed_matrix<T, M, N>& A, nvis::fixed_vector<T, N>& w,
                     c = g * h;
                     s = -f * h;
                     for(j = 0; j < m; j++) {
-                        y=u[j][nm];
-                        z=u[j][i];
-                        u[j][nm]=y*c+z*s;
-                        u[j][i]=z*c-y*s;
+                        y=u(j,m);
+                        z=u(j,i);
+                        u(j,nm)=y*c+z*s;
+                        u(j,i)=z*c-y*s;
                     }
                 }
             }
@@ -234,7 +238,7 @@ void svdcmp(const nvis::fixed_matrix<T, M, N>& A, nvis::fixed_vector<T, N>& w,
                 if(z < 0.0) { // Singular value is made nonnegative.
                     w[k] = -z;
                     for(j = 0; j < n; j++) {
-                        V[j][k] = -V[j][k];
+                        V(j,k) = -V(j,k);
                     }
                 }
                 break;
@@ -266,10 +270,10 @@ void svdcmp(const nvis::fixed_matrix<T, M, N>& A, nvis::fixed_vector<T, N>& w,
                 h = y * s;
                 y *= c;
                 for(jj = 0; jj < n; jj++) {
-                    x = V[jj][j];
-                    z = V[jj][i];
-                    V[jj][j] = x * c + z * s;
-                    V[jj][i] = z * c - x * s;
+                    x = V(jj,j);
+                    z = V(jj,i);
+                    V(jj,j) = x * c + z * s;
+                    V(jj,i) = z * c - x * s;
                 }
                 z = pythag(f, h);
                 w[j] = z; // Rotation can be arbitrary if z = 0.
@@ -281,10 +285,10 @@ void svdcmp(const nvis::fixed_matrix<T, M, N>& A, nvis::fixed_vector<T, N>& w,
                 f = c * g + s * y;
                 x = c * y - s * g;
                 for(jj = 0; jj < m; jj++) {
-                    y = u[jj][j];
-                    z = u[jj][i];
-                    u[jj][j] = y * c + z * s;
-                    u[jj][i] = z * c - y * s;
+                    y = u(jj,j);
+                    z = u(jj,i);
+                    u(jj,j) = y * c + z * s;
+                    u(jj,i) = z * c - y * s;
                 }
             }
             rv1[l] = 0.0;
@@ -297,9 +301,9 @@ void svdcmp(const nvis::fixed_matrix<T, M, N>& A, nvis::fixed_vector<T, N>& w,
 }
 
 template<typename T, int N>
-inline nvis::fixed_matrix<T, N> to_mat(const nvis::fixed_vector<T, N>& w)
+inline small_square_matrix<T, N> to_mat(const small_vector<T, N>& w)
 {
-    nvis::fixed_matrix<T, N> r = nvis::fixed_matrix<T, N>::identity();
+    small_square_matrix<T, N> r = small_square_matrix<T, N>::identity();
     for (int i=0 ; i<N ; ++i) {
         r(i,i) = w[i];
     }
@@ -307,9 +311,9 @@ inline nvis::fixed_matrix<T, N> to_mat(const nvis::fixed_vector<T, N>& w)
 }
 
 template<typename T, int N>
-inline nvis::fixed_matrix<T, N> to_inv_mat(const nvis::fixed_vector<T, N>& w, double eps=1.0e-12)
+inline small_square_matrix<T, N> to_inv_mat(const small_vector<T, N>& w, double eps=1.0e-12)
 {
-    nvis::fixed_matrix<T, N> r = nvis::fixed_matrix<T, N>::identity();
+    small_square_matrix<T, N> r = small_square_matrix<T, N>::identity();
     double max = *std::max_element(w.begin(), w.end());
     for (int i=0 ; i<N ; ++i) {
         r(i,i) = (w[i]/max > eps ? 1./w[i] : 0);
@@ -318,13 +322,13 @@ inline nvis::fixed_matrix<T, N> to_inv_mat(const nvis::fixed_vector<T, N>& w, do
 }
 
 template<typename T, int M, int N>
-inline nvis::fixed_matrix<T, M, N> pseudoinv(const nvis::fixed_matrix<T, M, N>& A, double eps=1.0e-12)
+inline small_matrix<T, M, N> pseudoinv(const small_matrix<T, M, N>& A, double eps=1.0e-12)
 {
-    nvis::fixed_matrix<T, M, N> U;
-    nvis::fixed_matrix<T, N> V;
-    nvis::fixed_vector<T, N> w;
+    small_matrix<T, M, N> U;
+    small_square_matrix<T, N> V;
+    small_vector<T, N> w;
     svdcmp<T, M, N>(A, w, U, V, eps);
-    return V*to_inv_mat<double, 3>(w, eps)*nvis::transpose(U);
+    return V*to_inv_mat<double, 3>(w, eps)*transpose(U);
 }
 
 }

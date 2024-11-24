@@ -26,7 +26,7 @@
 #include <vtk/vtk_utils.hpp>
 #include <graphics/colors.hpp>
 
-#include <util/timer.hpp>
+#include <misc/progress.hpp>
 
 typedef nvis::fixed_vector<double, 3> vec3;
 

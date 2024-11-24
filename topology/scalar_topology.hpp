@@ -9,7 +9,8 @@
 
 #include <Eigen/Core>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
+#include <math/bounding_box.hpp>
 #include <math/angle.hpp>
 #include <math/vector_manip.hpp>
 #include <image/probe.hpp>
@@ -17,69 +18,31 @@
 #include <image/nrrd_field.hpp>
 #include <misc/log_helper.hpp>
 #include <misc/progress.hpp>
-#include <data/raster.hpp>
+#include <data/image.hpp>
 #include <vtk/vtk_data_helper.hpp>
 #include <vtk/vtk_io_helper.hpp>
 
 
-namespace {
-    template<typename T, int N>
-    inline std::string flatten(const Eigen::Matrix<T, N, 1>& v) {
-        std::ostringstream oss;
-        oss << "[";
-        for (int i=0; i<N-1; ++i) {
-            oss << v[i] << ", ";
-        }
-        oss << v[N-1] << "]";
-        return oss.str();
-    }
-
-} // anonymous
-
-
 namespace spurt { namespace topology { namespace scalar {
 
-template<typename Matrix_, typename Vector_>
-struct naive_solver {
-};
-
-template<typename T, int N>
-struct naive_solver< Eigen::Matrix<T, N, N >, Eigen::Matrix<T, N, 1> > {
-    typedef Eigen::Matrix<T, N, N > matrix_t;
-    typedef Eigen::Matrix<T, N, 1> vector_t;
-    
-    static vector_t solve(const matrix_t& A, const vector_t& b) {
-        // std::cout << "solver:\n";
-        // std::cout << "        A=\n" << A << "\n";
-        // std::cout << "        b=" << flatten(b) << '\n';
-        // std::cout << "        inverse(A)=\n" << A.inverse() << '\n';
-        // std::cout << "        inverse(A)*A=\n" << A.inverse()*A << '\n';
-        // vector_t x = A.inverse()*b;
-        // vector_t bb = A*x;
-        // std::cout << "        inverse(A)*b=" << flatten(x) << '\n';
-        // std::cout << "        Ax=" << flatten(bb) << '\n';
-        return A.inverse()*b;
-    }
-};
-
 template<typename Scalar_, size_t N, 
-         typename Vector_ = Eigen::Matrix<Scalar_, N, 1>,
-         typename Matrix_ = Eigen::Matrix<Scalar_, N, N>,
-         typename Solver_ = naive_solver<Matrix_, Vector_> >
+         typename Vector_ = small_vector<double, N>,
+         typename Matrix_ = small_matrix<double, N, N> >
 struct SmoothScalarField {
     
     constexpr static size_t dim = N;
     typedef Scalar_ value_t;
     typedef Vector_ pos_t;
     typedef Vector_ gradient_t;
+    typedef Vector_ vector_t;
     typedef Matrix_ hessian_t;
+    typedef Matrix_ matrix_t;
     typedef spurt::gage_interface::scalar_wrapper wrapper_t;
-    typedef std::pair<pos_t, pos_t> bounds_t;
-    typedef Solver_ solver_t;
+    typedef bounding_box<pos_t> bounds_t;
     
     std::string error_msg(const pos_t& p) const {
         std::ostringstream os;
-        os << "Unable to interpolate scalar field " << m_name << " at " << flatten(p) << '\n';
+        os << "Unable to interpolate scalar field " << m_name << " at " << p << '\n';
         return os.str();
     }
     
@@ -92,13 +55,7 @@ struct SmoothScalarField {
                     spurt::gage_interface::BSPL3_INTERP, 
                     true, true, true, true), m_name(name) {
         m_wrapper.use_world();
-        std::vector< std::pair< double, double > > bounds;
-        nrrd_utils::compute_raster_bounds(bounds, nin, true);
-        for (int i=0; i<dim; ++i) {
-            const std::pair<double, double>& p = bounds[i];
-            m_bounds.first [i] = p.first;
-            m_bounds.second [i] = p.second;
-        }
+        nrrd_utils::compute_raster_bounds(m_bounds, nin, true);
     }
 
     ~SmoothScalarField() {}
@@ -129,14 +86,14 @@ struct SmoothScalarField {
     
     void hessian_eigen(const pos_t& x, value_t& lmax, value_t& lmin, 
                        gradient_t& emax, gradient_t& emin) const {
-        gradient_t evals;
-        std::vector< gradient_t > evecs;
+        vector_t evals;
+        matrix_t evecs;
         if (!m_wrapper.hess_evals<pos_t, 2, gradient_t>(x, evals)) {
-            throw std::runtime_error("Unable to compute Hessian eigenvalues at " + flatten(x));
+            throw std::runtime_error("Unable to compute Hessian eigenvalues at " + x);
         }
         std::cout << "computed eigenvalues\n";
         if (!m_wrapper.hess_evecs<pos_t, 2, gradient_t>(x, evecs)) {
-            throw std::runtime_error("Unable to compute Hessian eigenvectors at " + flatten(x));
+            throw std::runtime_error("Unable to compute Hessian eigenvectors at " + x);
         }  
         std::cout << "computed eigenvectors\n";
         if (evals[0] < evals[1]) {
@@ -160,9 +117,8 @@ struct SmoothScalarField {
 
 
 template<typename Scalar_, size_t N,
-         typename Vector_ = Eigen::Matrix<double, N, 1>,
-         typename Matrix_ = Eigen::Matrix<double, N, N>,
-         typename Solver_ = naive_solver<double, Vector_> >
+         typename Vector_ = small_vector<double, N>,
+         typename Matrix_ = small_matrix<double, N, N> >
 struct PWLScalarField {
     constexpr static size_t dim = N;
     typedef Scalar_ value_t;
@@ -170,12 +126,11 @@ struct PWLScalarField {
     typedef Vector_ gradient_t;
     typedef Matrix_ hessian_t;
     typedef spurt::nrrd_field<value_t, N, value_t> field_t;
-    typedef std::pair<pos_t, pos_t> bounds_t;
-    typedef Solver_ solver_t;
+    typedef bounding_box<pos_t> bounds_t;
     
     std::string error_msg(const pos_t& p) const {
         std::ostringstream os;
-        os << "Unable to interpolate scalar field " << m_name << " at " << flatten(p) << '\n';
+        os << "Unable to interpolate scalar field " << m_name << " at " << (p) << '\n';
         return os.str();
     }
     
@@ -212,11 +167,11 @@ struct PWLScalarField {
     //     gradient_t evals;
     //     std::vector< gradient_t > evecs;
     //     if (!m_wrapper.hess_evals<pos_t, 2, gradient_t>(x, evals)) {
-    //         throw std::runtime_error("Unable to compute Hessian eigenvalues at " + flatten(x));
+    //         throw std::runtime_error("Unable to compute Hessian eigenvalues at " + x);
     //     }
     //     std::cout << "computed eigenvalues\n";
     //     if (!m_wrapper.hess_evecs<pos_t, 2, gradient_t>(x, evecs)) {
-    //         throw std::runtime_error("Unable to compute Hessian eigenvectors at " + flatten(x));
+    //         throw std::runtime_error("Unable to compute Hessian eigenvectors at " + x);
     //     }
     //     std::cout << "computed eigenvectors\n";
     //     if (evals[0] < evals[1]) {
@@ -247,7 +202,6 @@ struct planar_topology {
     typedef typename field_t::gradient_t gradient_t;
     typedef typename field_t::hessian_t hessian_t;
     typedef typename field_t::bounds_t bounds_t;
-    typedef typename field_t::solver_t solver_t;
     
     struct critical_point {
         pos_t x;
@@ -309,8 +263,8 @@ struct planar_topology {
             double outer_edge = v0[0] * v1[1] - v0[1] * v1[0];
             if (outer_loc * outer_edge < 0) {
                 std::ostringstream oss;
-                oss << "Degenerate point encountered between " << flatten(x0) << " and " << flatten(x1) << ".";
-                oss << "\nv0=" << flatten(v0) << ", v1=" << flatten(v1) << ", dv0=" << flatten(dv0);
+                oss << "Degenerate point encountered between " << (x0) << " and " << (x1) << ".";
+                oss << "\nv0=" << v0 << ", v1=" << v1 << ", dv0=" << dv0;
                 sampling_issues.insert(sampling_issues.end(), current_samples.begin(), current_samples.end());
                 throw std::runtime_error(oss.str());
             }
@@ -373,12 +327,12 @@ struct planar_topology {
                 return to;
             }
             // std::cerr << "from = " << from << ", to = " << to << " (" << spurt::vector::norm(from-to) << ")" << std::endl;
-            // std::cerr << "box = " << flatten(m_box.first) << " -> " << flatten(m_box.second) << std::endl;
+            // std::cerr << "box = " << (m_box.first) << " -> " << (m_box.second) << std::endl;
             return clip(from, to);
         }
     
         double size() const {
-            return nvis::norm(m_box.size());
+            return m_box.size().norm();
         }
     
         bounds_t m_box;
@@ -435,12 +389,12 @@ struct planar_topology {
         try {
             f = m_field.gradient(x);
             double dinit = spurt::vector::norm(f);
-            std::cout << "newton: seeding, norm(f(" << flatten(x) << ")) = " << dinit << '\n';
+            std::cout << "newton: seeding, norm(f(" << x << ")) = " << dinit << '\n';
             minnorm = dinit;
             for (k = 0; k < maxiter; k++) {
                 polyline.push_back(x);
                 if (verbose) {
-                    os << "newton: k = " << k << ", norm(f(" << flatten(x) << ")) = " << spurt::vector::norm(f)
+                    os << "newton: k = " << k << ", norm(f(" << x << ")) = " << spurt::vector::norm(f)
                        << std::endl;
                     std::cerr << os.str();
                     os.clear();
@@ -461,7 +415,7 @@ struct planar_topology {
             
                 // determine local search direction
                 H = m_field.hessian(x);
-                d = solver_t::solve(H, H * x - f);
+                d = spurt::inverse(H)*(H * x - f);
                 
                 // do a relaxation linesearch
                 // (updates x and f)
@@ -561,7 +515,7 @@ struct planar_topology {
                                     if (v < bestv) {
                                         bestv = v;
                                         best = p;
-                                        std::cerr << "new min norm found at " << flatten(p) << ", norm=" << v << '\n';
+                                        std::cerr << "new min norm found at " << (p) << ", norm=" << v << '\n';
                                     }
                                 }
                             }
@@ -575,13 +529,13 @@ struct planar_topology {
                         
                         if (!failed) {
                             std::cout << "critical point of type " << cp.as_string() << " found!\n";
-                            std::cout << "\tposition: " << flatten(cp.x) << '\n';
+                            std::cout << "\tposition: " << (cp.x) << '\n';
                             std::cout << "\tlmax: " << cp.lmax << '\n';
                             std::cout << "\tlmin: " << cp.lmin << '\n';
-                            std::cout << "\temax: " << flatten(cp.emax) << '\n';
-                            std::cout << "\temin: " << flatten(cp.emin) << '\n';
+                            std::cout << "\temax: " << (cp.emax) << '\n';
+                            std::cout << "\temin: " << (cp.emin) << '\n';
                             gradient_t f = m_field.gradient(cp.x);
-                            std::cout << "\tvalue: " << flatten(f) << '\n';
+                            std::cout << "\tvalue: " << (f) << '\n';
                             std::cout << "\tnorm: " << spurt::vector::norm(f) << '\n';
                             cpts.push_back(cp);
                         }

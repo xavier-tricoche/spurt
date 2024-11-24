@@ -9,7 +9,7 @@
 #include <locale>
 #include <iomanip>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 
 #include <boost/numeric/odeint.hpp>
@@ -24,9 +24,6 @@
 #include <misc/progress.hpp>
 #include <misc/log_helper.hpp>
 #include <vtk/vtk_utils.hpp>
-
-#include <Eigen/Core>
-#include <Eigen/SVD>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -223,7 +220,7 @@ value_t step_x, step_y;
 size_t nb_samples; // invariant: nb_samples = res[0]*res[1]
 size_t nb_lost=0;
 size_t support_radius;
-nvis::fixed_vector<size_t, 3> up(1);
+svec3 up(1);
 vec2 input_spc;
 
 // i/o-related

@@ -12,19 +12,16 @@
 #include <boost/format.hpp>
 #include <boost/limits.hpp>
 
-#include <math/fixed_vector.hpp>
-#include <math/fixed_matrix.hpp>
-#include <util/wall_timer.hpp>
+#include <math/types.hpp>
+#include <misc/progress.hpp>
 
-#include <math/math.hpp>
+#include <math/basic_math.hpp>
 
 #include <iostream>
 #include <list>
 
-#include <data/grid.hpp>
-#include <data/raster_data.hpp>
-
-#include <util/wall_timer.hpp>
+#include <data/mesh.hpp>
+#include <data/image.hpp>
 
 #include <teem/nrrd.h>
 #include <image/nrrd_wrapper.hpp>
@@ -37,7 +34,7 @@
 
 namespace spurt {
 template<typename T>
-nvis::vec3 eigenplane(const T& field, const nvis::vec3& x, bool linear_type)
+spurt::vec3 eigenplane(const T& field, const spurt::vec3& x, bool linear_type)
 {
     EigenvectorField<T> efield(field);
     
@@ -48,80 +45,81 @@ nvis::vec3 eigenplane(const T& field, const nvis::vec3& x, bool linear_type)
     }
 }
 
-nvis::vec2 eigen2d(const nvis::mat2& m, bool major)
+spurt::vec2 eigen2d(const spurt::mat2& m, bool major)
 {
     double alpha = 0.5*(m(0,0)-m(1,1));
     double beta = m(1,0);
     
     if (major) {
-        return nvis::vec2(beta, -alpha + sqrt(alpha*alpha + beta*beta));
+        return spurt::vec2(beta, -alpha + sqrt(alpha*alpha + beta*beta));
     } else {
-        return nvis::vec2(beta, -alpha - sqrt(alpha*alpha + beta*beta));
+        return spurt::vec2(beta, -alpha - sqrt(alpha*alpha + beta*beta));
     }
 }
 
-void make_basis(nvis::vec3& b0, nvis::vec3& b1, const nvis::vec3& n)
+void make_basis(spurt::vec3& b0, spurt::vec3& b1, const spurt::vec3& n)
 {
     double maxnorm = 0;
     for (int i = 0 ; i < 3 ; ++i) {
-        nvis::vec3 e(0);
+        spurt::vec3 e = 0;
         e[i] = 1;
-        nvis::vec3 tmp = nvis::cross(e, n);
-        if (nvis::norm(tmp) > maxnorm) {
+        spurt::vec3 tmp = spurt::cross(e, n);
+        if (spurt::norm(tmp) > maxnorm) {
             b0 = tmp;
-            maxnorm = nvis::norm(tmp);
+            maxnorm = spurt::norm(tmp);
         }
     }
     
-    b0 /= nvis::norm(b0);
-    b1 = nvis::cross(n, b0);
+    b0 /= spurt::norm(b0);
+    b1 = spurt::cross(n, b0);
 }
 
-nvis::mat2 project_matrix_on_plane(const nvis::mat3& m,
-                                   const nvis::vec3& b0, const nvis::vec3& b1)
+spurt::mat2 project_matrix_on_plane(const spurt::mat3& m,
+                                    const spurt::vec3& b0, const spurt::vec3& b1)
 {
-    nvis::mat2 m2;
-    m2(0, 0) = nvis::inner(b0, m * b0);
-    m2(1, 0) = nvis::inner(b1, m * b0);
-    m2(0, 1) = nvis::inner(b0, m * b1);
-    m2(1, 1) = nvis::inner(b1, m * b1);
+    spurt::mat2 m2;
+    m2(0, 0) = spurt::inner(b0, m * b0);
+    m2(1, 0) = spurt::inner(b1, m * b0);
+    m2(0, 1) = spurt::inner(b0, m * b1);
+    m2(1, 1) = spurt::inner(b1, m * b1);
     return m2;
 }
 
 template<typename T>
-nvis::mat2 planar_interpolate(const T& field, const nvis::vec3& x,
-                              const nvis::vec3& b0, const nvis::vec3& b1)
+spurt::mat2 planar_interpolate(const T& field, const spurt::vec3& x,
+                              const spurt::vec3& b0, const spurt::vec3& b1)
 {
-    nvis::fixed_vector<double, 7> t = field(x);
-    nvis::mat3 m = to_matrix(t);
+    spurt::fixed_vector<double, 7> t = field(x);
+    spurt::mat3 m = to_matrix(t);
     return project_matrix_on_plane(m, b0, b1);
 }
 
 template<typename T>
-nvis::mat2 compute_2d_derivative(const T& field, const nvis::vec2& x,
-                                 const nvis::vec3& e0, const nvis::vec3& e1)
+spurt::mat2 compute_2d_derivative(const T& field, const spurt::vec2& x,
+                                  const spurt::vec3& e0, const spurt::vec3& e1)
 {
     typedef T                                       field_type;
     typedef typename field_type::data_type          tensor_type;
     typedef typename field_type::derivative_type    derivative_type;
     
-    nvis::vec3 normal = nvis::cross(e0, e1);
+    spurt::vec3 normal = spurt::cross(e0, e1);
     derivative_type dT = field.derivative(x);
 }
 
 template<typename T>
-void eigendirections(std::vector<nvis::vec3>& dir, const T& field, const nvis::vec3& x, double h, bool linear_type)
+void eigendirections(std::vector<spurt::vec3>& dir, const T& field, 
+                     const spurt::vec3& x, double h, bool linear_type)
 {
     typedef EigenvectorField<T>     efield_type;
     
     efield_type efield(field);
-    nvis::vec3 n = eigenplane(field, x, linear_type);
-    nvis::vec3 b0, b1;
+    spurt::vec3 n = eigenplane(field, x, linear_type);
+    spurt::vec3 b0, b1;
     make_basis(b0, b1, n);
     
-    nvis::mat2 dTdx = 0.5 / h * (planar_interpolate(field, x + h * b0, b0, b1) -
+    spurt::mat2 dTdx = 0.5 / h * (planar_interpolate(field, x + h * b0, b0, b1) -
                                  planar_interpolate(field, x - h * b0, b0, b1));
-    nvis::mat2 dTdy = 0.5 / h * (planar_interpolate(field, x + h * b1, b0, b1) -
+    spurt::mat2 dTdy = 0.5 / h * (planar_interpolate(field, x + h * b1, b0, b1) -
                                  planar_interpolate(field, x - h * b1, b0, b1));
                                  
     double alpha0 = 0.5*(dTdx(0,0) - dTdx(1,1));
@@ -141,13 +139,13 @@ void eigendirections(std::vector<nvis::vec3>& dir, const T& field, const nvis::v
     dir.clear();
     for (int i=0 ; i<u.size() ; ++i) {
         double theta = atan(u[i]);
-        nvis::vec3 step = cos(theta)*b0 + sin(theta)*b1;
-        nvis::vec3 y = x + h*step;
-        nvis::mat2 t = planar_interpolate(field, y, b0, b1);
-        nvis::vec2 c = eigen2d(t, linear_type);
-        nvis::vec3 e = c[0]*b0 + c[1]*b1;
-        e /= nvis::norm(e);
-        if (nvis::norm(nvis::cross(e, step)) < 0.1) {
+        spurt::vec3 step = cos(theta)*b0 + sin(theta)*b1;
+        spurt::vec3 y = x + h*step;
+        spurt::mat2 t = planar_interpolate(field, y, b0, b1);
+        spurt::vec2 c = eigen2d(t, linear_type);
+        spurt::vec3 e = c[0]*b0 + c[1]*b1;
+        e /= spurt::norm(e);
+        if (spurt::norm(spurt::cross(e, step)) < 0.1) {
             dir.push_back(e);
         } else {
             dir.push_back(-1.*e);

@@ -3,31 +3,129 @@
 
 using namespace spurt;
 
-// inline bool gage_interface::scalar_wrapper::
-// __gageProbe(gageContext* ctx, double u, double v, double w) const
-// {
-//     if (!_use_wc) return gageProbe(ctx, u, v, w);
-//     nvis::vec3 idx = wcidx.to_index(nvis::vec3(u, v, w));
-//     return gageProbe(ctx, idx[0], idx[1], idx[2]);
-// }
-
-inline bool gage_interface::vector_wrapper::
+bool spurt::gage_interface::scalar_wrapper::
 __gageProbe(gageContext* ctx, double u, double v, double w) const
 {
     if (!_use_wc) return gageProbe(ctx, u, v, w);
-    nvis::vec3 idx = wcidx.to_index(nvis::vec3(u, v, w));
+    vec3 idx = wcidx.to_index(vec3(u, v, w));
+    return gageProbe(ctx, idx[0], idx[1], idx[2]);
+}
 
-    // std::cout << "world position (" << u << ", " << v << ", " << w << ") "
-    //     << "mapped to " << idx << "\n";
+
+template<typename Position_, size_t N, typename Value_>
+bool spurt::gage_interface::scalar_wrapper::
+value(const Position_& u, Value_& v) const
+{
+    bool asw;
+    if (N == 2) asw = __gageProbe(ctx, u[0], u[1], 0);
+    else if (N==3) asw = __gageProbe(ctx, u[0], u[1], u[2]);
+    else throw std::runtime_error("Invalid spatial dimension: " + std::to_string(N));
+    if (asw) return false;
+    v = *_v;
+    return true;
+}
+
+template<typename Position_, size_t N, typename Vector_>
+bool spurt::gage_interface::scalar_wrapper::
+gradient(const Position_& u, Vector_& g) const
+{   
+    if (!_use_grad) {
+        throw std::runtime_error("Gradient computation deactivated");
+    }
+
+    bool asw;
+    if (N == 2) asw = __gageProbe(ctx, u[0], u[1], 0);
+    else if (N==3) asw = __gageProbe(ctx, u[0], u[1], u[2]);
+    else throw std::runtime_error("Invalid spatial dimension: " + std::to_string(N));
+    if (asw) return false;
+    g[0] = _g[0];
+    g[1] = _g[1];
+    if (N==3) g[2] = _g[2];
+    return true;
+}
+
+template<typename Position_, size_t N, typename Matrix_>
+bool spurt::gage_interface::scalar_wrapper::
+hessian(const Position_& u, Matrix_& h) const
+{   
+    if (!_use_hess) {
+        throw std::runtime_error("Hessian computation deactivated");
+    }
+
+    bool asw;
+    if (N == 2) asw = __gageProbe(ctx, u[0], u[1], 0);
+    else if (N==3) asw = __gageProbe(ctx, u[0], u[1], u[2]);
+    else throw std::runtime_error("Invalid spatial dimension: " + std::to_string(N));
+    if (asw) return false;
+    /*
+    0 1 2
+    3 4 5
+    6 7 8
+    */
+    h(0,0) = _h[0];
+    h(0,1) = h(1,0) = _h[1];
+    h(1,1) = _h[4];
+
+    if (N==3) {
+        h(0,2) = h(2,0) = _h[2];
+        h(1,2) = h(2,1) = _h[5];
+        h(2,2) = _h[8];
+    }
+    return true;
+}
+
+template<typename Position_, size_t N, typename Vector_>
+bool spurt::gage_interface::scalar_wrapper::
+hess_evals(const Position_& u, Vector_& vals) const {
+    if (!_use_heval) {
+        throw std::runtime_error("Hessian eigenvalues computation deactivated");
+    }
+
+    bool asw;
+    if (N==2) asw = __gageProbe(ctx, u[0], u[1], 0);
+    else asw =  __gageProbe(ctx, u[0], u[1], u[2]);
+    if (asw) return false;
+    
+    vals[0] = _heval[0];
+    vals[1] = _heval[1];
+    if (N==3) vals[2] = _heval[2];
+    return true;
+}
+
+template<typename Position_, size_t N, typename Vector_>
+bool spurt::gage_interface::scalar_wrapper::
+hess_evecs(const Position_& u, std::vector<Vector_>& evecs) const {
+    if (!_use_hevec) {
+        throw std::runtime_error("Hessian eigenvectors computation deactivated");
+    }
+    evecs.resize(N);
+    bool asw;
+    if (N==2) asw = __gageProbe(ctx, u[0], u[1], 0);
+    else asw = __gageProbe(ctx, u[0], u[1], u[2]);
+    
+    if (asw) return false;
+    for (unsigned int i = 0 ; i < N ; i++) {
+        evecs[0][i] = _hevec[  i];
+        evecs[1][i] = _hevec[3+i];
+        if (N==3) evecs[2][i] = _hevec[6+i];
+    }
+    return true;
+}
+
+bool gage_interface::vector_wrapper::
+__gageProbe(gageContext* ctx, double u, double v, double w) const
+{
+    if (!_use_wc) return gageProbe(ctx, u, v, w);
+    vec3 idx = wcidx.to_index(vec3(u, v, w));
 
     return gageProbe(ctx, idx[0], idx[1], idx[2]);
 }
 
-inline bool gage_interface::tensor_wrapper::
+bool gage_interface::tensor_wrapper::
 __gageProbe(gageContext* ctx, double u, double v, double w) const
 {
     if (!_use_wc) return gageProbe(ctx, u, v, w);
-    nvis::vec3 idx = wcidx.to_index(nvis::vec3(u, v, w));
+    vec3 idx = wcidx.to_index(vec3(u, v, w));
     return gageProbe(ctx, idx[0], idx[1], idx[2]);
 }
 
@@ -208,7 +306,7 @@ scalar_wrapper::value(double* u, double& v) const
 }
 
 bool gage_interface::
-scalar_wrapper::value(const nvis::vec1& u, double& v) const
+scalar_wrapper::value(const vec1& u, double& v) const
 {
     if (__gageProbe(ctx, u[0], 0, 0)) {
         v = 0;
@@ -219,7 +317,7 @@ scalar_wrapper::value(const nvis::vec1& u, double& v) const
 }
 
 bool gage_interface::
-scalar_wrapper::value(const nvis::vec2& u, double& v) const
+scalar_wrapper::value(const vec2& u, double& v) const
 {
     if (__gageProbe(ctx, u[0], u[1], 0)) {
         v = 0;
@@ -230,7 +328,7 @@ scalar_wrapper::value(const nvis::vec2& u, double& v) const
 }
 
 bool gage_interface::
-scalar_wrapper::value(const nvis::vec3& u, double& v) const
+scalar_wrapper::value(const vec3& u, double& v) const
 {
     if (__gageProbe(ctx, u[0], u[1], u[2])) {
         v = 0;
@@ -257,7 +355,7 @@ scalar_wrapper::gradient(double* u, double* g) const
 }
 
 bool gage_interface::
-scalar_wrapper::gradient(const nvis::vec2& u, nvis::vec2& g) const
+scalar_wrapper::gradient(const vec2& u, vec2& g) const
 {
     if (!_use_grad) {
         throw std::runtime_error("Gradient computation deactivated");
@@ -273,7 +371,7 @@ scalar_wrapper::gradient(const nvis::vec2& u, nvis::vec2& g) const
 }
 
 bool gage_interface::
-scalar_wrapper::gradient(const nvis::vec3& u, nvis::vec3& g) const
+scalar_wrapper::gradient(const vec3& u, vec3& g) const
 {
     if (!_use_grad) {
         throw std::runtime_error("Gradient computation deactivated");
@@ -307,7 +405,7 @@ scalar_wrapper::hessian(double* u, double* h) const
 }
 
 bool gage_interface::
-scalar_wrapper::hessian(const nvis::vec2& u, nvis::vec3& h) const
+scalar_wrapper::hessian(const vec2& u, vec3& h) const
 {
     if (!_use_hess) {
         throw std::runtime_error("Hessian computation deactivated");
@@ -324,7 +422,7 @@ scalar_wrapper::hessian(const nvis::vec2& u, nvis::vec3& h) const
 }
 
 bool gage_interface::
-scalar_wrapper::hessian(const nvis::vec3& u, nvis::vec6& h) const
+scalar_wrapper::hessian(const vec3& u, vec6& h) const
 {
     if (!_use_hess) {
         throw std::runtime_error("Hessian computation deactivated");
@@ -344,7 +442,7 @@ scalar_wrapper::hessian(const nvis::vec3& u, nvis::vec6& h) const
 }
 
 bool gage_interface::
-scalar_wrapper::hess_evals(const nvis::vec3& u, nvis::vec3& vals) const
+scalar_wrapper::hess_evals(const vec3& u, vec3& vals) const
 {
     if (!_use_heval) {
         throw std::runtime_error("Hessian eigenvalues computation deactivated");
@@ -361,8 +459,8 @@ scalar_wrapper::hess_evals(const nvis::vec3& u, nvis::vec3& vals) const
 }
 
 bool gage_interface::
-scalar_wrapper::hess_evecs(const nvis::vec3& u,
-                           std::vector< nvis::vec3 >& vecs) const
+scalar_wrapper::hess_evecs(const vec3& u,
+                           std::vector< vec3 >& vecs) const
 {
     if (!_use_hevec) {
         throw std::runtime_error("Hessian eigenvectors computation deactivated");
@@ -426,10 +524,10 @@ vector_wrapper::~vector_wrapper()
 }
 
 bool gage_interface::
-vector_wrapper::value(const nvis::vec2& u, nvis::vec2& v) const
+vector_wrapper::value(const vec2& u, vec2& v) const
 {
     if (__gageProbe(ctx, u[0], u[1], 0)) {
-        v = 0;
+        v = vec2(0);
         return false;
     }
     v[0] = _v[0];
@@ -438,10 +536,10 @@ vector_wrapper::value(const nvis::vec2& u, nvis::vec2& v) const
 }
 
 bool gage_interface::
-vector_wrapper::value(const nvis::vec3& u, nvis::vec3& v) const
+vector_wrapper::value(const vec3& u, vec3& v) const
 {
     if (__gageProbe(ctx, u[0], u[1], u[2])) {
-        v = 0;
+        v = vec3(0);
         return false;
     }
     v[0] = _v[0];
@@ -451,7 +549,7 @@ vector_wrapper::value(const nvis::vec3& u, nvis::vec3& v) const
 }
 
 bool gage_interface::
-vector_wrapper::jacobian(const nvis::vec2& u, deriv2_t& j) const
+vector_wrapper::jacobian(const vec2& u, deriv2_t& j) const
 {
     if (!_use_jac) {
         throw std::runtime_error("Jacobian computation deactivated");
@@ -459,25 +557,36 @@ vector_wrapper::jacobian(const nvis::vec2& u, deriv2_t& j) const
 
     if (__gageProbe(ctx, u[0], u[1], 0)) {
         std::cout << "gage return an error\n";
-        j=deriv2_t::Zero();
+        j=deriv2_t(0);
         return false;
     }
-    for (int i=0; i<4 ; ++i) j.data()[i]=_j[i];
+    j(0,0) = _j[0];
+    j(0,1) = _j[1];
+    j(1,0) = _j[2];
+    j(1,1) = _j[3];
     return true;
 }
 
 bool gage_interface::
-vector_wrapper::jacobian(const nvis::vec3& u, deriv3_t& j) const
+vector_wrapper::jacobian(const vec3& u, deriv3_t& j) const
 {
     if (!_use_jac) {
         throw std::runtime_error("Jacobian computation deactivated");
     }
 
     if (__gageProbe(ctx, u[0], u[1], u[2])) {
-        j=deriv3_t::Zero();
+        j=deriv3_t(0);
         return false;
     }
-    for (int i=0; i<9 ; ++i) j.data()[i]=_j[i];
+    j(0, 0) = _j[0];
+    j(1, 0) = _j[1];
+    j(2, 0) = _j[2];
+    j(0, 1) = _j[3];
+    j(1, 1) = _j[4];
+    j(2, 1) = _j[5];
+    j(0, 2) = _j[6];
+    j(1, 2) = _j[7];
+    j(2, 2) = _j[8];
 
     return true;
 }
@@ -592,7 +701,7 @@ tensor_wrapper::confidence(double* u, double& c) const
 }
 
 bool gage_interface::
-tensor_wrapper::confidence(const nvis::vec3& u, double& val) const
+tensor_wrapper::confidence(const vec3& u, double& val) const
 {
     if (__gageProbe(ctx, u[0], u[1], u[2])) {
         val = 0;
@@ -806,7 +915,7 @@ tensor_wrapper::mode_hess_evecs(double* u, double* evec) const
 // nvis::fixed_vector based API
 
 bool gage_interface::
-tensor_wrapper::fa(const nvis::vec3& u, double& v) const
+tensor_wrapper::fa(const vec3& u, double& v) const
 {
     v = 0;
     if (__gageProbe(ctx, u[0], u[1], u[2])) {
@@ -817,7 +926,7 @@ tensor_wrapper::fa(const nvis::vec3& u, double& v) const
 }
 
 bool gage_interface::
-tensor_wrapper::fa_grad(const nvis::vec3& u, nvis::vec3& g) const
+tensor_wrapper::fa_grad(const vec3& u, vec3& g) const
 {
     g[0] = g[1] = g[2] = 0;
     if (__gageProbe(ctx, u[0], u[1], u[2])) {
@@ -830,7 +939,7 @@ tensor_wrapper::fa_grad(const nvis::vec3& u, nvis::vec3& g) const
 }
 
 bool gage_interface::
-tensor_wrapper::fa_hess(const nvis::vec3& u, nvis::vec6& h) const
+tensor_wrapper::fa_hess(const vec3& u, vec6& h) const
 {
     h[0] = h[1] = h[2] = h[3] = h[4] = h[5] = 0;
     if (__gageProbe(ctx, u[0], u[1], u[2])) {
@@ -846,7 +955,7 @@ tensor_wrapper::fa_hess(const nvis::vec3& u, nvis::vec6& h) const
 }
 
 bool gage_interface::
-tensor_wrapper::fa_hess_evals(const nvis::vec3& u, nvis::vec3& vals) const
+tensor_wrapper::fa_hess_evals(const vec3& u, vec3& vals) const
 {
     vals[0] = vals[1] = vals[2] = 0;
     if (__gageProbe(ctx, u[0], u[1], u[2])) {
@@ -859,8 +968,8 @@ tensor_wrapper::fa_hess_evals(const nvis::vec3& u, nvis::vec3& vals) const
 }
 
 bool gage_interface::
-tensor_wrapper::fa_hess_evecs(const nvis::vec3& u,
-                              std::vector< nvis::vec3 >& vecs) const
+tensor_wrapper::fa_hess_evecs(const vec3& u,
+                              std::vector< vec3 >& vecs) const
 {
     for (unsigned int i = 0 ; i < 3 ; i++) {
         vecs[i][0] = vecs[i][1] = vecs[i][2] = 0;
@@ -877,7 +986,7 @@ tensor_wrapper::fa_hess_evecs(const nvis::vec3& u,
 }
 
 bool gage_interface::
-tensor_wrapper::mode(const nvis::vec3& u, double& v) const
+tensor_wrapper::mode(const vec3& u, double& v) const
 {
     if (__gageProbe(ctx, u[0], u[1], u[2])) {
         v = 0;
@@ -888,7 +997,7 @@ tensor_wrapper::mode(const nvis::vec3& u, double& v) const
 }
 
 bool gage_interface::
-tensor_wrapper::mode_grad(const nvis::vec3& u, nvis::vec3& g) const
+tensor_wrapper::mode_grad(const vec3& u, vec3& g) const
 {
     if (__gageProbe(ctx, u[0], u[1], u[2])) {
         g[0] = g[1] = g[2] = 0;
@@ -901,7 +1010,7 @@ tensor_wrapper::mode_grad(const nvis::vec3& u, nvis::vec3& g) const
 }
 
 bool gage_interface::
-tensor_wrapper::mode_hess(const nvis::vec3& u, nvis::vec6& h) const
+tensor_wrapper::mode_hess(const vec3& u, vec6& h) const
 {
     if (__gageProbe(ctx, u[0], u[1], u[2])) {
         h[0] = h[1] = h[2] = h[3] = h[4] = h[5] = 0;
@@ -917,7 +1026,7 @@ tensor_wrapper::mode_hess(const nvis::vec3& u, nvis::vec6& h) const
 }
 
 bool gage_interface::
-tensor_wrapper::mode_hess_evals(const nvis::vec3& u, nvis::vec3& vals) const
+tensor_wrapper::mode_hess_evals(const vec3& u, vec3& vals) const
 {
     if (__gageProbe(ctx, u[0], u[1], u[2])) {
         vals[0] = vals[1] = vals[2] = 0;
@@ -930,8 +1039,8 @@ tensor_wrapper::mode_hess_evals(const nvis::vec3& u, nvis::vec3& vals) const
 }
 
 bool gage_interface::
-tensor_wrapper::mode_hess_evecs(const nvis::vec3& u,
-                                std::vector< nvis::vec3 >& vecs) const
+tensor_wrapper::mode_hess_evecs(const vec3& u,
+                                std::vector< vec3 >& vecs) const
 {
     if (__gageProbe(ctx, u[0], u[1], u[2])) {
         for (unsigned int i = 0 ; i < 3 ; i++) {

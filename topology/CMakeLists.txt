@@ -1,5 +1,5 @@
 set( TOPOLOGY_EXEC_SRC
-    scalar_topology
+    # scalar_topology
 )
 
 foreach( target ${TOPOLOGY_EXEC_SRC} )

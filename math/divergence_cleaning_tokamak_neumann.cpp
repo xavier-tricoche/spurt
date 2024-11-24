@@ -1,5 +1,5 @@
 #include <math/poisson_gmm.hpp>
-#include <data/raster.hpp>
+#include <data/image.hpp>
 #include <image/nrrd_wrapper.hpp>
 
 #include <gmm/gmm_solver_cg.h>
@@ -33,10 +33,10 @@ void initialize(int argc, const char* argv[])
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
 }
 
-typedef spurt::raster_grid<3, double> grid_type;
-typedef grid_type::coord_type          ivec_type;
-typedef grid_type::size_type           index_type;
-typedef grid_type::point_type          vec_type;
+typedef spurt::raster_grid<long, double, 3, lvec3, vec3> grid_type;
+typedef grid_type::coord_type                            ivec_type;
+typedef grid_type::size_type                             index_type;
+typedef grid_type::point_type                            vec_type;
 
 typedef gmm::wsvector<double>           sparse_vector;
 typedef gmm::row_matrix<sparse_vector>  sparse_matrix;

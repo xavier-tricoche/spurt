@@ -9,20 +9,19 @@
 #include <algorithm>
 #include <random>
 #include <math.h>
-#include <math/fixed_vector.hpp>
-#include <math/fixed_matrix.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 #include <format/dlr_reader.hpp>
 #include <teem/nrrd.h>
 #include <image/nrrd_wrapper.hpp>
-#include <util/timer.hpp>
+#include <misc/progress.hpp>
 #include <vtk/vtk_utils.hpp>
 
 // parameters
 size_t        nsamples = 0;
 double        factor = -1;
 std::string   in_name, in_name2, out_name;
-nvis::bbox3   bbox;
+spurt::bbox3   bbox;
 std::vector<std::string> types;
 
 struct Coords {
@@ -54,23 +53,23 @@ struct Coords {
         int npts = dataset->GetNumberOfPoints();
         m_pos.resize(npts);
         for (int i=0 ; i<npts ; ++i) {
-            dataset->GetPoint(i, m_pos[i].begin());
+            dataset->GetPoint(i, const_cast<double*>(m_pos[i].data()));
         }
         m_procedural = false;
     }
 
-    void initialize(const std::vector<nvis::vec3>& pos) {
+    void initialize(const std::vector<spurt::vec3>& pos) {
         m_pos.resize(pos.size());
         std::copy(pos.begin(), pos.end(), m_pos.begin());
         m_procedural = false;
     }
 
-    nvis::vec3 operator[](int i) const {
+    spurt::vec3 operator[](int i) const {
         if (!m_procedural) {
             return m_pos[i];
         }
         else {
-            nvis::ivec3 id;
+            spurt::ivec3 id;
             id[0] = i%m_sizes[0];
             int n = i/m_sizes[0];
             if (m_spacings[2] == 0) {
@@ -81,9 +80,7 @@ struct Coords {
                 id[1] = n%m_sizes[1];
                 id[2] = n/m_sizes[1];
             }
-            return nvis::vec3(m_mins[0]+m_spacings[0]*id[0],
-                              m_mins[1]+m_spacings[1]*id[1],
-                              m_mins[2]+m_spacings[2]*id[2]);
+            return m_mins + m_spacings*id; 
         }
     }
 
@@ -97,10 +94,10 @@ struct Coords {
     }
 
     bool m_procedural;
-    nvis::vec3 m_spacings;
-    nvis::vec3 m_mins;
-    nvis::ivec3 m_sizes;
-    std::vector<nvis::vec3> m_pos;
+    spurt::vec3 m_spacings;
+    spurt::vec3 m_mins;
+    spurt::ivec3 m_sizes;
+    std::vector<spurt::vec3> m_pos;
 };
 
 bool has_type(const std::string& str) {
@@ -135,9 +132,9 @@ Coords all_points;
 
 // only some of these arrays will be filled
 // depending on the nature of the input data
-std::vector<nvis::vec3> all_vectors;
+std::vector<spurt::vec3> all_vectors;
 std::vector<double>     all_scalars;
-std::vector<nvis::mat3> all_tensors;
+std::vector<spurt::mat3> all_tensors;
 
 void load_VTK(const std::string& name, const std::string& me) {
     VTK_SMART(vtkDataSet) dataset = vtk_utils::readVTK(name);
@@ -155,7 +152,7 @@ void load_VTK(const std::string& name, const std::string& me) {
     if (vectors != NULL && has_type("vector")) {
         all_vectors.resize(npts);
         for (int i=0 ; i<npts ; ++i) {
-            vectors->GetTuple(i, all_vectors[i].begin());
+            vectors->GetTuple(i, const_cast<double*>(all_vectors[i].data()));
         }
     }
     VTK_SMART(vtkDataArray) tensors = dataset->GetPointData()->GetTensors();
@@ -167,7 +164,7 @@ void load_VTK(const std::string& name, const std::string& me) {
             int n=0;
             for (int r=0 ; r<3 ; ++r) {
                 for (int c=0 ; c<3 ; ++c)
-                    all_tensors[i][r][c] = t[n++];
+                    all_tensors[i](r,c) = t[n++];
             }
         }
     }
@@ -216,21 +213,21 @@ void load_NRRD(const std::string& name, const std::string& me) {
             npts = nin->axis[1].size * nin->axis[2].size;
             all_tensors.resize(npts);
             for (int i=0; i<npts; ++i) {
-                all_tensors[i][0][0] = data[4*i  ];
-                all_tensors[i][0][1] = data[4*i+1];
-                all_tensors[i][0][2] = 0;
-                all_tensors[i][1][0] = data[4*i+2];
-                all_tensors[i][1][1] = data[4*i+3];
-                all_tensors[i][1][2] = 0;
-                all_tensors[i][2][0] = 0;
-                all_tensors[i][2][1] = 0;
-                all_tensors[i][2][2] = 0;
+                all_tensors[i](0, 0) = data[4*i  ];
+                all_tensors[i](0, 1) = data[4*i+1];
+                all_tensors[i](0, 2) = 0;
+                all_tensors[i](1, 0) = data[4*i+2];
+                all_tensors[i](1, 1) = data[4*i+3];
+                all_tensors[i](1, 2) = 0;
+                all_tensors[i](2, 0) = 0;
+                all_tensors[i](2, 1) = 0;
+                all_tensors[i](2, 2) = 0;
             }
         }
         else if (has_type("scalar")) {
             npts = nin->axis[1].size;
             all_scalars.resize(npts);
-            std::vector<nvis::vec3> pts(npts);
+            std::vector<spurt::vec3> pts(npts);
             for (int i=0 ; i<npts ; ++i) {
                 for (int j=0 ; j<3 ; ++j) {
                     pts[i][j]  = data[4*i+j];
@@ -266,15 +263,15 @@ void load_NRRD(const std::string& name, const std::string& me) {
         npts = all_points.size();
         all_tensors.resize(npts);
         for (int i=0; i<npts; ++i) {
-            all_tensors[i][0][0] = data[6*i  ];
-            all_tensors[i][0][1] = data[6*i+1];
-            all_tensors[i][0][2] = data[6*i+2];
-            all_tensors[i][1][0] = data[6*i+1];
-            all_tensors[i][1][1] = data[6*i+3];
-            all_tensors[i][1][2] = data[6*i+4];
-            all_tensors[i][2][0] = data[6*i+2];
-            all_tensors[i][2][1] = data[6*i+4];
-            all_tensors[i][2][2] = data[6*i+5];
+            all_tensors[i](0, 0) = data[6*i  ];
+            all_tensors[i](0, 1) = data[6*i+1];
+            all_tensors[i](0, 2) = data[6*i+2];
+            all_tensors[i](1, 0) = data[6*i+1];
+            all_tensors[i](1, 1) = data[6*i+3];
+            all_tensors[i](1, 2) = data[6*i+4];
+            all_tensors[i](2, 0) = data[6*i+2];
+            all_tensors[i](2, 1) = data[6*i+4];
+            all_tensors[i](2, 2) = data[6*i+5];
         }
     }
     else if (nin->dim == 4 && nin->axis[0].size == 9 && has_type("tensor")) {
@@ -282,19 +279,19 @@ void load_NRRD(const std::string& name, const std::string& me) {
         npts = all_points.size();
         all_tensors.resize(npts);
         for (int i=0; i<npts; ++i) {
-            all_tensors[i][0][0] = data[6*i  ];
-            all_tensors[i][0][1] = data[6*i+1];
-            all_tensors[i][0][2] = data[6*i+2];
-            all_tensors[i][1][0] = data[6*i+3];
-            all_tensors[i][1][1] = data[6*i+4];
-            all_tensors[i][1][2] = data[6*i+5];
-            all_tensors[i][2][0] = data[6*i+6];
-            all_tensors[i][2][1] = data[6*i+7];
-            all_tensors[i][2][2] = data[6*i+8];
+            all_tensors[i](0, 0) = data[6*i  ];
+            all_tensors[i](0, 1) = data[6*i+1];
+            all_tensors[i](0, 2) = data[6*i+2];
+            all_tensors[i](1, 0) = data[6*i+3];
+            all_tensors[i](1, 1) = data[6*i+4];
+            all_tensors[i](1, 2) = data[6*i+5];
+            all_tensors[i](2, 0) = data[6*i+6];
+            all_tensors[i](2, 1) = data[6*i+7];
+            all_tensors[i](2, 2) = data[6*i+8];
         }
     }
     else if (nin->dim == 2 && ncol == 6 && has_type("vector")) {
-        std::vector<nvis::vec3> pts(npts);
+        std::vector<spurt::vec3> pts(npts);
         all_vectors.resize(npts);
         for (int i=0 ; i<npts ; ++i) {
             for (int j=0 ; j<3 ; ++j) {
@@ -305,40 +302,40 @@ void load_NRRD(const std::string& name, const std::string& me) {
         all_points.initialize(pts);
     }
     else if (nin->dim == 2 && ncol == 9 && has_type("tensor")) {
-        std::vector<nvis::vec3> pts(npts);
+        std::vector<spurt::vec3> pts(npts);
         all_tensors.resize(npts);
         for (int i=0 ; i<npts ; ++i) {
             pts[i][0]     = data[9*i  ];
             pts[i][1]     = data[9*i+1];
             pts[i][2]     = data[9*i+2];
-            all_tensors[i][0][0] = data[9*i+3];
-            all_tensors[i][0][1] = data[9*i+4];
-            all_tensors[i][1][0] = data[9*i+4];
-            all_tensors[i][0][2] = data[9*i+5];
-            all_tensors[i][2][0] = data[9*i+5];
-            all_tensors[i][1][1] = data[9*i+6];
-            all_tensors[i][1][2] = data[9*i+7];
-            all_tensors[i][2][1] = data[9*i+7];
-            all_tensors[i][2][2] = data[9*i+8];
+            all_tensors[i](0, 0) = data[9*i+3];
+            all_tensors[i](0, 1) = data[9*i+4];
+            all_tensors[i](1, 0) = data[9*i+4];
+            all_tensors[i](0, 2) = data[9*i+5];
+            all_tensors[i](2, 0) = data[9*i+5];
+            all_tensors[i](1, 1) = data[9*i+6];
+            all_tensors[i](1, 2) = data[9*i+7];
+            all_tensors[i](2, 1) = data[9*i+7];
+            all_tensors[i](2, 2) = data[9*i+8];
         }
         all_points.initialize(pts);
     }
     else if (nin->dim == 2 && ncol == 12 && has_type("tensor")) {
-        std::vector<nvis::vec3> pts(npts);
+        std::vector<spurt::vec3> pts(npts);
         all_tensors.resize(npts);
         for (int i=0 ; i<npts ; ++i) {
             pts[i][0]     = data[12*i   ];
             pts[i][1]     = data[12*i+ 1];
             pts[i][2]     = data[12*i+ 2];
-            all_tensors[i][0][0] = data[12*i+ 3];
-            all_tensors[i][0][1] = data[12*i+ 4];
-            all_tensors[i][0][2] = data[12*i+ 5];
-            all_tensors[i][1][0] = data[12*i+ 6];
-            all_tensors[i][1][1] = data[12*i+ 7];
-            all_tensors[i][1][2] = data[12*i+ 8];
-            all_tensors[i][2][0] = data[12*i+ 9];
-            all_tensors[i][2][1] = data[12*i+10];
-            all_tensors[i][2][1] = data[12*i+11];
+            all_tensors[i](0, 0) = data[12*i+ 3];
+            all_tensors[i](0, 1) = data[12*i+ 4];
+            all_tensors[i](0, 2) = data[12*i+ 5];
+            all_tensors[i](1, 0) = data[12*i+ 6];
+            all_tensors[i](1, 1) = data[12*i+ 7];
+            all_tensors[i](1, 2) = data[12*i+ 8];
+            all_tensors[i](2, 0) = data[12*i+ 9];
+            all_tensors[i](2, 1) = data[12*i+10];
+            all_tensors[i](2, 1) = data[12*i+11];
         }
         all_points.initialize(pts);
     }
@@ -350,12 +347,12 @@ void load_NRRD(const std::string& name, const std::string& me) {
 
 void load_DLR(const std::string& grid_name, const std::string data_name, const std::string& me) {
     spurt::dlr_reader reader(grid_name, data_name);
-    std::vector<nvis::fvec3> vertices;
+    std::vector<spurt::fvec3> vertices;
     std::vector<long int> cell_indices;
     std::vector<std::pair<spurt::dlr_reader::cell_type, long int> >cell_types;
     reader.read_mesh(false, vertices, cell_indices, cell_types);
     int npts = vertices.size();
-    std::vector<nvis::vec3> pts(npts);
+    std::vector<spurt::vec3> pts(npts);
     for (int i=0 ; i<npts ; ++i) pts[i] = vertices[i];
 
     std::vector<double> tmp;
@@ -375,8 +372,8 @@ void load_DLR(const std::string& grid_name, const std::string data_name, const s
     }
 }
 
-nvis::bbox3 bounds() {
-    nvis::bbox3 bb;
+spurt::bbox3 bounds() {
+    spurt::bbox3 bb;
     for (int i=0 ; i<all_points.size() ; ++i) {
         bb.add(all_points[i]);
     }
@@ -384,7 +381,7 @@ nvis::bbox3 bounds() {
 }
 
 template<typename T>
-T get_val(T* array, const nvis::ivec3& id, const nvis::ivec3& size) {
+T get_val(T* array, const spurt::ivec3& id, const spurt::ivec3& size) {
     return array[id[0] + size[0]*(id[1] + size[1]*id[2])];
 }
 
@@ -402,7 +399,7 @@ int main(int argc, char* argv[]) {
     in_name = "none";
     in_name2 = "none";
     out_name = "none";
-    bbox.min() = bbox.max() = nvis::vec3(0);
+    bbox.min() = bbox.max() = spurt::vec3(0);
 
     for (int i=1; i<argc ; ++i) {
         std::string arg(argv[i]);
@@ -476,7 +473,7 @@ int main(int argc, char* argv[]) {
 
     // user reader appropriate for input file type
     std::string ext = extension(in_name);
-    nvis::timer _timer;
+    spurt::timer _timer;
     if (ext == "vtk" || ext == "vtu" || ext == "vtp" || ext == "vtr") load_VTK(in_name, argv[0]);
     else if (ext == "nrrd") load_NRRD(in_name, argv[0]);
     else if (in_name2 != "none") {
@@ -497,8 +494,8 @@ int main(int argc, char* argv[]) {
     }
     std::cerr << "dataset imported in " << _timer.elapsed() << " seconds\n";
 
-    if (nvis::norm(bbox.size())) {
-        nvis::bbox3 tmp = bounds();
+    if (spurt::norm(bbox.size())) {
+        spurt::bbox3 tmp = bounds();
         for (int i=0 ; i<3 ; ++i) {
             bbox.min()[i] = std::max(tmp.min()[i], bbox.min()[i]);
             bbox.max()[i] = std::min(tmp.max()[i], bbox.max()[i]);
@@ -524,14 +521,14 @@ int main(int argc, char* argv[]) {
     std::mt19937 g(rd());
     std::shuffle(indices.begin(), indices.end(), g);
 
-    nvis::bbox3 out_box;
+    spurt::bbox3 out_box;
 
     ext = extension(out_name);
     if (ext == "nrrd") {
         int stride = nrhs + 3;
-        nvis::fvec3 *data = (nvis::fvec3 *)calloc(stride*nsamples, sizeof(nvis::fvec3));
+        spurt::fvec3 *data = (spurt::fvec3 *)calloc(stride*nsamples, sizeof(spurt::fvec3));
         for (int i=0; i<nsamples ; ++i) {
-            nvis::vec3 p = all_points[indices[i]];
+            spurt::vec3 p = all_points[indices[i]];
             out_box.add(p);
             data[stride*i  ] = p[0];
             data[stride*i+1] = p[1];
@@ -546,15 +543,15 @@ int main(int argc, char* argv[]) {
                 data[stride*i+(k++)] = all_vectors[indices[i]][2];
             }
             if (all_tensors.size()) {
-                data[stride*i+(k++)] = all_tensors[indices[i]][0][0];
-                data[stride*i+(k++)] = all_tensors[indices[i]][0][1];
-                data[stride*i+(k++)] = all_tensors[indices[i]][0][2];
-                data[stride*i+(k++)] = all_tensors[indices[i]][1][0];
-                data[stride*i+(k++)] = all_tensors[indices[i]][1][1];
-                data[stride*i+(k++)] = all_tensors[indices[i]][1][2];
-                data[stride*i+(k++)] = all_tensors[indices[i]][2][0];
-                data[stride*i+(k++)] = all_tensors[indices[i]][2][1];
-                data[stride*i+(k++)] = all_tensors[indices[i]][2][2];
+                data[stride*i+(k++)] = all_tensors[indices[i]](0, 0);
+                data[stride*i+(k++)] = all_tensors[indices[i]](0, 1);
+                data[stride*i+(k++)] = all_tensors[indices[i]](0, 2);
+                data[stride*i+(k++)] = all_tensors[indices[i]](1, 0);
+                data[stride*i+(k++)] = all_tensors[indices[i]](1, 1);
+                data[stride*i+(k++)] = all_tensors[indices[i]](1, 2);
+                data[stride*i+(k++)] = all_tensors[indices[i]](2, 0);
+                data[stride*i+(k++)] = all_tensors[indices[i]](2, 1);
+                data[stride*i+(k++)] = all_tensors[indices[i]](2, 2);
             }
         }
 
@@ -566,7 +563,7 @@ int main(int argc, char* argv[]) {
         ofs.open(out_name);
         ofs << nsamples << ' ' << nrhs + 3 << '\n';
         for (int i=0 ; i<nsamples ; ++i) {
-            nvis::vec3 p = all_points[indices[i]];
+            spurt::vec3 p = all_points[indices[i]];
             out_box.add(p);
             ofs << p[0] << ' ' << p[1] << ' ' << p[2];
             if (all_scalars.size()) {
@@ -578,15 +575,15 @@ int main(int argc, char* argv[]) {
                 ofs << ' ' << all_vectors[indices[i]][2];
             }
             if (all_tensors.size()) {
-                ofs << ' ' << all_tensors[indices[i]][0][0];
-                ofs << ' ' << all_tensors[indices[i]][0][1];
-                ofs << ' ' << all_tensors[indices[i]][0][2];
-                ofs << ' ' << all_tensors[indices[i]][1][0];
-                ofs << ' ' << all_tensors[indices[i]][1][1];
-                ofs << ' ' << all_tensors[indices[i]][1][2];
-                ofs << ' ' << all_tensors[indices[i]][2][0];
-                ofs << ' ' << all_tensors[indices[i]][2][1];
-                ofs << ' ' << all_tensors[indices[i]][2][2];
+                ofs << ' ' << all_tensors[indices[i]](0, 0);
+                ofs << ' ' << all_tensors[indices[i]](0, 1);
+                ofs << ' ' << all_tensors[indices[i]](0, 2);
+                ofs << ' ' << all_tensors[indices[i]](1, 0);
+                ofs << ' ' << all_tensors[indices[i]](1, 1);
+                ofs << ' ' << all_tensors[indices[i]](1, 2);
+                ofs << ' ' << all_tensors[indices[i]](2, 0);
+                ofs << ' ' << all_tensors[indices[i]](2, 1);
+                ofs << ' ' << all_tensors[indices[i]](2, 2);
             }
             ofs << '\n';
         }

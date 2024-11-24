@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <teem/nrrd.h>
 #include <netcdf.h>
 #include <stdexcept>
@@ -47,7 +47,7 @@ void initialize(int argc, char* argv[])
 }
 
 struct vec_equal {
-    bool operator()(const nvis::fvec3& a, const nvis::fvec3& b) const {
+    bool operator()(const spurt::fvec3& a, const spurt::fvec3& b) const {
         return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
     }
 };
@@ -91,11 +91,11 @@ int main(int argc, char* argv[])
 
         int npts = hexpts.size() / 3;
 
-        nvis::fvec3 *pts = (nvis::fvec3*) & hexpts.front();
+        spurt::fvec3 *pts = (spurt::fvec3*) & hexpts.front();
 
-        std::vector<nvis::fvec3> spts(pts, pts + npts);
+        std::vector<spurt::fvec3> spts(pts, pts + npts);
 
-        std::sort(spts.begin(), spts.end(), nvis::lexicographical_order());
+        std::sort(spts.begin(), spts.end(), spurt::lexicographical_order());
         spts.resize(std::unique(spts.begin(), spts.end(), vec_equal()) - spts.begin());
 
         std::cout << spts.size() << " unique points = " << (100*spts.size()) / npts << "%%\n";
@@ -105,7 +105,7 @@ int main(int argc, char* argv[])
         std::vector<unsigned int> rindex(spts.size());
 
         for (unsigned int i = 0; i < npts; ++i) {
-            indmap[i] = std::lower_bound(spts.begin(), spts.end(), pts[i], nvis::lexicographical_order()) - spts.begin();
+            indmap[i] = std::lower_bound(spts.begin(), spts.end(), pts[i], spurt::lexicographical_order()) - spts.begin();
             rindex[indmap[i]] = i;
         }
 

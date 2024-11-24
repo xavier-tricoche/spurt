@@ -2,7 +2,7 @@
 #include <omp.h>
 #endif
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 #include <teem/nrrd.h>
 #include <vector>
@@ -76,11 +76,11 @@ int main(int argc, char* argv[]) {
     std::cerr << "fun = " << fun << std::endl;
 
     float *data = (float*)calloc(res[0]*res[1]*res[2], sizeof(float));
-    nvis::vec3 lo(_min[0], _min[1], _min[2]);
-    nvis::vec3 hi(_max[0], _max[1], _max[2]);
-    nvis::vec3 span = hi - lo;
-    nvis::vec3 size(res[0]-1, res[1]-1, res[2]-1);
-    nvis::vec3 step = span/size;
+    spurt::vec3 lo(_min[0], _min[1], _min[2]);
+    spurt::vec3 hi(_max[0], _max[1], _max[2]);
+    spurt::vec3 span = hi - lo;
+    spurt::vec3 size(res[0]-1, res[1]-1, res[2]-1);
+    spurt::vec3 step = span/size;
     std::cerr << "lo = " << lo << ", hi = " << hi << std::endl;
 
     if (res[2] <= 1) {

@@ -10,7 +10,7 @@
 #include <locale>
 #include <iomanip>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 
 #include <boost/numeric/odeint.hpp>
@@ -25,9 +25,6 @@
 #include <misc/progress.hpp>
 #include <misc/log_helper.hpp>
 #include <vtk/vtk_utils.hpp>
-
-#include <Eigen/Core>
-#include <Eigen/SVD>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -154,7 +151,7 @@ void parse_restart_file() {
 		else if (param == "bounds") {
 			if (std::regex_search(val_as_str, bnd_match, bnd_regex)) {
 				std::istringstream iss1(bnd_match[1].str());
-				nvis::vec2 x;
+				spurt::vec2 x;
 				iss1 >> x;
 				bnds[0] = x[0];
 				bnds[1] = x[1];
@@ -637,7 +634,7 @@ int main(int argc, const char* argv[])
 		Nrrd* nin = spurt::nrrd_utils::readNrrd(restart_name);
 		spurt::nrrd_utils::to_vector(restart_values, nin);
 		for (size_t i=0; i<all_trajectories.size(); ++i) {
-			all_trajectories[i].push_back(nvis::vec2(restart_values[3*i], restart_values[3*i+1]));
+			all_trajectories[i].push_back(spurt::vec2(restart_values[3*i], restart_values[3*i+1]));
 		}
 	}
 

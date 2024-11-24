@@ -16,8 +16,8 @@
 #include <vector>
 // Boost
 #include <boost/static_assert.hpp>
-// nvis
-#include <math/fixed_vector.hpp>
+// arrays and such
+#include <math/types.hpp>
 // spurt
 #include <math/combinatorial.hpp>
 #include <misc/meta_utils.hpp>
@@ -50,20 +50,21 @@ inline T power(T x, size_t n) {
 template<typename, size_t, typename>
 class polynomial;
 
-template<typename _Type, size_t _Dim, REQATTR(arithmetic,_Type)>
+template<typename Scalar, size_t Dim, 
+         typename Coordinate=spurt::small_vector<Scalar, Dim> >
 class monomial {
 public:
-    static const size_t dim = _Dim;
-    
-    typedef size_t                          degree_type;
-    typedef _Type                           value_type;
-    typedef std::pair<size_t, size_t>       term_type;
-    typedef nvis::fixed_vector<_Type, _Dim> point_type;
-    typedef monomial<_Type, _Dim>           self_type;
-    typedef std::map<size_t, size_t>        map_type;
-    typedef map_type::const_iterator        const_iterator;
-    typedef map_type::iterator              iterator;
-    typedef std::array<self_type, dim>      derivative_type;
+    static const size_t dim = Dim;   
+
+    typedef size_t                             degree_type;
+    typedef Scalar                             value_type;
+    typedef std::pair<size_t, size_t>          term_type;
+    typedef Coordinate                         point_type;
+    typedef monomial<Scalar, dim, Coordinate>  self_type;
+    typedef std::map<size_t, size_t>           map_type;
+    typedef map_type::const_iterator           const_iterator;
+    typedef map_type::iterator                 iterator;
+    typedef std::array<self_type, dim>         derivative_type;
 
     // default constructor: creates a null monomial
     monomial() : _degree(0), _constant(0), _terms() {}
@@ -129,8 +130,8 @@ public:
         : _constant(constant), _degree(0) {}
     
     // copy constructor
-    template<typename _ValidType, REQATTR(arithmetic,_ValidType)>
-    monomial(const monomial<_ValidType, dim>& other) 
+    template<typename OtherScalar, typename OtherCoord>
+    monomial(const monomial<OtherScalar, dim, OtherCoord>& other) 
         : _constant(other._constant), _degree(other._degree),
           _terms(other._terms.begin(), other._terms.end()) {}
     
@@ -249,28 +250,37 @@ private:
     degree_type  _degree;
 };
 
-template<typename _Type1, typename _Type2, size_t _Dim>
-inline monomial<_Type1, _Dim>
-operator*(const monomial<_Type1, _Dim>& m1, const monomial<_Type2, _Dim>& m2) {
-    return monomial<_Type1, _Dim>(m1) *= m2;
+template<typename Scalar1, size_t Dim, 
+         typename Coord1=spurt::small_vector<Scalar1, Dim>, 
+         typename Scalar2, 
+         typename Coord2=spurt::small_vector<Scalar2, Dim> >
+inline monomial<Scalar1, Dim, Coord1>
+operator*(const monomial<Scalar1, Dim, Coord1>& m1, 
+          const monomial<Scalar2, Dim, Coord2>& m2) {
+    return monomial<Scalar1, Dim, Coord1>(m1) *= m2;
 }
 
-template<typename _Type1, typename _Type2, size_t _Dim>
-inline monomial<_Type2, _Dim>
-operator*(const _Type1& scalar, const monomial<_Type2, _Dim>& m) {
-    return monomial<_Type2, _Dim>(m) *= scalar;
+template<typename Scalar, size_t Dim, 
+         typename Coord=spurt::small_vector<Scalar, Dim> >
+inline monomial<Scalar, Dim, Coord>
+operator*(const Scalar& scalar, const monomial<Scalar, Dim, Coord>& m) {
+    return monomial<Scalar, Dim, Coord>(m) *= scalar;
 }
 
-template<typename _Type, size_t _Dim>
-inline monomial<_Type, _Dim>
-operator*(const std::pair<size_t, size_t>& term, const monomial<_Type, _Dim>& m) {
-    return monomial<_Type, _Dim>(m) *= term;
+template <typename Scalar, size_t Dim,
+          typename Coord = spurt::small_vector<Scalar, Dim>>
+inline monomial<Scalar, Dim, Coord>
+operator*(const std::pair<size_t, size_t> &term, const monomial<Scalar, Dim, Coord> &m)
+{
+    return monomial<Scalar, Dim, Coord>(m) *= term;
 }
 
-template<typename _Type, size_t _Dim>
-inline bool 
-operator<(const monomial<_Type, _Dim>& m1, const monomial<_Type, _Dim>& m2) {
-    typedef monomial<_Type, _Dim>                  monomial_type;
+template <typename Scalar, size_t Dim,
+          typename Coord = spurt::small_vector<Scalar, Dim>>
+inline bool
+operator<(const monomial<Scalar, Dim, Coord> &m1, const monomial<Scalar, Dim, Coord> &m2)
+{
+    typedef monomial<Scalar, Dim, Coord> monomial_type;
     typedef typename monomial_type::const_iterator const_iterator;
     
     if (m2.is_null()) return false;
@@ -295,10 +305,12 @@ operator<(const monomial<_Type, _Dim>& m1, const monomial<_Type, _Dim>& m2) {
     return false;
 }
 
-template<typename _Type, size_t _Dim>
-inline bool 
-operator==(const monomial<_Type, _Dim>& m1, const monomial<_Type, _Dim>& m2) {
-    typedef monomial<_Type, _Dim>                  monomial_type;
+template <typename Scalar, size_t Dim,
+          typename Coord = spurt::small_vector<Scalar, Dim>>
+inline bool
+operator==(const monomial<Scalar, Dim, Coord> &m1, const monomial<Scalar, Dim, Coord> &m2)
+{
+    typedef monomial<Scalar, Dim, Coord> monomial_type;
     typedef typename monomial_type::const_iterator const_iterator;
     
     if (m1.is_null() && m2.is_null()) return true;
@@ -320,10 +332,12 @@ operator==(const monomial<_Type, _Dim>& m1, const monomial<_Type, _Dim>& m2) {
     return true;
 }
 
-template<typename _Type, size_t _Dim>
-inline bool 
-proportional(const monomial<_Type, _Dim>& m1, const monomial<_Type, _Dim>& m2) {
-    typedef monomial<_Type, _Dim>                  monomial_type;
+template <typename Scalar, size_t Dim,
+          typename Coord = spurt::small_vector<Scalar, Dim>>
+inline bool
+proportional(const monomial<Scalar, Dim, Coord> &m1, const monomial<Scalar, Dim, Coord> &m2)
+{
+    typedef monomial<Scalar, Dim, Coord> monomial_type;
     typedef typename monomial_type::const_iterator const_iterator;
     
     if (m1.is_null() || m2.is_null()) return false;
@@ -343,10 +357,12 @@ proportional(const monomial<_Type, _Dim>& m1, const monomial<_Type, _Dim>& m2) {
 }
 
 struct partial_monomial_order {
-    template<typename _Type, size_t _Dim, REQATTR(arithmetic,_Type)>
-    bool operator()(const monomial<_Type, _Dim>& m1, 
-                    const monomial<_Type, _Dim>& m2) const {
-        typedef typename monomial<_Type, _Dim>::const_iterator const_iterator;
+    template <typename Scalar, size_t Dim,
+              typename Coord = spurt::small_vector<Scalar, Dim>>
+    bool operator()(const monomial<Scalar, Dim, Coord> &m1,
+                    const monomial<Scalar, Dim, Coord> &m2) const
+    {
+        typedef typename monomial<Scalar, Dim, Coord>::const_iterator const_iterator;
         if (m2.is_null()) return false;
         else if (m1.degree() < m2.degree()) return true;
         else if (m1.degree() > m2.degree()) return false;
@@ -365,9 +381,11 @@ struct partial_monomial_order {
     }
 };
 
-template<typename _Type, size_t _Dim>
-std::ostream& operator<<(std::ostream& os, const monomial<_Type, _Dim>& m) {
-    typedef monomial<_Type, _Dim>                  monomial_type;
+template <typename Scalar, size_t Dim,
+          typename Coord = spurt::small_vector<Scalar, Dim>>
+std::ostream &operator<<(std::ostream &os, const monomial<Scalar, Dim, Coord> &m)
+{
+    typedef monomial<Scalar, Dim, Coord> monomial_type;
     typedef typename monomial_type::const_iterator const_iterator;
     const std::string symbols = "xyzw";
     if (m.constant() != 1 || !m.degree()) os << m.constant();
@@ -388,15 +406,17 @@ std::ostream& operator<<(std::ostream& os, const monomial<_Type, _Dim>& m) {
     return os;
 }
 
-template<typename _Type, size_t _Dim, REQATTR(arithmetic,_Type)>
-class polynomial : private std::set< monomial<_Type, _Dim> > {
+template <typename Scalar, size_t Dim,
+          typename Coord = spurt::small_vector<Scalar, Dim>>
+class polynomial : private std::set<monomial<Scalar, Dim, Coord>>
+{
 public:
-    static const size_t dim = _Dim;
+    static const size_t dim = Dim;
     
     typedef size_t                               degree_type;
-    typedef _Type                                scalar_type;
-    typedef nvis::fixed_vector<scalar_type, dim> point_type;
-    typedef monomial<_Type, _Dim>                monomial_type;
+    typedef Scalar                               scalar_type;
+    typedef Coord                                point_type;
+    typedef monomial<Scalar, Dim, Coord>         monomial_type;
     typedef std::set<monomial_type>              base_type;
     typedef typename base_type::const_iterator   const_iterator;
     typedef typename base_type::iterator         iterator;
@@ -592,33 +612,43 @@ private:
     degree_type  _degree;
 };
 
-template<typename _Type, size_t _Dim, REQATTR(arithmetic,_Type)>
-polynomial<_Type, _Dim> operator+(const polynomial<_Type, _Dim>& p1,
-                                  const polynomial<_Type, _Dim>& p2) {
-    return polynomial<_Type, _Dim>(p1)+=(p2);
+template <typename Scalar, size_t Dim,
+          typename Coord = spurt::small_vector<Scalar, Dim>>
+polynomial<Scalar, Dim, Coord> operator+(const polynomial<Scalar, Dim, Coord> &p1,
+                                         const polynomial<Scalar, Dim, Coord> &p2)
+{
+    return polynomial<Scalar, Dim, Coord>(p1) += (p2);
 }
 
-template<typename _Type, size_t _Dim, REQATTR(arithmetic,_Type)>
-polynomial<_Type, _Dim> operator-(const polynomial<_Type, _Dim>& p1,
-                                  const polynomial<_Type, _Dim>& p2) {
-    return polynomial<_Type, _Dim>(p1)-=(p2);
+template <typename Scalar, size_t Dim,
+          typename Coord = spurt::small_vector<Scalar, Dim>>
+polynomial<Scalar, Dim, Coord> operator-(const polynomial<Scalar, Dim, Coord> &p1,
+                                         const polynomial<Scalar, Dim, Coord> &p2)
+{
+    return polynomial<Scalar, Dim, Coord>(p1) -= (p2);
 }
 
-template<typename _Type, size_t _Dim, REQATTR(arithmetic,_Type)>
-polynomial<_Type, _Dim> operator*(const polynomial<_Type, _Dim>& p1,
-                                  const polynomial<_Type, _Dim>& p2) {
-    return polynomial<_Type, _Dim>(p1)*=(p2);
+template <typename Scalar, size_t Dim,
+          typename Coord = spurt::small_vector<Scalar, Dim>>
+polynomial<Scalar, Dim, Coord> operator*(const polynomial<Scalar, Dim, Coord> &p1,
+                                         const polynomial<Scalar, Dim, Coord> &p2)
+{
+    return polynomial<Scalar, Dim, Coord>(p1) *= (p2);
 }
 
-template<typename _Type, size_t _Dim, REQATTR(arithmetic,_Type)>
-polynomial<_Type, _Dim> operator*(const _Type& s,
-                                  const polynomial<_Type, _Dim>& p) {
-    return polynomial<_Type, _Dim>(p)*=s;
+template <typename Scalar, size_t Dim,
+          typename Coord = spurt::small_vector<Scalar, Dim>>
+polynomial<Scalar, Dim, Coord> operator*(const Scalar &s,
+                                         const polynomial<Scalar, Dim, Coord> &p)
+{
+    return polynomial<Scalar, Dim, Coord>(p) *= s;
 }
 
-template<typename _Type, size_t _Dim, REQATTR(arithmetic,_Type)>
-std::ostream& operator<<(std::ostream& os, const polynomial<_Type, _Dim>& p) {
-    typedef polynomial<_Type, _Dim>            poly_type;
+template <typename Scalar, size_t Dim,
+          typename Coord = spurt::small_vector<Scalar, Dim>>
+std::ostream &operator<<(std::ostream &os, const polynomial<Scalar, Dim, Coord> &p)
+{
+    typedef polynomial<Scalar, Dim, Coord> poly_type;
     typedef typename poly_type::monomial_type  mono_type;
     typedef typename poly_type::const_iterator const_iterator;
     
@@ -633,15 +663,17 @@ std::ostream& operator<<(std::ostream& os, const polynomial<_Type, _Dim>& p) {
     return os;
 }
 
-template<typename _Type, size_t _Dim, REQATTR(arithmetic,_Type)>
-class polynomial_basis {
+template <typename Scalar, size_t Dim,
+          typename Coord = spurt::small_vector<Scalar, Dim>>
+class polynomial_basis
+{
 public:
-    static const size_t dimension = _Dim;
+    static const size_t dimension = Dim;
     
-    typedef _Type                                         scalar_type;
-    typedef monomial<_Type, _Dim>                         monomial_type;
-    typedef nvis::fixed_vector<monomial_type, dimension>  derivative_type;
-    typedef nvis::fixed_vector<size_t, dimension>         array_type;
+    typedef Scalar                                 scalar_type;
+    typedef monomial<Scalar, Dim, Coord>           monomial_type;
+    typedef std::array<monomial_type, dimension>   derivative_type;
+    typedef spurt::small_vector<size_t, dimension> array_type;
     
     static void 
     compute_basis(std::vector<monomial_type>& basis, 
@@ -678,10 +710,10 @@ private:
     static monomial_type _make_monomial(const array_type& array) {
         typedef typename monomial_type::term_type term_type;
         
-        if (nvis::all(array == array_type(0))) return monomial_type(1);
+        if (all(array == 0)) return monomial_type(1);
         else {
             std::vector<term_type> terms;
-            for (size_t i=0 ; i<array.size() ; ++i) {
+            for (size_t i=0 ; i<dimension ; ++i) {
                 terms.push_back(term_type(i, array[i]));
             }
             return monomial_type(terms.begin(), terms.end());
@@ -708,21 +740,26 @@ private:
     }
 };
 
-// Instantiation in 0D yields invalid template specialization 
-template<typename _Type>
-class polynomial_basis<_Type, 0> {};
+// Instantiation in 0D yields invalid template specialization
+template <typename Scalar, typename Coord>
+class polynomial_basis<Scalar, 0, Coord>
+{
+};
 
 // alternative implementation for 2D and 3D cases
 
-template<typename _Type, size_t _Dimension, size_t _Order>
-struct alt_polynomial_basis {};
+template <typename Scalar, size_t Dim, typename Coord, size_t _Order >
+struct alt_polynomial_basis
+{
+};
 
-template<typename _Type, size_t _Dimension>
-struct constant_basis {
-    typedef nvis::fixed_vector<_Type, _Dimension>  vector_type;
-    typedef _Type                                  value_type;
+template <typename Scalar, size_t Dim, typename Coord>
+struct constant_basis
+{
+    typedef Coord vector_type;
+    typedef Scalar value_type;
     
-    static const size_t dimension = _Dimension;
+    static const size_t dimension = Dim;
     static const size_t order     = 0;
     
     static void eval(std::vector<value_type>& r, const vector_type& x) {
@@ -734,22 +771,23 @@ struct constant_basis {
 };
 
 // 2D specialization
-template<typename _Type, size_t _Order>
-struct alt_polynomial_basis<_Type, 2, _Order> {
-    typedef nvis::fixed_vector<_Type, 2>  vector_type;
-    typedef _Type                         value_type;
+template <typename Scalar, typename Coord, size_t _Order >
+struct alt_polynomial_basis<Scalar, 2, Coord, _Order>
+{
+    typedef Coord  vector_type;
+    typedef Scalar value_type;
     
     static const size_t dimension = 2;
     static const size_t order     = _Order;
     
     static void eval(std::vector<value_type>& r, const vector_type& x) {
-        alt_polynomial_basis<value_type, 2, order-1>::eval(r, x);
+        alt_polynomial_basis<value_type, 2, Coord, order-1>::eval(r, x);
         for (size_t i=0 ; i<=order ; ++i) {
             r.push_back(power(x[0], order-i)*power(x[1], i));
         }
     }
     static void derivative(std::vector<vector_type>& r, const vector_type& x) {
-        alt_polynomial_basis<value_type, 2, order-1>::derivative(r, x);
+        alt_polynomial_basis<value_type, 2, Coord, order-1>::derivative(r, x);
         for (size_t i=0 ; i<=order ; ++i) {
             value_type ddx = order-i ? 
                 (order-i)*power(x[0], order-i-1)*power(x[1], i) : 0;
@@ -760,20 +798,22 @@ struct alt_polynomial_basis<_Type, 2, _Order> {
     }
 };
 
-template<typename _Type>
-struct alt_polynomial_basis<_Type, 2, 0> : public constant_basis<_Type, 2> {};
+template<typename Scalar, typename Coord>
+struct alt_polynomial_basis<Scalar, 2, Coord, 0> : public constant_basis<Scalar, 2, Coord> {};
 
 // 3D specialization
-template<typename _Type, size_t _Order >
-struct alt_polynomial_basis<_Type, 3, _Order> {
-    typedef nvis::fixed_vector<_Type, 3>  vector_type;
-    typedef _Type                         value_type;
+template<typename Scalar, 
+         typename Coord, 
+         size_t _Order >
+struct alt_polynomial_basis<Scalar, 3, Coord, _Order> {
+    typedef Coord  vector_type;
+    typedef Scalar value_type;
     
     static const size_t dimension = 3;
     static const size_t order     = _Order;
     
     static void eval(std::vector<value_type>& r, const vector_type& x) {
-        alt_polynomial_basis<value_type, 3, order-1>::eval(r, x);
+        alt_polynomial_basis<value_type, 3, Coord, order-1>::eval(r, x);
         for (size_t i=0 ; i<=order ; ++i) {
             for (size_t j=0 ; j<=i; ++j) {
                 r.push_back(power(x[0], order-i)*
@@ -783,7 +823,7 @@ struct alt_polynomial_basis<_Type, 3, _Order> {
         }
     }
     static void derivative(std::vector<vector_type>& r, const vector_type& x) {
-        alt_polynomial_basis<value_type, 3, order-1>::derivative(r, x);
+        alt_polynomial_basis<value_type, 3, Coord, order-1>::derivative(r, x);
         for (size_t i=0 ; i<=order ; ++i) {
             for (size_t j=0 ; j<=i; ++j) {
                 value_type ddx = order-i ? 
@@ -800,20 +840,21 @@ struct alt_polynomial_basis<_Type, 3, _Order> {
         }
     }
 };
-template<typename _Type>
-struct alt_polynomial_basis<_Type, 3, 0> : public constant_basis<_Type, 3> {};
+template<typename Scalar, typename Coord>
+struct alt_polynomial_basis<Scalar, 3, Coord, 0> : public constant_basis<Scalar, 3, Coord> {};
 
 // 4D specialization
-template<typename _Type, size_t _Order >
-struct alt_polynomial_basis<_Type, 4, _Order> {
-    typedef nvis::fixed_vector<_Type, 4>  vector_type;
-    typedef _Type                         value_type;
+template<typename Scalar, 
+         typename Coord, size_t _Order >
+struct alt_polynomial_basis<Scalar, 4, Coord, _Order> {
+    typedef Coord  vector_type;
+    typedef Scalar                         value_type;
     
     static const size_t dimension = 4;
     static const size_t order     = _Order;
     
     static void eval(std::vector<value_type>& r, const vector_type& x) {
-        alt_polynomial_basis<value_type, 4, order-1>::eval(r, x);
+        alt_polynomial_basis<value_type, 4, Coord, order-1>::eval(r, x);
         for (size_t i=0 ; i<=order ; ++i) {
             for (size_t j=0 ; i+j<=order; ++j) {
                 for (size_t k=0 ; i+j+k<=order ; ++k) {
@@ -826,7 +867,7 @@ struct alt_polynomial_basis<_Type, 4, _Order> {
         }
     }
     static void derivative(std::vector<vector_type>& r, const vector_type& x) {
-        alt_polynomial_basis<value_type, 4, order-1>::derivative(r, x);
+        alt_polynomial_basis<value_type, 4, Coord, order-1>::derivative(r, x);
         for (size_t i=0 ; i<=order ; ++i) {
             for (size_t j=0 ; i+j<=order; ++j) {
                 for (size_t k=0 ; i+j+k<=order ; ++k) {
@@ -861,8 +902,8 @@ struct alt_polynomial_basis<_Type, 4, _Order> {
     }
 };
 
-template<typename _Type>
-struct alt_polynomial_basis<_Type, 4, 0> : public constant_basis<_Type, 4> {};
+template<typename Scalar, typename Coord >
+struct alt_polynomial_basis<Scalar, 4, Coord, 0> : public constant_basis<Scalar, 4, Coord> {};
     
         
 } // polynomial

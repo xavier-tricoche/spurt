@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <teem/nrrd.h>
 #include <netcdf.h>
 #include <stdexcept>
@@ -17,6 +17,8 @@
 char *metafile, *outfile;
 int timestep;
 bool do_grid;
+
+using namespace spurt;
 
 
 void initialize(int argc, char* argv[])
@@ -41,7 +43,7 @@ void initialize(int argc, char* argv[])
 }
 
 struct vec_equal {
-	bool operator()(const nvis::fvec3& a, const nvis::fvec3& b) const {
+	bool operator()(const fvec3& a, const fvec3& b) const {
 		return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
 	}
 };
@@ -55,7 +57,7 @@ int main(int argc, char* argv[])
 	std::vector<unsigned int> hexind; // hexahedra vertices' indices
 	std::vector<float>        hexpts; // vertices' coordinates
     std::vector<unsigned int> rindex; // indices of unique vertex ids
-    std::vector<nvis::fvec3>  vals;   // vector values
+    std::vector<fvec3>  vals;   // vector values
 
     reader.read_grid(hexind, hexpts, rindex);
     reader.read_vectors(vals, timestep, rindex);
@@ -111,7 +113,7 @@ int main(int argc, char* argv[])
 	<< "DATASET UNSTRUCTURED_GRID\n";
 
 	// float *hexpts_ptr = (float*)calloc(hexpts.size() * 3, sizeof(float));
-	// std::copy(hexpts.begin(), hexpts.end(), reinterpret_cast<nvis::fvec3 *>(hexpts_ptr));
+	// std::copy(hexpts.begin(), hexpts.end(), reinterpret_cast<fvec3 *>(hexpts_ptr));
 
 	file << "POINTS " << hexpts.size() << " float\n";
 	file.write(reinterpret_cast<char*>(&hexpts.front()), sizeof(float)*hexpts.size());
@@ -139,7 +141,7 @@ int main(int argc, char* argv[])
 	delete[] types;
 
 	// float *vecf = (float*)calloc(3*npts, sizeof(float));
-	//     std::copy(vals.begin(), vals.end(), reinterpret_cast<nvis::fvec3*>(vecf));
+	//     std::copy(vals.begin(), vals.end(), reinterpret_cast<fvec3*>(vecf));
 	file << "POINT_DATA " << npts << '\n';
 	file << "VECTORS velocity float\n";
 	file.write(reinterpret_cast<char*>(&vals.front()), sizeof(float)*3*npts);

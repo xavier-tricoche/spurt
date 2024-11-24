@@ -16,7 +16,9 @@
 #include <vtk/vtk_utils.hpp>
 #include <graphics/colors.hpp>
 
-typedef nvis::fixed_vector<double, 3> vec3;
+#include <math/types.hpp>
+
+using namespace spurt;
 
 void swiss_roll(std::vector<vec3>& points, 
                 std::vector<double>& theta, int N,
@@ -65,12 +67,12 @@ bool show_points=true;
 bool show_edges=true;
 bool regular_sampling=false;
 int npoints=100;
-int n_neighbors=3;
+int n_neighbors=8;
 int verbose=0;
 int color_dim=0;
 double search_radius=1;
 double sphere_radius=0.1;
-nvis::vec3 bg_color;
+spurt::vec3 bg_color;
 
 bool init(int argc, const char* argv[]) {
     namespace xcl=spurt::command_line;
@@ -146,11 +148,12 @@ int main(int argc, const char* argv[]) {
     typedef isomap_t::row_vector_t row_vector_t;
     
     graph_t graph;
-    spurt::compute_connectivity<graph_t, vec3, 3>(graph, search_radius, points);
+    spurt::compute_knn_connectivity<graph_t, vec3, 3>(graph, n_neighbors, points);
     
     isomap_t::matrix_t coordinates;
+    bool failed = false;
     try {
-        nvis::timer t;
+        spurt::timer t;
         isomap_t isomap(graph);
         isomap.embed();
         if (verbose>0) {
@@ -174,16 +177,19 @@ int main(int argc, const char* argv[]) {
     catch (std::exception& e) {
         std::cout << "Exception caught: " << e.what() << '\n';
         std::cout << "Exiting.\n";
-        return 1;
+        failed = true;
     }
-    
-    row_vector_t mins = coordinates.colwise().minCoeff(); // (1xdim)
-    row_vector_t maxs = coordinates.colwise().maxCoeff(); // (1xdim)
-    row_vector_t spans = maxs-mins; // (1xdim)
+
+    row_vector_t mins, maxs, spans;
+    if (!failed) {
+        mins = coordinates.colwise().minCoeff(); // (1xdim)
+        maxs = coordinates.colwise().maxCoeff(); // (1xdim)
+        spans = maxs-mins; // (1xdim)
+    }
     VTK_SMART(vtkPolyData) pd = vtk_utils::make_points(points);
     
     /*
-    typedef nvis::fixed_vector<unsigned char, 3> color_t;
+    typedef spurt::fixed_vector<unsigned char, 3> color_t;
     const vec3 red = vec3(255,0,0); // (1,0)
     const vec3 blue = vec3(0,0,255); // (0,1)
     const vec3 white = vec3(255,255,255); // (1,1)
@@ -203,15 +209,13 @@ int main(int argc, const char* argv[]) {
     }
     pd = vtk_utils::add_colors(pd, colors);
     */
-    std::vector<double> values(npoints);
-    for (int i=0; i<npoints; ++i) {
-        values[i] = coordinates(i, color_dim);
-    }
-    pd = vtk_utils::add_scalars(pd, values);
-    
-    
     VTK_CREATE(vtkColorTransferFunction, ctf);
-    {
+    std::vector<double> values(npoints);
+    if (!failed) {
+        for (int i=0; i<npoints; ++i) {
+            values[i] = coordinates(i, color_dim);
+        }
+        pd = vtk_utils::add_scalars(pd, values);
         double min=mins(0, color_dim);
         double max=maxs(0, color_dim);
         ctf->AddRGBPoint(min, 0, 0, 1);
@@ -225,8 +229,10 @@ int main(int argc, const char* argv[]) {
     
     VTK_CREATE(vtkPolyDataMapper, point_mapper);
     point_mapper->SetInputData(spheres);
-    point_mapper->ScalarVisibilityOn();
-    point_mapper->SetLookupTable(ctf);
+    if (!failed) {
+        point_mapper->ScalarVisibilityOn();
+        point_mapper->SetLookupTable(ctf);
+    }
     VTK_CREATE(vtkActor, point_actor);
     point_actor->SetMapper(point_mapper);
     
@@ -244,7 +250,8 @@ int main(int argc, const char* argv[]) {
     VTK_CREATE(vtkPolyDataMapper, edge_mapper);
     edge_mapper->SetInputData(pd);
     edge_mapper->ScalarVisibilityOn();
-    edge_mapper->SetLookupTable(ctf);
+    if (!failed)
+        edge_mapper->SetLookupTable(ctf);
     VTK_CREATE(vtkActor, edge_actor);
     edge_actor->SetMapper(edge_mapper);
     
@@ -264,41 +271,43 @@ int main(int argc, const char* argv[]) {
     window->Render();
     
     // visualization pipeline for manifold coordinates
-    std::vector<nvis::vec2> coords(npoints);
-    for (int i=0; i<npoints; ++i) {
-        coords[i][0]=coordinates(i, 0);
-        coords[i][1]=coordinates(i, 1);
-    }
-    VTK_SMART(vtkPolyData) pd2d=vtk_utils::make_points(coords);
-    pd2d=vtk_utils::add_scalars(pd2d, values);
-    vtk_utils::add_edges_from_numbers(pd2d, edges);
-    VTK_CREATE(vtkPolyDataMapper, mapper2d);
-    mapper2d->SetInputData(pd2d);
-    mapper2d->ScalarVisibilityOn();
-    mapper2d->SetLookupTable(ctf);
-    VTK_CREATE(vtkActor, actor2d);
-    actor2d->SetMapper(mapper2d);
-    actor2d->GetProperty()->EdgeVisibilityOn();
+    if (!failed) {
+        std::vector<spurt::vec2> coords(npoints);
+        for (int i=0; i<npoints; ++i) {
+            coords[i][0]=coordinates(i, 0);
+            coords[i][1]=coordinates(i, 1);
+        }
+        VTK_SMART(vtkPolyData) pd2d=vtk_utils::make_points(coords);
+        pd2d=vtk_utils::add_scalars(pd2d, values);
+        vtk_utils::add_edges_from_numbers(pd2d, edges);
+        VTK_CREATE(vtkPolyDataMapper, mapper2d);
+        mapper2d->SetInputData(pd2d);
+        mapper2d->ScalarVisibilityOn();
+        mapper2d->SetLookupTable(ctf);
+        VTK_CREATE(vtkActor, actor2d);
+        actor2d->SetMapper(mapper2d);
+        actor2d->GetProperty()->EdgeVisibilityOn();
     
-    VTK_SMART(vtkPolyData) spheres2d=vtk_utils::make_spheres(pd2d, 0.0001);
-    VTK_CREATE(vtkPolyDataMapper, point2d_mapper);
-    point2d_mapper->SetInputData(spheres2d);
-    point2d_mapper->ScalarVisibilityOn();
-    point2d_mapper->SetLookupTable(ctf);
-    VTK_CREATE(vtkActor, point2d_actor);
-    point2d_actor->SetMapper(point2d_mapper);
+        VTK_SMART(vtkPolyData) spheres2d=vtk_utils::make_spheres(pd2d, 0.0001);
+        VTK_CREATE(vtkPolyDataMapper, point2d_mapper);
+        point2d_mapper->SetInputData(spheres2d);
+        point2d_mapper->ScalarVisibilityOn();
+        point2d_mapper->SetLookupTable(ctf);
+        VTK_CREATE(vtkActor, point2d_actor);
+        point2d_actor->SetMapper(point2d_mapper);
         
-    VTK_CREATE(vtkRenderer, ren2d);
-    ren2d->AddActor(actor2d);
-    ren2d->AddActor(point2d_actor);
-    VTK_CREATE(vtkRenderWindow, win2d);
-    win2d->AddRenderer(ren2d);
-    win2d->SetSize(800, 800);
-    VTK_CREATE(vtkRenderWindowInteractor, interactor2d);
-    interactor2d->SetRenderWindow(win2d);
-    ren2d->ResetCamera();
-    interactor2d->Initialize();
-    win2d->Render();
+        VTK_CREATE(vtkRenderer, ren2d);
+        ren2d->AddActor(actor2d);
+        ren2d->AddActor(point2d_actor);
+        VTK_CREATE(vtkRenderWindow, win2d);
+        win2d->AddRenderer(ren2d);
+        win2d->SetSize(800, 800);
+        VTK_CREATE(vtkRenderWindowInteractor, interactor2d);
+        interactor2d->SetRenderWindow(win2d);
+        ren2d->ResetCamera();
+        interactor2d->Initialize();
+        win2d->Render();
+    }
     
     interactor->Start();
     

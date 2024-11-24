@@ -1,8 +1,10 @@
 set(SRC
     scalar2d
     scalar3d
+    abc_function
+    sinc
+    marschner_lobb
 )
-
 
 foreach( target ${SRC} )
     add_executable( ${target} ${target}.cpp )

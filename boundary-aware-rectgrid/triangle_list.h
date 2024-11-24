@@ -307,15 +307,15 @@ int triTable[256][16] = {
 	{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
 };
 
-Point pt0(0, 1, 0);  //v0
-Point pt1(1, 1, 0);  //v1
-Point pt2(1, 0, 0);  //v2
-Point pt3(0, 0, 0);  //v3
-Point pt4(0, 1, 1);  //v4
-Point pt5(1, 1, 1);  //v5
-Point pt6(1, 0, 1);  //v6
-Point pt7(0, 0, 1);  //v7
-std::vector<Point> unit_cube_coords = { pt0, pt1, pt2, pt3, pt4, pt5, pt6, pt7 };
+Point3 pt0(0, 1, 0);  //v0
+Point3 pt1(1, 1, 0);  //v1
+Point3 pt2(1, 0, 0);  //v2
+Point3 pt3(0, 0, 0);  //v3
+Point3 pt4(0, 1, 1);  //v4
+Point3 pt5(1, 1, 1);  //v5
+Point3 pt6(1, 0, 1);  //v6
+Point3 pt7(0, 0, 1);  //v7
+std::vector<Point3> unit_cube_coords = { pt0, pt1, pt2, pt3, pt4, pt5, pt6, pt7 };
 
 
 
@@ -492,11 +492,11 @@ int find_code_for_cutcell_2D(bool* vertex_label_in_grid_ordering)
 }
 
 
-Point pt0_2D(0, 0, 0);  //v0
-Point pt1_2D(1, 0, 0);  //v1
-Point pt2_2D(1, 1, 0);  //v2
-Point pt3_2D(0, 1, 0);  //v3
-std::vector<Point> unit_square_coords = { pt0_2D, pt1_2D, pt2_2D, pt3_2D };
+Point3 pt0_2D(0, 0, 0);  //v0
+Point3 pt1_2D(1, 0, 0);  //v1
+Point3 pt2_2D(1, 1, 0);  //v2
+Point3 pt3_2D(0, 1, 0);  //v3
+std::vector<Point3> unit_square_coords = { pt0_2D, pt1_2D, pt2_2D, pt3_2D };
 
 double determinant_3x3(double dMatrix[3][3]) {
 	double x = ((dMatrix[1][1] * dMatrix[2][2]) - (dMatrix[2][1] * dMatrix[1][2]));

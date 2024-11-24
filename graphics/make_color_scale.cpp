@@ -4,7 +4,7 @@
 
 #include <misc/option_parse.hpp>
 #include <graphics/colors.hpp>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 
 
 std::string name_out;
@@ -12,6 +12,8 @@ std::string scale_name = "spiral:1";
 int number = 10;
 int order = 1;
 float r=1;
+
+using namespace spurt;
 
 void initialize(int argc, const char* argv[])
 {
@@ -57,12 +59,12 @@ int main(int argc, const char* argv[]) {
 		scale_name = scale_name.substr(0, sep);
 	}
 	
-	std::vector<nvis::fvec3> colors;
+	std::vector<fvec3> colors;
 	if (scale_name == "spiral") {
 		spurt::spiral_scale(colors, number, 0.2, r, 1, 1, order);
 	}
 	else if (scale_name == "b2y" || scale_name == "r2g") {
-		nvis::fvec3 col0, col1;
+		fvec3 col0, col1;
 		if (scale_name == "b2y") {
 			col0 = spurt::blue;
 			col1 = spurt::yellow;

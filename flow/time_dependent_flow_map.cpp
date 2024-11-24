@@ -10,28 +10,21 @@
 #include <boost/filesystem.hpp>
 #include <boost/numeric/odeint.hpp>
 
+#include <math/types.hpp>
+#include <flow/ode_observer.hpp>
 #include <data/raster.hpp>
 #include <flow/time_dependent_field.hpp>
 #include <flow/vector_field.hpp>
-#include <flow/vector_field.hpp>
 #include <format/DLRreader.hpp>
-#include <math/bounding_box.hpp>
-#include <math/dopri5.hpp>
-#include <math/fixed_vector.hpp>
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
 #include <misc/strings.hpp>
 #include <vtk/vtk_interpolator.hpp>
+#include <misc/meta_utils.hpp>
 
-// #define NO_TBB
-
-#ifndef NO_TBB
 #include <tbb/parallel_for.h>
 #include <tbb/tbb.h>
 tbb::atomic<size_t> progress_counter;
-#else
-size_t progress_counter;
-#endif
 
 
 std::string name_in, name_out, seed_name, path, cmdline;
@@ -46,26 +39,10 @@ size_t nb_threads = 1;
 bool save_lines = false;
 bool monitor = false;
 bool confine = false;
-nvis::bbox3 the_bounds;
+spurt::bbox3 the_bounds;
 bool in_parallel=false;
 
 namespace odeint = boost::numeric::odeint;
-
-template< typename T, typename T1, typename T2=void, typename T3=void, typename T4=void >
-struct is_one_of_those_types : public std::false_type {};
-
-template<typename T, typename T1>
-struct is_one_of_those_types< T, T1, typename std::enable_if< std::is_same<T, T1>::value >::type > : public std::true_type {};
-
-template<typename T, typename T1, typename T2>
-struct is_one_of_those_types< T, T1, T2, typename std::enable_if< std::is_same<T, T1>::value || std::is_same<T, T2>::value >::type > : public std::true_type {};
-
-template<typename T, typename T1, typename T2, typename T3>
-struct is_one_of_those_types< T, T1, T2, T3,
-            typename std::enable_if<
-                std::is_same<T, T1>::value ||
-                std::is_same<T, T2>::value ||
-                std::is_same<T, T3>::value >::type > : public std::true_type {};
 
 void initialize(int argc, const char* argv[]) {
     namespace xcl = spurt::command_line;
@@ -122,76 +99,6 @@ void initialize(int argc, const char* argv[]) {
 using namespace spurt;
 using namespace vtk_utils;
 
-struct vec3 : public Eigen::Vector3d
-{
-    typedef Eigen::Vector3d base_type;
-    typedef base_type::value_type value_type;
-
-    vec3() : base_type(0,0,0) {}
-    vec3(const base_type& v) : base_type(v) {}
-    vec3(double x, double y, double z) : base_type(x,y,z) {}
-
-#if EIGEN_VERSION_AT_LEAST(3,4,0)
-    // starting with version 3.4, Eigen offers STL-type iterators
-    typedef base_type::iterator iterator;
-    typedef base_type::const_iterator const_iterator;
-#else
-    typedef const double* const_iterator;
-    typedef double* iterator;
-
-    const_iterator begin() const {
-        return &this->operator()(0);
-    }
-    iterator begin() {
-        return &this->operator()(0);
-    }
-    const_iterator end() const {
-        return begin()+3;
-    }
-    iterator end() {
-        return begin()+3;
-    }
-#endif
-
-    nvis::vec3& as_nvis_vec3() { return *((nvis::vec3*)(&base_type::operator()(0))); }
-    const nvis::vec3& as_nvis_vec3() const { return *((const nvis::vec3*)(&base_type::operator()(0))); }
-};
-
-vec3& as_vec3(nvis::vec3& v) {
-    return *((vec3*)(&v[0]));
-}
-
-const vec3& as_vec3(const nvis::vec3& v) {
-    return *((const vec3*)(&v[0]));
-}
-
-inline std::string to_str(const vec3& p) {
-    std::ostringstream os;
-    os << "[" << p(0) << ", " << p(1) << ", " << p(2) << "]";
-    return os.str();
-}
-
-namespace spurt {
-template<>
-struct data_traits< vec3 > {
-    typedef vec3::value_type value_type;
-    typedef vec3 data_type;
-
-    constexpr static int size() { return 3; }
-    static const value_type& value(const data_type& v, size_t i) {
-        return v[i];
-    }
-    static value_type& value(data_type& v, size_t i) { return v[i]; }
-    static data_type& assign(data_type& inout, value_type val) {
-        inout.setConstant(val);
-        return inout;
-    }
-    static value_type norm(const data_type& v) {
-        return v.norm();
-    }
-};
-} // spurt
-
 typedef vec3 point_type;
 typedef vec3 vector_type;
 typedef double scalar_type;
@@ -205,8 +112,8 @@ typedef vtk_utils::point_locator<vtkUnstructuredGrid, double, 3, vec3> locator_t
 typedef spurt::fixed_mesh_time_dependent_field<locator_type, std::vector<vec3> > field_type;
 
 struct RKDOPRI5 {
-    typedef nvis::vec3 vec_t; // vector type required by nvis::dopri5
-    typedef nvis::dopri5<vec_t> ode_solver_type;
+    typedef vec3 vec_t; // vector type required by dopri5
+    typedef dopri5<vec_t> ode_solver_type;
     typedef ode_solver_type::step step_type;
 
     template<typename RHS>
@@ -219,7 +126,7 @@ struct RKDOPRI5 {
                 m_rhs(as_vec3(y), dydt, t);
             }
             catch(...) {
-                throw nvis::invalid_position_exception("Unable to interpolate");
+                throw invalid_position_exception("Unable to interpolate");
             }
             return dydt.as_nvis_vec3();
         }
@@ -269,7 +176,7 @@ struct RKDOPRI5 {
             std::ostringstream os;
             os << "RKDOPRI5::integrate: exception caught: " << e.what() << '\n';
             if (verbose) std::cerr << os.str() << std::flush;
-            throw nvis::invalid_position_exception(os.str());
+            throw invalid_position_exception(os.str());
         }
     }
 };
@@ -302,7 +209,7 @@ struct rhs_type<
 
     void operator()(const vec3& x, vec3& dxdt, scalar_type t) const {
         if (confine && !the_bounds.inside(x.as_nvis_vec3())) {
-            throw nvis::invalid_position_exception("invalid position: " + to_str(x) + " at t=" + to_string(t));
+            throw invalid_position_exception("invalid position: " + to_str(x) + " at t=" + to_string(t));
         }
         std::ostringstream os;
         if (false) {
@@ -324,49 +231,13 @@ struct rhs_type<
     bool m_verbose;
 };
 
-struct Observer {
-    Observer(vec3& seed, double& t, double& d, std::vector<vec3>& c,
-             std::vector<double>& ts, bool _verbose=false)
-    : last_p(seed), last_t(t), distance(d), curve(c), times(ts), m_verbose(_verbose) {
-        if (monitor || save_lines) {
-            curve.push_back(seed);
-            ts.push_back(t);
-        }
-        if (m_verbose) {
-            std::ostringstream os;
-            os << "Observer: seeding at " << to_str(seed) << " at time " << t << std::endl;
-            std::cout << os.str();
-        }
-    }
-    void operator()(const vec3& p, double t) {
-        distance += (last_p-p).norm();
-        last_p = p;
-        last_t = t;
-        if (monitor || save_lines) {
-            curve.push_back(p);
-            times.push_back(t);
-        }
-        if (m_verbose) {
-            std::ostringstream os;
-            os << "\nObserver: p=" << to_str(p) << ", t=" << t << std::endl;
-            std::cout << os.str();
-        }
-    }
-
-    vec3& last_p;
-    double& last_t;
-    double& distance;
-    std::vector<vec3>& curve;
-    std::vector<double>& times;
-    bool m_verbose;
-};
-typedef Observer observer_t;
+typedef Observer<vec3> observer_t;
 
 
 int runTBB(shared_ptr<field_type> field) {
     double global_bounds[6];
     field->get_locator()->get_dataset()->GetBounds(global_bounds);
-    nvis::bbox3 bnds;
+    bbox3 bnds;
 
     std::vector<vec3> seeds;
 
@@ -375,12 +246,12 @@ int runTBB(shared_ptr<field_type> field) {
         ::bounds[2] >= global_bounds[2] && ::bounds[3] <= global_bounds[3] &&
         ::bounds[4] >= global_bounds[4] && ::bounds[5] <= global_bounds[5]) {
         // valid bounds supplied by user
-        bnds.min() = nvis::vec3(::bounds[0], ::bounds[2], ::bounds[4]);
-        bnds.max() = nvis::vec3(::bounds[1], ::bounds[3], ::bounds[5]);
+        bnds.min() = vec3(::bounds[0], ::bounds[2], ::bounds[4]);
+        bnds.max() = vec3(::bounds[1], ::bounds[3], ::bounds[5]);
     }
     else {
-        bnds.min() = nvis::vec3(global_bounds[0], global_bounds[2], global_bounds[4]);
-        bnds.max() = nvis::vec3(global_bounds[1], global_bounds[3], global_bounds[5]);
+        bnds.min() = vec3(global_bounds[0], global_bounds[2], global_bounds[4]);
+        bnds.max() = vec3(global_bounds[1], global_bounds[3], global_bounds[5]);
     }
 
     the_bounds = bnds;
@@ -416,24 +287,18 @@ int runTBB(shared_ptr<field_type> field) {
 
     progress_counter = 0;
 
-#ifndef NO_TBB
     tbb::parallel_for(tbb::blocked_range<int>(0,npoints),
-                       [&](tbb::blocked_range<int> r) {
+                       [&](tbb::blocked_range<int> r) 
+    {
         for (int n=r.begin(); n!=r.end(); ++n) {
-#else
-        for (int n=0 ; n<npoints ; ++n) {
-#endif
-            // nvis::ivec3 c = sampling_grid.coordinates(n);
-            // nvis::vec3 x = sampling_grid(c);
             flowmap[3*n  ] = seeds[n][0];
             flowmap[3*n+1] = seeds[n][1];
             flowmap[3*n+2] = seeds[n][2];
 
             ++progress_counter;
         }
-#ifndef NO_TBB
     });
-#endif
+
 
     size_t nbcomputed=0;
     spurt::ProgressDisplay progress(true);
@@ -447,13 +312,10 @@ int runTBB(shared_ptr<field_type> field) {
     std::vector< std::vector<double> > times(npoints);
 
     progress_counter = 0;
-#ifndef NO_TBB
     tbb::parallel_for(tbb::blocked_range<int>(0,npoints),
-                       [&](tbb::blocked_range<int> r) {
+                       [&](tbb::blocked_range<int> r) 
+    {
         for (int n=r.begin(); n!=r.end(); ++n) {
-#else
-        for (int n=0; n<npoints; ++n) {
-#endif
             ++progress_counter;
 
             if (!(progress_counter%10)) progress.update(progress_counter);
@@ -513,9 +375,7 @@ int runTBB(shared_ptr<field_type> field) {
                 }
             }
         }
-#ifndef NO_TBB
     }); // end of tbb::parallel_for
-#endif
 
     progress.end();
 
@@ -532,7 +392,7 @@ int runTBB(shared_ptr<field_type> field) {
             lines.swap(newlines);
             times.swap(newtimes);
         }
-        std::vector<nvis::ivec2> dummy;
+        std::vector<ivec2> dummy;
         VTK_SMART(vtkPolyData) pdata = vtk_utils::make_polylines(lines,dummy, 0);
         std::vector<double> all_times;
         std::for_each(times.begin(), times.end(),
@@ -623,7 +483,7 @@ shared_ptr<field_type> load_DLR_time_steps() {
     info_file.close();
 
     spurt::DLRreader reader(mesh_name, "");
-    std::vector<nvis::fvec3> vertices;
+    std::vector<fvec3> vertices;
     std::vector<long> cell_indices;
     std::vector<std::pair<DLRreader::cell_type, long> > cell_types;
     reader.read_mesh(false, vertices, cell_indices, cell_types);

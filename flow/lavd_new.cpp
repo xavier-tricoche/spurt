@@ -9,7 +9,7 @@
 #include <locale>
 #include <iomanip>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 
 #include <boost/numeric/odeint.hpp>
@@ -24,9 +24,6 @@
 #include <misc/progress.hpp>
 #include <misc/log_helper.hpp>
 #include <vtk/vtk_utils.hpp>
-
-#include <Eigen/Core>
-#include <Eigen/SVD>
 
 // #include <vtkPoints.h>
 // #include <vtkCellArray.h>

@@ -1,7 +1,7 @@
 #include "rbf_basis.hpp"
 #include <iostream>
 #include <limits>
-#include <util/timer.hpp>
+#include <misc/progress.hpp>
 
 template<typename T>
 inline T quadratic(T x) {
@@ -69,7 +69,7 @@ void compare(size_t N) {
 
     std::cout << "Performance comparison for type=" << type_traits<T>::name() << ":\n";
 
-    nvis::timer _timer;
+    spurt::timer _timer;
     T x, y, r, err=0;
     double tic, toc;
     for (size_t i=0 ; i<N ; ++i) {

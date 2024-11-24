@@ -9,7 +9,7 @@
 
 #include <netcdf.h>
 
-#include  <math/fixed_vector.hpp>
+#include  <math/types.hpp>
 
 template<typename T>
 struct netcdf_traits
@@ -37,22 +37,16 @@ template<> struct netcdf_traits<unsigned int>
 };
 
 template<typename T, size_t N> 
-struct netcdf_traits< nvis::fixed_vector<T,N> >
+struct netcdf_traits< spurt::small_vector<T,N> >
 {
     enum { components = N, nctype = netcdf_traits<T>::nctype };
 };
 
 template<typename T, unsigned int N> 
-struct netcdf_traits< nvis::fixed_vector<T,N> >
+struct netcdf_traits< spurt::small_vector<T,N> >
 {
     enum { components = N, nctype = netcdf_traits<T>::nctype };
 };
-
-// template<typename T, unsigned int N, unsigned int M> 
-// struct netcdf_traits< nvis::fixed_matrix<T,N,M> >
-// {
-//     enum { components = N*M, nctype = netcdf_traits<T>::nctype };
-// };
 
 // -------------------------------------------------------------------------
 

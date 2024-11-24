@@ -1,28 +1,29 @@
 #include <iostream>
 #include <vector>
-#include <math/fixed_vector.hpp>
-#include <data/grid.hpp>
+#include <math/types.hpp>
+#include <data/image.hpp>
+#include <data/mesh.hpp>
 
 int main(int argc, char* argv[])
 {
     using namespace spurt;
     
-    nvis::vec3 v[8] = { nvis::vec3(0, 0, 0), nvis::vec3(1, 0, 0),
-                        nvis::vec3(1, 1, 0), nvis::vec3(0, 1, 0),
-                        nvis::vec3(0, 0, 1), nvis::vec3(1, 0, 1),
-                        nvis::vec3(1, 1, 1), nvis::vec3(0, 1, 1),
-                      };
+    vec3 v[8] = {vec3(0, 0, 0), vec3(1, 0, 0),
+                 vec3(1, 1, 0), vec3(0, 1, 0),
+                 vec3(0, 0, 1), vec3(1, 0, 1),
+                 vec3(1, 1, 1), vec3(0, 1, 1),
+                };
                       
-    nvis::vec3 f[6] = { nvis::vec3(0.5, 0.5, 0), nvis::vec3(0.5, 0.5, 1),
-                        nvis::vec3(0.5, 0, 0.5), nvis::vec3(1, 0.5, 0.5),
-                        nvis::vec3(0.5, 1, 0.5), nvis::vec3(0, 0.5, 0.5)
-                      };
+    vec3 f[6] = {vec3(0.5, 0.5, 0), vec3(0.5, 0.5, 1),
+                 vec3(0.5, 0, 0.5), vec3(1, 0.5, 0.5),
+                 vec3(0.5, 1, 0.5), vec3(0, 0.5, 0.5)
+                };
                       
-    nvis::vec3 c(0.5, 0.5, 0.5);
+    vec3 c(0.5, 0.5, 0.5);
     
-    nvis::vec3 tets[24][4];
+    vec3 tets[24][4];
     for (int face = 0 ; face < 6 ; ++face) {
-        const nvis::ivec4 aface = spurt::grid::voxel_faces[face];
+        const spurt::ivec4 aface = spurt::mesh::voxel_faces[face];
         for (int i = 0 ; i < 4 ; ++i) {
             tets[4*face+i][0] = v[aface[i]];
             tets[4*face+i][1] = v[aface[(i+1)%4]];
@@ -33,7 +34,7 @@ int main(int argc, char* argv[])
     
     std::vector<int> id2tet(64, -1);
     for (int i = 0 ; i < 24 ; ++i) {
-        nvis::vec3 center = 0.25 * (tets[i][0] + tets[i][1] + tets[i][2] + tets[i][3]);
+        vec3 center = 0.25 * (tets[i][0] + tets[i][1] + tets[i][2] + tets[i][3]);
         double u = center[0], v = center[1], w = center[2];
         unsigned int code = 0;
         if (u <= v) {

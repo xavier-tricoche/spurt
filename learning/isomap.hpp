@@ -4,7 +4,7 @@
 #include <stdexcept>
 
 // nvis
-#include <util/timer.hpp>
+#include <misc/progress.hpp>
 
 // Boost graph library
 #include <graph/definitions.hpp>
@@ -140,11 +140,11 @@ public:
     
     template<typename I_=int>
     void embed() {
-        nvis::timer t;
+        spurt::timer t;
         all_pairs_distances(distances);
         std::cout << "all pair shortest path computation took " 
                   << t.elapsed() << " seconds.\n";
-        t.restart();
+        t.start();
         mds.embed(distances);
         std::cout << "MDS embedding took " << t.elapsed() << " seconds.\n";
     }

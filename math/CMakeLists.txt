@@ -1,13 +1,3 @@
-set( MATH_LIB_SRC
-     matrix.cpp
-)
-add_library( spurt_math ${LIBMODE} ${MATH_LIB_SRC} )
-target_link_libraries( spurt_math ${Teem_LIBRARIES} )
-install( TARGETS spurt_math
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-)
-
 set( MATH_TEST
     test_exponentiation
     test_polynomial
@@ -25,7 +15,7 @@ set( MATH_EXEC
 
 foreach( name ${MATH_EXEC} )
     add_executable( ${name} ${name}.cpp )
-    target_link_libraries( ${name} spurt_math spurt_image ${Teem_LIBRARIES} )
+    target_link_libraries( ${name} spurt_image ${Teem_LIBRARIES} )
 endforeach()
 install( TARGETS ${MATH_EXEC} RUNTIME DESTINATION bin )
 
@@ -39,6 +29,6 @@ set( MATH_EXEC_WITH_TOKAMAK
 
 foreach( name ${MATH_EXEC_WITH_TOKAMAK} )
     add_executable( ${name} ${name}.cpp )
-    target_link_libraries( ${name} spurt_math spurt_image ${Teem_LIBRARIES} ${TOKAMAK_LIBRARIES})
+    target_link_libraries( ${name} spurt_image ${Teem_LIBRARIES} ${TOKAMAK_LIBRARIES})
 endforeach()
 install( TARGETS ${MATH_EXEC_WITH_TOKAMAK} RUNTIME DESTINATION bin )

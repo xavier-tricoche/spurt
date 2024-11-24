@@ -3,28 +3,30 @@
 
 #include <iostream>
 #include <teem/nrrd.h>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 #include <image/nrrd_wrapper.hpp>
-#include <data/raster.hpp>
+#include <data/image.hpp>
 #include <misc/meta_utils.hpp>
 
 
 namespace spurt {
 
-template< typename Value_, int N, typename Scalar_=double >
+template< typename Value_, int N, typename Scalar_=double,
+          typename Size_ = size_t, typename Coord_ = small_vector<Size_, N>,
+          typename Pos_ = small_vector<Scalar_, N> >
 class nrrd_field {
 public:
     static const size_t dim = N;
     static const size_t valsize = data_traits<Value_>::size();
+    typedef spurt::image<Size_, Scalar_, N, Value_, Coord_, Pos_> field_type;  // a continuous function
+    typedef Pos_                             point_type;
+    typedef Coord_                           coord_type;
     typedef Scalar_                          scalar_type; // a number
     typedef Value_                           value_type;  // an attribute
-    typedef spurt::image<value_type, N>     field_type;  // a continuous function
-    typedef typename field_type::grid_type   grid_type;   // a spatial data structure
-    typedef typename field_type::point_type  point_type;  // a position in space
-    typedef typename field_type::coord_type  coord_type;  // discrete coordinates
+    typedef typename field_type::grid_type   grid_type;   // a spatial data structurecoordinates
     typedef typename field_type::bounds_type bounds_type; // physical bounds
-    typedef typename field_type::vec_type    vector_type; // a vector 
+    typedef typename field_type::pos_type    vector_type; // a vector 
     
 private:
     void initialize(const Nrrd* nrrd) {

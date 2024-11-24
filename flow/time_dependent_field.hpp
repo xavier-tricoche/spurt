@@ -14,11 +14,9 @@
 #include <vtk/vtk_interpolator.hpp>
 #include <vtkGenericCell.h>
 
-#include "math/fixed_vector.hpp"
-#include <math/dopri5.hpp>
+#include <math/types.hpp>
 
 namespace {
-
     template<typename Scalar>
     int find_time(Scalar t, const std::vector<Scalar>& times) {
         if (t < times.front() || t > times.back()) return -1;
@@ -38,6 +36,15 @@ namespace {
 
 namespace spurt {
 
+    struct invalid_position_exception: public std::runtime_error {
+        typedef std::runtime_error base_type;
+        explicit invalid_position_exception(const std::string& what_arg) : base_type(what_arg), on_start(false) {}
+        explicit invalid_position_exception(const char* what_arg ) : base_type(what_arg), on_start(false) {}
+        explicit invalid_position_exception() : base_type("Invalid position queried for interpolation"), on_start(false) {}
+
+        bool on_start;
+    };
+
     template<typename Field_>
     class arbitrary_time_dependent_field {
     public:
@@ -49,7 +56,8 @@ namespace spurt {
         constexpr static size_t dimension = field_type::dimension;
 
     private:
-        constexpr static scalar_type invalid_time = std::numeric_limits<scalar_type>::min();
+        constexpr static scalar_type invalid_time = 
+                std::numeric_limits<scalar_type>::min();
 
     public:
         arbitrary_time_dependent_field()
@@ -58,12 +66,12 @@ namespace spurt {
             // std::cout << "default constructor @" << (void*)this << std::endl;
         }
 
-        arbitrary_time_dependent_field(const std::vector< std::shared_ptr<field_type> >& steps,
-                                       const std::vector<scalar_type>& times)
+        arbitrary_time_dependent_field(
+            const std::vector< std::shared_ptr<field_type> >& steps,
+            const std::vector<scalar_type>& times
+            )
             : m_steps(steps), m_times(times), m_deltas(), m_samples(0),
               m_min_time(invalid_time), m_max_time(invalid_time) {
-
-            // std::cout << "time-dependent field constructor @" << (void*)this << std::endl;
 
             // check that the time steps are sorted and sort them if not
             if (!std::is_sorted(m_times.begin(), m_times.end())) {
@@ -91,9 +99,11 @@ namespace spurt {
             m_max_time = m_times.back();
         }
 
-        arbitrary_time_dependent_field(const arbitrary_time_dependent_field& other)
-            : m_steps(other.m_steps), m_times(other.m_times), m_deltas(other.m_deltas),
-              m_samples(other.m_samples),
+        arbitrary_time_dependent_field(
+            const arbitrary_time_dependent_field& other
+            )
+            : m_steps(other.m_steps), m_times(other.m_times), 
+              m_deltas(other.m_deltas), m_samples(other.m_samples),
               m_min_time(other.m_min_time), m_max_time(other.m_max_time) {
             // std::cout << "time-dependent field copy constructor @" << (void*)this
                       // << " from @" << (void*)&other << ", inherited m_samples: "
@@ -118,18 +128,12 @@ namespace spurt {
             }
 
             std::ostringstream os;
-
-            // os << "\thi=" << hi << " before increment, counter=" << m_samples << ")\n";
             m_samples += 2;
-
-            // temporal interpolation
-            // os << "\tfield(" << p[0] << ", " << p[1] << ", " << p[2] << ", " << t << ")=" << (1.-u)*vlo + u*vhi << " (counter=" << m_samples << ") @=" << (void*)this << std::endl;
-            // std::cout << os.str();
             return (1.-u)*vlo + u*vhi;
         }
 
         size_t nb_samples() const { return m_samples; }
-        void reset_counter() const { /*std::cout << "resetting counter" << std::endpoint_locatorl;*/ m_samples = 0; }
+        void reset_counter() const { m_samples = 0; }
 
     private:
         std::vector< scalar_type >                  m_times, m_deltas;
@@ -160,14 +164,14 @@ namespace spurt {
             value_type v = value_type(weights.front()*(*values)[ptids.front()]);
             if (m_verbose) {
                 std::cout << "ptid[0]=" << ptids[0] << ", weight[0]=" << weights.front()
-                          << ", value[0]=" << to_str((*values)[ptids.front()]) << '\n';
+                          << ", value[0]=" << ((*values)[ptids.front()]) << '\n';
             }
             for (int i=1; i<weights.size(); i++) {
                 v += value_type(weights[i]*(*values)[ptids[i]]);
                 if (m_verbose) {
                     std::cout << "ptid[" << i << "]=" << ptids[i] << ", weight["
                               << i << "]=" << weights[i] << ", value[" << i << "]="
-                              << to_str((*values)[ptids[i]]) << '\n';
+                              << ((*values)[ptids[i]]) << '\n';
                 }
             }
             return v;
@@ -224,7 +228,7 @@ namespace spurt {
             std::vector<index_type> ptids(8);
             if (!m_locator->find_cell(p, weights, ptids, a_cell)) {
                 std::ostringstream os;
-                os << "fixed_mesh_time_dependent_field::interpolate: invalid location: " << to_str(p) << ", t=" << t;
+                os << "fixed_mesh_time_dependent_field::interpolate: invalid location: " << (p) << ", t=" << t;
                 if (m_verbose) {
                     std::cerr << os.str() << std::flush;
                 }
@@ -234,7 +238,7 @@ namespace spurt {
             index_type idx = find_time(t, m_times);
             if (idx == -1) {
                 std::ostringstream os;
-                os << "fixed_mesh_time_dependent_field::interpolate: invalid time coordinate: " << t << ", p=" << to_str(p);
+                os << "fixed_mesh_time_dependent_field::interpolate: invalid time coordinate: " << t << ", p=" << (p);
                 throw std::runtime_error(os.str());
             }
             else {
@@ -244,8 +248,8 @@ namespace spurt {
 
                 if (m_verbose) {
                     std::ostringstream os;
-                    os << "interpolation at " << to_str(p) << " at time step #" << idx << " returned " << to_str(vlo) << '\n';
-                    os << "interpolation at " << to_str(p) << " at time step #" << idx+1 << " returned " << to_str(vhi) << '\n';
+                    os << "interpolation at " << (p) << " at time step #" << idx << " returned " << (vlo) << '\n';
+                    os << "interpolation at " << (p) << " at time step #" << idx+1 << " returned " << (vhi) << '\n';
                     std::cout << os.str() << std::flush;
                 }
                 vlo *= (1-u);
@@ -291,14 +295,14 @@ namespace spurt {
             value_type v = value_type(weights.front()*(*values)[ptids.front()]);
             if (m_verbose) {
                 std::cout << "ptid[0]=" << ptids[0] << ", weight[0]=" << weights.front()
-                          << ", value[0]=" << to_str((*values)[ptids.front()]) << '\n';
+                          << ", value[0]=" << ((*values)[ptids.front()]) << '\n';
             }
             for (int i=1; i<weights.size(); i++) {
                 v += value_type(weights[i]*(*values)[ptids[i]]);
                 if (m_verbose) {
                     std::cout << "ptid[" << i << "]=" << ptids[i] << ", weight["
                               << i << "]=" << weights[i] << ", value[" << i << "]="
-                              << to_str((*values)[ptids[i]]) << '\n';
+                              << ((*values)[ptids[i]]) << '\n';
                 }
             }
             return v;
@@ -348,7 +352,7 @@ namespace spurt {
             if (!m_interpolator->interpolation_info(p, weights, ptids, cellid) ||
                 is_out_of_bounds(cellid)) {
                 std::ostringstream os;
-                os << "structured_mesh_time_dependent_field::interpolate: invalid location: " << to_str(p) << ", t=" << t;
+                os << "structured_mesh_time_dependent_field::interpolate: invalid location: " << (p) << ", t=" << t;
                 if (m_verbose) {
                     std::cerr << os.str() << std::flush;
                 }
@@ -358,7 +362,7 @@ namespace spurt {
             int idx = find_time(t, m_times);
             if (idx == -1) {
                 std::ostringstream os;
-                os << "structured_mesh_time_dependent_field::interpolate: invalid time coordinate: " << t << ", p=" << to_str(p);
+                os << "structured_mesh_time_dependent_field::interpolate: invalid time coordinate: " << t << ", p=" << (p);
                 throw std::runtime_error(os.str());
             }
             else {
@@ -368,8 +372,8 @@ namespace spurt {
 
                 if (m_verbose) {
                     std::ostringstream os;
-                    os << "interpolation at " << to_str(p) << " at time step #" << idx << " returned " << to_str(vlo) << '\n';
-                    os << "interpolation at " << to_str(p) << " at time step #" << idx+1 << " returned " << to_str(vhi) << '\n';
+                    os << "interpolation at " << (p) << " at time step #" << idx << " returned " << (vlo) << '\n';
+                    os << "interpolation at " << (p) << " at time step #" << idx+1 << " returned " << (vhi) << '\n';
                     std::cout << os.str() << std::flush;
                 }
                 vlo *= (1-u);
@@ -421,14 +425,14 @@ namespace spurt {
             value_type v = value_type(weights.front()*(*values)[ptids.front()]);
             if (m_verbose) {
                 std::cout << "ptid[0]=" << ptids[0] << ", weight[0]=" << weights.front()
-                    << ", value[0]=" << to_str((*values)[ptids.front()]) << '\n';
+                    << ", value[0]=" << ((*values)[ptids.front()]) << '\n';
             }
             for (int i = 1; i < weights.size(); i++) {
                 v += value_type(weights[i] * (*values)[ptids[i]]);
                 if (m_verbose) {
                     std::cout << "ptid[" << i << "]=" << ptids[i] << ", weight["
                         << i << "]=" << weights[i] << ", value[" << i << "]="
-                        << to_str((*values)[ptids[i]]) << '\n';
+                        << ((*values)[ptids[i]]) << '\n';
                 }
             }
             return v;
@@ -479,7 +483,7 @@ namespace spurt {
             int idx = find_time(t, m_times);
             if (idx == -1) {
                 std::ostringstream os;
-                os << "tp_bspline_time_dependent_field::interpolate: invalid time coordinate: " << t << ", p=" << to_str(p);
+                os << "tp_bspline_time_dependent_field::interpolate: invalid time coordinate: " << t << ", p=" << (p);
                 throw std::runtime_error(os.str());
             }
             else {
@@ -490,45 +494,12 @@ namespace spurt {
                 bool project_onto_closest_bdry_surface = m_bdry_aware && !is_starting_pt;
                 vtkIdType ci = m_dataset->BsplineInterpolate(query_param_tmp, return_val_tmp, m_bdry_aware, project_onto_closest_bdry_surface);
                 if (ci < 0) {
-                    throw nvis::invalid_position_exception("BARG: out of bound.");
+                    throw invalid_position_exception("BARG: out of bound.");
                 }
 
 
                 value_type ret_val(return_val_tmp[0], return_val_tmp[1], return_val_tmp[2]);
                 return ret_val;
-
-                /////// Below is the old version ////////
-
-#if 0
-                std::vector<scalar_type> weights(8);
-                std::vector<int> ptids(8);
-                int cellid;
-
-                //interpolation_info gets the weights and the ptids for interpolation use
-                if (!m_interpolator->interpolation_info(p, weights, ptids, cellid) ||
-                    is_out_of_bounds(cellid)) {
-                    std::ostringstream os;
-                    os << "tp_bspline_time_dependent_field::interpolate: invalid location: " << to_str(p) << ", t=" << t;
-                    if (m_verbose) {
-                        std::cerr << os.str() << std::flush;
-                    }
-                    throw std::runtime_error(os.str());
-                }
-
-                value_type vlo = interpolate(idx, weights, ptids);      // spatial interpolation
-                value_type vhi = interpolate(idx + 1, weights, ptids);    // spatial interpolation
-                scalar_type u = (t - m_times[idx]) / (m_times[idx + 1] - m_times[idx]); // linear time interpolation
-
-                if (m_verbose) {
-                    std::ostringstream os;
-                    os << "interpolation at " << to_str(p) << " at time step #" << idx << " returned " << to_str(vlo) << '\n';
-                    os << "interpolation at " << to_str(p) << " at time step #" << idx + 1 << " returned " << to_str(vhi) << '\n';
-                    std::cout << os.str() << std::flush;
-                }
-                vlo *= (1 - u);
-                vhi *= u;
-                return value_type(vlo + vhi);
-#endif
             }
         }
 
@@ -544,7 +515,6 @@ namespace spurt {
         bool m_verbose;
         bool m_bdry_aware;
     };
-
 
 } // spurt
 

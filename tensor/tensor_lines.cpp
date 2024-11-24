@@ -4,13 +4,13 @@
 #include <teem/nrrd.h>
 #include <teem/unrrdu.h>
 
-#include <math/fixed_vector.hpp>
-#include <util/wall_timer.hpp>
+#include <math/types.hpp>
+#include <math/inverse_transform.hpp>
+#include <misc/progress.hpp>
 #include <image/nrrd_field.hpp>
 #include <flow/ftle.hpp>
 #include <tensor/double_point.hpp>
 #include <tensor/eigenvector_field.hpp>
-#include <math/inverse_transform.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <boost/random.hpp>
 
@@ -19,13 +19,13 @@ char* name_out;
 char* name_seed_density;
 char* name_seed_points;
 double length, sampling, dx, rel, min_length, max_length, d_length;
-int dir, scaleLen, eigen;
+int dir, scaleLen, eigenid;
 size_t nb_seeds;
 char* tl_out;
 int r;
 float col[3];
 
-typedef Eigen::Matrix<double, 7, 1> tensor_type;
+typedef small_vector<double, 7> tensor_type;
 typedef spurt::nrrd_field<tensor_type, 3, double> tensor_field_type;
 typedef EigenvectorField<tensor_field_type> eigenvector_field_type;
 typedef EigenvectorField<DoublePointLoad> dpl_eigenvectorfield_type;
@@ -51,7 +51,7 @@ void initialize(int argc, char* argv[], hestOpt* hopt)
     hestOptAdd(&hopt, "n",      "nb seeds",         airTypeSize_t,  1,  1,  &nb_seeds,          NULL,       "number of seeds");
     hestOptAdd(&hopt, "random", NULL,               airTypeInt,     0,  0,  &r,                 NULL,       "random seeding");
     hestOptAdd(&hopt, "r",      "dpl rel distance", airTypeDouble,  0,  1,  &rel,               "0.5",      "relative distance between single point loads in procedural double point load model. Ignored if an input file is selected");
-    hestOptAdd(&hopt, "e",      "eigenvector",      airTypeInt,     0,  1,  &eigen,             "0",        "eigenvector field along which integration takes place");
+    hestOptAdd(&hopt, "e",      "eigenvector",      airTypeInt,     0,  1,  &eigenid,             "0",        "eigenvector field along which integration takes place");
     hestOptAdd(&hopt, "c",      "color",            airTypeFloat,   3,  3,  col,                "-1 -1 -1", "lines' color");
 
     hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
@@ -68,29 +68,29 @@ struct field_wrapper {
         : dpl(0), nrrd(new eigenvector_field_type(field)),
           procedural(false), bbox(field.bounds()) {}
 
-    nvis::vec3 interpolate(const nvis::vec3& x) const {
+    spurt::vec3 interpolate(const spurt::vec3& x) const {
         if (procedural) {
-            return dpl->evec(x, eigen);
+            return dpl->evec(x, eigenid);
         } else {
-            return nrrd->evec(x, eigen);
+            return nrrd->evec(x, eigenid);
         }
     }
 
-    const nvis::bbox3& bounds() const {
+    const spurt::bbox3& bounds() const {
         return bbox;
     }
 
     const dpl_eigenvectorfield_type*     dpl;
     const eigenvector_field_type*   nrrd;
     const bool                                   procedural;
-    nvis::bbox3                                  bbox;
+    spurt::bbox3                                  bbox;
 };
 
-bool seeds_from_density(std::vector<nvis::vec3>& seeds, const std::string& name, size_t n)
+bool seeds_from_density(std::vector<spurt::vec3>& seeds, const std::string& name, size_t n)
 {
     Nrrd* sampling_nrrd;
-    nvis::bbox3 sampling_bounds;
-    nvis::vec3 sampling_step;
+    spurt::bbox3 sampling_bounds;
+    spurt::vec3 sampling_step;
     spurt::inverse_transform_sampling<float>* sampler;
     sampling_nrrd = spurt::nrrd_utils::readNrrd(name);
     int size = 1;
@@ -122,14 +122,14 @@ bool seeds_from_density(std::vector<nvis::vec3>& seeds, const std::string& name,
         int i = id % sampling_nrrd->axis[0].size;
         int j = (id / sampling_nrrd->axis[0].size) % sampling_nrrd->axis[1].size;
         int k = id / (sampling_nrrd->axis[0].size * sampling_nrrd->axis[1].size);
-        nvis::vec3 c(i, j, k);
-        seeds.push_back(sampling_bounds.min() + c * sampling_step);
+        spurt::vec3 c(i, j, k);
+        seeds.push_back(sampling_bounds.min() + (c * sampling_step));
     }
 
     return true;
 }
 
-bool seeds_from_file(std::vector<nvis::vec3>& seeds, const std::string& name, size_t n)
+bool seeds_from_file(std::vector<spurt::vec3>& seeds, const std::string& name, size_t n)
 {
     seeds.clear();
     std::fstream in(name.c_str(), std::ios::in);
@@ -140,7 +140,7 @@ bool seeds_from_file(std::vector<nvis::vec3>& seeds, const std::string& name, si
     unsigned int N;
     in >> N;
     for (int i = 0 ; i < N && !in.eof() ; ++i) {
-        nvis::vec3 x;
+        spurt::vec3 x;
         in >> x[0] >> x[1] >> x[2];
         seeds.push_back(x);
     }
@@ -155,10 +155,10 @@ bool seeds_from_file(std::vector<nvis::vec3>& seeds, const std::string& name, si
     return true;
 }
 
-void uniform_seeding(std::vector<nvis::vec3>& seeds, const nvis::bbox3& bounds, size_t n)
+void uniform_seeding(std::vector<spurt::vec3>& seeds, const spurt::bbox3& bounds, size_t n)
 {
     seeds.clear();
-    nvis::vec3 diameter = bounds.size();
+    spurt::vec3 diameter = bounds.size();
     double ref = *std::min_element(&diameter[0], &diameter[3]);
     int fac = 1;
     for (int i = 0 ; i < 3 ; ++i) {
@@ -166,7 +166,7 @@ void uniform_seeding(std::vector<nvis::vec3>& seeds, const nvis::bbox3& bounds, 
     }
     float refn = pow((float)n / fac, 1. / 3.);
     int nsamples[3];
-    nvis::vec3 step;
+    spurt::vec3 step;
     for (int i = 0 ; i < 3 ; ++i) {
         nsamples[i] = (int)floor(refn * diameter[i] / ref);
         step[i] = std::max(1., diameter[i] / (float)(nsamples[i] - 1));
@@ -177,20 +177,20 @@ void uniform_seeding(std::vector<nvis::vec3>& seeds, const nvis::bbox3& bounds, 
         int i = l % nsamples[0];
         int j = (l / nsamples[0]) % nsamples[1];
         int k = l / (nsamples[0] * nsamples[1]);
-        nvis::vec3 c(i, j, k);
-        nvis::vec3 x = bounds.min() + c * step;
+        spurt::vec3 c(i, j, k);
+        spurt::vec3 x = bounds.min() + (c * step);
         seeds.push_back(x);
     }
 }
 
-void random_seeding(std::vector<nvis::vec3>& seeds, const nvis::bbox3& bounds, size_t n)
+void random_seeding(std::vector<spurt::vec3>& seeds, const spurt::bbox3& bounds, size_t n)
 {
     srand48(time(0));
     seeds.clear();
-    nvis::vec3 diameter = bounds.size();
+    spurt::vec3 diameter = bounds.size();
     for (int i = 0 ; i < n ; ++i) {
-        nvis::vec3 c(drand48()*diameter[0], drand48()*diameter[1], drand48()*diameter[2]);
-        nvis::vec3 x = bounds.min() + c;
+        spurt::vec3 c(drand48()*diameter[0], drand48()*diameter[1], drand48()*diameter[2]);
+        spurt::vec3 x = bounds.min() + c;
         seeds.push_back(x);
     }
 }
@@ -200,7 +200,7 @@ int main(int argc, char* argv[])
     hestOpt* hopt;
     initialize(argc, argv, hopt);
 
-    if (eigen < 0 || eigen > 2) {
+    if (eigenid < 0 || eigenid > 2) {
         std::cerr << "ERROR: invalid eigenvector field selected" << std::endl;
         hestUsage(stderr, hopt, argv[0], 0);
         return -1;
@@ -221,7 +221,7 @@ int main(int argc, char* argv[])
         std::cerr << "processing nrrd file: " << name_in << std::endl;
     }
 
-    std::vector<nvis::vec3> seeds;
+    std::vector<spurt::vec3> seeds;
     bool pdf_seeding = strcmp(name_seed_density, "none");
     bool file_seeding = strcmp(name_seed_points, "none");
 
@@ -241,10 +241,10 @@ int main(int argc, char* argv[])
 
     int lastpct = -1;
 
-    std::vector<std::vector<nvis::vec3> > curves;
+    std::vector<std::vector<spurt::vec3> > curves;
     int nverts = 0;
     int nprocessed = 0;
-    nvis::timer timer;
+    spurt::timer timer;
     for (int n = 0 ; n < seeds.size() ; ++n) {
         int pct = 100 * n / seeds.size();
         if (pct > lastpct) {
@@ -255,17 +255,17 @@ int main(int argc, char* argv[])
                       << std::flush;
         }
 
-        nvis::vec3 seed = seeds[n];
+        spurt::vec3 seed = seeds[n];
 
         for (int dir = 0 ; dir < 2 ; ++dir) {
             int error = -3;
             double h = (dir ? dx : -dx);
-            curves.push_back(std::vector<nvis::vec3>());
-            std::vector<nvis::vec3>& steps = curves.back();
+            curves.push_back(std::vector<spurt::vec3>());
+            std::vector<spurt::vec3>& steps = curves.back();
             try {
                 double length_io = length;
-                nvis::vec3 z = ftle::eigen_flow_map(*efield, seed, h, length_io, error, steps);
-                if (std::isinf(nvis::norm(z)) || std::isnan(nvis::norm(z))) {
+                spurt::vec3 z = ftle::eigen_flow_map(*efield, seed, h, length_io, error, steps);
+                if (spurt::any(spurt::isinvalid(z))) {
                     continue;
                 }
             } catch (...) {

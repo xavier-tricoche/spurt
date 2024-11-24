@@ -1,194 +1,201 @@
-#ifndef __raster_data_hpp__
-#define __raster_data_hpp__
+#pragma once
 
-#include "grid.hpp"
-#include <vector>
 #include <assert.h>
+// STL
+#include <cstdlib>
+#include <iostream>
+#include <iterator>
 #include <stdexcept>
-#include <boost/static_assert.hpp>
+#include <vector>
+#include <memory>
+#include <fstream>
+#include <math/types.hpp>
+#include <data/raster_grid.hpp>
 
 namespace spurt
 {
 
-/// legacy wrapper for raster_data<>
-template<typename T1, typename T2, int N>
+template <typename Size_, typename Scalar_, size_t Dim, typename Value_,
+          typename Coord_ = small_vector<Size_, Dim>, 
+          typename Pos_ = small_vector<Scalar_, Dim> >
 class raster_data
 {
 public:
-    typedef T1                                  data_type;
-    typedef nvis::fixed_vector<data_type, N>    derivative_type;
-    typedef T2                                  scalar_type;
-    typedef grid<scalar_type, N>                grid_type;
-    typedef typename grid_type::vec_type        vec_type;
-    typedef typename grid_type::ivec_type       ivec_type;
+    typedef raster_grid<Size_, Scalar_, Dim, Coord_, Pos_> grid_type;
+    typedef typename grid_type::size_type size_type;
+    typedef typename grid_type::coord_type coord_type;
+    typedef typename grid_type::pos_type pos_type;
+    typedef typename grid_type::scalar_type scalar_type;
+    typedef typename grid_type::bounds_type bounds_type;
+    typedef Value_ value_type;
+    typedef typename std::vector<value_type>::reference reference_type;
+    typedef typename std::vector<value_type>::const_reference const_reference_type;
+    typedef typename std::vector<value_type>::iterator iterator;
+    typedef typename std::vector<value_type>::const_iterator const_iterator;
+    static const size_type dimension = grid_type::dimension;
+    typedef raster_data<Size_, Scalar_, Dim, Value_, Coord_, Pos_> self_type;
 
-    struct invalid_point : public std::runtime_error {
-        invalid_point() : std::runtime_error("invalid point") {
-        }
-    };
-
-    raster_data(const grid_type& grid, const data_type& init_value)
-        : __data(grid.size(), init_value), __grid(grid), __verbose(false) {
+    // constructors
+    raster_data() {}
+    raster_data(const self_type &other) = default;
+    raster_data(const grid_type &grid) 
+        : m_grid(grid), m_data(grid.size()) {}
+    raster_data(const grid_type &grid, value_type init_val) 
+        : m_grid(grid), m_data(grid.size(), init_val) {} 
+    raster_data(const grid_type &grid, const std::vector<value_type> &data) 
+        : m_grid(grid), m_data(data) {
+        assert(m_data.size() == grid.size());
+    }
+    template <typename _Iterator>
+    raster_data(const grid_type &grid, _Iterator begin, _Iterator end) 
+        : m_grid(grid) { 
+        std::copy(begin, end, std::back_inserter(m_data));
+        assert(m_data.size() == grid.size());
     }
 
-    raster_data(const grid_type& grid, const std::vector<data_type>& data)
-        : __data(data), __grid(grid), __verbose(false) {
-        assert(__data.size() == __grid.size());
+    ~raster_data() {}
+
+    const grid_type &grid() const { return m_grid; }
+
+    iterator begin() { return m_data.begin(); }
+    const_iterator begin() const { return m_data.begin(); }
+    iterator end() { return m_data.end(); }
+    const_iterator end() const { return m_data.end(); }
+
+    const size_type &size() const { return m_grid.size(); }
+
+    // lookup
+    const_reference_type operator()(size_type i) const
+    {
+        return m_data[m_grid.index(i)];
+    }
+    const_reference_type operator()(size_type i, size_type j) const
+    {
+        return m_data[m_grid.index(i, j)];
+    }
+    const_reference_type operator()(size_type i, size_type j, size_type k) const
+    {
+        return m_data[m_grid.index(i, j, k)];
+    }
+    const_reference_type operator()(size_type i, size_type j, size_type k,
+                                    size_type l) const
+    {
+        return m_data[m_grid.index(i, j, k, l)];
+    }
+    const_reference_type operator()(const coord_type &id) const
+    {
+        return m_data[m_grid.index(id)];
+    }
+    // array-type access for convenience
+    const_reference_type operator[](size_type idx) const
+    {
+        return m_data[idx];
     }
 
-    template<typename iterator_type>
-    raster_data(const grid_type& grid,
-                const iterator_type& data_begin, const iterator_type& data_end)
-        : __data(data_begin, data_end), __grid(grid), __verbose(false) {
-        assert(__data.size() == __grid.size());
+    reference_type operator()(size_type i)
+    {
+        return m_data[m_grid.index(i)];
+    }
+    reference_type operator()(size_type i, size_type j)
+    {
+        return m_data[m_grid.index(i, j)];
+    }
+    reference_type operator()(size_type i, size_type j, size_type k)
+    {
+        return m_data[m_grid.index(i, j, k)];
+    }
+    reference_type operator()(size_type i, size_type j, size_type k,
+                              size_type l)
+    {
+        return m_data[m_grid.index(i, j, k, l)];
+    }
+    reference_type operator()(const coord_type &id)
+    {
+        return m_data[m_grid.index(id)];
+    }
+    reference_type operator[](size_type idx)
+    {
+        return m_data[idx];
     }
 
-    void verbose(bool v) const {
-        __verbose = v;
-    }
-
-    const data_type& operator()(const ivec_type& c) const {
-        // this will throw an exception if the coordinates are invalid
-        return __data[__grid.index(c)];
-    }
-
-    data_type& operator()(const ivec_type& c) {
-        // this will throw an exception if the coordinates are invalid
-        return __data[__grid.index(c)];
-    }
-
-    data_type interpolate(const vec_type& x) const {
-        // apply bilinear / trilinear interpolation
-        BOOST_STATIC_ASSERT(N == 2 || N == 3);
-
-        // an exception will be thrown if the position is outside the grid
-        if (__verbose) __grid.verbose(true);
-        std::pair<ivec_type, vec_type> tmp = __grid.local_coordinates(x);
-        if (__verbose) __grid.verbose(false);
-        ivec_type id = tmp.first;
-        vec_type z = tmp.second;
-        vec_type Z = vec_type(1) - z;
-
-        if (N == 2) {
-            // bilinear case
-            return Z[0]*Z[1]*(*this)(id) +
-                   z[0]*Z[1]*(*this)(id + ivec_type(1, 0)) +
-                   z[0]*z[1]*(*this)(id + ivec_type(1, 1)) +
-                   Z[0]*z[1]*(*this)(id + ivec_type(0, 1));
-        }
-        else {
-            // trilinear case
-            return Z[0]*Z[1]*Z[2]*(*this)(id) +
-                   z[0]*Z[1]*Z[2]*(*this)(id + ivec_type(1, 0, 0)) +
-                   z[0]*z[1]*Z[2]*(*this)(id + ivec_type(1, 1, 0)) +
-                   Z[0]*z[1]*Z[2]*(*this)(id + ivec_type(0, 1, 0)) +
-                   Z[0]*Z[1]*z[2]*(*this)(id + ivec_type(0, 0, 1)) +
-                   z[0]*Z[1]*z[2]*(*this)(id + ivec_type(1, 0, 1)) +
-                   z[0]*z[1]*z[2]*(*this)(id + ivec_type(1, 1, 1)) +
-                   Z[0]*z[1]*z[2]*(*this)(id + ivec_type(0, 1, 1));
-        }
-    }
-
-    derivative_type derivative(const vec_type& x) const {
-        // apply bilinear / trilinear interpolation
-        BOOST_STATIC_ASSERT(N == 2 || N == 3);
-
-        // an exception will be thrown if the position is outside the grid
-        if (__verbose) __grid.verbose(true);
-        std::pair<ivec_type, vec_type> tmp = __grid.local_coordinates(x);
-        if (__verbose) __grid.verbose(false);
-        ivec_type id = tmp.first;
-        vec_type z = tmp.second;
-        vec_type Z = vec_type(1) - z;
-        vec_type dz = 1. / __grid.spacing();
-        vec_type dZ = -1*dz;
-
-        derivative_type df;
-        if (N == 2) {
-            // bilinear case
-            df[0] = dZ[0] * Z[1] * (*this)(id) +
-                    dz[0] * Z[1] * (*this)(id + ivec_type(1, 0)) +
-                    dz[0] * z[1] * (*this)(id + ivec_type(1, 1)) +
-                    dZ[0] * z[1] * (*this)(id + ivec_type(0, 1));
-            df[1] = Z[0] * dZ[1] * (*this)(id) +
-                    z[0] * dZ[1] * (*this)(id + ivec_type(1, 0)) +
-                    z[0] * dz[1] * (*this)(id + ivec_type(1, 1)) +
-                    Z[0] * dz[1] * (*this)(id + ivec_type(0, 1));
-        }
-        else {
-            // trilinear case
-            df[0] = dZ[0] * Z[1] * Z[2] * (*this)(id) +
-                    dz[0] * Z[1] * Z[2] * (*this)(id + ivec_type(1, 0, 0)) +
-                    dz[0] * z[1] * Z[2] * (*this)(id + ivec_type(1, 1, 0)) +
-                    dZ[0] * z[1] * Z[2] * (*this)(id + ivec_type(0, 1, 0)) +
-                    dZ[0] * Z[1] * z[2] * (*this)(id + ivec_type(0, 0, 1)) +
-                    dz[0] * Z[1] * z[2] * (*this)(id + ivec_type(1, 0, 1)) +
-                    dz[0] * z[1] * z[2] * (*this)(id + ivec_type(1, 1, 1)) +
-                    dZ[0] * z[1] * z[2] * (*this)(id + ivec_type(0, 1, 1));
-            df[1] = Z[0] * dZ[1] * Z[2] * (*this)(id) +
-                    z[0] * dZ[1] * Z[2] * (*this)(id + ivec_type(1, 0, 0)) +
-                    z[0] * dz[1] * Z[2] * (*this)(id + ivec_type(1, 1, 0)) +
-                    Z[0] * dz[1] * Z[2] * (*this)(id + ivec_type(0, 1, 0)) +
-                    Z[0] * dZ[1] * z[2] * (*this)(id + ivec_type(0, 0, 1)) +
-                    z[0] * dZ[1] * z[2] * (*this)(id + ivec_type(1, 0, 1)) +
-                    z[0] * dz[1] * z[2] * (*this)(id + ivec_type(1, 1, 1)) +
-                    Z[0] * dz[1] * z[2] * (*this)(id + ivec_type(0, 1, 1));
-            df[2] = Z[0] * Z[1] * dZ[2] * (*this)(id) +
-                    z[0] * Z[1] * dZ[2] * (*this)(id + ivec_type(1, 0, 0)) +
-                    z[0] * z[1] * dZ[2] * (*this)(id + ivec_type(1, 1, 0)) +
-                    Z[0] * z[1] * dZ[2] * (*this)(id + ivec_type(0, 1, 0)) +
-                    Z[0] * Z[1] * dz[2] * (*this)(id + ivec_type(0, 0, 1)) +
-                    z[0] * Z[1] * dz[2] * (*this)(id + ivec_type(1, 0, 1)) +
-                    z[0] * z[1] * dz[2] * (*this)(id + ivec_type(1, 1, 1)) +
-                    Z[0] * z[1] * dz[2] * (*this)(id + ivec_type(0, 1, 1));
-        }
-        return df;
-    }
-
-    const grid_type& get_grid() const {
-        return __grid;
-    }
-
-    const std::vector<data_type>& get_data() const {
-        return __data;
-    }
-
-    std::vector<data_type>& get_data() {
-        return __data;
-    }
-
-    size_t size() const {
-        return get_data().size();
-    }
-
-private:
-    std::vector<data_type>  __data;
-    const grid_type&        __grid;
-    mutable bool            __verbose;
+protected:
+    typedef typename grid_type::shifter_type shifter_type;
+    grid_type m_grid;
+    std::vector<value_type> m_data;
 };
 
+template <typename _Value>
+using raster1d = raster_data<long, double, 1, _Value>;
+template <typename _Value>
+using raster2d = raster_data<long, double, 2, _Value>;
+template <typename _Value>
+using raster3d = raster_data<long, double, 3, _Value>;
+template <typename _Value>
+using raster4d = raster_data<long, double, 4, _Value>;
+
+template <typename Size_, typename Scalar_, size_t Dim, typename Value_>
+void save_as_nrrd(const std::string &filename, 
+                  const raster_data<Size_, Scalar_, Dim, Value_>& data)
+{
+    typedef raster_data<Size_, Scalar_, Dim, Value_> data_type;
+    typedef typename data_type::scalar_type scalar_type;
+    typedef data_traits<Value_> dtraits;
+    typedef Value_ value_type;
+    std::string type_string = spurt::type2string<scalar_type>::type_name();
+    size_t ncomp = dtraits::size();
+
+    std::ostringstream os;
+    os << "NRRD0001\n";
+    os << "# Complete NRRD file format specification at:\n";
+    os << "# http://teem.sourceforge.net/nrrd/format.html\n";
+    os << "type: " << type_string << '\n';
+    os << "dimension: " << (ncomp > 1 ? Dim + 1 : Dim) << '\n';
+    os << "sizes:";
+    if (ncomp > 1)
+        os << " " << ncomp;
+    for (int i = 0; i < Dim; ++i)
+    {
+        os << " " << data.m_grid.resolution[i];
+    }
+    os << '\n';
+    os << "spacings:";
+    if (ncomp > 1)
+        os << " nan";
+    for (int i = 0; i < Dim; ++i)
+    {
+        os << " " << std::setprecision(17) 
+           << data.m_grid.spacing[i];
+    }
+    os << '\n';
+    os << "axis mins:";
+    if (ncomp > 1)
+        os << " nan";
+    for (int i = 0; i < Dim; ++i)
+    {
+        os << " " << std::setprecision(17) 
+           << data.m_grid.bounds().min()[i];
+    }
+    os << '\n';
+    os << "centerings:";
+    if (ncomp > 1)
+        os << " ???";
+    for (int i = 0; i < Dim; ++i)
+    {
+        os << " node";
+    }
+    os << '\n';
+    os << "endian: little\n";
+    os << "encoding: raw\n";
+
+    size_t sz = ncomp * data.m_data.size() * sizeof(scalar_type);
+    std::cout << "exporting " << sz << " bytes" << '\n';
+    std::cout << "grid res: " << data.m_grid.resolution() << '\n';
+    std::cout << "grid size: " << data.m_grid.size() << '\n';
+
+    std::ofstream out(filename.c_str(), std::ios::binary);
+    out << os.str() << std::endl;
+    out.write((char *)&data.m_data[0], sz);
+    out.close();
+}
+
 } // namespace spurt
-
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

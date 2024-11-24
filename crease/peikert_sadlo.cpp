@@ -8,29 +8,35 @@
 #include <Eigen/Eigen>
 
 #include <misc/progress.hpp>
+#include <math/types.hpp>
+
+using namespace spurt;
 
 typedef double value_type;
-typedef Eigen::Matrix<double, 3, 1> position_type;
-typedef Eigen::Matrix<double, 3, 1> vector_type;
-typedef Eigen::Matrix<double, 3, 3> matrix_type;
-typedef Eigen::Matrix<double, 2, 1> vector2d_type;
-typedef Eigen::Matrix<double, 2, 1> position2d_type;
-
-typedef Eigen::SelfAdjointEigenSolver<matrix_type> eigensolver_type;
+typedef vec3   position_type;
+typedef vec3   vector_type;
+typedef cvec3  complex_vector_type;
+typedef cmat3  complex_matrix_type;
+typedef mat3   matrix_type;
+typedef vec2   vector2d_type;
+typedef vec2   position2d_type;
 
 constexpr value_type invalid_value = std::numeric_limits<value_type>::min();
 inline bool is_bad_value(value_type v) {
     return v == invalid_value;
 }
 
-typedef spurt::fixed_sorted_vector<long int, 2> edge_index_type;
-typedef spurt::fixed_sorted_vector<long int, 3> triangle_index_type;
-typedef spurt::fixed_sorted_vector<long int, 4> quad_index_type;
-typedef spurt::fixed_sorted_vector<long int, 4> face_index_type;
+typedef lvec2 edge_index_type;
+typedef lvec3 triangle_index_type;
+typedef lvec4 quad_index_type;
+typedef lvec4 face_index_type;
 
-typedef vtk_utils::interpolator<vtkUnstructuredGrid, double, 3, vector_type, matrix_type> unstructured_interpolator_type;
-typedef vtk_utils::interpolator<vtkStructuredGrid, double, 3, vector_type, matrix_type> curvilinear_interpolator_type;
-typedef vtk_utils::interpolator<vtkRectilinearGrid, double, 3, vector_type, matrix_type> rectilinear_interpolator_type;
+typedef vtk_utils::interpolator<vtkUnstructuredGrid, double, 3, vec3, mat3> 
+    unstructured_interpolator_type;
+typedef vtk_utils::interpolator<vtkStructuredGrid, double, 3, vec3, mat3> 
+    curvilinear_interpolator_type;
+typedef vtk_utils::interpolator<vtkRectilinearGrid, double, 3, vec3, mat3> 
+    rectilinear_interpolator_type;
 
 
 std::string name_in, name_out, name_surface;
@@ -209,40 +215,28 @@ bool check_edge_linear(position_type& p, const edge_index_type& edge_id,
         // zero crossing found. compute linear approximation
         double u = -value0/(value1-value0);
         position_type p0, p1;
-        dataset->GetPoint(edge_id[0], &p0(0));
-        dataset->GetPoint(edge_id[1], &p1(0));
+        dataset->GetPoint(edge_id[0], &p0[0]);
+        dataset->GetPoint(edge_id[1], &p1[0]);
         p = (1.-u)*p0 + u*p1;
         return true;
     }
     else return false;
 }
 
-void eigen_decomposition(std::vector<value_type>& eigenvalues,
-                         std::vector<vector_type>& eigenvectors,
-                         const matrix_type& H) {
-    eigensolver_type solver;
-    solver.compute(H);
-    eigenvalues.resize(3);
-    eigenvectors.resize(3);
-    for (int i=0; i<3; ++i) {
-        eigenvalues[i] = solver.eigenvalues()[i];
-        eigenvectors[i] = solver.eigenvectors().col(i);
-    }
-}
-
 value_type PS_determinant(const vector_type& g, const matrix_type& H) {
     matrix_type A;
-    A.col(0) = g;
-    A.col(1) = H*g;
-    A.col(2) = H*A.col(1);
-    return A.determinant();
+    A.column(0) = g;
+    A.column(1) = H*g;
+    A.column(2) = H*A.column(1);
+    return determinant(A);
 }
 
 struct CreasePoint {
     CreasePoint(const position_type& p, const edge_index_type& eid,
                 const vector_type& g, const matrix_type& H)
         : _p(p), _edge_id(eid), _g(g), _H(H) {
-        eigen_decomposition(_evals, _evecs, _H);
+            
+        spurt::sym_eigensystem(_evals, _evecs, _H);
         // crease type:
         //
     }
@@ -253,8 +247,8 @@ struct CreasePoint {
     edge_index_type _edge_id;
     vector_type _g;
     matrix_type _H;
-    std::vector<value_type> _evals;
-    std::vector<vector_type> _evecs;
+    vec3 _evals;
+    matrix_type _evecs;
 };
 
 struct CreaseInfo {
@@ -267,14 +261,11 @@ struct CreaseInfo {
 };
 
 CreaseInfo eberly_filter(const vector_type& g,
-                         const std::vector<vector_type>& evecs,
-                         const std::vector<value_type>& evals,
+                         const matrix_type& evecs,
+                         const vector_type& evals,
                          const double epsilon = eps) {
     // evals are sorted in increasing order
-    std::vector<value_type> g_dot_ev(3);
-    for (int i=0; i<3; ++i) {
-        g_dot_ev[i] = std::abs(g.dot(evecs[i]))/g.norm();
-    }
+    vector_type g_dot_ev = abs(transpose(evecs)*g)/norm(g);
     // ridge test:
     int ridge_k=0; // ridge dimension
     for (int i=0; i<3; ++i, ++ridge_k) {
@@ -323,38 +314,38 @@ bool linear_parallel_operator(std::vector<CreaseInfo>& cps,
     for (unsigned int i = 0 ; i < 3 ; i++) {
         Hg[i] = H[i]*g[i];
     }
-    V.col(0) = Hg[1]-Hg[0];
-    V.col(1) = Hg[2]-Hg[0];
-    V.col(2) = Hg[0];
+    V.column(0) = Hg[1]-Hg[0];
+    V.column(1) = Hg[2]-Hg[0];
+    V.column(2) = Hg[0];
 
-    W.col(0) = g[1]-g[0];
-    W.col(1) = g[2]-g[0];
-    W.col(2) = g[0];
+    W.column(0) = g[1]-g[0];
+    W.column(1) = g[2]-g[0];
+    W.column(2) = g[0];
 
-    double detW = std::abs(W.determinant());
-    double detV = std::abs(V.determinant());
+    double detW = std::abs(determinant(W));
+    double detV = std::abs(determinant(V));
     matrix_type M;
     if (detW >= detV) {
         if (detW == 0) return false;
-        M = W.inverse() * V;
+        M = inverse(W) * V;
     }
     else { // (detV > detW)
-        M = V.inverse() * W;
+        M = inverse(V) * W;
     }
-
-    Eigen::EigenSolver<matrix_type> solver(M);
-    auto evals = solver.eigenvalues();
-    auto evecs = solver.eigenvectors();
+    
+    complex_vector_type evals;
+    complex_matrix_type evecs;
+    eigensystem(evals, evecs, M);
     std::vector<position_type> found;
     for (int i=0; i<3; ++i) {
-        if (evals(i).imag() != 0) continue; // discard complex eigenvalues
-        auto ev = evecs.col(i);
-        value_type ez = ev(2).real();
+        if (evals[i].imag() != 0) break; // discard complex eigenvalues
+        auto ev = evecs.column(i);
+        value_type ez = ev[2].real();
         if (ez == 0.) continue; // degenerate solution
         ev /= ez; // divide by ev[2] to obtain homogeneous coordinates
         value_type b[3];
-        b[1] = ev(0).real();
-        b[2] = ev(1).real();
+        b[1] = ev[0].real();
+        b[2] = ev[1].real();
         b[0] = 1.-b[1]-b[2];
         if (b[1] >= 0 && b[2] >= 0 && b[0] >= 0) {
             // position lies inside the triangle
@@ -368,18 +359,12 @@ bool linear_parallel_operator(std::vector<CreaseInfo>& cps,
     // loop over valid solutions inside triangles
     for (int i=0; i<found.size(); ++i) {
         position_type beta = found[i];
-        matrix_type hX = beta(0)*H[0] + beta(1)*H[1] + beta(2)*H[2];
-        vector_type gX = beta(0)*g[0] + beta(1)*g[1] + beta(2)*g[2];
-        eigensolver_type solverX(hX);
-        auto evalsX = solverX.eigenvalues();
-        auto evecsX = solverX.eigenvectors();
-        std::vector<value_type> _evals;
-        std::vector<vector_type> _evecs;
-        for (int j=0; j<3; ++j) {
-            _evals.push_back(evalsX(j));
-            _evecs.push_back(vector_type(evecsX.col(j)));
-        }
-        CreaseInfo info = eberly_filter(gX, _evecs, _evals, 0.01);
+        matrix_type hX = beta[0]*H[0] + beta[1]*H[1] + beta[2]*H[2];
+        vector_type gX = beta[0]*g[0] + beta[1]*g[1] + beta[2]*g[2];
+        vector_type evalsX;
+        matrix_type evecsX;
+        sym_eigensystem(evalsX, evecsX, hX);
+        CreaseInfo info = eberly_filter(gX, evecsX, evalsX, 0.01);
         if (info.kind != -1) {
             info.position = beta;
             cps.push_back(info);
@@ -403,7 +388,7 @@ struct cross_product_evaluator {
         matrix_type H;
         if (m_interpolator.gradient(g, p) &&
             m_interpolator.hessian(H, p)) {
-            f = g.cross(H*g);
+            f = cross(g, H*g);
             return true;
         }
         return false;
@@ -424,8 +409,8 @@ struct cross_product_evaluator {
             m_interpolator.hessian(H, p) &&
             m_interpolator.dhessian(dH, p)) {
             for (int i=0; i<3; ++i) {
-                df.row(i) = H.row(i).cross(H*g) +
-                            g.cross(dH[i]*g + H*H.row(i));
+                df.row(i) = cross(H.row(i), H*g) +
+                            cross(g, dH[i]*g + H*H.row(i));
             }
             return true;
         }
@@ -524,7 +509,7 @@ struct C3_vector_interpolator<boundaryAwareRectGrid> {
 
     bool jacobian(matrix_type& J, size_t index) const {
         position_type p;
-        m_dataset->GetPoint(index, &p(0));
+        m_dataset->GetPoint(index, &p[0]);
         if (_interpolate(p)) {
             J = m_Jacobian;
         }
@@ -534,18 +519,22 @@ struct C3_vector_interpolator<boundaryAwareRectGrid> {
     bool _interpolate(const position_type& p) const {
         // 0: f, 1: fx, 2: fy, 3: fz,
         // 4: fxx, 5: fxy, 6: fxz, 7: fyy, 8: fyz, 9: fzz,
-        // 10: fxxx, 11: fxxy, 12: fxxz, 13: fxyy, 14: fxyz, 15: fxzz, 16: fyyy, 17: fyyz, 18: fyzz, 19: fzzz
-        // dH[0] = [ [fxxx, fxxy, fxxz], [fxxy, fxyy, fxyz], [fxxz, fxyz, fxzz] ]
-        // dH[1] = [ [fxxy, fxyy, fxyz], [fxyy, fyyy, fyyz], [fxyz, fyyz, fyzz] ]
-        // dH[2] = [ [fxxz, fxyz, fxzz], [fxyz, fyyz, fyzz], [fxzz, fyzz. fzzz] ]
+        // 10: fxxx, 11: fxxy, 12: fxxz, 13: fxyy, 14: fxyz, 15: fxzz, 
+        // 16: fyyy, 17: fyyz, 18: fyzz, 19: fzzz
+        // dH[0] = [ [fxxx, fxxy, fxxz], [fxxy, fxyy, fxyz], 
+        //           [fxxz, fxyz, fxzz] ]
+        // dH[1] = [ [fxxy, fxyy, fxyz], [fxyy, fyyy, fyyz], 
+        //           [fxyz, fyyz, fyzz] ]
+        // dH[2] = [ [fxxz, fxyz, fxzz], [fxyz, fyyz, fyzz], 
+        //           [fxzz, fyzz. fzzz] ]
         std::vector<value_type> value;
-        if (is_bad_value(m_last_pos[0]) || p != m_last_pos) {
-            if (m_dataset->BsplineAllDerivatives(const_cast<double*>(&p(0)), value, 1, true)>=0) {
+        if (is_bad_value(m_last_pos[0]) || any(p != m_last_pos)) {
+            if (m_dataset->BsplineAllDerivatives(const_cast<double*>(&p[0]), value, 1, true)>=0) {
                 // std::cout << "returned value:\n";
                 // std::copy(value.begin(), value.end(), std::ostream_iterator<double>(std::cout, ","));
                 // std::cout << '\n';
                 // g = [fx, fy, fz]
-                std::copy(&value[0], &value[3], &m_value(0));
+                std::copy(&value[0], &value[3], &m_value[0]);
                 std::copy(&value[3], &value[12], &m_Jacobian(0,0));
                 return true;
             }
@@ -607,7 +596,7 @@ struct C3_interpolator {
     }
 
     bool gradient(vector_type& g, size_t index) const {
-        m_dataset->GetPointData()->GetArray("Gradient")->GetTuple(index, &g(0));
+        m_dataset->GetPointData()->GetArray("Gradient")->GetTuple(index, &g[0]);
         return true;
     }
 
@@ -697,7 +686,7 @@ struct C3_interpolator<boundaryAwareRectGrid> {
 
     bool gradient(vector_type& g, size_t index) const {
         position_type p;
-        m_dataset->GetPoint(index, &p(0));
+        m_dataset->GetPoint(index, &p[0]);
         if (_interpolate(p)) {
             g = m_gradient;
         }
@@ -715,7 +704,7 @@ struct C3_interpolator<boundaryAwareRectGrid> {
     bool hessian(matrix_type& H, size_t index) const {
         if (m_max_order < 2) return false;
         position_type p;
-        m_dataset->GetPoint(index, &p(0));
+        m_dataset->GetPoint(index, &p[0]);
         if (_interpolate(p)) {
             H = m_Hessian;
         }
@@ -733,7 +722,7 @@ struct C3_interpolator<boundaryAwareRectGrid> {
     bool dHessian(tensor_type& dH, size_t index) const {
         if (m_max_order < 3) return false;
         position_type p;
-        m_dataset->GetPoint(index, &p(0));
+        m_dataset->GetPoint(index, &p[0]);
         if (_interpolate(p)) {
             dH = m_dHessian;
         }
@@ -748,17 +737,17 @@ struct C3_interpolator<boundaryAwareRectGrid> {
         // dH[1] = [ [fxxy, fxyy, fxyz], [fxyy, fyyy, fyyz], [fxyz, fyyz, fyzz] ]
         // dH[2] = [ [fxxz, fxyz, fxzz], [fxyz, fyyz, fyzz], [fxzz, fyzz. fzzz] ]
         std::vector<value_type> value;
-        if (is_bad_value(m_last_pos[0]) || p != m_last_pos) {
-            if (m_dataset->BsplineAllDerivatives(const_cast<double*>(&p(0)), value, m_max_order, true)>=0) {
+        if (is_bad_value(m_last_pos[0]) || any(p != m_last_pos)) {
+            if (m_dataset->BsplineAllDerivatives(const_cast<double*>(&p[0]), value, m_max_order, true)>=0) {
                 // std::cout << "returned value:\n";
                 // std::copy(value.begin(), value.end(), std::ostream_iterator<double>(std::cout, ","));
                 // std::cout << '\n';
                 // g = [fx, fy, fz]
                 m_value = value[0];
-                std::copy(&value[1], &value[4], &m_gradient(0));
+                std::copy(&value[1], &value[4], &m_gradient[0]);
                 if (m_max_order >= 2) {
                     // H.row(0) = [fxx, fxy, fxz]
-                    std::copy(&value[4], &value[7], &m_Hessian(0));
+                    std::copy(&value[4], &value[7], &m_Hessian(0,0));
                     // symmetry: fxy = fyx
                     m_Hessian(0,1) = m_Hessian(1,0);
                     // symmetry: fxz = fzx
@@ -835,13 +824,13 @@ bool lnsearch(const Function& func, position_type& x,
 
     position_type xsave = x;
     vector_type fsave = f0;
-    vector_type d = dd.norm() > maxlength ? dd * maxlength / dd.norm() : dd;
+    vector_type d = norm(dd) > maxlength ? dd * maxlength / norm(dd) : dd;
     vector_type f;
 
     for (unsigned int i = 0; i < 7; ++i) {
         x = xsave + lambda * d;
         if (func.value(f, x)) {
-            if (f.norm() < (1 - alpha*lambda)*fsave.norm()) {
+            if (norm(f) < (1 - alpha*lambda)*norm(fsave)) {
                 return true;
             }
         }
@@ -866,23 +855,23 @@ bool newton_search(position_type& solution,
     // dx ~= -(df/dx)^{-1}*f(x)
 
     // intialize search at center
-    position_type center=position_type::Zero();
+    position_type center = 0;
     for (int i=0; i<face.size(); ++i) {
         center += face[i];
     }
     center *= 1./value_type(face.size());
     position_type guess = center;
-    value_type maxlength = 0.25*((face[2]-face[0]).norm()+(face[3]-face[1]).norm());
+    value_type maxlength = 0.25*(norm(face[2]-face[0])+norm(face[3]-face[1]));
 
     // compute local 2d reference frame in cell
     vector_type e0, e1, normal;
     if (face.size() == 4) { // quadrilateral face
         e0 = face[2]-face[0];
         e1 = face[3]-face[1];
-        normal = e0.cross(e1);
-        e0 /= e0.norm();
-        e1 = normal.cross(e0);
-        e1 /= e1.norm();
+        normal = cross(e0, e1);
+        e0 /= norm(e0);
+        e1 = cross(normal,e0);
+        e1 /= norm(e1);
     }
 
     // initialize search
@@ -895,9 +884,10 @@ bool newton_search(position_type& solution,
         }
 
         for (int iter=0; iter<nbiter; ++iter) {
-            vector_type dx = -df.inverse()*f;
+            matrix_type invdf = inverse(df);
+            vector_type dx = -(invdf*f);
             // project dx on the linear approximation of the face
-            dx = dx.dot(e0)*e0 + dx.dot(e1)*e1;
+            dx = inner(dx, e0)*e0 + inner(dx, e1)*e1;
             if (!lnsearch(func, x, f, dx, maxlength)) {
                 return false;
             }
@@ -905,7 +895,7 @@ bool newton_search(position_type& solution,
             if (!func.value(f, x) || !func.gradient(df, x)) {
                 throw std::runtime_error("Unable to interpolate in Newton search");
             }
-            if (f.norm() < epsilon) {
+            if (norm(f) < epsilon) {
                 solution = x;
                 return true;
             }
@@ -982,29 +972,31 @@ void compute_differential_quantities(Interpolator& intp,
         matrix_type Jacobian;
 
         position_type p;
-        dataset->GetPoint(i, &p(0));
+        dataset->GetPoint(i, &p[0]);
         if (intp.value(velocity, p) && intp.jacobian(Jacobian, p)) {
             if (do_vorticity) {
-                w(0) = Jacobian(2,1) - Jacobian(1,2);
-                w(1) = Jacobian(0,2) - Jacobian(2,0);
-                w(2) = Jacobian(1,0) - Jacobian(0,1);
-                vorticity->SetTuple3(i, w(0), w(1), w(2));
+                w[0] = Jacobian(2,1) - Jacobian(1,2);
+                w[1] = Jacobian(0,2) - Jacobian(2,0);
+                w[2] = Jacobian(1,0) - Jacobian(0,1);
+                vorticity->SetTuple3(i, w[0], w[1], w[2]);
             }
             if (do_lambda2) {
-                matrix_type S = 0.5*(Jacobian + Jacobian.transpose());
-                matrix_type Omega = 0.5*(Jacobian - Jacobian.transpose());
+                matrix_type S = 0.5*(Jacobian + transpose(Jacobian));
+                matrix_type Omega = 0.5*(Jacobian - transpose(Jacobian));
                 S *= S;
                 Omega *= Omega;
-                eigensolver_type solver(S + Omega);
-                Eigen::Vector3d evalue = solver.eigenvalues();
-                lambda2->SetTuple1(i, evalue[1]);
+                S += Omega;
+                vec3 evals;
+                mat3 evecs;
+                sym_eigensystem(evals, evecs, S);
+                lambda2->SetTuple1(i, evals[1]);
             }
             if (do_lamb) {
-                vector_type l = velocity.cross(w);
+                vector_type l = cross(velocity, w);
                 lamb->SetTuple3(i, l[0], l[1], l[2]);
             }
             if (do_helicity) {
-                value_type h = velocity.dot(w);
+                value_type h = inner(velocity, w);
                 helicity->SetTuple1(i, h);
             }
         }
@@ -1055,14 +1047,14 @@ void compute_crease_strength(Interpolator& intp) {
         // vector_type g;
         matrix_type H;
         // intp.gradient(g, i);
-        std::vector<value_type> eigenvalues;
-        std::vector<vector_type> eigenvectors;
+        vector_type eigenvalues;
+        matrix_type eigenvectors;
         intp.hessian(H, i);
-        eigen_decomposition(eigenvalues, eigenvectors, H);
+        sym_eigensystem(eigenvalues, eigenvectors, H);
         // eigenvalues are sorted in increasing order
-        value_type ridge_surface_strength = std::max(-eigenvalues[0], 0.);
+        value_type ridge_surface_strength = std::max(-eigenvalues[2], 0.);
         value_type ridge_line_strength = std::max(-eigenvalues[1], 0.);
-        value_type valley_surface_strength = std::max(eigenvalues[2], 0.);
+        value_type valley_surface_strength = std::max(eigenvalues[0], 0.);
         value_type valley_line_strength = std::max(eigenvalues[1], 0.);
         if (do_ridge_surfaces)
             rs->SetTypedTuple(i, &ridge_surface_strength);
@@ -1169,7 +1161,7 @@ void extract_ridges(VTK_SMART(DataSet) dataset,
     }
 
     // 3. Compute intersection points of 0-level sets of determinant
-    std::map<edge_index_type, long int> edge_to_points;
+    std::map<edge_index_type, long int, lexicographical_order> edge_to_points;
     std::vector<position_type> all_crossings;
     std::vector<CreaseInfo> all_ridge_points;
     std::vector<CreaseInfo> all_valley_points;
@@ -1220,9 +1212,9 @@ void extract_ridges(VTK_SMART(DataSet) dataset,
             std::cerr << "Unable to interpolate at " << p << "\n";
             continue;
         }
-        std::vector<value_type> eigenvalues;
-        std::vector<vector_type> eigenvectors;
-        eigen_decomposition(eigenvalues, eigenvectors, H);
+        vector_type eigenvalues;
+        matrix_type eigenvectors;
+        sym_eigensystem(eigenvalues, eigenvectors, H);
         crease_info[i] = eberly_filter(g, eigenvectors, eigenvalues);
     }
 
@@ -1303,15 +1295,15 @@ void extract_ridges(VTK_SMART(DataSet) dataset,
                         // compute position
                         position_type bary = found[0].position;
                         position_type p = bary[0]*pts[0] + bary[1]*pts[1] + bary[2]*pts[2];
-                        std::vector<value_type> eigenvalues;
-                        std::vector<vector_type> eigenvectors;
+                        vector_type eigenvalues;
+                        matrix_type eigenvectors;
                         matrix_type H;
                         intp.hessian(H, p);
                         vector_type g;
                         intp.gradient(g, p);
                         value_type v;
                         intp.value(v, p);
-                        eigen_decomposition(eigenvalues, eigenvectors, H);
+                        sym_eigensystem(eigenvalues, eigenvectors, H);
                         CreaseInfo info = eberly_filter(g, eigenvectors, eigenvalues);
                         if (do_ridges && info.kind==0) {
                             std::cout << "Found a ridge point with strength "

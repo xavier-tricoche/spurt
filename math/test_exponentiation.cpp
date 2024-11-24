@@ -2,7 +2,7 @@
 #include <iostream>
 #include <limits>
 #include <string>
-#include <util/timer.hpp>
+#include <misc/progress.hpp>
 #include <boost/lexical_cast.hpp>
 
 template<typename T>
@@ -67,7 +67,7 @@ void compare(unsigned int n, unsigned int maxp) {
     T max_value = std::pow((double)std::numeric_limits<T>::max(), 
                            (double)1/(double)maxp);
     
-    nvis::timer _timer;
+    spurt::timer _timer;
     double err;
     
     // loop over exponents

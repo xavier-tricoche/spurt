@@ -11,8 +11,7 @@
 #include <misc/strings.hpp>
 #include <misc/option_parse.hpp>
 
-#include <math/fixed_vector.hpp>
-#include <math/bounding_box.hpp>
+#include <math/types.hpp>
 #include <flow/vector_field.hpp>
 #include <data/vtk_field.hpp>
 #include <data/raster.hpp>
@@ -102,7 +101,7 @@ typedef RHS rhs_type;
 struct Observer {
     Observer(point_type& seed, double& t, double& d) : last_p(seed), last_t(t), distance(d) {}
     void operator()(const point_type& p, double t) {
-        distance += nvis::norm(last_p-p);
+        distance += norm(last_p-p);
         last_p = p;
         last_t = t;
         // std::cout << "distance = " << distance << '\n';
@@ -145,8 +144,8 @@ int main(int argc, const char* argv[])
     // initialize coordinates
 #pragma openmp parallel
     for (int n=0 ; n<npoints ; ++n) {
-        nvis::ivec3 c = sampling_grid.coordinates(n);
-        nvis::vec3 x = sampling_grid(c);
+        ivec3 c = sampling_grid.coordinates(n);
+        vec3 x = sampling_grid(c);
         flowmap[3*n  ] = x[0];
         flowmap[3*n+1] = x[1];
         flowmap[3*n+2] = x[2];

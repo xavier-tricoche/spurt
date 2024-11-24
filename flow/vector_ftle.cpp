@@ -4,13 +4,13 @@
 #include <image/nrrd_wrapper.hpp>
 #include <data/field_wrapper.hpp>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 #include <util/wall_timer.hpp>
 #include <vis/streamline.hpp>
 
 #include "ftle.hpp"
-#include "data/raster.hpp"
+#include "data/image.hpp"
 
 #ifdef _OPENMP
 #include <omp.h>

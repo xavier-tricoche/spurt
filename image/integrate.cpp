@@ -46,7 +46,7 @@ void spurt::ten_interface::Fiber::reset()
     fwd.total_length = 0;
     bwd.total_length = 0;
 
-    initial_dir = nvis::vec3(0, 0, 0);
+    initial_dir = vec3(0, 0, 0);
 
     valid = true;
 
@@ -78,7 +78,7 @@ spurt::ten_interface::Chain::Chain(unsigned int i0, unsigned int i1, const doubl
     l.resize(size());
     l[0] = 0;
     for (unsigned int i = 1 ; i < size() ; i++) {
-        l[i] = l[i-1] + nvis::norm((*this)[i] - (*this)[i-1]);
+        l[i] = l[i-1] + norm((*this)[i] - (*this)[i-1]);
     }
 }
 

@@ -98,8 +98,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include <math/fixed_vector.hpp>
-#include <math/bounding_box.hpp>
+#include <math/types.hpp>
 
 #include <boost/static_assert.hpp>
 #include <boost/type_traits.hpp>
@@ -112,13 +111,9 @@
 #include <Eigen/SVD>
 #include <Eigen/Eigenvalues>
 
-namespace nvis {
-    typedef fixed_vector<double, 1> vec1;
-    typedef bounding_box<vec1>     bbox1;
-}
-
-
 namespace vtk_utils {
+    
+using namespace spurt;
 
 template<typename PointOut, typename PointIn>
 inline PointOut make3d(const PointIn& _in)
@@ -145,7 +140,7 @@ inline vtkPoints* make_vtkpoints(const ForwardContainer& pos)
     typedef typename ForwardContainer::const_iterator   iterator_type;
     typedef typename point_type::value_type                    value_type;
     typedef typename vtk_array_traits<value_type>::array_type  array_type;
-    typedef typename nvis::fixed_vector<value_type, 3>         vec_type;
+    typedef small_vector<value_type, 3>        vec_type;
 
     VTK_CREATE(array_type, coords);
     coords->SetNumberOfComponents(3);
@@ -182,7 +177,7 @@ inline vtkPolyData* make_points(const RandomAccessContainer& pos,
     typedef typename ForwardContainer::const_iterator          iterator_type;
     typedef typename point_type::value_type                    value_type;
     typedef typename vtk_array_traits<value_type>::array_type  array_type;
-    typedef typename nvis::fixed_vector<value_type, 3>         vec_type;
+    typedef small_vector<value_type, 3>        vec_type;
 
     VTK_CREATE(array_type, coords);
     coords->SetNumberOfComponents(3);
@@ -203,7 +198,7 @@ inline vtkPolyData* make_points(const RandomAccessContainer& pos,
 template< typename ForwardContainer>
 inline vtkPolyData*
 make_polylines(const ForwardContainer& lines,
-               std::vector<nvis::ivec2>& removed, double mind=1.0e-6,
+               std::vector<spurt::ivec2>& removed, double mind=1.0e-6,
                bool verbose=false)
 {
     typedef typename ForwardContainer::const_iterator          iterator_type;
@@ -212,7 +207,7 @@ make_polylines(const ForwardContainer& lines,
     typedef typename line_type::value_type                     point_type;
     typedef typename point_type::value_type                    value_type;
     typedef typename vtk_array_traits<value_type>::array_type  array_type;
-    typedef typename nvis::fixed_vector<value_type, 3>         vec_type;
+    typedef small_vector<value_type, 3>        vec_type;
 
     removed.clear();
 
@@ -244,7 +239,7 @@ make_polylines(const ForwardContainer& lines,
                     valid_pts.push_back(p);
                 }
                 else {
-                    removed.push_back(nvis::ivec2(lid, i));
+                    removed.push_back(spurt::ivec2(lid, i));
                     if (verbose) {
                         std::cout << "point #" << i << " rejected, distance="
                             << spurt::vector::distance(p, q) << '\n';
@@ -275,7 +270,7 @@ inline vtkPolyData*
 make_polylines(const ForwardContainer& lines, double mind=1.0e-6,
                bool verbose=false)
 {
-    std::vector<nvis::ivec2> dummy;
+    std::vector<spurt::ivec2> dummy;
     return make_polylines(lines, dummy, mind, verbose);
 }
 
@@ -420,7 +415,7 @@ inline DataSetPtr add_vectors(DataSetPtr inout, const ForwardContainer& vectors,
     typedef typename vtk_array_traits<value_type>::array_type array_type;
 
     size_t N=0;
-    if (!vectors.empty()) N = vectors.front().size();
+    if (!vectors.empty()) N = vectors[0].size();
 
     assert(N==2 || N==3);
 
@@ -545,11 +540,11 @@ inline DataSetPtr add_tensors(DataSetPtr inout, const ForwardContainer& tensors,
                               bool point_data=true, const std::string& name="anonymous_tensors",
                               bool active=true)
 {
-    typedef typename ForwardContainer::value_type             vector_type;
+    typedef typename ForwardContainer::value_type             tensor_type;
     typedef typename ForwardContainer::const_iterator         iterator_type;
-    typedef typename vector_type::value_type                  value_type;
+    typedef typename tensor_type::value_type                  value_type;
     typedef typename vtk_array_traits<value_type>::array_type array_type;
-    static const size_t N = vector_type::size();
+    static const size_t N = tensors[0].size();
 
     assert(N==3 || N==4 || N==6 || N==9);
 
@@ -884,7 +879,8 @@ struct cell_links {
         _dataset = dataset;
         std::cout << "Building cell links\n";
         _links->Initialize();
-        _links->BuildLinks(_dataset);
+        _links->SetDataSet(_dataset);
+        _links->BuildLinks();
         std::cout << "Cell links built\n";
         _links->PrintSelf(std::cout, vtkIndent(0));
         // _links = vtkCellLinks::SafeDownCast(dataset->GetCellLinks());
@@ -1337,7 +1333,7 @@ inline T* clip_polydata(T* ds, vtkPlane* plane)
     return out;
 }
 
-inline vtkPlane* make_plane(const nvis::vec3& normal, const nvis::vec3& x)
+inline vtkPlane* make_plane(const spurt::vec3& normal, const spurt::vec3& x)
 {
     VTK_PTR(vtkPlane, plane);
     plane->SetOrigin(x[0], x[1], x[2]);

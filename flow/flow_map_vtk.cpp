@@ -12,7 +12,7 @@
 #include <misc/strings.hpp>
 #include <misc/option_parse.hpp>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 #include <flow/vector_field.hpp>
 #include <data/raster.hpp>
@@ -115,42 +115,6 @@ void initialize(int argc, const char* argv[])
 
 using namespace spurt;
 using namespace vtk_utils;
-
-struct vec3 : public Eigen::Vector3d {
-    typedef Eigen::Vector3d base_type;
-    typedef base_type::value_type value_type;
-
-    vec3() : base_type(0,0,0) {}
-    vec3(const base_type& v) : base_type(v) {}
-    vec3(double x, double y, double z) : base_type(x,y,z) {}
-
-#if EIGEN_VERSION_AT_LEAST(3,4,0)
-    // starting with version 3.4, Eigen offers STL-type iterators
-    typedef base_type::iterator iterator;
-    typedef base_type::const_iterator const_iterator;
-#else
-    typedef const double* const_iterator;
-    typedef double* iterator;
-
-    const_iterator begin() const {
-        return &this->operator()(0);
-    }
-    iterator begin() {
-        return &this->operator()(0);
-    }
-    const_iterator end() const {
-        return begin()+3;
-    }
-    iterator end() {
-        return begin()+3;
-    }
-#endif
-
-    nvis::vec3& as_nvis_vec3() { return *((nvis::vec3*)(&base_type::operator()(0))); }
-    const nvis::vec3& as_nvis_vec3() const { return *((const nvis::vec3*)(&base_type::operator()(0))); }
-    // nvis::vec3 as_nvis_vec3() const { return nvis::vec3(this->operator()(0), this->operator()(1), this->operator()(2)); }
-};
-
 
 inline std::string to_str(const vec3& p) {
     std::ostringstream os;

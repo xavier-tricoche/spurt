@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <teem/nrrd.h>
 #include <netcdf.h>
 #include <stdexcept>
@@ -166,7 +166,7 @@ void save_grid(const std::string& filename,
 }
 
 struct vec_equal {
-	bool operator()(const nvis::fvec3& a, const nvis::fvec3& b) const {
+	bool operator()(const spurt::fvec3& a, const spurt::fvec3& b) const {
 		return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
 	}
 };
@@ -185,11 +185,11 @@ int main(int argc, char* argv[])
 
 		int npts = hexpts.size() / 3;
 
-		nvis::fvec3 *pts = (nvis::fvec3*) & hexpts.front();
+		spurt::fvec3 *pts = (spurt::fvec3*) & hexpts.front();
 
-		std::vector<nvis::fvec3> spts(pts, pts + npts);
+		std::vector<spurt::fvec3> spts(pts, pts + npts);
 
-		std::sort(spts.begin(), spts.end(), nvis::lexicographical_order());
+		std::sort(spts.begin(), spts.end(), spurt::lexicographical_order());
 		spts.resize(std::unique(spts.begin(), spts.end(), vec_equal()) - spts.begin());
 
 		std::cout << spts.size() << " unique points = " << (100*spts.size()) / npts << "%%\n";
@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
 		std::vector<unsigned int> rindex(spts.size());
 
 		for (unsigned int i = 0; i < npts; ++i) {
-			indmap[i] = std::lower_bound(spts.begin(), spts.end(), pts[i], nvis::lexicographical_order()) - spts.begin();
+			indmap[i] = std::lower_bound(spts.begin(), spts.end(), pts[i], spurt::lexicographical_order()) - spts.begin();
 			rindex[indmap[i]] = i;
 		}
 		rindex.resize(spts.size());
@@ -223,7 +223,7 @@ int main(int argc, char* argv[])
 
 		hexpts = std::vector<float>();
 		hexpts.resize(spts.size()*3);
-		std::copy(spts.begin(), spts.end(), (nvis::fvec3*)&hexpts[0]);
+		std::copy(spts.begin(), spts.end(), (spurt::fvec3*)&hexpts[0]);
 
 		std::vector<unsigned int> hexfind(hexind.size());
 		std::copy(hexind.begin(), hexind.end(), hexfind.begin());
@@ -250,7 +250,7 @@ int main(int argc, char* argv[])
 		std::cout << "done\n";
 
 		size_t npts = rindex.size();
-		std::vector<nvis::fvec3> vecd(npts);
+		std::vector<spurt::fvec3> vecd(npts);
 		std::cout << "reindexing vector field... " << std::flush;
 		for (unsigned int i = 0; i < npts / 3; ++i) {
 			for (unsigned int j = 0; j < 3; ++j)

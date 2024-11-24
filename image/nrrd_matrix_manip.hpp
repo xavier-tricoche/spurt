@@ -7,8 +7,6 @@
 #include <Eigen/SVD>
 #include <Eigen/Dense>
 
-#include <util/timer.hpp>
-
 #include <misc/progress.hpp>
 
 

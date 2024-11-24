@@ -3,7 +3,7 @@
 
 #include <string>
 #include <fstream>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 
 #include <vtkColorTransferFunction.h>
 #include <vtkProperty2D.h>
@@ -13,7 +13,7 @@
 
 namespace vtk_utils {
     
-typedef nvis::vec3 color_t;
+typedef spurt::vec3 color_t;
 
 void export_colormap(const std::string& name, vtkColorTransferFunction* ctf) {
 	std::fstream out(name.c_str(), std::ios::out);
@@ -46,7 +46,7 @@ struct colorbar_param {
   
     std::string   title;
     color_t       title_col, label_col;
-    nvis::vec2    pos;
+    spurt::vec2    pos;
     unsigned int  width, height;
     unsigned int  nlabels;
     unsigned int  font_size;

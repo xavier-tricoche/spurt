@@ -6,11 +6,13 @@
 #include <fstream>
 #include <sstream>
 #include <iterator>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <image/nrrd_wrapper.hpp>
-#include <util/timer.hpp>
+#include <misc/progress.hpp>
 
 #define QUIET
+
+using namespace spurt;
 
 char* outs, *file;
 float alpha;
@@ -39,38 +41,38 @@ void initialize(int argc, const char* argv[])
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
 }
 
-inline nvis::ivec3 int_to_ivec(int i, const nvis::ivec3& s)
+inline ivec3 int_to_ivec(int i, const ivec3& s)
 {
     int x = i % s[0];
     int aux = i / s[0];
     int y = aux % s[1];
     int z = aux / s[1];
-    return nvis::ivec3(x, y, z);
+    return ivec3(x, y, z);
 }
 
-inline int ivec_to_int(const nvis::ivec3& c, const nvis::ivec3& s)
+inline int ivec_to_int(const ivec3& c, const ivec3& s)
 {
     return c[0] + s[0]*(c[1] + s[1]*c[2]);
 }
 
-inline int vert_to_vox(int i, const nvis::ivec3& s)
+inline int vert_to_vox(int i, const ivec3& s)
 {
-    nvis::ivec3 svx = s - nvis::ivec3(1, 1, 1);
+    ivec3 svx = s - ivec3(1, 1, 1);
     return ivec_to_int(int_to_ivec(i, s), svx);
 }
 
-inline int vox_to_vert(int i, const nvis::ivec3& s)
+inline int vox_to_vert(int i, const ivec3& s)
 {
-    nvis::ivec3 svx = s - nvis::ivec3(1, 1, 1);
+    ivec3 svx = s - ivec3(1, 1, 1);
     return ivec_to_int(int_to_ivec(i, svx), s);
 }
 
 // voxel stuff
 
-typedef nvis::fixed_vector<int, 8>  voxel;
-typedef nvis::lexicographical_order Lt_voxel;
+typedef small_vector<int, 8>  voxel;
+typedef lexicographical_order Lt_voxel;
 Lt_voxel __Lt_voxel;
-inline voxel create_voxel(int __i, const nvis::ivec3& size)
+inline voxel create_voxel(int __i, const ivec3& size)
 {
     int i = vox_to_vert(__i, size);
     voxel v;
@@ -93,8 +95,8 @@ inline void voxel_data(std::set<float>& r, const voxel& v, const std::vector<flo
 
 // face stuff
 
-typedef nvis::fixed_vector<int, 4>  face;
-typedef nvis::lexicographical_order Lt_face;
+typedef small_vector<int, 4>  face;
+typedef lexicographical_order Lt_face;
 Lt_face __Lt_face;
 const int voxel_faces[][4] = {
     {0, 1, 2, 3},
@@ -311,7 +313,7 @@ inline bool is_edge_on_face(const vertex& ev, const vertex& fv)
 bool is_on_face(const t_edge& e)
 {
     if (e.first.type == 1 && e.second.type == 1) {
-        return nvis::all(e.first.f == e.second.f);
+        return all(e.first.f == e.second.f);
     } else if (e.first.type == 0 && e.second.type == 1) {
         return is_edge_on_face(e.first, e.second);
     } else if (e.first.type == 1 && e.second.type == 0) {
@@ -487,7 +489,7 @@ void filter(std::vector<vertex>& selected,
             }
             for (int j = 0 ; j < 4 ; ++j) {
                 face f = create_face(v, faces[faceid-6][j]);
-                if (nvis::all(vertices[i].f == f)) {
+                if (all(vertices[i].f == f)) {
                     selected.push_back(vertices[i]);
                     break;
                 }
@@ -1007,15 +1009,15 @@ bool triangulate(std::vector<triangle>& triangles,
 return true;
 }
 
-inline nvis::fvec3 coord(int i, const nvis::ivec3& size, const nvis::vec3& step)
+inline fvec3 coord(int i, const ivec3& size, const vec3& step)
 {
-    nvis::vec3 c = int_to_ivec(i, size);
+    vec3 c = int_to_ivec(i, size);
     return c*step;
 }
 
-inline nvis::vec3 coord(const vertex& v, const nvis::ivec3& size, const nvis::vec3& step)
+inline vec3 coord(const vertex& v, const ivec3& size, const vec3& step)
 {
-    nvis::vec3 r;
+    vec3 r;
     if (v.type == 0) {      // edge
         r = 0.5 * (coord(v.e.first, size, step) + coord(v.e.second, size, step));
     } else if (v.type == 1) { // face
@@ -1028,9 +1030,9 @@ inline nvis::vec3 coord(const vertex& v, const nvis::ivec3& size, const nvis::ve
 
 void classify(std::vector<int>& simple, std::vector<int>& edge,
               std::vector<int>& corner, const std::vector<float>& values,
-              const nvis::ivec3& size)
+              const ivec3& size)
 {
-    nvis::ivec3 vsize = size - nvis::ivec3(1, 1, 1);
+    ivec3 vsize = size - ivec3(1, 1, 1);
     int nbvoxels = vsize[0] * vsize[1] * vsize[2];
     std::vector<int> tmp;
     for (int i = 0 ; i < nbvoxels ; ++i) {
@@ -1049,7 +1051,7 @@ void classify(std::vector<int>& simple, std::vector<int>& edge,
         std::set<float> d;
         voxel v = create_voxel(tmp[n], size);
         voxel_data(d, v, values);
-        nvis::ivec3 vc = int_to_ivec(tmp[n], vsize);
+        ivec3 vc = int_to_ivec(tmp[n], vsize);
         int i = vc[0], j = vc[1], k = vc[2];
         int counter = 0;
         for (int ii = i - 1 ; counter < 3 && ii <= i + 1 ; ++ii) {
@@ -1067,7 +1069,7 @@ void classify(std::vector<int>& simple, std::vector<int>& edge,
                     if (kk < 0 || kk >= vsize[2]) {
                         continue;
                     }
-                    int id = ivec_to_int(nvis::ivec3(ii, jj, kk), vsize);
+                    int id = ivec_to_int(ivec3(ii, jj, kk), vsize);
                     voxel vv = create_voxel(id, size);
                     std::set<float> dd;
                     voxel_data(dd, vv, values);
@@ -1200,9 +1202,9 @@ void topology(std::vector<vertex>& corners, std::vector<t_edge>& edges,
     }
 }
 
-typedef nvis::ivec3 tri_face;
+typedef ivec3 tri_face;
 
-void smooth_mesh(std::vector<nvis::vec3>& pos, const std::vector<tri_face>& faces,
+void smooth_mesh(std::vector<vec3>& pos, const std::vector<tri_face>& faces,
                  const std::vector<int>& corners, double alpha, int niter)
 {
     // identify constraints
@@ -1226,14 +1228,14 @@ void smooth_mesh(std::vector<nvis::vec3>& pos, const std::vector<tri_face>& face
     }
     
     // loop over laplacian smoothing steps
-    std::vector<nvis::vec3> next(pos.size());
+    std::vector<vec3> next(pos.size());
     for (int n = 0 ; n < niter ; ++n) {
         for (int i = 0 ; i < pos.size() ; ++i) {
             if (fixed[i] || !neigh[i].size()) {
                 next[i] = pos[i];
                 continue;
             }
-            nvis::vec3 avg(0, 0, 0);
+            vec3 avg(0, 0, 0);
             for (iterator it = neigh[i].begin() ; it != neigh[i].end() ; ++it) {
                 avg += pos[*it];
             }
@@ -1246,8 +1248,8 @@ void smooth_mesh(std::vector<nvis::vec3>& pos, const std::vector<tri_face>& face
 
 
 struct Lt_close_enough {
-    bool operator()(const nvis::vec3& x, const nvis::vec3& y) const {
-        double d = nvis::norm(x - y);
+    bool operator()(const vec3& x, const vec3& y) const {
+        double d = norm(x - y);
         if (d < 1.0e-8) {
             return false;
         } else {
@@ -1255,7 +1257,7 @@ struct Lt_close_enough {
         }
     }
     
-    nvis::lexicographical_order order;
+    lexicographical_order order;
 };
 
 int main(int argc, const char* argv[])
@@ -1274,8 +1276,8 @@ int main(int argc, const char* argv[])
     Nrrd* nin = spurt::nrrd_utils::readNrrd(file);
     std::vector<float> values;
     spurt::nrrd_utils::to_vector(values, nin);
-    nvis::fixed_vector<size_t, 3> size;
-    nvis::vec3 step;
+    small_vector<size_t, 3> size;
+    vec3 step;
     for (int i = 0 ; i < 3 ; ++i) {
         size[i] = nin->axis[i].size;
         step[i] = nin->axis[i].spacing;
@@ -1291,7 +1293,7 @@ int main(int argc, const char* argv[])
 
     // find all intersected edges
     int last_pct = -1;
-    nvis::timer timer;
+    timer timer;
     for (int n = 0 ; n < nbvoxels ; ++n) {
         int pct = n * 100 / nbvoxels;
         if (pct > last_pct) {
@@ -1441,13 +1443,13 @@ int main(int argc, const char* argv[])
     std::cout << "total computation time was: " << dt << " s.\n";
 
     std::map<vertex, int>         pos_ids;
-    std::vector<nvis::vec3>     pos;
+    std::vector<vec3>     pos;
     for (std::set<vertex>::const_iterator it = vertices.begin() ; it != vertices.end() ; ++it) {
         const vertex& v = *it;
         if (pos_ids.find(v) != pos_ids.end()) {
             continue;
         }
-        nvis::vec3 x = coord(v, size, step);
+        vec3 x = coord(v, size, step);
         pos.push_back(x);
         pos_ids[v] = pos.size() - 1;
 
@@ -1571,11 +1573,11 @@ int main(int argc, const char* argv[])
         // check what we just exported
         if (false) {
             // initialize counter
-            typedef std::set<nvis::vec3, Lt_close_enough>             pos_set;
-            typedef std::map<nvis::vec3, pos_set, Lt_close_enough>    pos_map;
+            typedef std::set<vec3, Lt_close_enough>             pos_set;
+            typedef std::map<vec3, pos_set, Lt_close_enough>    pos_map;
             pos_map index;
             for (int i = 0 ; i < corner_vertex.size() ; ++i) {
-                nvis::vec3 x = pos[pos_ids[corner_vertex[i]]];
+                vec3 x = pos[pos_ids[corner_vertex[i]]];
                 index[x] = pos_set();
             }
             Lt_close_enough order;
@@ -1583,8 +1585,8 @@ int main(int argc, const char* argv[])
             for (int i = 0 ; i < real_edges.size() ; ++i) {
                 const t_edge& e = real_edges[i];
                 pos_map::iterator it;
-                nvis::vec3 x0 = pos[pos_ids[e.first]];
-                nvis::vec3 x1 = pos[pos_ids[e.second]];
+                vec3 x0 = pos[pos_ids[e.first]];
+                vec3 x1 = pos[pos_ids[e.second]];
                 it = index.find(x0);
                 if (it != index.end()) {
                     it->second.insert(x1);

@@ -14,7 +14,7 @@ bool refine;
 std::string name_in, name_out;
 
 typedef spurt::fixed_sorted_vector<size_t, 2> edge_type;
-typedef nvis::fixed_vector<double, 3> pos_type;
+typedef spurt::small_vector<double, 3> pos_type;
 
 void initialize(int argc, char* argv[]) {
     namespace xcl = spurt::command_line;

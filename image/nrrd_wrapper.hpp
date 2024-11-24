@@ -8,8 +8,9 @@
 #include <vector>
 #include <stdexcept>
 #include <array>
+
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
-#include <math/fixed_vector.hpp>
 #include <math/vector_manip.hpp>
 #include <misc/meta_utils.hpp>
 
@@ -292,60 +293,59 @@ inline std::string error_msg(const std::string& fun_name="", const char* what=NR
     return fun_name + ": " + biffGetDone(what);
 }
 
+template<int N>
 inline void
-compute_raster_bounds(std::vector< std::pair<double, double > >& bounds,
+compute_raster_bounds(spurt::bounding_box<small_vector<double, N>>& bounds,
                       const Nrrd* nrrd, bool is_scalar=true)
 {
     int skip = (is_scalar ? 0 : 1);
-    bounds.resize(nrrd->dim - skip);
+    bounds.min() = 0;
+    bounds.max() = 0;
+    assert(nrrd->dim - skip == N);
     for (int i = skip ; i < nrrd->dim ; ++i) {
+        int j = i-skip;
         const NrrdAxisInfo& axis = nrrd->axis[i];
         double step = axis.spacing;
         if (invalid(step)) step = 1;
         double width = (axis.size - 1) * step;
         if (!invalid(axis.min)) {
-            bounds[i].first = axis.min;
-            bounds[i].second = axis.min + width;
+            bounds.min()[j] = axis.min;
+            bounds.max()[j] = axis.min + width;
         }
         else if (!invalid(axis.max)) {
-            bounds[i].second = axis.max;
-            bounds[i].first = axis.max - width;
+            bounds.max()[j] = axis.max;
+            bounds.min()[j] = axis.max - width;
         }
         else {
-            bounds[i].first = 0;
-            bounds[i].second = width;
+            bounds.min()[j] = 0;
+            bounds.max()[j] = width;
         }
         if (axis.center == nrrdCenterCell) {
-            bounds[i].first -= 0.5 * step;
-            bounds[i].second += 0.5 * step;
+            bounds.min()[j] -= 0.5 * step;
+            bounds.max()[j] += 0.5 * step;
         }
     }
 }
 
 template<int N> inline
-nvis::bounding_box<nvis::fixed_vector<double, N> >
+spurt::bounding_box<small_vector<double, N>>
 get_bounds(const Nrrd* nrrd, bool is_scalar=true)
 {
-    nvis::bounding_box<nvis::fixed_vector<double, N> > b;
+    bounding_box<small_vector<double, N>> b;
 
-    std::vector< std::pair< double, double > > tmp;
-    compute_raster_bounds(tmp, nrrd, is_scalar);
-    for (int i=0; i<tmp.size(); ++i) {
-        b.min()[i] = tmp[i].first;
-        b.max()[i] = tmp[i].second;
-    }
+    compute_raster_bounds<N>(b, nrrd, is_scalar);
     return b;
 }
 
 template<int N> inline
-nvis::bounding_box< nvis::fixed_vector<double, N> > get_bounds(const nrrd_wrapper& wrap) {
+spurt::bounding_box<small_vector<double, N>> get_bounds(const nrrd_wrapper& wrap) {
     return get_bounds<N>(wrap.pointer());
 }
 
 template<int N> inline
-nvis::fixed_vector<double, N> step(const Nrrd* nrrd)
+Eigen::Vector<double, N> step(const Nrrd* nrrd)
 {
-    nvis::fixed_vector<double, N> s;
+    Eigen::Vector<double, N> s;
     for (int i = 0 ; i < N ; ++i)
     {
         s[i] = nrrd->axis[nrrd->dim-N+i].spacing;
@@ -355,7 +355,7 @@ nvis::fixed_vector<double, N> step(const Nrrd* nrrd)
 }
 
 template<int N> inline
-nvis::bounding_box< nvis::fixed_vector<double, N> > step(const nrrd_wrapper& wrap) {
+spurt::bounding_box<small_vector<double, N> >step(const nrrd_wrapper& wrap) {
     return step<N>(wrap.pointer());
 }
 

@@ -9,14 +9,14 @@
 #include <locale>
 #include <iomanip>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 
 #include <boost/numeric/odeint.hpp>
 #include <boost/filesystem.hpp>
 
 #include <data/field_wrapper.hpp>
-#include <data/raster.hpp>
+#include <data/image.hpp>
 #include <format/filename.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <image/probe.hpp>
@@ -25,18 +25,17 @@
 #include <misc/log_helper.hpp>
 #include <vtk/vtk_utils.hpp>
 
-#include <Eigen/Core>
-#include <Eigen/SVD>
-
 #ifdef _OPENMP
 #include <omp.h>
 #endif
 
 namespace odeint = boost::numeric::odeint;
 
+using namespace spurt;
+
 using namespace spurt::lavd;
 
-typedef nvis::fixed_vector<value_t, 6> vec6;
+typedef fixed_vector<value_t, 6> vec6;
 
 std::string name_in, name_mask, name_out;
 std::vector<std::string> t_init_str(1, "0");
@@ -249,12 +248,12 @@ void filter_trajectory(trajectory_t& out, const trajectory_t& in) {
     }
     double mean_dist=0;
     out.push_back(in[0]);
-    vec2 last = nvis::subv<0, 2, value_t, 4>(in[0]);
+    vec2 last = subv<0, 2, value_t, 4>(in[0]);
     for (size_t i=1; i<in.size()-1; ++i) {
         const vec4& p = in[i];
-        vec2 cur = nvis::subv<0, 2, value_t, 4>(p);
-        // mean_dist += nvis::norm(cur - nvis::subv<0, 2, value_t, 4>(in[i-1]));
-        if (nvis::norm(cur-last) > min_dist) {
+        vec2 cur = subv<0, 2, value_t, 4>(p);
+        // mean_dist += norm(cur - subv<0, 2, value_t, 4>(in[i-1]));
+        if (norm(cur-last) > min_dist) {
             out.push_back(p);
             last = cur;
         }
@@ -534,7 +533,7 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
     os << "kernel size=" << support_radius << '\n';
     comments.push_back(os.str());
 
-    typedef nvis::fixed_vector<float, 5> fvec5;
+    typedef fixed_vector<float, 5> fvec5;
     std::vector< fvec5 > out_array;
 
     for (size_t i=0; i<all_trajectories.size(); ++i) {
@@ -653,13 +652,13 @@ int main(int argc, const char* argv[])
     else {
         region = domain;
     }
-	std::vector<nvis::vec2> seeds;
-    nvis::vec2 span = region.max() - region.min();
-    nvis::vec2 spc = span / nvis::vec2(res[0]-1, res[1]-1);
+	std::vector<vec2> seeds;
+    vec2 span = region.max() - region.min();
+    vec2 spc = span / vec2(res[0]-1, res[1]-1);
     seeds.resize(res[0]*res[1]);
     for (int j=0; j<res[1]; ++j) {
         for (int i=0; i<res[0]; ++i) {
-            seeds[j*res[0]+i] = region.min() + nvis::vec2(i,j)*spc;
+            seeds[j*res[0]+i] = region.min() + vec2(i,j)*spc;
         }
     }
     nb_samples = seeds.size();

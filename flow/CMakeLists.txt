@@ -1,3 +1,15 @@
+set(FLOW_LIB_SRC
+    vector_field.cpp
+)
+
+add_library( spurt_flow ${LIBMODE} ${FLOW_LIB_SRC} )
+target_link_libraries( spurt_flow ${Teem_LIBRARIES} )
+install( TARGETS spurt_flow
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+)
+
+
 set(FLOW_EXEC_SRC
     #best-scale
     #color_ftle
@@ -38,7 +50,7 @@ if( ${VTK_FOUND} )
     foreach( name ${FLOW_EXEC_SRC} )
         add_executable( ${name} ${EXECUTABLE_FLAG} ${name}.cpp )
 		target_link_libraries( ${name} ${VTK_LIBRARIES} ${Teem_LIBRARIES} BARG
-			spurt_math spurt_image ${Boost_LIBRARIES} ${TBB_LIBRARY_RELEASE} #${TBB_IMPORTED_TARGETS}
+			spurt_image spurt_flow ${Boost_LIBRARIES} ${TBB_LIBRARY_RELEASE} #${TBB_IMPORTED_TARGETS}
 			${TBB_LIBRARIES} ${NetCDF_LIBRARIES} )
         install( TARGETS ${name} RUNTIME DESTINATION bin )
     endforeach()

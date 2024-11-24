@@ -22,8 +22,7 @@
 #include <vtkUnsignedCharArray.h>
 #include <vtkUnstructuredGrid.h>
 // nvis
-#include <math/bounding_box.hpp>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 
 #include "dlr_reader.hpp"
 #include <vtk/vtk_utils.hpp>
@@ -33,9 +32,9 @@ namespace spurt {
 
 class dlr2vtk_converter {
 
-typedef spurt::fvec3                    point_type;
-typedef nvis::bounding_box<point_type>  box_type;
-typedef spurt::dlr_reader::cell_type   cell_type;
+typedef fvec3                    point_type;
+typedef bounding_box<point_type>  box_type;
+typedef dlr_reader::cell_type   cell_type;
 typedef std::pair<cell_type, long>      cell_entry;
 
 typedef std::pair< std::vector<double>, std::string > pair_type;

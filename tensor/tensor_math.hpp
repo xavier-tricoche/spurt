@@ -1,15 +1,14 @@
 #ifndef __TENSOR_MATH_HPP__
 #define __TENSOR_MATH_HPP__
 
-#include <math/fixed_vector.hpp>
-#include <math/fixed_matrix.hpp>
+#include <math/types.hpp>
 
 namespace spurt {
 
 template<typename T>
-nvis::mat2 to_matrix(const nvis::fixed_vector<T, 3>& t)
+spurt::mat2 to_matrix(const spurt::small_vector<T, 3>& t)
 {
-    nvis::mat2 m;
+    spurt::mat2 m;
     m(0, 0) = t[0];
     m(1, 0) = m(0, 1) = t[1];
     m(1, 1) = t[2];
@@ -17,9 +16,9 @@ nvis::mat2 to_matrix(const nvis::fixed_vector<T, 3>& t)
 }
 
 template<typename T>
-nvis::mat3 to_matrix(const nvis::fixed_vector<T, 7>& t)
+spurt::mat3 to_matrix(const spurt::small_vector<T, 7>& t)
 {
-    nvis::mat3 m;
+    spurt::mat3 m;
     m(0, 0) = t[1];
     m(1, 0) = m(0, 1) = t[2];
     m(2, 0) = m(0, 2) = t[3];
@@ -30,9 +29,9 @@ nvis::mat3 to_matrix(const nvis::fixed_vector<T, 7>& t)
 }
 
 template<typename T>
-nvis::mat3 to_matrix(const nvis::fixed_vector<T, 6>& t)
+spurt::mat3 to_matrix(const spurt::small_vector<T, 6>& t)
 {
-    nvis::mat3 m;
+    spurt::mat3 m;
     m(0, 0) = t[0];
     m(1, 0) = m(0, 1) = t[1];
     m(2, 0) = m(0, 2) = t[2];
@@ -42,20 +41,20 @@ nvis::mat3 to_matrix(const nvis::fixed_vector<T, 6>& t)
     return m;
 }
 
-inline nvis::vec3 PQR(const nvis::mat3& m)
+inline spurt::vec3 PQR(const spurt::mat3& m)
 {
-    nvis::vec3 r;
-    r[0] = nvis::trace(m); // P
+    spurt::vec3 r;
+    r[0] = trace(m); // P
     r[1] = m(0, 0) * m(1, 1) - m(1, 0) * m(0, 1) +
            m(1, 1) * m(2, 2) - m(1, 2) * m(2, 1) +
            m(2, 2) * m(0, 0) - m(0, 2) * m(2, 0); // Q
-    r[2] = nvis::det(m); // R;
+    r[2] = determinant(m); // R;
     return r;
 }
 
-inline double discriminant(const nvis::mat3& m)
+inline double discriminant(const spurt::mat3& m)
 {
-    nvis::vec3 r = PQR(m);
+    spurt::vec3 r = PQR(m);
     double P = r[0];
     double Q = r[1];
     double R = r[2];

@@ -4,7 +4,7 @@
 #include <vector>
 #include <sstream>
 #include <string>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 
 int main(int argc, const char* argv[])
 {

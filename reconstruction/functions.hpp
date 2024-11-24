@@ -5,35 +5,6 @@
 
 namespace spurt { namespace reconstruction {
 
-// template<typename _Kernel, size_t _Dim>
-// struct reconstruction_kernel {
-//     static const size_t dimension = _Dim;
-//     static const size_t kernel_size = _Kernel::size;
-//
-//     typedef _Kernel                                     kernel_type;
-//     typedef typename kernel_type::scalar_type           scalar_type;
-//     typedef typename kernel_type::size_type             size_type;
-//     typedef nvis::fixed_vector<size_t, dimension>       ivec_type;
-//     typedef nvis::fixed_vector<scalar_type, dimension>  point_type;
-//     typedef nvis::fixed_vector<scalar_type, dimension>  derivative_type;
-//
-//     template<typename _Raster>
-//     static scalar_type operator()(const point_type& local_c,
-//                                   const ivec_type& index_c,
-//                                   const _Raster& raster) {
-//         scalar_type r(0);
-//         for (size_t d=0 ; d<dimension ; ++d) {
-//
-//         }
-//     }
-//
-//     // 1D convolution
-//     value_type pr(0);
-//     for (long i=index_c[d]-kernel_size ; i<=index_c[d]+kernel_size ; ++i) {
-//         r
-//     }
-// };
-
 template<typename T>
 inline T tent(T x) {
     return 1-x;
@@ -138,8 +109,8 @@ struct kernel_base {
     typedef K                                 kernel_type;
     typedef typename kernel_type::value_type  value_type;
     typedef size_t                            size_type;
-    typedef nvis::fixed_vector<value_type, N> point_type;
-    typedef nvis::fixed_vector<value_type, N> derivative_type;
+    typedef small_vector<value_type, N>       point_type;
+    typedef small_vector<value_type, N>       derivative_type;
 
     value_type operator()(const point_type&) = 0;
     value_type operator()(const point_type&, const point_type&) = 0;
@@ -204,14 +175,14 @@ class radial_function_kernel : public kernel_base<K, N> {
     typedef typename base_type::kernel_type kernel_type;
 
     value_type operator()(const point_type& x) {
-        return kernel_type(nvis::norm(x));
+        return kernel_type(spurt::norm(x));
     }
     value_type operator()(const point_type& x,
                           const point_type& scale) {
-        return kernel_type(nvis::norm(x/scale));
+        return kernel_type(spurt::norm(x/scale));
     }
     derivative_type derivative(const point_type& x) {
-        value_type y = nvis::norm(x);
+        value_type y = spurt::norm(x);
         return x*kernel_type::derivative(y)/y;
     }
 };

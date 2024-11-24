@@ -1,16 +1,16 @@
 #ifndef __TETRAHEDRIZATION_HPP__
 #define __TETRAHEDRIZATION_HPP__
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 
 // blatantly and shamelessly copied from FAnToM's code...
 
 namespace spurt {
-typedef nvis::fixed_vector<int, 8>  hexahedron;
-typedef nvis::fixed_vector<int, 6>  prism;
-typedef nvis::fixed_vector<int, 4>  tetrahedron;
-typedef nvis::fixed_vector<int, 5>  pyramid;
-typedef nvis::fixed_vector<int, 4>  face;
+typedef small_vector<int, 8>  hexahedron;
+typedef small_vector<int, 6>  prism;
+typedef small_vector<int, 4>  tetrahedron;
+typedef small_vector<int, 5>  pyramid;
+typedef small_vector<int, 4>  face;
 
 /*
        7--------6

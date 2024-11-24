@@ -4,7 +4,7 @@
 #include <exception>
 #include <iostream>
 #include <misc/option_parse.hpp>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 
 
 struct time_of_day {
@@ -134,9 +134,9 @@ int main(int argc, const char* argv[]) {
     // parser_t validator = validate;
     
     std::string str2, str, str3 = "abcd";
-    nvis::fixed_vector<int, 3> iv(1, 2, 3);
-    nvis::fvec2 fv(1.1, 2.2);
-    nvis::vec4 dv(0.1, 0.2, 0.3, 0.4);
+    spurt::small_vector<int, 3> iv(1, 2, 3);
+    spurt::fvec2 fv(1.1, 2.2);
+    spurt::vec4 dv(0.1, 0.2, 0.3, 0.4);
     std::array<double, 5> da = {6, 5, 4, 3, 2};
     std::vector<short> svec;
     std::vector<std::string> tod_str;

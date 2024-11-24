@@ -8,9 +8,9 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include <math/fixed_vector.hpp>
-#include <math/fixed_matrix.hpp>
-#include <math/bounding_box.hpp>
+#include <nvis-math/fixed_vector.hpp>
+#include <nvis-math/fixed_matrix.hpp>
+#include <nvis-math/bounding_box.hpp>
 
 #include <tokamak/tokamak_field.hpp>
 

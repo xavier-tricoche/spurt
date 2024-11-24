@@ -5,15 +5,17 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <math/fixed_vector.hpp>
 #include <image/nrrd_wrapper.hpp>
-#include <util/timer.hpp>
-#include <math/math.hpp>
-#include <math/matrix.hpp>
+#include <misc/progress.hpp>
+#include <math/basic_math.hpp>
 #include <math/tensor.hpp>
+#include <math/types.hpp>
 
 char* outs, *file, *att;
 bool verbose;
+
+using namespace spurt;
+
 void initialize(int argc, const char* argv[])
 {
     hestOpt* hopt = NULL;
@@ -37,19 +39,19 @@ void initialize(int argc, const char* argv[])
                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
 }
 
-inline nvis::ivec3 int_to_ivec(int i, const nvis::ivec3& s)
+inline ivec3 int_to_ivec(int i, const svec3& s)
 {
     int x = i % s[0];
     int aux = i / s[0];
     int y = aux % s[1];
     int z = aux / s[1];
-    return nvis::ivec3(x, y, z);
+    return ivec3(x, y, z);
 }
 
-inline nvis::vec3 coord(int i, const nvis::ivec3& size, const nvis::vec3& step)
+inline vec3 coord(int i, const svec3& size, const vec3& step)
 {
-    nvis::vec3 c = int_to_ivec(i, size);
-    return c*step;
+    vec3 c = int_to_ivec(i, size);
+    return c * step;
 }
 
 int main(int argc, const char* argv[])
@@ -60,8 +62,8 @@ int main(int argc, const char* argv[])
 	Nrrd* nin = spurt::nrrd_utils::readNrrd(file);
 	std::vector<int> tags;
 	spurt::nrrd_utils::to_vector(tags, nin);
-	nvis::fixed_vector<size_t, 3> size;
-	nvis::vec3 step;
+	svec3 size;
+	vec3 step;
 	for (int i = 0 ; i < 3 ; ++i) {
 		size[i] = nin->axis[i].size;
 		step[i] = nin->axis[i].spacing;
@@ -237,30 +239,29 @@ int main(int argc, const char* argv[])
 	     it = tag_to_voxel.upper_bound(it->first)) {
 		int tag = it->first;
 		range_type range = tag_to_voxel.equal_range(tag);
-		nvis::vec3 center(0, 0, 0);
+		vec3 center(0, 0, 0);
 		for (iterator_type i = range.first ; i != range.second ; ++i) {
-			nvis::vec3 x = coord(i->second, size, step);
+			vec3 x = coord(i->second, size, step);
 			center += x;
 		}
 		center /= (float)tag_to_voxel.count(tag);
 
 		spurt::mat3 A;
 		for (iterator_type i = range.first ; i != range.second ; ++i) {
-			nvis::vec3 x = coord(i->second, size, step) - center;
-			A += spurt::outer<nvis::vec3, spurt::mat3>(x, x);
+			vec3 x = coord(i->second, size, step) - center;
+			A += spurt::outer(x,x);
 		}
 		int id = tag_to_id[tag];
 		voxel_fa[id] = spurt::FA(A);
 		if (std::isnan(voxel_fa[id]) || std::isinf(voxel_fa[id])) voxel_fa[id] = 0;
-		nvis::vec3 aniso = spurt::westin_aniso(A);
+		vec3 aniso = spurt::westin_aniso(A);
 		for (int j = 0 ; j < 3 ; ++j) voxel_aniso[3*id+j] = aniso[j];
 
-		std::vector<double> evals;
-		std::vector<nvis::vec3> evecs;
-		int roots = spurt::eigensystem(evecs, evals, A);
-		if (evals[0] > evals[1]) {
-			for (int j = 0 ; j < 3 ; ++j) voxel_dir[3*id+j] = evecs[0][j];
-		}
+        cvec3 evals;
+        cmat3 evecs;
+        spurt::eigensystem(evals, evecs, A);
+        vec3 emax = spurt::real(evecs.column(0));
+		for (int j = 0 ; j < 3 ; ++j) voxel_dir[3*id+j] = emax[j];
 	}
 
 	// debug

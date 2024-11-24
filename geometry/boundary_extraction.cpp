@@ -120,7 +120,7 @@ int main(int argc, const char* argv[]) {
     boundary->SetPolys(cells);
     if (!data_name.empty()) {
         m.load_data(data_name);
-        std::vector<mesh_type::vec3_type> shearstress = m.get_shear_stress();
+        std::vector<mesh_type::vertex_type> shearstress = m.get_shear_stress();
         vtk_utils::add_vectors(boundary, shearstress, true, "velocity", true);
     }
     else {

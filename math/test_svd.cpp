@@ -2,7 +2,8 @@
 #include <teem/hest.h>
 #include <teem/ell.h>
 #include <iostream>
-#include <util/timer.hpp>
+#include <misc/progress.hpp>
+#include <math/types.hpp>
 #include <vector>
 
 
@@ -16,7 +17,7 @@ int main(int argc, char* argv[])
     
     std::cerr << "machine epsilon is " << DBL_EPSILON << '\n';
     
-    nvis::mat3 A;
+    spurt::mat3 A;
     Eigen::Matrix3d A_, Id;
     srand48(time(0));
     double err = 0;
@@ -56,17 +57,17 @@ int main(int argc, char* argv[])
         //         // make A degenerate
         //         double e[3];
         //         int ret = ell_3m_eigenvalues_d(e, A[0].begin(), AIR_TRUE);
-        //         A -= e[0]*nvis::mat3::identity();
+        //         A -= e[0]*spurt::mat3::identity();
         // A_ -= e[0]*Id;
         
         // check SVD
-        nvis::mat3 U,V;
-        nvis::vec3 w;
-        nvis::timer t;
+        spurt::mat3 U,V;
+        spurt::vec3 w;
+        spurt::timer t;
         nr_svd::svdcmp<double, 3,3>(A, w, U, V, DBL_EPSILON);
         std::cerr << "NR SVD took " << t.elapsed() << '\n';
-        nvis::mat3 Approx = U * nr_svd::to_mat<double, 3>(w) * nvis::transpose(V);
-        std::cerr << "NR SVD error = " << nvis::norm(A-Approx)/nvis::norm(A) << std::endl;
+        spurt::mat3 Approx = U * nr_svd::to_mat<double, 3>(w) * spurt::transpose(V);
+        std::cerr << "NR SVD error = " << spurt::norm(A-Approx)/spurt::norm(A) << std::endl;
         std::cerr << "NR w = " << w << std::endl;
         std::cerr << "NR U = " << U << std::endl;
         std::cerr << "NR V = " << V << std::endl;
@@ -82,7 +83,7 @@ int main(int argc, char* argv[])
         std::cerr << "Eigen V = " << '\n' << V_ << std::endl;
         
         // compute pseudoinverse
-        nvis::mat3 B = nr_svd::pseudoinv<double, 3, 3>(A, DBL_EPSILON);
+        spurt::mat3 B = nr_svd::pseudoinv<double, 3, 3>(A, DBL_EPSILON);
         
         // ad-hoc pseudo inverse of diagonal matrix
         std::vector<double> svs;
@@ -103,10 +104,10 @@ int main(int argc, char* argv[])
         std::cerr << "Eigen pseudoinv = " << B << std::endl;
         
         // check pseudoinverse
-        nvis::mat3 a = A*B*A;
-        nvis::mat3 b = B*A*B;
-        double err1 = nvis::norm(a-A)/nvis::norm(A);
-        double err2 = nvis::norm(b-B)/nvis::norm(B);
+        spurt::mat3 a = A*B*A;
+        spurt::mat3 b = B*A*B;
+        double err1 = spurt::norm(a-A)/spurt::norm(A);
+        double err2 = spurt::norm(b-B)/spurt::norm(B);
         std::cerr << "NR: " << err1 << '\t' << err2 << std::endl;
         err += err1 + err2;
         

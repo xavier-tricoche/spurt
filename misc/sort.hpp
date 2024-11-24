@@ -4,7 +4,7 @@
 #include <map>
 #include <vector>
 #include <list>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 
 namespace spurt {
 template<typename T1, typename T2>
@@ -45,9 +45,9 @@ struct Lt_fabs {
 // A simple fixed length container that keeps its elements in the order
 // defined by std::less<T>
 template<typename T, int N, class Comp = std::less<T> >
-class fixed_sorted_vector : public nvis::fixed_vector<T, N> {
+class fixed_sorted_vector : public spurt::small_vector<T, N> {
 public:
-    typedef nvis::fixed_vector<T, N>     base_type;
+    typedef spurt::small_vector<T, N>     base_type;
     typedef fixed_sorted_vector<T, N>    self_type;
     typedef Comp                        less_than;
 
@@ -85,12 +85,12 @@ public:
     }
 
     bool operator==(const self_type& sa) const {
-        return nvis::all(static_cast<base_type>(*this) ==
+        return spurt::all(static_cast<base_type>(*this) ==
                          static_cast<base_type>(sa));
     }
 
     bool operator<(const self_type& sa) const {
-        nvis::lexicographical_order _order;
+        spurt::lexicographical_order _order;
         return _order(static_cast<base_type>(*this),
                       static_cast<base_type>(sa));
     }

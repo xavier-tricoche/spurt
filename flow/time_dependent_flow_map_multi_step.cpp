@@ -11,27 +11,30 @@
 #include <boost/filesystem.hpp>
 #include <boost/numeric/odeint.hpp>
 
-#include <data/raster.hpp>
+#include <math/types.hpp>
+#include <data/image.hpp>
+#include <flow/ode_observer.hpp>
+
 #include <flow/time_dependent_field.hpp>
-#include <flow/vector_field.hpp>
 #include <flow/vector_field.hpp>
 #include <format/dlr_reader.hpp>
 #include <format/filename.hpp>
-#include <math/bounding_box.hpp>
-#include <math/dopri5.hpp>
-#include <math/fixed_vector.hpp>
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
 #include <misc/strings.hpp>
+#include <misc/meta_utils.hpp>
 #include <vtk/vtk_interpolator.hpp>
+
 #include <tbb/parallel_for.h>
 #include <tbb/tbb.h>
+
+using namespace spurt;
 
 std::atomic<size_t> progress_counter;
 std::string name_in, name_out, seed_name, path, cmdline;
 double length, eps, eps_refined, T, t0, t1, deltaT;
 size_t dim, mem;
-std::array<size_t, 3> res;
+svec3 res;
 std::array<bool, 3> periodic;
 std::array<double, 6> bounds;
 bool verbose=false, do_log=true;
@@ -41,7 +44,7 @@ bool save_lines = false;
 bool monitor = false;
 bool confine = false;
 bool split_prisms = false;
-nvis::bbox3 the_bounds;
+bbox3 the_bounds;
 std::ofstream ofs;
 std::mutex output_mutex;
 std::mutex progress_mutex;
@@ -76,22 +79,6 @@ void update_progress(spurt::ProgressDisplay& progress) {
 }
 
 namespace odeint = boost::numeric::odeint;
-
-template< typename T, typename T1, typename T2=void, typename T3=void, typename T4=void >
-struct is_one_of_those_types : public std::false_type {};
-
-template<typename T, typename T1>
-struct is_one_of_those_types< T, T1, typename std::enable_if< std::is_same<T, T1>::value >::type > : public std::true_type {};
-
-template<typename T, typename T1, typename T2>
-struct is_one_of_those_types< T, T1, T2, typename std::enable_if< std::is_same<T, T1>::value || std::is_same<T, T2>::value >::type > : public std::true_type {};
-
-template<typename T, typename T1, typename T2, typename T3>
-struct is_one_of_those_types< T, T1, T2, T3,
-            typename std::enable_if<
-                std::is_same<T, T1>::value ||
-                std::is_same<T, T2>::value ||
-                std::is_same<T, T3>::value >::type > : public std::true_type {};
 
 void initialize(int argc, const char* argv[]) {
     namespace xcl = spurt::command_line;
@@ -151,174 +138,20 @@ void initialize(int argc, const char* argv[]) {
     }
 }
 
-using namespace spurt;
 using namespace vtk_utils;
-
-struct vec3 : public Eigen::Vector3d
-{
-    typedef Eigen::Vector3d base_type;
-    typedef base_type::value_type value_type;
-
-    vec3() : base_type(0,0,0) {}
-    vec3(const base_type& v) : base_type(v) {}
-    vec3(double x, double y, double z) : base_type(x,y,z) {}
-
-#if EIGEN_VERSION_AT_LEAST(3,4,0)
-    // starting with version 3.4, Eigen offers STL-type iterators
-    typedef base_type::iterator iterator;
-    typedef base_type::const_iterator const_iterator;
-#else
-    typedef const double* const_iterator;
-    typedef double* iterator;
-
-    const_iterator begin() const {
-        return &this->operator()(0);
-    }
-    iterator begin() {
-        return &this->operator()(0);
-    }
-    const_iterator end() const {
-        return begin()+3;
-    }
-    iterator end() {
-        return begin()+3;
-    }
-#endif
-
-    nvis::vec3& as_nvis_vec3() { return *((nvis::vec3*)(&base_type::operator()(0))); }
-    const nvis::vec3& as_nvis_vec3() const { return *((const nvis::vec3*)(&base_type::operator()(0))); }
-};
-
-vec3& as_vec3(nvis::vec3& v) {
-    return *((vec3*)(&v[0]));
-}
-
-const vec3& as_vec3(const nvis::vec3& v) {
-    return *((const vec3*)(&v[0]));
-}
-
-inline std::string to_str(const vec3& p, bool precise=false) {
-    std::ostringstream os;
-    if (!precise) os << "[" << p(0) << ", " << p(1) << ", " << p(2) << "]";
-    else {
-        os << std::setprecision(std::numeric_limits<double>::digits10+1)
-           << "[" << p(0) << ", " << p(1) << ", " << p(2) <<"]";
-    }
-    return os.str();
-}
-
-namespace spurt {
-template<>
-struct data_traits< vec3 > {
-    typedef vec3::value_type value_type;
-    typedef vec3 data_type;
-
-    constexpr static int size() { return 3; }
-    static const value_type& value(const data_type& v, size_t i) {
-        return v[i];
-    }
-    static value_type& value(data_type& v, size_t i) { return v[i]; }
-    static data_type& assign(data_type& inout, value_type val) {
-        inout.setConstant(val);
-        return inout;
-    }
-    static value_type norm(const data_type& v) {
-        return v.norm();
-    }
-};
-} // namespace spurt
 
 typedef vec3 point_type;
 typedef vec3 vector_type;
 typedef double scalar_type;
 
-typedef vtk_utils::point_locator<vtkUnstructuredGrid, double, 3> unstructured_locator_type;
+typedef vtk_utils::point_locator<vtkUnstructuredGrid, double, 3> 
+    unstructured_locator_type;
 typedef spurt::fixed_mesh_time_dependent_field<unstructured_locator_type, std::vector<vec3> > unstructured_field_type;
 typedef vtk_utils::point_locator<vtkStructuredGrid, double, 3> curvilinear_locator_type;
 typedef spurt::fixed_mesh_time_dependent_field<curvilinear_locator_type, std::vector<vec3> > curvilinear_field_type;
 typedef spurt::structured_mesh_time_dependent_field< vtkRectilinearGrid, double, 3, std::vector<vec3> > rectilinear_field_type;
 typedef spurt::structured_mesh_time_dependent_field< vtkImageData, double, 3, std::vector<vec3> > image_field_type;
-//typedef spurt::structured_mesh_time_dependent_field< boundaryAwareRectGrid, double, 3, std::vector<vec3> > BARG_field_type;  //BARG edit #2
 typedef spurt::tp_bspline_time_dependent_field< boundaryAwareRectGrid, double, 3, std::vector<vec3> > BARG_field_type;  //BARG edit
-
-
-struct RKDOPRI5 {
-    typedef nvis::vec3 vec_t; // vector type required by nvis::dopri5
-    typedef nvis::dopri5<vec_t> ode_solver_type;
-    typedef ode_solver_type::step step_type;
-
-    template<typename RHS>
-    struct dopri_rhs {
-        dopri_rhs(const RHS& rhs) : m_rhs(rhs) {}
-
-        vec_t operator()(double t, const vec_t& y) const {
-            vector_type dydt;
-            try {
-                m_rhs(as_vec3(y), dydt, t);
-            }
-            catch(...) {
-                if (verbose && do_log) {
-                    std::ostringstream os;
-                    os << "Seed #" << m_rhs.m_seedid << ": Unable to interpolate at " + to_str(as_vec3(y), true);
-                    write_to_ostream(ofs, os.str());
-                }
-                throw nvis::invalid_position_exception("Unable to interpolate at " + to_str(as_vec3(y), true));
-            }
-            return dydt.as_nvis_vec3();
-        }
-        const RHS& m_rhs;
-    };
-
-    template<typename RHS, typename Obs>
-    static void integrate(const RHS& rhs, point_type& y, double t0,
-                          double T, double hinit, double hmax, double eps,
-                          Obs& obs) {
-        ode_solver_type solver;
-        dopri_rhs<RHS> my_rhs(rhs);
-        if (eps > 0) {
-            solver.reltol = solver.abstol = eps;
-        }
-        if (hmax > 0) {
-            solver.h_max = hmax;
-        }
-        solver.t = t0;
-        solver.t_max = t0+T;
-        solver.y = y.as_nvis_vec3();
-        step_type step;
-        try {
-            while (true) {
-                auto result = solver.do_step(my_rhs, step, verbose);
-                if (result == ode_solver_type::OK || result ==
-                    ode_solver_type::T_MAX_REACHED) {
-                    obs(as_vec3(step.y1()), step.t1());
-                    if (result == ode_solver_type::T_MAX_REACHED) break;
-                }
-                else {
-                    if (verbose && do_log) {
-                        std::ostringstream os;
-                        os << "unable to complete integration: ";
-                        if (result == ode_solver_type::STIFFNESS_DETECTED) {
-                            os << "stiffness detected";
-                        }
-                        else if (result == ode_solver_type::STEPSIZE_UNDERFLOW) {
-                            os << "step size underflow";
-                        }
-                        os << " at (" << to_str(as_vec3(solver.y)) << ", "
-                           << solver.t << ")";
-                        write_to_ostream(ofs, os.str());
-                    }
-                    break;
-                }
-            }
-        }
-        catch(std::runtime_error& e) {
-            std::ostringstream os;
-            os << "RKDOPRI5::integrate: exception caught: " << e.what() << '\n';
-            if (verbose) write_to_ostream(std::cerr, os.str());
-            throw nvis::invalid_position_exception(os.str());
-        }
-    }
-};
 
 template<typename Field>
 struct rhs_base {
@@ -328,11 +161,6 @@ struct rhs_base {
              bool _verbose=false, int seedid=-1, size_t counter=0)
     : m_field(field), m_counter(counter), m_max_evals(max_evals),
       m_verbose(_verbose), m_seedid(seedid) {}
-    //
-    // rhs_base(std::shared_ptr<const field_type> field, size_t max_evals=1000,
-    //          bool forward=true, bool _verbose=false, int seedid=-1, size_t counter=0)
-    //     : m_field(field), m_cell(acell), m_counter(counter),
-    //       m_max_evals(max_evals), m_seedid(seedid), m_verbose(_verbose) {}
 
     rhs_base(const rhs_base& other)
         : m_field(other.m_field), m_counter(other.m_counter),
@@ -370,22 +198,22 @@ struct rhs_type<
                     other.m_verbose, other.m_seedid, other.m_counter) {}
 
     void operator()(const vec3& x, vec3& dxdt, scalar_type t) const {
-        if (confine && !the_bounds.inside(x.as_nvis_vec3())) {
+        if (confine && !the_bounds.inside(x)) {
             if (verbose && do_log) {
                 std::ostringstream os;
-                os << "invalid position: " << to_str(x) << " at t=" << t << '\n';
+                os << "invalid position: " << x << " at t=" << t << '\n';
                 write_to_ostream(ofs, os.str());
             }
-            throw nvis::invalid_position_exception("invalid position: " + to_str(x) + " at t=" + to_string(t));
+            throw invalid_position_exception("invalid position: " + to_str(x) + " at t=" + to_string(t));
         }
         dxdt = (*base_type::m_field)(x, t); // may throw
         ++base_type::m_counter;
         if (base_type::m_counter >= base_type::m_max_evals) {
             std::ostringstream os;
-            os << "Max RHS evaluations reached at "
-               << to_str(x) << " at t=" << t << '\n';
+            os << "Max RHS evaluations reached at " << x
+               << " at t=" << t << '\n';
             write_to_ostream(ofs, os.str());
-            // will trigger a nvis::invalid_position_exception:
+            // will trigger a invalid_position_exception:
             throw std::runtime_error(os.str());
         }
     }
@@ -412,13 +240,13 @@ struct rhs_type<
     }
 
     void operator()(const vec3& x, vec3& dxdt, scalar_type t) const {
-        if (confine && !the_bounds.inside(x.as_nvis_vec3())) {
+        if (confine && !the_bounds.inside(x)) {
             if (verbose && do_log) {
                 std::ostringstream os;
-                os << "invalid position: " << to_str(x) << " at t=" << t << '\n';
+                os << "invalid position: " << x << " at t=" << t << '\n';
                 write_to_ostream(ofs, os.str());
             }
-            throw nvis::invalid_position_exception("invalid position: " + to_str(x) + " at t=" + to_string(t));
+            throw invalid_position_exception("invalid position: " + to_str(x) + " at t=" + to_string(t));
         }
         dxdt = (*base_type::m_field)(x, t, m_cell);
         ++base_type::m_counter;
@@ -427,53 +255,14 @@ struct rhs_type<
             os << "Max RHS evaluations reached at "
                << to_str(x) << " at t=" << t << '\n';
             write_to_ostream(ofs, os.str());
-            // will trigger a nvis::invalid_position_exception:
+            // will trigger a invalid_position_exception:
             throw std::runtime_error(os.str());
         }
     }
 
     VTK_SMART(vtkGenericCell) m_cell;
 };
-
-struct Observer {
-    Observer(vec3& seed, double& t, double& d, std::vector<vec3>& c,
-             std::vector<double>& ts, bool _verbose=false)
-    : last_p(seed), last_t(t), distance(d), curve(c), times(ts),
-      m_verbose(_verbose) {
-        if (monitor || save_lines) {
-            curve.push_back(seed);
-            ts.push_back(t);
-        }
-        if (m_verbose) {
-            std::ostringstream os;
-            os << "Observer: seeding at " << to_str(seed) << " at time " << t;
-            write_to_ostream(std::cout, os.str());
-        }
-    }
-    void operator()(const vec3& p, double t) {
-        distance += (last_p-p).norm();
-        last_p = p;
-        last_t = t;
-        if (monitor || save_lines) {
-            curve.push_back(p);
-            times.push_back(t);
-        }
-        // if (m_verbose || (verbose && do_log)) {
-        //     std::ostringstream os;
-        //     os << "\nObserver: p=" << to_str(p) << ", t=" << t << std::endl;
-        //     if (m_verbose) write_to_ostream(std::cout, os.str());
-        //     if (verbose && do_log) write_to_ostream(ofs, os.str());
-        // }
-    }
-
-    vec3& last_p;
-    double& last_t;
-    double& distance;
-    std::vector<vec3>& curve;
-    std::vector<double>& times;
-    bool m_verbose;
-};
-typedef Observer observer_t;
+typedef spurt::Observer<vec3> observer_t;
 
 const vtkDataSet* get_dataset(const std::shared_ptr<unstructured_field_type> field) {
     return field->get_locator()->get_dataset();
@@ -499,7 +288,7 @@ template<typename Field>
 int runTBB(shared_ptr<Field> field) {
     double global_bounds[6];
     const_cast<vtkDataSet*>(get_dataset(field))->GetBounds(global_bounds);
-    nvis::bbox3 bnds;
+    bbox3 bnds;
 
     std::cout << "dataset imported.\n";
 
@@ -516,34 +305,40 @@ int runTBB(shared_ptr<Field> field) {
         ::bounds[4] >= global_bounds[4] &&
         ::bounds[5] <= global_bounds[5]) {
         // valid bounds supplied by user
-        bnds.min() = nvis::vec3(::bounds[0], ::bounds[2], ::bounds[4]);
-        bnds.max() = nvis::vec3(::bounds[1], ::bounds[3], ::bounds[5]);
+        bnds.min() = vec3(::bounds[0], ::bounds[2], ::bounds[4]);
+        bnds.max() = vec3(::bounds[1], ::bounds[3], ::bounds[5]);
     }
     else {
-        bnds.min() = nvis::vec3(global_bounds[0], global_bounds[2], global_bounds[4]);
-        bnds.max() = nvis::vec3(global_bounds[1], global_bounds[3], global_bounds[5]);
+        bnds.min() = vec3(global_bounds[0], global_bounds[2], global_bounds[4]);
+        bnds.max() = vec3(global_bounds[1], global_bounds[3], global_bounds[5]);
     }
 
     the_bounds = bnds;
     int npoints;
-    spurt::raster_grid<3> sampling_grid(res, bnds);
+    typedef spurt::raster_grid<long, double, 3> grid_t;
+    typedef grid_t::coord_type coord_t;
+    grid_t sampling_grid(res, bnds);
 
     if (seed_name.empty()) {
         std::cout << "initializing seed locations..." << std::flush;
         std::cout << "Resolution = " << res[0] << " x " << res[1] << " x " << res[2] << std::endl;
 
-        std::cout << "sampling grid bounds are: " << sampling_grid.bounds().min()
-            << " -> " << sampling_grid.bounds().max() << '\n';
+        std::cout << "sampling grid bounds are: " 
+            << (sampling_grid.bounds().min())
+            << " -> " 
+            << (sampling_grid.bounds().max()) << '\n';
 
         if (do_log) {
             ofs << "Resolution = " << res[0] << " x " << res[1] << " x " << res[2] << std::endl;
-            ofs << "sampling grid bounds are: " << sampling_grid.bounds().min()
-                << " -> " << sampling_grid.bounds().max() << '\n';
+            ofs << "sampling grid bounds are: " 
+                << (sampling_grid.bounds().min())
+                << " -> " 
+                << (sampling_grid.bounds().max()) << '\n';
         }
         npoints = sampling_grid.size();
         seeds.resize(npoints);
         for (int i=0; i<npoints; i++) {
-            seeds[i] = as_vec3(sampling_grid(sampling_grid.coordinates(i)));
+            seeds[i] = sampling_grid(sampling_grid.coordinates(i));
         }
         std::cout << " done\n";
     }
@@ -603,6 +398,7 @@ int runTBB(shared_ptr<Field> field) {
     });
 #endif
     std::cout << " done\n";
+    using namespace boost::numeric::odeint;
 
     // parallel portion of the algorithm
     std::fill(flowtimes, flowtimes + npoints, t0);
@@ -661,13 +457,9 @@ int runTBB(shared_ptr<Field> field) {
         std::cout << "lines initially contains " << lines.size() << " lines\n";
 
         progress_counter = 0;
-    #ifndef NO_TBB
         tbb::parallel_for(tbb::blocked_range<int>(0,npoints),
                            [&](tbb::blocked_range<int> r) {
             for (int n=r.begin(); n!=r.end(); ++n) {
-    #else
-            for (int n=0; n<npoints; ++n) {
-    #endif
                 ++progress_counter;
 
                 update_progress(progress);
@@ -677,7 +469,8 @@ int runTBB(shared_ptr<Field> field) {
                 if (stopped[n]) {
                     if (do_log && verbose) {
                         std::ostringstream oss;
-                        oss << "pathline " << n << ": already stopped at " << to_str(x);
+                        oss << "pathline " << n << ": already stopped at "
+                        << x;
                         write_to_ostream(ofs, oss.str());
                     }
                     continue;
@@ -702,9 +495,10 @@ int runTBB(shared_ptr<Field> field) {
                         p=x; // obs.last_p
                         sline.clear();
                         slinetimes.clear();
-                        observer_t obs(p, t, d, sline, slinetimes/*, do_verbose*/);
-                        RKDOPRI5::integrate(rhs, y, flowtimes[n], next_time-flowtimes[n], 0, 0,
-                                            local_eps, obs);
+                        observer_t obs(p, t, d, sline, slinetimes /*, do_verbose*/);
+                        auto stepper = make_controlled(local_eps, local_eps, runge_kutta_dopri5<point_type>());
+                        integrate_adaptive(stepper, rhs, y, current_time, 
+                                           next_time-current_time, 1.0e-4, obs);
                         if (fabs(t-next_time)/fabs(next_time-current_time) < 0.001) {
                             too_short = false;
                             break;
@@ -752,9 +546,9 @@ int runTBB(shared_ptr<Field> field) {
                     if (do_log) {
                         std::ostringstream os;
                         os << "\n\ncaught exception while integrating from "
-                           << to_str(x) << ". reason: " << e.what() << '\n'
+                           << x << ". reason: " << e.what() << '\n'
                            << "last position reached was "
-                           << to_str(p) << " at time "
+                           << p << " at time "
                            << t << " for a total distance of "
                            << d;
                         write_to_ostream(ofs, os.str());
@@ -766,9 +560,7 @@ int runTBB(shared_ptr<Field> field) {
                     stopped[n] = true;
                 }
             }
-    #ifndef NO_TBB
         }); // end of tbb::parallel_for
-    #endif
 
         progress.end();
         if (do_log) {
@@ -810,7 +602,7 @@ int runTBB(shared_ptr<Field> field) {
                     write_to_ostream(ofs, os.str());
                 }
             }
-            std::vector<nvis::ivec2> dummy;
+            std::vector<ivec2> dummy;
             VTK_SMART(vtkPolyData) pdata = vtk_utils::make_polylines(lines, dummy, 0);
             std::vector<double> all_times;
             std::for_each(times.begin(), times.end(),
@@ -903,13 +695,9 @@ int runTBB(shared_ptr<Field> field) {
             lines.resize(new_seeds.size());
             times.resize(new_seeds.size());
             progress_counter = 0;
-#ifndef NO_TBB
             tbb::parallel_for(tbb::blocked_range<int>(0,new_seeds.size()),
             [&](tbb::blocked_range<int> r) {
                 for (int n=r.begin(); n!=r.end(); ++n) {
-#else
-                for (int n=0; n<new_seeds.size(); ++n) {
-#endif
                     ++progress_counter;
 
                     double t=t0, d=0;
@@ -930,7 +718,10 @@ int runTBB(shared_ptr<Field> field) {
                         point_type y(x);
                         // attempt integration over the full time interval, knowing that it will
                         // stop somewhere along the way
-                        RKDOPRI5::integrate(rhs, y, t0, T, 0, 0, eps_refined, obs);
+
+                        auto stepper = make_controlled(eps_refined, eps_refined, runge_kutta_dopri5<point_type>());
+                        integrate_adaptive(stepper, rhs, y, t0,
+                                           T, 1.0e-4, obs);
                         if (do_log) {
                             std::ostringstream os;
                             os << "failed streamline #" << seed_ids[n]
@@ -1210,7 +1001,7 @@ shared_ptr<unstructured_field_type> load_DLR_time_steps() {
     }
 
     spurt::dlr_reader reader(mesh_name, "");
-    std::vector<nvis::fvec3> vertices;
+    std::vector<fvec3> vertices;
     std::vector<long> cell_indices;
     std::vector<std::pair<dlr_reader::cell_type, long> > cell_types;
     reader.read_mesh(false, vertices, cell_indices, cell_types);

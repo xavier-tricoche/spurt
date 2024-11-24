@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <stdexcept>
 #include <sstream>
 
@@ -33,7 +33,7 @@ inline void check_nc( int status ) {
         throw std::runtime_error(nc_strerror(status));
 }
 
-void load_vertices(std::vector<nvis::fvec3>& pos, int file) {
+void load_vertices(std::vector<fvec3>& pos, int file) {
     int id, nPointsDimId;
     size_t nPoints;
 
@@ -61,7 +61,7 @@ void load_vertices(std::vector<nvis::fvec3>& pos, int file) {
 
     pos.resize(nPoints);
     for (int i=0 ; i<nPoints ; ++i) {
-        pos[i] = nvis::fvec3(points[3*i], points[3*i+1], points[3*i+2]);
+        pos[i] = fvec3(points[3*i], points[3*i+1], points[3*i+2]);
     }
 }
 
@@ -263,11 +263,12 @@ bool load_attributes(std::vector<double>& data, int file, const std::string& nam
 }
 
 public:
-    dlr_reader(const std::string& grid_file_name, const std::string& data_file_name)
+    dlr_reader(const std::string& grid_file_name, 
+               const std::string& data_file_name)
             : _gfn(grid_file_name), _dfn(data_file_name), verbose(false) {}
 
     void read_mesh(bool boundary,
-                   std::vector<nvis::fvec3>& vertices,
+                   std::vector<fvec3>& vertices,
                    std::vector<long>& cell_indices,
                    std::vector<std::pair<cell_type, long> >& cell_types,
                    bool verbose=false) {
@@ -312,7 +313,8 @@ public:
     template<typename Vec3>
     void read_vector_data_from_file(const std::string& filename,
                                     const std::string& data_name,
-                                    std::vector<Vec3>& data, bool verbose=false) {
+                                    std::vector<Vec3>& data, 
+                                    bool verbose=false) {
         this->verbose = verbose;
         int file, nPointsDimId;
         size_t nPoints;

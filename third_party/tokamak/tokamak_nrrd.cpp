@@ -6,7 +6,7 @@
 #include <cassert>
 #include <fstream>
 
-#include <math/fixed_matrix.hpp>
+#include <nvis-math/fixed_matrix.hpp>
 #include "tokamak_nrrd.hpp"
 
 using namespace nvis;

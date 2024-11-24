@@ -10,16 +10,13 @@
 #include <data/field_wrapper.hpp>
 #include <vtk/vtk_utils.hpp>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 
 #include <data/raster.hpp>
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
 #include <format/filename.hpp>
-
-#include <Eigen/Core>
-#include <Eigen/SVD>
 
 #include <vtkPoints.h>
 #include <vtkCellArray.h>
@@ -31,6 +28,8 @@
 #include <omp.h>
 #endif
 
+using namespace spurt;
+
 namespace odeint = boost::numeric::odeint;
 
 typedef double value_t;
@@ -38,19 +37,18 @@ typedef double value_t;
 constexpr value_t PI=3.14159265358979323844;
 constexpr value_t TWO_PI=6.28318530717958647688;
 
-typedef nvis::fixed_vector< value_t, 3 > state_t;
-typedef nvis::fixed_vector< value_t, 12 > ext_state_t;
-typedef Eigen::Matrix< value_t, 3, 3 > matrix_t;
-typedef Eigen::Matrix< value_t, 3, 1 > col_t;
-typedef Eigen::JacobiSVD< matrix_t > svd_t;
-typedef nvis::fixed_vector< value_t, 3 > pos_t;
-typedef nvis::bounding_box< pos_t > bbox_t;
+typedef small_vector< value_t, 3 > state_t;
+typedef small_vector< value_t, 12 > ext_state_t;
+typedef small_matrix< value_t, 3, 3 > matrix_t;
+typedef small_vector< value_t, 3> col_t;
+typedef small_vector< value_t, 3 > pos_t;
+typedef spurt::bounding_box< pos_t > bbox_t;
 typedef std::vector< state_t > line_t;
 typedef std::vector< value_t > attr_t;
 
 std::string name_in, name_out;
 value_t l_max=-1., t_max=10., eps=1.0e-8, dt=1.0e-2, min_dist=1.0e-2;
-std::array<size_t, 3> res({ 256, 256, 256 });
+svec3 res({ 256, 256, 256 });
 std::array< value_t, 6 > bnds({ -PI, PI, -PI, PI, -PI, PI});
 bbox_t region;
 int nlines=10, fieldid=1;
@@ -75,8 +73,8 @@ bbox_t to_bbox(const std::array<value_t, 6>& array) {
 }
 
 template<typename T, size_t N>
-nvis::fixed_vector<T, N> to_vec(const std::array<T, N>& array) {
-    nvis::fixed_vector<T, N> v;
+small_vector<T, N> to_vec(const std::array<T, N>& array) {
+    small_vector<T, N> v;
     for (size_t i=0; i<N; ++i) v[i]=array[i];
     return v;
 }
@@ -225,7 +223,7 @@ struct NrrdFieldInterface {
                     os << "ref val remains " << m_memory.m_last << " at " 
                         << m_memory.m_last_t << ". ";
             }
-            if (nvis::inner(dxdt, m_memory.m_last)>0) {
+            if (inner(dxdt, m_memory.m_last)>0) {
                 m_memory.m_cur=dxdt;
                 dxdt*=aniso;
                 if (verbose)
@@ -265,7 +263,7 @@ void make_seeds(std::vector<state_t>& seeds) {
     if (seeding==RANDOM) {
         std::cout << "Random seeding\n";
         srand48(time(0));
-        nvis::vec3 sz=region.size();
+        vec3 sz=region.size();
         sz[2]=0.;
         for (int i=0; i<nlines; ++i) {
             seeds[i]=region.min()+random_vec()*sz;

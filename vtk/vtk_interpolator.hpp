@@ -166,9 +166,9 @@ namespace {
     inline std::string to_str(const vec& p) {
         std::ostringstream os;
         if (spurt::data_traits<vec>::size() == 3)
-            os << "[" << p(0) << ", " << p(1) << ", " << p(2) << "]";
+            os << "[" << p[0] << ", " << p[1] << ", " << p[2] << "]";
         else
-            os << "[" << p(0) << ", " << p(1) << "]";
+            os << "[" << p[0] << ", " << p[1] << "]";
         return os.str();
     }
 
@@ -191,9 +191,9 @@ namespace vtk_utils {
     template< typename DataSet,
               typename T=double,
               unsigned int N=3,
-              typename Vector=Eigen::Matrix<T, 3, 1>,
-              typename Matrix=Eigen::Matrix<T, 3, 3>,
-              typename Tuple=Eigen::Matrix<T, Eigen::Dynamic, 1>>
+              typename Vector=small_vector<T, 3>,
+              typename Matrix=small_matrix<T, 3, 3>,
+              typename Tuple=std::vector<T> >
     class interpolator_base {
     public:
         typedef DataSet dataset_type;
@@ -232,9 +232,9 @@ namespace vtk_utils {
     template<typename DataSet,
              typename T=double,
              unsigned int N=3,
-             typename Vector=Eigen::Matrix<T, 3, 1>,
-             typename Matrix=Eigen::Matrix<T, 3, 3>,
-             typename Tuple=Eigen::Matrix<T, Eigen::Dynamic, 1>,
+             typename Vector=small_vector<T, 3>,
+             typename Matrix=small_matrix<T, 3, 3>,
+             typename Tuple=std::vector<T>,
              typename Enable=void>
     class interpolator {};
 
@@ -382,12 +382,12 @@ namespace vtk_utils {
              double m[100];
              int n = tuples->GetNumberOfComponents();
              value = tuple_type(n);
-             for (int i=0; i<n; ++i) value(i) = 0.;
+             std::fill(value.begin(), value.end(), 0);
 
              for (size_t i=0; i<n_points_per_cell; ++i) {
                  tuples->GetTuple(ptid+m_converter.delta(i), m);
                  for (int k=0; k<n; ++k)
-                    value(k) += weights[i] * m[k];
+                    value[k] += weights[i] * m[k];
              }
              return true;
         }
@@ -440,6 +440,7 @@ namespace vtk_utils {
         typedef DataSet dataset_type;
         typedef Vector vector_type;
         typedef Matrix matrix_type;
+        typedef Tuple tuple_type;
         typedef typename locator_traits<N>::locator_type locator_type;
         static constexpr unsigned int dimension = base_type::dimension;
 
@@ -463,7 +464,7 @@ namespace vtk_utils {
             if (!coeff(x, weights, acell)) return false;
 
             if (m_verbose) {
-                std::cerr << "point " << to_str(x) << " is located in cell ";
+                std::cerr << "point " << x << " is located in cell ";
                 acell->PrintSelf(std::cerr, vtkIndent(0));
                 std::cerr << '\n';
             }
@@ -484,7 +485,7 @@ namespace vtk_utils {
             if (!coeff(x, weights, acell)) return false;
 
             if (m_verbose) {
-                std::cerr << "point " << to_str(x) << " is located in cell ";
+                std::cerr << "point " << x << " is located in cell ";
                 acell->PrintSelf(std::cerr, vtkIndent(0));
                 std::cerr << '\n';
             }
@@ -532,7 +533,7 @@ namespace vtk_utils {
             if (!coeff(x, weights, acell)) return false;
 
             if (m_verbose) {
-                std::cerr << "point " << to_str(x) << " is located in cell ";
+                std::cerr << "point " << x << " is located in cell ";
                 acell->PrintSelf(std::cerr, vtkIndent(0));
                 std::cerr << '\n';
             }
@@ -559,6 +560,24 @@ namespace vtk_utils {
             return true;
         }
 
+        bool interpolate(tuple_type& value, const vector_type& x, vtkGenericCell* acell,
+                         const std::string& field_name) const {
+             double weights[8];
+             if (!coeff(x, weights, acell)) return false;
+             vtkDataArray* tuples = this->m_dataset->GetPointData()->GetAbstractArray(field_name.c_str());
+             double m[100];
+             int n = tuples->GetNumberOfComponents();
+             value = tuple_type(n); // dynamic resize
+             std::fill(value.begin(), value.end(), 0);
+
+             for (size_t i=0; i<acell->GetNumberOfPoints(); ++i) {
+                 tuples->GetTuple(acell->GetPointId(i), m);
+                 for (int k=0; k<n; ++k)
+                    value[k] += weights[i] * m[k];
+             }
+             return true;
+        }
+
     private:
         VTK_SMART(locator_type) m_locator;
         bool coeff(const vector_type& x, double* weights, vtkGenericCell* acell) const {
@@ -572,7 +591,7 @@ namespace vtk_utils {
     template<typename DataSet,
              typename T=double,
              unsigned int N=3,
-             typename Vector=Eigen::Matrix<T, 3, 1>,
+             typename Vector=small_vector<T, 3>,
              typename Index=int,
              typename Enable=void>
     class point_locator {};
@@ -663,7 +682,7 @@ namespace vtk_utils {
             if (fc.find(x, (double*)&weights[0], m_locator, acell) < 0) return false;
 
             if (m_verbose) {
-                std::cerr << "point " << to_str(x) << " is located in cell ";
+                std::cerr << "point " << x << " is located in cell ";
                 acell->PrintSelf(std::cerr, vtkIndent(0));
                 std::cerr << '\n';
             }

@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <vector>
-#include <math/math.hpp>
+#include <math/basic_math.hpp>
 
 namespace spurt {
 

@@ -1,8 +1,8 @@
 #include <image/nrrd_wrapper.hpp>
 #include <fstream>
 #include <vector>
-#include <Eigen/Dense>
-#include <Eigen/Eigenvalues>
+#include <flow/ftle.hpp>
+#include <math/types.hp>
 #include <misc/option_parse.hpp>
 
 std::string cmdline;
@@ -56,9 +56,8 @@ int main(int argc, const char* argv[]) {
 
     spurt::nrrd_utils::nrrd_data_wrapper<double> wrapper(nin);
 
-    typedef Eigen::Matrix<double, 3, 3> mat_t;
-    typedef Eigen::Matrix<double, 3, 1> vec_t;
-    typedef Eigen::SelfAdjointEigenSolver<mat_t> solver_t;
+    typedef mat3 mat_t;
+    typedef vec3 vec_t;
 
     double* ftle = (double*)calloc(res[0]*res[1]*res[2], sizeof(double));
 
@@ -107,8 +106,10 @@ int main(int argc, const char* argv[]) {
             J(dim, 2) = f[2];
 
             C = J.transpose() * J;
-            solver.compute(C);
-            double lambda = solver.eigenvalues()[2];
+            vec3 evals;
+            mat3 evecs;
+            sym_eigensystem(evals, evecs, C);
+            double lambda = evals[0];
             if (lambda > 0) {
                 ftle[n] = 1/length * log(sqrt(lambda));
             }

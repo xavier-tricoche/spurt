@@ -26,7 +26,7 @@ namespace {
 // object, which itself is not thread safe.
 class gage_vector_field {
     typedef spurt::gage_interface::vector_wrapper wrapper_t;
-	typedef nvis::bbox3 bounds_t;
+	typedef spurt::bbox3 bounds_t;
 public:
     typedef wrapper_t::deriv3_t  derivative_type;
 	typedef wrapper_t::point3_t  point_type;
@@ -62,8 +62,8 @@ public:
 		spurt::nrrd_utils::nrrd_traits traits(nin);
 		const std::vector<double>& mins = traits.mins();
 		const std::vector<double>& maxs = traits.maxs();
-		m_bounds.min() = nvis::vec3(mins[1], mins[2], mins[3]);
-		m_bounds.max() = nvis::vec3(maxs[1], maxs[2], maxs[3]);
+		m_bounds.min() = spurt::vec3(mins[1], mins[2], mins[3]);
+		m_bounds.max() = spurt::vec3(maxs[1], maxs[2], maxs[3]);
 		m_is_periodic = std::any_of(m_periodic.begin(), m_periodic.end(), [](bool b){return b;});
     }
 	
@@ -74,71 +74,17 @@ public:
 		  
 	const std::string& name() const { return m_name; }
 
-    bool operator()(const point_type& x, vector_type& v) const {
-        return m_wrapper.value(transform(x), v);
-    }
+    bool operator()(const point_type& x, vector_type& v) const;
 
-    vector_type operator()(const point_type& x) const {
-        vector_type v;
-		// std::cout << "vector_field(" << x << ")" << std::endl;
-        if (!m_wrapper.value(transform(x), v)) {
-            std::ostringstream os;
-			point_type y = transform(x);
-            os << "Probing velocity outside domain of definition at " << y << " =transform(" << x << ")";
-			throw std::runtime_error(os.str());
-        }
-        return v;
-    }
+    vector_type operator()(const point_type& x) const ;
 
-    scalar_type vorticity_scalar(const point_type& x) const {
-        if (!m_have_jacobian) {
-            throw std::runtime_error("Vorticity computation deactivated");
-        }
-        derivative_type J;
-        bool ok=m_wrapper.jacobian(transform(x), J);
-        if (!ok) {
-            std::ostringstream os;
-            os << "Probing vorticity outside domain of definition at "
-                << transform(x) << " =transform(" << x << ")";
-            throw std::runtime_error(os.str());
-        }
-        return J(1,0)-J(0,1);
-    }
-	scalar_type vorticity(const point_type& x) const {
-		return vorticity_scalar(x);
-	}
+    scalar_type vorticity_scalar(const point_type& x) const;
+	scalar_type vorticity(const point_type& x) const;
 
-    vector_type vorticity_vector(const point_type& x) const {
-        if (!m_have_jacobian) {
-            throw std::runtime_error("Vorticity computation deactivated");
-        }
-        derivative_type J;
-        bool ok=m_wrapper.jacobian(transform(x), J);
-        if (!ok) {
-            std::ostringstream os;
-            os << "Probing vorticity outside domain of definition at "
-                << transform(x) << " =transform(" << x << ")";
-            throw std::runtime_error(os.str());
-        }
-        return vector_type(J(2,1)-J(1,2), J(0,2)-J(2,0), J(1,0)-J(0,1));
-    }
+    vector_type vorticity_vector(const point_type& x) const;
+    bool jacobian(const point_type& x, derivative_type& J) const;
 
-    bool jacobian(const point_type& x, derivative_type& J) const {
-        if (!m_have_jacobian) {
-            throw std::runtime_error("Jacobian computation deactivated");
-        }
-       return m_wrapper.jacobian(transform(x), J);
-    }
-
-	derivative_type jacobian(const point_type& x) const {
-		derivative_type J;
-		if (!jacobian(transform(x), J)) {
-            std::ostringstream os;
-            os << "Probing Jacobian outside domain of definition at " << transform(x) << " =transform(" << x << ")";
-            throw std::runtime_error(os.str());
-		}
-		return J;
-	}
+	derivative_type jacobian(const point_type& x) const;
 
     wrapper_t           m_wrapper;
     std::string         m_name;

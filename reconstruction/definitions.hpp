@@ -1,7 +1,7 @@
 #ifndef __RECONSTRUCTION_DEFINTIONS_HPP__
 #define __RECONSTRUCTION_DEFINTIONS_HPP__
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 
 namespace spurt { namespace reconstruction {
 
@@ -9,7 +9,7 @@ template<typename T, int N>
 class point {
 public:
     typedef T                             value_type;
-    typedef nvis::fixed_vector<T, N>      vector_type;
+    typedef small_vector<T, N>            vector_type;
     typedef size_t                        index_type;
 
     point() : __i(), __v() {}    

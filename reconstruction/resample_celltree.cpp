@@ -8,11 +8,11 @@
 #include <fstream>
 #include <algorithm>
 #include <math.h>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 #include <teem/nrrd.h>
 #include <image/nrrd_wrapper.hpp>
-#include <util/timer.hpp>
+#include <misc/progress.hpp>
 
 #include <format/filename.hpp>
 #include <vtk/vtk_utils.hpp>
@@ -26,10 +26,10 @@
 
 #include <vtkCellIterator.h>
 
-typedef nvis::bounding_box<nvis::fvec3> fbox3;
+typedef spurt::bounding_box<spurt::fvec3> fbox3;
 
 // parameters
-nvis::ivec3   res;
+spurt::ivec3   res;
 std::string   in_name, out_name;
 fbox3         bounds;
 
@@ -60,7 +60,7 @@ void usage( const std::string& msg="")
 
 fbox3 compute_bounds(const float* points, unsigned int npoints) {
     fbox3 bb;
-    const nvis::fvec3* pts = (const nvis::fvec3*)points;
+    const spurt::fvec3* pts = (const spurt::fvec3*)points;
     for (int i=0 ; i<npoints ; ++i) {
         bb.add(pts[i]);
     }
@@ -147,7 +147,7 @@ int main(int argc, char* argv[]) {
     typedef celltree::interpolator::coord_type coord_type;
     typedef celltree::interpolator::value_type value_type;
 
-    res = nvis::ivec3(0);
+    res = spurt::ivec3(0);
     std::string grid_name;
 
     for (int i=1; i<argc ; ++i) {
@@ -205,7 +205,7 @@ int main(int argc, char* argv[]) {
     }
 
     // user reader appropriate for input file type
-    nvis::timer _timer;
+    spurt::timer _timer;
 
     std::string ext = extension(in_name);
 
@@ -236,7 +236,7 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    nvis::fvec3 step;
+    spurt::fvec3 step;
 
     bool has_geometry = !grid_name.empty();
     VTK_SMART(vtkDataSet) target_mesh;
@@ -247,16 +247,16 @@ int main(int argc, char* argv[]) {
         const fbox3 b = compute_bounds(m->points, m->npoints);
         std::cout << "bounds read\n";
 
-        if (nvis::any(bounds.min() >= bounds.max())) bounds = b;
+        if (spurt::any(bounds.min() >= bounds.max())) bounds = b;
         std::cout << "bounds = " << bounds << '\n';
 
-        step = bounds.size() / nvis::fvec3(res - nvis::ivec3(1));
+        step = bounds.size() / (res - 1);
     }
 
     std::cout << "dataset: " << m->npoints << " points\n"
               << "         " << m->ncells << " cells\n";
 
-    nvis::timer timer;
+    spurt::timer timer;
     celltree::celltree ct;
     {
         celltree::celltree_builder builder;
@@ -298,12 +298,12 @@ int main(int argc, char* argv[]) {
     }
     data = (float*)calloc(number_of_samples*nscalars, sizeof(float));
 
-    timer.restart();
+    timer.start();
     #pragma omp parallel
     {
         #pragma omp for schedule(dynamic, 1)
         for (size_t n=0 ; n<number_of_samples ; ++n) {
-            nvis::fvec3 p;
+            spurt::fvec3 p;
             if (has_geometry) {
                 double pp[3];
                 target_mesh->GetPoint(n, pp);
@@ -314,10 +314,10 @@ int main(int argc, char* argv[]) {
                 int j = n / res[0];
                 int k = j / res[1];
                 j = j % res[1];
-                p = bounds.min() + step*nvis::fvec3(i, j, k);
+                p = bounds.min() + step*spurt::fvec3(i, j, k);
             }
-            if (vintp != nullptr) (*vintp)(0, p.begin(), &data[nscalars*n+offset]);
-            if (sintp != nullptr) (*sintp)(0, p.begin(), &data[nscalars*n]);
+            if (vintp != nullptr) (*vintp)(0, &p[0], &data[nscalars*n+offset]);
+            if (sintp != nullptr) (*sintp)(0, &p[0], &data[nscalars*n]);
 
             int thread = 0;
 #if _OPENMP

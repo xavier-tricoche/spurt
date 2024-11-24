@@ -21,7 +21,7 @@
 #include <spline/spline.h>
 
 #include <crease/crease_mc_cases.hpp>
-#include <data/raster.hpp>
+#include <data/image.hpp>
 
 #include <vtkDoubleArray.h>
 #include <vtkCellArray.h>
@@ -42,6 +42,7 @@
 // 5. For each subdivision voxel, go back to 1.
 
 typedef unsigned int uint;
+using namespace spurt;
 
 uint verbose = 1;
 
@@ -61,23 +62,22 @@ constexpr int invalid_mc_case = 3;
 constexpr int exotic_case = 4;
 constexpr int not_enough_edges = 5;
 
-typedef Eigen::Matrix<double, 2, 1> vec2;
-typedef Eigen::Matrix<double, 3, 1> vec3;
-typedef Eigen::Matrix<double, 4, 1> vec4;
-typedef Eigen::Matrix<double, 3, 3> mat3;
-typedef Eigen::Matrix<double, 7, 1> vec7;
-typedef Eigen::Matrix<double, 7, 2> mat72;
+typedef small_matrix<double, 2, 1> vec2;
+typedef small_matrix<double, 3, 1> vec3;
+typedef small_matrix<double, 4, 1> vec4;
+typedef small_matrix<double, 3, 3> mat3;
+typedef small_matrix<double, 7, 1> vec7;
+typedef small_matrix<double, 7, 2> mat72;
 typedef Eigen::Matrix<uint, Eigen::Dynamic, Eigen::Dynamic> dyn_mat_type;
 typedef Eigen::SelfAdjointEigenSolver<mat3> eigensolver_type;
 
 typedef spurt::rgrid3d grid_type;
-typedef grid_type::point_type point_type;
+typedef grid_type::pos_type pos_type;
 typedef grid_type::coord_type coord_type;
-typedef grid_type::vec_type vec_type;
 typedef grid_type::bounds_type bounds_type;
 typedef grid_type::size_type size_type;
 typedef grid_type::scalar_type scalar_type;
-typedef std::pair<coord_type, point_type> invoxel_point_type;
+typedef std::pair<coord_type, pos_type> invoxel_pos_type;
 
 typedef spurt::image3d<double> scalar_image;
 typedef spurt::image3d<vec3> vector_image;
@@ -100,9 +100,9 @@ struct Less
 template<typename V=vec3>
 struct PosLexico
 {
-    typedef V vec_type;
+    typedef V pos_type;
     static constexpr double eps = 1.0e-9;
-    bool operator()(const vec_type& p0, const vec_type& p1) const
+    bool operator()(const pos_type& p0, const pos_type& p1) const
     {
         if (p0[0] < p1[0]-eps)
             return true;
@@ -118,9 +118,9 @@ struct PosLexico
 };
 
 template<typename V>
-point_type to_point(const V& v)
+pos_type to_point(const V& v)
 {
-    return point_type(static_cast<scalar_type>(v[0]), 
+    return pos_type(static_cast<scalar_type>(v[0]), 
                       static_cast<scalar_type>(v[1]), 
                       static_cast<scalar_type>(v[2]));
 }
@@ -229,8 +229,8 @@ void import_nrrd(spurt::image3d<Value>& out, const std::string& filename)
     coord_type res(nin->axis[spacemin].size, 
                    nin->axis[spacemin+1].size, 
                    nin->axis[spacemin+2].size);
-    point_type origin(0,0,0);
-    vec_type spacings(1,1,1);
+    pos_type origin(0,0,0);
+    pos_type spacings(1,1,1);
     for (int d=0; d<3; ++d)
     {
         if (!std::isnan(nin->axis[spacemin+d].min))
@@ -288,19 +288,19 @@ T get_value(const spurt::image3d<T>& volume, const coord_type& coord, int depth)
 {
     if (depth == 0) return volume(coord[0], coord[1], coord[2]);
     int factor = 1 << depth;
-    point_type p = point_type(coord) / static_cast<double>(factor);
-    point_type q(std::trunc(p[0]), std::trunc(p[1]), std::trunc(p[2]));
+    pos_type p = coord / factor;
+    pos_type q(std::trunc(p[0]), std::trunc(p[1]), std::trunc(p[2]));
     p -= q;
-    if (nvis::norm(p)==0) return volume(q[0], q[1], q[2]);
-    else return volume.value_in_voxel(coord_type(q), p);
+    if (spurt::norm(p)==0) return volume(q[0], q[1], q[2]);
+    else return volume.value_in_voxel(q, p);
 }
 
-point_type get_point(const grid_type& grid, const coord_type& coord, int depth)
+pos_type get_point(const grid_type& grid, const coord_type& coord, int depth)
 {
     if (depth == 0) return grid(coord[0], coord[1], coord[2]);
     int factor = 1 << depth;
-    point_type p = point_type(coord)/static_cast<double>(factor);
-    point_type q(std::trunc(p[0]), std::trunc(p[1]), std::trunc(p[2]));
+    pos_type p = coord/factor;
+    pos_type q(std::trunc(p[0]), std::trunc(p[1]), std::trunc(p[2]));
     p -= q;
     return grid(q[0], q[1], q[2]) + p*grid.spacing();
 }
@@ -378,30 +378,29 @@ T linear(double u, const T& v0, const T& v1) {
 }
 
 std::pair<double, vec3> evmin(const mat3& H) {
-    eigensolver_type solver;
-    // std::cout << "About to compute eigenvalues for " << H << '\n';
-    mat3 M = H;
-    solver.compute(H);
+    vec3 eigenvalues;
+    mat3 eigenvectors;
+    sym_eigensystem(eigenvalues, eigenvectors, H);
     // std::cout << "done.\n";
-    if (H.maxCoeff() > 1000.) {
+    if (max(H) > 1000.) {
         std::cout << "matrix H is " << H << '\n';
-        std::cout << "copy of H is " << M << '\n';
-        throw std::runtime_error("Invalid hessian value: " + std::to_string(H.maxCoeff()));
+        throw std::runtime_error("Invalid hessian value: " + std::to_string(max(H)));
     }
-    return std::make_pair(solver.eigenvalues()[0], solver.eigenvectors().col(0));
+    return std::make_pair(eigenvalues[2], eigenvectors.column(2));
 }
 
 std::pair<vec3, mat3> evall(const mat3& H) {
-    eigensolver_type solver;
-    solver.compute(H);
-    return std::make_pair(solver.eigenvalues(), solver.eigenvectors());
+    vec3 eigenvalues;
+    mat3 eigenvectors;
+    sym_eigensystem(eigenvalues, eigenvectors, H);
+    return std::make_pair(eigenvalues, eigenvectors);
 }
 
 double determinant(const vec3& g, const mat3& H, bool normalize=false) {
     mat3 A;
-    A.col(0) = g;
-    A.col(1) = H * g;
-    A.col(2) = H * A.col(1);
+    A.set_column(0,  g);
+    A.set_column(1,  H * g);
+    A.set_column(2,  H * A.col(1));
 
     if (normalize) {
         A.col(0) /= g.norm();
@@ -1084,8 +1083,8 @@ void save_sampled_voxel(const std::string& filename, coord_type& voxel_id,
             for (int i = 0; i < resolution; ++i)
             {
                 double x = i * dh;
-                vec3 g = gradient.value_in_voxel(voxel_id, point_type(x,y,z));
-                mat3 H = hessian.value_in_voxel(voxel_id, point_type(x,y,z));
+                vec3 g = gradient.value_in_voxel(voxel_id, pos_type(x,y,z));
+                mat3 H = hessian.value_in_voxel(voxel_id, pos_type(x,y,z));
                 det_values[2 * (i + resolution * (j + resolution * k))] = determinant(g, H);
                 det_values[2 * (i + resolution * (j + resolution * k)) + 1] = (project(g, H).first)[0];
             }

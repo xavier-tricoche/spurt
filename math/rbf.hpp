@@ -10,9 +10,9 @@
 #include <fstream>
 #include <array>
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
-#include <util/timer.hpp>
+#include <misc/progress.hpp>
 
 #include <data/locator.hpp>
 #include <misc/meta_utils.hpp>
@@ -31,33 +31,38 @@ namespace spurt {
 namespace RBF {
 
 // Interpolation with compactly supported radial basis function
-template<typename Value, typename T, int Dim, typename Func, unsigned Order=0,
-         int NVals = data_traits<Value>::size() >
+template<typename Value, typename T, int Dim, typename Func, unsigned Order=0>
 class CompactSupportRBFInterpolator {
 public:
     static const size_t dimension          = Dim;
     static const unsigned polynomial_order = Order;
 
-    typedef nvis::fixed_vector<T, Dim>                        point_type;
+    typedef small_vector<T, Dim>                              point_type;
     typedef Value                                             value_type;
     typedef data_traits<value_type>                           value_traits;
-    typedef nvis::fixed_vector<Value, Dim>                    derivative_type;
+    typedef small_vector<Value, Dim>                          derivative_type;
     typedef T                                                 scalar_type;
     typedef Func                                              function_type;
     typedef Eigen::SparseMatrix<T>                            matrix_type;
     typedef Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>  rhs_type;
     typedef Eigen::Triplet<T>                                 triplet_type;
     typedef Eigen::Matrix<T, Eigen::Dynamic, 1>               vector_type;
-    typedef spurt::point_locator<T, int, Dim>                locator_type;
+    typedef point_locator<point_type, int>                    locator_type;
     typedef typename locator_type::point_type                 source_type;
     typedef typename polynomial::polynomial_basis<T, Dim>     polynomial_basis;
     typedef typename polynomial_basis::monomial_type          monomial_type;
     typedef typename monomial_type::derivative_type           monomial_derivative_type;
 
+    /// @brief 
+    /// @param points 
+    /// @param data 
+    /// @param phi 
+    /// @param verbose 
     CompactSupportRBFInterpolator(
         const std::vector<point_type>& points,
         const std::vector<value_type>& data,
         const function_type& phi,
+        int nrhs,
         bool verbose = false
     )
         : _points(points), _data(data), _phi(phi) {
@@ -72,7 +77,7 @@ public:
                 _poly_deriv_basis[i] = _poly_basis[i].derivative();
             }
         }
-        _nrhs = NVals;
+        _nrhs = nrhs;
         _radius = _phi.radius();
 
         matrix_type A(total_size, total_size);
@@ -83,7 +88,7 @@ public:
             std::cout << "building sparse RBF matrix of dimension "
                       << total_size << "...\n";
         }
-        nvis::timer _timer;
+        timer _timer;
         size_t counter=0;
 
         // insert all sites into kd-tree using efficient constructor
@@ -105,7 +110,7 @@ public:
                     ++counter;
                 }
                 else {
-                    scalar_type r = nvis::norm(it->coordinate()-_points[i]);
+                    scalar_type r = norm(it->position()-_points[i]);
                     if ( r < _radius) {
                         scalar_type v = _phi(r);
                         coeff.push_back(triplet_type(i, j, v));
@@ -153,7 +158,7 @@ public:
         std::cout << "matrix exported to file\n";
             std::cout << "starting Cholesky solver...\n";
         }
-        _timer.restart();
+        _timer.start();
         rhs_type sol = cholesky.solve(rhs);
         std::cout << "Cholesky solver took " << _timer.elapsed()
                   << " seconds\n";
@@ -196,7 +201,7 @@ public:
 
         _locator.find_within_range(in_cube, x, _radius);
         for (it=in_cube.begin(); it!=in_cube.end() ; ++it) {
-            scalar_type r = nvis::norm(it->coordinate()-x);
+            scalar_type r = norm(it->position()-x);
             if ( r < _radius) {
                 val += _phi(r)*_weights[it->data()];
             }
@@ -219,9 +224,9 @@ public:
 
         _locator.find_within_range(in_cube, x, _radius);
         for (it=in_cube.begin(); it!=in_cube.end() ; ++it) {
-            scalar_type r = nvis::norm(it->coordinate()-x);
+            scalar_type r = norm(it->position()-x);
             if ( r < _radius && r > 0) {
-                point_type nabla_r = (x - it->coordinate())/r;
+                point_type nabla_r = (x - it->position())/r;
                 scalar_type phi_prime = _phi.derivative(r);
                 for (int j=0 ; j<dimension ; ++j) {
                     nabla_f[j] += phi_prime*nabla_r[j]*_weights[it->data()];
@@ -270,10 +275,10 @@ template< typename Value, typename T, size_t Dim, typename Func,
           unsigned Order=0 >
 class InfiniteSupportRBFInterpolator {
 public:
-    typedef nvis::fixed_vector<T, Dim>                        point_type;
+    typedef small_vector<T, Dim>                        point_type;
     typedef Value                                             value_type;
     typedef data_traits<value_type>                           value_traits;
-    typedef nvis::fixed_vector<Value, Dim>                    derivative_type;
+    typedef small_vector<Value, Dim>                    derivative_type;
     typedef T                                                 scalar_type;
     typedef Func                                              function_type;
     typedef Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>  matrix_type;
@@ -316,7 +321,7 @@ public:
             std::cout << "Building dense RBF matrix of dimension "
             << total_size << "...\n";
         }
-        nvis::timer _timer;
+        timer _timer;
         // set value constraints
         for (size_t i=0 ; i<_size ; ++i) {
             // A(i,j) = \phi(||xi-xj||)
@@ -329,7 +334,7 @@ public:
                 << std::flush;
             }
             for (size_t j=i+1 ; j<_size ; ++j) {
-                scalar_type r = nvis::norm(_points[i]-_points[j]);
+                scalar_type r = norm(_points[i]-_points[j]);
                 scalar_type v = _phi(r);
                 A(i,j) = v;
                 A(j,i) = v;
@@ -369,7 +374,7 @@ public:
             std::cout << "starting solver...\n";
         }
 
-        _timer.restart();
+        _timer.start();
         solver_type solver(A);
         matrix_type sol = solver.solve(rhs);
         if (verbose) {
@@ -413,7 +418,7 @@ public:
         value_type val(0);
 
         for (int i=0 ; i<_size ; ++i) {
-            scalar_type r = nvis::norm(_points[i]-x);
+            scalar_type r = norm(_points[i]-x);
             val += _phi(r)*_weights[i];
         }
 
@@ -432,7 +437,7 @@ public:
         // \nabla \phi_j = \nabla r(x,xj) \phi'(r(x,xj))
         // \nabla r(x,xj) = (x-xj)/r(x,xj)
         for (int i=0 ; i<_size ; ++i) {
-            scalar_type r = nvis::norm(_points[i]-x);
+            scalar_type r = norm(_points[i]-x);
         if (r==0) continue;
             point_type nabla_r = (x - _points[i])/r;
             scalar_type phi_prime = _phi.derivative(r);

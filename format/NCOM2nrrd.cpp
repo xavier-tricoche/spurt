@@ -27,6 +27,8 @@ inline double rad2deg(double r) {
     return r*R2D;
 }
 
+using namespace spurt;
+
 void initialize(int argc, const char* argv[])
 {
     namespace xcl = spurt::command_line;
@@ -77,7 +79,7 @@ int main(int argc, char* argv[]) {
     initialize(argc, (const char**)argv);
     
     std::vector<double> lat_deg, lon_deg, lat_rad, lon_rad;
-    std::vector<nvis::vec2> vel_spatial, vel_angular;
+    std::vector<vec2> vel_spatial, vel_angular;
     size_t nlat, nlon;
     double t;
     if (name_out.empty()) {
@@ -107,11 +109,11 @@ int main(int argc, char* argv[]) {
     size_t nvalid = 0;
     for (size_t i=0; i<vel_spatial.size(); ++i) {
         if (vel_spatial[i][0] == _invalid_ || vel_spatial[i][1] == _invalid_) {
-            vel_spatial[i] = nvis::vec2(0,0);
+            vel_spatial[i] = vec2(0,0);
         }
         else {
             vel_spatial[i] *= 0.001;
-            vel_norm.push_back(nvis::norm(vel_spatial[i]));
+            vel_norm.push_back(norm(vel_spatial[i]));
         }
     }
     
@@ -144,7 +146,7 @@ int main(int argc, char* argv[]) {
     double mid_lat_deg = 0.5*(lat_deg[0] + lat_deg.back());
     
     if (save_mesh) {
-        std::vector<nvis::vec2> vertices(nlat*nlon);
+        std::vector<vec2> vertices(nlat*nlon);
         for (int i=0; i<nlat*nlon; ++i) {
             double _lon_deg = lon_deg[i%nlon]-mid_lon_deg;
             double _lat_deg = lat_deg[i/nlon];
@@ -214,8 +216,8 @@ int main(int argc, char* argv[]) {
     vel_angular.resize(vel_spatial.size()); 
     for (int j=0; j<nlat; ++j) {
         for (int i=0; i<nlon; ++i) {
-            const nvis::vec2& vs = vel_spatial[i+j*nlon];
-            nvis::vec2& va = vel_angular[i+j*nlon];
+            const vec2& vs = vel_spatial[i+j*nlon];
+            vec2& va = vel_angular[i+j*nlon];
             if (vs[0] == _invalid_) {
                 va[0] = va[1] = 0.; // zero velocity on land
             }

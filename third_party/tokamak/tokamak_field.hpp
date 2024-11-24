@@ -1,17 +1,13 @@
-#ifndef __tokamak_field_hpp
-#define __tokamak_field_hpp
+#pragma once
 
-#include <math/fixed_vector.hpp>
-#include <math/fixed_matrix.hpp>
-#include <math/bounding_box.hpp>
+#include <nvis-math/fixed_vector.hpp>
+#include <nvis-math/fixed_matrix.hpp>
+#include <nvis-math/bounding_box.hpp>
 
 #include <stdexcept>
 
-namespace nvis
-{
-typedef fixed_vector<double, 9> 	vec9;
-typedef fixed_vector<float, 9>		fvec9;
-}
+typedef nvis::fixed_vector<double, 9>  vec9;
+typedef nvis::fixed_vector<float, 9>	fvec9;
 
 class tokamak_field
 {
@@ -40,5 +36,3 @@ public:
 
 	virtual void periodic_coordinates(bool periodic = false) const {}
 };
-
-#endif // __tokamak_base_hpp

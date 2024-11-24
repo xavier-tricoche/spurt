@@ -1,10 +1,11 @@
 # This is the root Xavier CMakeLists file
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.20)
 
 # Run cmake --help-policy CMP<num> to see documentation.
 if( COMMAND cmake_policy )
   cmake_policy( SET CMP0003 NEW )
   cmake_policy( SET CMP0012 NEW )
+  cmake_policy( SET CMP0167 NEW )
 endif( COMMAND cmake_policy )
 
 project( XAVIER )

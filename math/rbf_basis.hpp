@@ -2,7 +2,6 @@
 #define __XAVIER_RBF_BASIS_HPP__
 
 #include <math.h>
-#include <boost/static_assert.hpp>
 #include <iostream>
 #include <cmath>
 
@@ -45,9 +44,8 @@ inline T inverse_quadratic(T r, T epsilon) {
     return 1/(1 + quadratic<T>(epsilon*r));
 }
 
-template<typename T, unsigned int N>
+template<typename T, unsigned int N, typename = typename std::enable_if<N >= 2 && !(N % 2)>::type>
 inline T polyharmonic(T r) {
-    BOOST_STATIC_ASSERT( N >= 2 && !(N % 2) );
     return std::pow(r, N)*log(r);
 }
 
@@ -88,9 +86,8 @@ inline T dinverse_quadratic(T r, T epsilon) {
     return -multiquadric<T>(r, epsilon)*inverse_quadratic<T>(r, epsilon);
 }
 
-template<typename T, unsigned int N>
+template<typename T, unsigned int N, typename = typename std::enable_if<N >= 2 && !(N % 2)>::type>
 inline T dpolyharmonic(T r) {
-    BOOST_STATIC_ASSERT( N >= 2 && !(N % 2) );
     return std::pow(r, N-1)*(N*log(r) + 1);
 }
 
@@ -238,10 +235,9 @@ struct inverse_quadratic_function {
     T _eps;
 };
 
-template<typename T, unsigned int N>
+template<typename T, unsigned int N, 
+         typename = typename std::enable_if<N >= 2 && !(N%2)>::type>
 struct polyharmonic_function {
-    BOOST_STATIC_ASSERT( N >= 2 && !(N % 2) );
-
     T operator()(T r) const {
         return polyharmonic<T, N>(r);
     }

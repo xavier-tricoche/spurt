@@ -1,14 +1,13 @@
-#ifndef __map2d_hpp
-#define __map2d_hpp
+#pragma once
 
-#include <math/fixed_vector.hpp>
-#include <math/fixed_matrix.hpp>
-#include <math/bounding_box.hpp>
+#include <nvis-math/fixed_vector.hpp>
+#include <nvis-math/bounding_box.hpp>
 #include <vector>
 
-namespace nvis
-{
+namespace nvis {
+
 typedef fixed_vector< bool, 2 > bvec2;
+
 
 struct return_map_info {
 	nvis::vec2 x, err;
@@ -40,8 +39,6 @@ struct map2d {
 
 	static map2d* load(const std::string& desc);
 };
-
-#endif // __map2d_hpp
 
 
 

@@ -1,14 +1,16 @@
-set( CREASE_SRC
-    measure_wrapper.cpp
-    extractor.cpp
-    pvo.cpp
-)
-add_library( spurt_crease ${LIBMODE} ${CREASE_SRC} )
-target_link_libraries( spurt_crease ${Teem_LIBRARIES} spurt_image spurt_math )
-install( TARGETS spurt_crease
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib
-)
+# set( CREASE_SRC
+#     measure_wrapper.cpp
+#     extractor.cpp
+#     pvo.cpp
+#     face.cpp
+#     crease.cpp
+# )
+# add_library( spurt_crease ${LIBMODE} ${CREASE_SRC} )
+# target_link_libraries( spurt_crease ${Teem_LIBRARIES} spurt_image )
+# install( TARGETS spurt_crease
+#   LIBRARY DESTINATION lib
+#   ARCHIVE DESTINATION lib
+# )
 
 if ( VTK_FOUND )
     add_executable( peikert_sadlo ${EXECUTABLE_FLAG} peikert_sadlo.cpp )
@@ -42,16 +44,43 @@ target_link_libraries( multires_peikert
                        ${VTK_LIBRARIES}  )
 install( TARGETS multires_peikert RUNTIME DESTINATION bin )
 
-add_executable( crease_surface ${EXECUTABLE_FLAG} crease_surface.cpp )
-target_link_libraries( crease_surface
-                       ${Teem_LIBRARIES}
-                       ${Boost_LIBRARIES}
-                       ${VTK_LIBRARIES} )
-install( TARGETS crease_surface RUNTIME DESTINATION bin )
+# add_executable( crease_surface ${EXECUTABLE_FLAG} crease_surface.cpp )
+# target_link_libraries( crease_surface
+#                        ${Teem_LIBRARIES}
+#                        ${Boost_LIBRARIES}
+#                        ${VTK_LIBRARIES} )
+# install( TARGETS crease_surface RUNTIME DESTINATION bin )
 
-add_executable( crease_surface_v2 ${EXECUTABLE_FLAG} crease_surface_v2.cpp )
-target_link_libraries( crease_surface_v2
-                       ${Teem_LIBRARIES}
-                       ${Boost_LIBRARIES}
-                       ${VTK_LIBRARIES} )
-install( TARGETS crease_surface_v2 RUNTIME DESTINATION bin )
+# add_executable( creaseline ${EXECUTABLE_FLAG} creaseline.cpp )
+# target_link_libraries( creaseline
+#                        ${Teem_LIBRARIES}
+#                        ${Boost_LIBRARIES}
+#                        ${VTK_LIBRARIES}
+#                        spurt_image
+#                        spurt_crease)
+# install( TARGETS creaseline RUNTIME DESTINATION bin )
+#
+# add_executable( creaseline2d ${EXECUTABLE_FLAG} creaseline2d.cpp )
+# target_link_libraries( creaseline2d
+#                        ${Teem_LIBRARIES}
+#                        ${Boost_LIBRARIES}
+#                        ${VTK_LIBRARIES}
+#                        spurt_image
+#                        spurt_crease)
+# install( TARGETS creaseline2d RUNTIME DESTINATION bin )
+#
+# add_executable( creaseline3d ${EXECUTABLE_FLAG} creaseline3d.cpp )
+# target_link_libraries( creaseline3d
+#                        ${Teem_LIBRARIES}
+#                        ${Boost_LIBRARIES}
+#                        ${VTK_LIBRARIES}
+#                        spurt_image
+#                        spurt_crease)
+# install( TARGETS creaseline3d RUNTIME DESTINATION bin )
+
+# add_executable( crease_surface_v2 ${EXECUTABLE_FLAG} crease_surface_v2.cpp )
+# target_link_libraries( crease_surface_v2
+#                        ${Teem_LIBRARIES}
+#                        ${Boost_LIBRARIES}
+#                        ${VTK_LIBRARIES} )
+# install( TARGETS crease_surface_v2 RUNTIME DESTINATION bin )

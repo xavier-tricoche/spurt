@@ -10,7 +10,7 @@
 #include <Eigen/Core>
 #include <Eigen/SVD>
 
-#include <util/timer.hpp>
+#include <misc/progress.hpp>
 
 extern double toverhead;
 
@@ -107,11 +107,11 @@ namespace nrrd_utils {
     }
     
     template< int N >
-    nvis::bounding_box<nvis::fixed_vector<double, N> > 
+    spurt::bounding_box<Eigen::Vector<double, N>> 
     compute_bounds(const Nrrd* nrrd, bool is_scalar=true)
     {
-        typedef nvis::fixed_vector<double, N>       pos_type;
-        typedef nvis::bounding_box<pos_type>        bbox_type;
+        typedef Eigen::Vector<double, N>       pos_type;
+        typedef spurt::bounding_box<pos_type>  bbox_type;
     
         bbox_type bounds;
         pos_type lo, hi;

@@ -25,9 +25,6 @@
 #include <misc/log_helper.hpp>
 #include <vtk/vtk_utils.hpp>
 
-#include <Eigen/Core>
-#include <Eigen/SVD>
-
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -72,7 +69,7 @@ size_t nb_samples;
 size_t nb_lost=0;
 size_t support_radius;
 size_t nb_threads;
-nvis::fixed_vector<size_t, 3> up(1);
+svec3 up(1);
 std::vector< int > verbose_vec;
 int verbose_cout=0;
 int verbose_log=1;

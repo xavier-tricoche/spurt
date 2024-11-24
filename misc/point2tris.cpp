@@ -1,18 +1,18 @@
 #include <iostream>
 #include <fstream>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <vector>
 #include <list>
 #include <teem/nrrd.h>
-#include <util/timer.hpp>
+#include <misc/progress.hpp>
 #include <limits>
 
 
-std::vector<nvis::fvec3> points;
-std::vector<nvis::ivec2> coords;
+std::vector<spurt::fvec3> points;
+std::vector<spurt::ivec2> coords;
 std::vector<bool> tagged;
 std::vector<float> data;
-std::vector<nvis::ivec3> tris;
+std::vector<spurt::ivec3> tris;
 
 typedef std::list<unsigned int>     list_type;
 typedef list_type::const_iterator   const_list_iterator_type;
@@ -77,7 +77,7 @@ struct raster {
 };
 
 inline int get_neighbor(unsigned int u, unsigned int v, const raster& r,
-                        const nvis::fvec3& x)
+                        const spurt::fvec3& x)
 {
     if (u >= r.__width || v >= r.__height) {
         return -1;
@@ -93,7 +93,7 @@ inline int get_neighbor(unsigned int u, unsigned int v, const raster& r,
         if (tagged[*it]) {
             continue;
         }
-        float d = nvis::norm(x - points[*it]);
+        float d = spurt::norm(x - points[*it]);
         if (d < mind) {
             mind = d;
             mini = *it;
@@ -103,11 +103,11 @@ inline int get_neighbor(unsigned int u, unsigned int v, const raster& r,
     return mini;
 }
 
-inline float diameter(const nvis::ivec3& tri)
+inline float diameter(const spurt::ivec3& tri)
 {
     std::vector<float> d(3);
     for (int i = 0 ; i < 3 ; ++i) {
-        d[i] = nvis::norm(points[tri[i]] - points[tri[(i+1)%3]]);
+        d[i] = spurt::norm(points[tri[i]] - points[tri[(i+1)%3]]);
     }
     return *std::max_element(d.begin(), d.end());
 }
@@ -122,18 +122,18 @@ int main(int argc, char* argv[])
     size_t height = size[1];
     raster image(width, height);
     
-    nvis::fvec3 min(bmin[0], bmin[1], bmin[2]), max(bmax[0], bmax[1], bmax[2]);
-    nvis::fvec3 diam(256., 256., 128.);
+    spurt::fvec3 min(bmin[0], bmin[1], bmin[2]), max(bmax[0], bmax[1], bmax[2]);
+    spurt::fvec3 diam(256., 256., 128.);
     
-    nvis::timer timer;
+    spurt::timer timer;
     
     unsigned int npts;
     in >> npts;
     float x, y, z, u, v, lambda;
     for (int i = 0 ; i < npts ; ++i) {
         in >> u >> v >> x >> y >> z >> lambda;
-        points.push_back(nvis::fvec3(x, y, z));
-        coords.push_back(nvis::ivec2(u, v));
+        points.push_back(spurt::fvec3(x, y, z));
+        coords.push_back(spurt::ivec2(u, v));
         data.push_back(lambda);
         image.add(u, v, points.size() - 1);
     }
@@ -143,21 +143,21 @@ int main(int argc, char* argv[])
     tagged.resize(points.size());
     std::fill(tagged.begin(), tagged.end(), false);
     
-    timer.restart();
+    timer.start();
     for (unsigned int i = 0 ; i < points.size() ; ++i) {
-        nvis::ivec2 uv = coords[i];
+        spurt::ivec2 uv = coords[i];
         int p0 = get_neighbor(uv[0] + 1, uv[1] - 1, image, points[i]);
         int p1 = get_neighbor(uv[0] + 1, uv[1], image, points[i]);
         int p2 = get_neighbor(uv[0], uv[1] + 1, image, points[i]);
         
         if (p0 >= 0 && p1 >= 0) {
-            nvis::ivec3 tri(i, p0, p1);
+            spurt::ivec3 tri(i, p0, p1);
             if (diameter(tri) < h) {
                 tris.push_back(tri);
             }
         }
         if (p1 >= 0 && p2 >= 0) {
-            nvis::ivec3 tri(i, p1, p2);
+            spurt::ivec3 tri(i, p1, p2);
             if (diameter(tri) < h) {
                 tris.push_back(tri);
             }
@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
         << "DATASET UNSTRUCTURED_GRID\n"
         << "POINTS " << points.size() << " float\n";
     for (int i = 0 ; i < points.size() ; ++i) {
-        nvis::fvec3 p = min + (points[i] / diam) * (max - min);
+        spurt::fvec3 p = min + (points[i] / diam) * (max - min);
         out << p[0] << " " << p[1] << " " << p[2] << '\n';
     }
     out << "CELLS " << tris.size() << " " << 4*tris.size() << '\n';
