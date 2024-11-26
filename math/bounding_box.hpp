@@ -23,13 +23,11 @@ struct bounding_box
     typedef typename value_traits::value_type scalar_type;
 
     bounding_box() 
-        : m_initialized(false), 
-        m_min(value_traits::zero()), 
-        m_max(value_traits::zero()) {}
+        : m_min(value_traits::zero()), 
+          m_max(value_traits::zero()) {}
 
     template<typename Vec>
     bounding_box(const Vec &min, const Vec &max) 
-        : m_initialized(true)
     {
         for (size_t i=0; i<dimension; ++i) {
             value_traits::value(m_min, i) = data_traits<Vec>::value(min, i);
@@ -37,42 +35,57 @@ struct bounding_box
         }
     }
 
-    value_type size() const { 
-        if (!m_initialized) return value_traits::zero();
+    value_type size() const {
         return value_traits::minus(m_max, m_min); 
     }
     scalar_type diameter() const { return value_traits::norm(this->size()); }
     bool empty() const {
-        return !m_initialized;
+        return diameter() == 0;
     }
 
     template<typename Array>
     void add(const Array &p)
     {
         typedef data_traits<Array> array_traits;
+        typedef typename array_traits::value_type other_scalar_type;
         for (auto i=0; i<dimension; ++i) {
-            auto v = array_traits::value(p, i);
-            if (!m_initialized || v < value_traits::value(m_min, i))
+            const other_scalar_type& v = array_traits::value(p, i);
+            if (v < value_traits::value(m_min, i))
                 value_traits::value(m_min, i) = v;
-            if (!m_initialized || v > value_traits::value(m_max, i))
+            if (v > value_traits::value(m_max, i))
                 value_traits::value(m_max, i) = v;
         }
-        m_initialized = true;
     }
 
     template< typename Array >
     bool inside(const Array &p) const
     {
-        if (!m_initialized) return false;
         typedef data_traits<Array> array_traits;
+        typedef typename array_traits::value_type other_scalar_type;
         for (auto i = 0; i < dimension; ++i)
         {
-            auto v = array_traits::value(p, i);
+            const other_scalar_type& v = array_traits::value(p, i);
             if (v < value_traits::value(m_min, i)|| 
                 v > value_traits::value(m_max, i))
                 return false;
         }
         return true;
+    }
+    
+    template <typename Array >
+    scalar_type inf_distance(const Array& p) const {
+        typedef data_traits<Array> array_traits;
+        typedef typename array_traits::value_type other_scalar_type;
+        scalar_type r = 0;
+        for (auto i = 0; i < dimension; ++i)
+        {
+            const other_scalar_type& v = array_traits::value(p, i);
+            const scalar_type& _min = value_traits::value(m_min, i);
+            const scalar_type& _max = value_traits::value(m_max, i);
+            if (v < _min) r = std::max(r, _min-v);
+            else if (v > _max) r = std::max(r, v-_max);
+        }
+        return r;
     }
 
     const value_type& min() const { return m_min; }
@@ -85,7 +98,6 @@ struct bounding_box
     }
 
     value_type m_min, m_max;
-    bool m_initialized;
 };
 
 template<typename Value>

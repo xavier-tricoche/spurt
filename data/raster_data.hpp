@@ -119,7 +119,6 @@ public:
     }
 
 protected:
-    typedef typename grid_type::shifter_type shifter_type;
     grid_type m_grid;
     std::vector<value_type> m_data;
 };
@@ -133,14 +132,14 @@ using raster3d = raster_data<long, double, 3, _Value>;
 template <typename _Value>
 using raster4d = raster_data<long, double, 4, _Value>;
 
-template <typename Size_, typename Scalar_, size_t Dim, typename Value_>
+template <typename Size_, typename Scalar_, size_t Dim, typename Value_, typename Coord_, typename Pos_, typename AltValue_ = Value_>
 void save_as_nrrd(const std::string &filename, 
-                  const raster_data<Size_, Scalar_, Dim, Value_>& data)
+                  const raster_data<Size_, Scalar_, Dim, Value_, Coord_, Pos_>& data)
 {
-    typedef raster_data<Size_, Scalar_, Dim, Value_> data_type;
-    typedef typename data_type::scalar_type scalar_type;
-    typedef data_traits<Value_> dtraits;
-    typedef Value_ value_type;
+    typedef raster_data<Size_, Scalar_, Dim, Value_, Coord_, Pos_> data_type;
+    typedef data_traits<AltValue_> dtraits;
+    typedef AltValue_ value_type;
+    typedef typename dtraits::value_type scalar_type;
     std::string type_string = spurt::type2string<scalar_type>::type_name();
     size_t ncomp = dtraits::size();
 
@@ -155,7 +154,7 @@ void save_as_nrrd(const std::string &filename,
         os << " " << ncomp;
     for (int i = 0; i < Dim; ++i)
     {
-        os << " " << data.m_grid.resolution[i];
+        os << " " << data.grid().resolution()[i];
     }
     os << '\n';
     os << "spacings:";
@@ -164,7 +163,7 @@ void save_as_nrrd(const std::string &filename,
     for (int i = 0; i < Dim; ++i)
     {
         os << " " << std::setprecision(17) 
-           << data.m_grid.spacing[i];
+           << data.grid().spacing()[i];
     }
     os << '\n';
     os << "axis mins:";
@@ -173,7 +172,7 @@ void save_as_nrrd(const std::string &filename,
     for (int i = 0; i < Dim; ++i)
     {
         os << " " << std::setprecision(17) 
-           << data.m_grid.bounds().min()[i];
+           << data.grid().bounds().min()[i];
     }
     os << '\n';
     os << "centerings:";
@@ -187,14 +186,16 @@ void save_as_nrrd(const std::string &filename,
     os << "endian: little\n";
     os << "encoding: raw\n";
 
-    size_t sz = ncomp * data.m_data.size() * sizeof(scalar_type);
-    std::cout << "exporting " << sz << " bytes" << '\n';
-    std::cout << "grid res: " << data.m_grid.resolution() << '\n';
-    std::cout << "grid size: " << data.m_grid.size() << '\n';
-
+    size_t sz = ncomp * data.grid().size() * sizeof(scalar_type);
+    std::cout << '\n' << filename << '\n';
+    std::cout << "exporting "  << sz << " bytes" << '\n';
+    std::cout << "grid res: "  << data.grid().resolution() << '\n';
+    std::cout << "grid size: " << data.grid().size() << '\n';
+    std::cout << "data type: " << type_string << '\n';
+ 
     std::ofstream out(filename.c_str(), std::ios::binary);
     out << os.str() << std::endl;
-    out.write((char *)&data.m_data[0], sz);
+    out.write((char *)&data[0], sz);
     out.close();
 }
 

@@ -28,10 +28,27 @@ namespace spurt
         typedef small_vector<size_type, Dim> coord_type;
 
         template<typename T=size_type>
-        index_shifter(const small_vector<T, Dim>& sizes=small_vector<T, Dim>(0)) {
-            for (size_type i=0; i<dimension; ++i)
-                m_sizes[i] = sizes[i];
+        index_shifter(const small_vector<T, Dim>& sizes=small_vector<T, Dim>(0))
+             : m_sizes(sizes) {
+            size_type shift = 1;
+            for (size_t i=0 ; i<dimension ; ++i) {
+                m_dim_shifts[i] = shift;
+                shift *= m_sizes[i];
+            }
+
+            size_t points_per_cell = 1;
+            points_per_cell = points_per_cell << dimension;
+            m_cell_shifts.resize(points_per_cell);
+            std::fill(m_cell_shifts.begin(), m_cell_shifts.end(), 0);
+
+            for (size_t i=1 ; i<points_per_cell ; ++i) {
+                std::bitset<sizeof(size_type)> bits(i);
+                for (size_t j=0 ; j<dimension ; ++j) {
+                    if (bits[j]) m_cell_shifts[i] += m_dim_shifts[i];
+                }
+            }
         }
+        
         index_shifter(const index_shifter &other) 
             : m_sizes(other.m_sizes), m_dim_shifts(other.m_dim_shifts), 
               m_cell_shifts(other.m_cell_shifts) {}

@@ -1,6 +1,7 @@
 set( MATH_TEST
     test_exponentiation
     test_polynomial
+    test_types
 )
 foreach( name ${MATH_TEST} )
     add_executable( ${name} ${name}.cpp )

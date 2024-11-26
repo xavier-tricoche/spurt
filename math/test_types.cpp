@@ -36,13 +36,15 @@ int main(int argc, char* argv[]) {
     vec4 b(dd(), dd(), dd(), dd());
 
     vec3 l = d[0] + d[1];
-    std::cout << "l=" << l << '\n';
-    if (any((d[2]+d[3]) > 0.5)) std::cout << "any TRUE\n";
-    else std::cout << "any is FALSE\n";
+    std::cout << "sum of " << d[0] << " and " << d[1] << " is " << l << '\n';
+    if (any((d[2]+d[3]) > 0.5)) std::cout << "any larger than 0.5 is TRUE in " << d[2]+d[3] << "\n";
+    else std::cout << "None is larger than 0.5 in " << d[2]+d[3] << "\n";
     fvec3 g = f[0]*f[1];
     fvec3 h = f[2]/f[3];
     std::cout << "the norm of " << f[0] << " * " << f[1] <<  " (=" << g << ") is " << norm(f[0]*f[1]) << '\n';
+    std::cout << "norm computed differently is " << norm(g) << '\n';
     std::cout << "the norm of " << f[2] << " / " << f[3] << " (=" << h << ") is " << norm(f[2]/f[3]) << '\n';
+    std::cout << "norm computed differently is " << norm(h) << '\n';
     std::cout << "square of " << d[0] << " is " << square(d[0]) << '\n';
     std::cout << "min coefficient in " << f[0] << " is " << min(f[0]) << '\n';
     std::cout << "partial initialization of a 4D vector with 2.3 and 4.5 is " << vec4(2.3, 4.5) << '\n';
@@ -52,7 +54,7 @@ int main(int argc, char* argv[]) {
 
 
     vec3 k(f[0]);
-    std::cout << "Initializing a double vector with a float vector produced " << k << '\n';
+    std::cout << "Initializing a double vector with a float vector " << f[0] << " produced " << k << '\n';
 
     std::cout << "The sum of double vector " << d[0] << " and a float vector " << f[0] << " is " << d[0]+f[0] << '\n';
     std::cout << "The sum of a float vector " << f[1] << " and an int vector " << j[0] << " is " << f[1]+j[0] << '\n';
@@ -72,7 +74,7 @@ int main(int argc, char* argv[]) {
     small_vector<double, 16> av({dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd()});
 
     typedef small_square_matrix<double, 4> sq4;
-    static_assert(sq4::base_type::size == 16, "Size of vector is wrong");
+    static_assert(sq4::base_type::_size_ == 16, "Size of vector is wrong");
 
     sq4 C(small_vector<double, 16>({dd(), dd(), dd(), dd(), 
                                     dd(), dd(), dd(), dd(), 
@@ -99,6 +101,8 @@ int main(int argc, char* argv[]) {
     eigensystem(evals, evecs, F);
     std::cout << "sorted eigenvalues are:\n" << evals << '\n';
     std::cout << "matching eigenvectors are:" << evecs << '\n';
+    
+    std::cout << "F is \n" << F << '\n';
     
     auto rit = F.begin<sq4::rowwise_iterator>();
     std::cout << "iterating over the matrix F rowwise:\n";
@@ -137,6 +141,21 @@ int main(int argc, char* argv[]) {
     std::cout << "same thing for row 0 and row 3\n";
     F.row(3) = F.row(0);
     std::cout << "F is now\n" << F << '\n';
+    
+    vec3 real3 = vec3::random(-5. , 5.);
+    fvec4 float4 = fvec4::random();
+    ivec5 int5 = ivec5::random(-10, 10);
+    lvec6 long6 = lvec6::random();
+    
+    mat4 double44 = mat4::random(-2. , 2.);
+    imat5 int55 = imat5::random(-12, 12);
+    
+    std::cout << "random vec3 in (-5, 5)=" << real3 << '\n';
+    std::cout << "random fvec4 in default range=" << float4 << '\n';
+    std::cout << "random ivec5 in (-10, 10)=" << int5 << '\n';
+    std::cout << "random lvec6 in default range=" << long6 << '\n';
+    std::cout << "random mat4 in (-2, 2)=" << double44 << '\n';
+    std::cout << "random imat5 in (-12, 12)=" << int55 << '\n';
 
     return 0;
 }

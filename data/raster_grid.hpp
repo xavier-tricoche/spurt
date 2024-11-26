@@ -11,7 +11,6 @@
 #include <iomanip>
 #include <math/types.hpp>
 #include <misc/meta_utils.hpp>
-#include <data/index_shifter.hpp>
 #include <math/bounding_box.hpp>
 
 namespace spurt {
@@ -28,7 +27,6 @@ public:
     typedef Size_                                             size_type;
     typedef size_t                                            dim_type;
     typedef Coord_                                            coord_type;
-    typedef index_shifter<Size_, Dim>                         shifter_type;
     typedef Pos_                                              pos_type;
     typedef Pos_                                              point_type;
     typedef bounding_box<pos_type>                            bounds_type;
@@ -37,55 +35,36 @@ public:
     // constructors
     raster_grid() 
         : m_res(0), m_cell_res(0),
-          m_bounds(), m_spacing(0), m_npos(0), m_shifter() {}
+          m_bounds(), m_spacing(0), m_npos(0) {}
     raster_grid(const self_type& other) = default;
 
     raster_grid(const coord_type& resolution, const bounds_type& bounds,
-                bool cell_based=false) {
+                bool cell_based=false) : m_res(resolution) {
         auto sz = bounds.max() - bounds.min();
-        for (size_type i=0; i<dimension; ++i) {
-            m_res[i] = resolution[i];
-            if (cell_based)
-                m_res[i] = m_res[i] + 1;
-            m_cell_res[i] = m_res[i] - 1;
-            m_spacing[i] = sz[i] / m_cell_res[i];
-            m_npos *= m_res[i];
-            m_bounds.min()[i] = bounds.min()[i];
-            m_bounds.max()[i] = bounds.max()[i];
-        }
+        m_npos = product(resolution);
+        m_bounds.min() = bounds.min();
+        m_bounds.max() = bounds.max();
+        m_cell_res = m_res - 1;
+        if (cell_based) m_cell_res += 1;
+        m_spacing = sz / m_cell_res;
+        std::cout << "grid constructor: npos = " << m_npos << ", bounds = " << m_bounds << ", cell res = " << m_cell_res << ", size = " << sz << ", spacing = " << m_spacing << '\n'; 
     }
     raster_grid(const coord_type& resolution, const pos_type& origin,
-                const pos_type& spacing, bool cell_based=false) {
-
-        m_npos = 1;
-        for (auto i=0; i<dimension; ++i) {
-            auto n = resolution[i];
-            auto x = origin[i];
-            auto d = spacing[i];
-
-            m_bounds.min()[i] = x;
-            m_spacing[i] = d;
-            if (cell_based) {
-                m_res[i] = n + 1;
-                m_cell_res[i] = n;
-                m_bounds.max()[i] = x + n*d;
-                m_npos *= n+1;
-            }
-            else {
-                m_res[i] = n;
-                m_cell_res[i] = n - 1;
-                m_bounds.max()[i] = x + (n-1) * d;
-                m_npos *= n;
-            }
-        }
+                const pos_type& spacing, bool cell_based=false)
+        : m_res(resolution) {
+        m_npos = product(m_res);
+        m_bounds.min() = origin;
+        m_spacing = spacing;
+        m_cell_res = m_res-1;
+        if (cell_based) m_cell_res += 1;
+        m_bounds.max() = m_bounds.min() + m_spacing*m_cell_res;
     }
 
     // vertex access
     pos_type operator()(size_type i) const {
         assert(i < m_res[0]);
         pos_type r(m_bounds.min());
-        r[i] +=
-            static_cast<scalar_type>(i) * m_spacing[0];
+        r[0] += static_cast<scalar_type>(i) * m_spacing[0];
         return r;
     }
     pos_type operator()(size_type i, size_type j) const {
@@ -97,33 +76,24 @@ public:
     }
     pos_type operator()(size_type i, size_type j, size_type k) const {
         static_assert(dimension >= 3, "Invalid dimension (<3) in raster_grid::operator()");
-        assert(i < m_res[0] && 
-            j < m_res[1] && 
-            k < m_res[2]);
+        assert(i < m_res[0] && j < m_res[1] && k < m_res[2]);
         pos_type r((*this)(i, j));
         r[2] += static_cast<scalar_type>(k) * m_spacing[2];
         return r;
     }
-    pos_type operator()(size_type i, size_type j, size_type k,
-                        size_type l) const {
+    pos_type operator()(size_type i, size_type j, size_type k, size_type l) const {
         static_assert(dimension >= 4, "Invalid dimension (<4) in raster_grid::operator()");
-        assert(i < m_res[0] && 
-            j < m_res[1] && 
-            k < m_res[2] &&
-            l < m_res[3]);
+        assert(i < m_res[0] && j < m_res[1] && k < m_res[2] && l < m_res[3]);
         pos_type r((*this)(i, j, k));
         r[3] += static_cast<scalar_type>(l) * m_spacing[3];
         return r;
     }
     pos_type operator()(const coord_type& ids) const {
-        pos_type r;
+        pos_type r = m_bounds.min();
         for (auto i = 0; i < dimension; ++i)
         {
             assert(ids[i] < m_res[i]);
-            auto x = m_bounds.min()[i];
-            auto d = m_spacing[i];
-            auto n = ids[i];
-            r[i] = x + n * d;
+            r[i] += static_cast<scalar_type>(ids[i]) * m_spacing[i];
         }
         return r;
     }
@@ -142,14 +112,14 @@ public:
         assert(dimension >= 2);
         assert(i < m_res[0] &&
                j < m_res[1]);
-        return m_shifter(0, i, j);
+        return i + m_res[0]*j;
     }
     size_type index(size_type i, size_type j, size_type k) const {
         assert(dimension >= 3);
         assert(i < m_res[0] &&
                j < m_res[1] &&
                k < m_res[2]);
-        return m_shifter(0, i, j, k);
+        return i + m_res[0]*(j + m_res[1]*k);
     }
     size_type index(size_type i, size_type j, size_type k, size_type l) const {
         assert(dimension >= 4);
@@ -157,11 +127,25 @@ public:
                j < m_res[1] &&
                k < m_res[2] && 
                l < m_res[3]);
-        return m_shifter(0, i, j, k, l);
+        return i + m_res[0]*(j + m_res[1]*(k + m_res[2]*l));
     }
     size_type index(const coord_type& ids) const {
-        return m_shifter(0, ids);
+        size_type r = ids[dimension-1];
+        for (int i=dimension-2; i>=0; --i) {
+            r *= m_res[i];
+            r += ids[i];
+        }
+        return r;
     }
+    
+    // index(i,j,k,l,m,n):
+    // dim = 6
+    // r = n
+    // r = r * res[4] + m = m + res[4] * n
+    // r = r * res[3] + l = l + res[3] * ( m + res[4] * n )
+    // r = r * res[2] + k = k + res[2] * ( l + res[3]*( m + res[4] * n ) )
+    // r = r * res[1] + j = j + res[1] * ( k + res[2]*( l + res[3]*( m + res[4] * n ) ) )
+    // r = r * res[0] + i = i + res[0] * ( j + res[1]*( k + res[2]*( l + res[3]*(m + res[4] * n ) ) ) )
 
     // index to coordinates
     coord_type coordinates(size_type idx) const {
@@ -183,47 +167,48 @@ public:
 
     // point to coordinates
     std::pair<coord_type, pos_type> locate(const pos_type& x) const {
-        eps_lexicographical_order eps_comp(1.0e-9);
-    
-        pos_type y = x - m_bounds.min();
-        y /= m_spacing;
-        pos_type q;
-        coord_type c;
-        scalar_type o, _max;
-        for (int i = 0; i < dimension; ++i)
-        {
-            _max = static_cast<scalar_type>(m_cell_res[i]);
-            if (y[i] > 0 && y[i] < _max)
-            {
-                o = floor(y[i]);
-                q[i] = y[i] - o;
-                c[i] = static_cast<size_type>(o);
-            }
-            else if (eps_comp.equal(y[i], _max))
-            {
-                c[i] = m_cell_res[i] - 1;
-                q[i] = static_cast<scalar_type>(1);
-            }
-            else if (eps_comp.equal_zero(y[i]))
-            {
-                c[i] = 0;
-                q[i] = static_cast<scalar_type>(0);
-            }
-            else
-            {
-                std::ostringstream os;
-                os << std::setprecision(16)
-                   << "invalid " << i+1 << "-th coordinate in raster_grid::locate()\n"
-                   << "coordinate mapped from " << x[i] << " to " << y[i]
-                   << " was tested against: [0, " << _max << "]\n";
-                throw std::runtime_error(os.str());
-            }
+        const double eps = 1.0e-9;
+        bool verbose = false;
+        
+        auto d = m_bounds.inf_distance(x);
+        if (d > eps) {
+            std::ostringstream os;
+            os << "invalid query position " << x << '\n';
+            os << "bounds are " << m_bounds << '\n';
+            os << "outer distance is " << d << '\n';
+            throw std::runtime_error(os.str());
         }
-        return std::make_pair(c, q);
+        else
+        { 
+            pos_type y = x - m_bounds.min();
+            if (verbose) std::cout << "shifted position of " << x << " is " << y << '\n';
+            y /= m_spacing;
+            if (verbose) std::cout << "after normalization by spacing: " << y << '\n';
+            coord_type c = floor(y);
+            if (verbose) std::cout << "coordinates = " << c << '\n';
+            pos_type q = y - c;
+            if (verbose) std::cout << "local coordinates = " << q << '\n';
+        
+            for (int i=0; i<dimension; ++i) {
+                if (c[i] == m_cell_res[i])
+                {
+                    if (verbose) std::cout << "cell coordinate in dim " << i << " is out of range (" << c[i] << ")\n";
+                    c[i] = m_cell_res[i]-1;
+                    if (verbose) std::cout << "it is corrected to " << c[i] << "\n";
+                    q[i] = 1;
+                }
+                else if (y[i] < 0)
+                {
+                    if (verbose) std::cout << "position coordinate in dim " << i << " is negative (" << y[i] << ")\n";
+                    c[i] = 0;
+                    q[i] = 0;
+                }
+            }
+            return std::make_pair(c, q);
+        }
+        // should not be reached...
+        return std::make_pair(coord_type(), pos_type());
     }
-
-    // index manipulation helper
-    const shifter_type& shifter() const { return m_shifter; }
 
 private:
     coord_type   m_res;
@@ -231,7 +216,6 @@ private:
     bounds_type  m_bounds;
     pos_type     m_spacing;
     size_type    m_npos;
-    shifter_type m_shifter;
 };
 
 // Typical specializations

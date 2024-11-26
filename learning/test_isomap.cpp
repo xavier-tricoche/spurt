@@ -187,28 +187,6 @@ int main(int argc, const char* argv[]) {
         spans = maxs-mins; // (1xdim)
     }
     VTK_SMART(vtkPolyData) pd = vtk_utils::make_points(points);
-    
-    /*
-    typedef spurt::fixed_vector<unsigned char, 3> color_t;
-    const vec3 red = vec3(255,0,0); // (1,0)
-    const vec3 blue = vec3(0,0,255); // (0,1)
-    const vec3 white = vec3(255,255,255); // (1,1)
-    const vec3 black = vec3(0,0,0); // (0,0)
-    std::vector<color_t> colors(npoints);
-    for (int i=0; i<npoints; ++i) {
-        row_vector_t loc = (coordinates.row(i)-mins).array()/spans.array();
-        double u=loc(0);
-        double v=loc(1);
-        if (u<0 || u>1 || v<0 || v>1) {
-            std::cout << "ERROR: wrong local coordinates: " << loc << '\n';
-        }
-        colors[i] = color_t((1.-u)*(1.-v)*black + 
-                            u*(1.-v)*red + 
-                            u*v*white + 
-                            (1.-u)*v*blue);
-    }
-    pd = vtk_utils::add_colors(pd, colors);
-    */
     VTK_CREATE(vtkColorTransferFunction, ctf);
     std::vector<double> values(npoints);
     if (!failed) {

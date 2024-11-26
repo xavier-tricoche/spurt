@@ -1,13 +1,15 @@
 #pragma once
 
-#include <type_traits>
-#include <array>
 #include <algorithm>
+#include <array>
 #include <complex>
-#include <iterator>
 #include <cstddef>
-#include <tuple>
 #include <iostream>
+#include <iterator>
+#include <random>
+#include <tuple>
+#include <type_traits>
+
 #include <math/better_type.hpp>
 #include <math/basic_math.hpp>
 #include <Eigen/Eigen>
@@ -150,7 +152,10 @@ namespace
                 j = j%ncols;
                 i++;
             }
-            return (j-m_j)*nrows + (i-m_i);
+            difference_type delta = (j-m_j)*nrows + (i-m_i);
+            m_i = i;
+            m_j = j;
+            return delta;
         }
         difference_type bwd(difference_type n) {
             difference_type q = n/ncols;
@@ -161,7 +166,10 @@ namespace
                 j = j % ncols;
                 i--;
             }
-            return (j-m_j)*nrows + (i-m_i);
+            difference_type delta = (j-m_j)*nrows + (i-m_i);
+            m_i = i;
+            m_j = j;
+            return delta;
         }
     public:
         explicit OuterIterator(pointer init=nullptr, difference_type i=0, difference_type j=0) 
@@ -440,6 +448,116 @@ namespace
         typedef DataBlock<value_type, N> type;
     };
     
+    template<typename T, typename Enable = void>
+    struct random_filler {};
+    
+    template<typename T>
+    struct random_filler<T, typename std::enable_if<std::is_integral<T>::value>::type>
+    {
+        typedef T value_type;
+        typedef std::uniform_int_distribution<value_type> dist_type;
+        static constexpr value_type default_min = std::numeric_limits<value_type>::min();
+        static constexpr value_type default_max = std::numeric_limits<value_type>::max();
+        random_filler(value_type min_=default_min, value_type max_=default_max) {
+            m_dist = dist_type(min_, max_);
+            std::random_device rd;
+            m_gen = std::mt19937(rd());
+        }
+        
+        value_type operator()() {
+            return m_dist(m_gen);
+        }
+        
+        template<typename Iterator>
+        void fill(Iterator begin, Iterator end) {
+            for (Iterator it=begin; it!=end; ++it) {
+                *it = m_dist(m_gen);
+            }
+        }
+        
+        dist_type m_dist;
+        std::mt19937 m_gen;
+    };
+    
+    template<typename T>
+    struct random_filler<T, typename std::enable_if<std::is_floating_point<T>::value>::type>
+    {
+        typedef T value_type;
+        typedef std::uniform_real_distribution<value_type> dist_type;
+        static constexpr value_type default_min = value_type(0);
+        static constexpr value_type default_max = value_type(1);
+        random_filler(value_type min_=default_min, value_type max_=default_max) {
+            m_dist = dist_type(min_, max_);
+            std::random_device rd;
+            m_gen = std::mt19937(rd());
+        }
+        
+        value_type operator()() {
+            return m_dist(m_gen);
+        }
+        
+        template<typename Iterator>
+        void fill(Iterator begin, Iterator end) {
+            for (Iterator it=begin; it!=end; ++it) {
+                *it = m_dist(m_gen);
+            }
+        }
+        
+        value_type m_min, m_max;
+        dist_type m_dist;
+        std::mt19937 m_gen;
+    };
+    
+    template<typename T>
+    struct random_filler<std::complex<T>, typename std::enable_if<std::is_integral<T>::value>::type>
+    {
+        typedef std::complex<T> value_type;
+        typedef T scalar_type;
+        typedef random_filler<T> base_type;
+        static constexpr value_type default_min = value_type(base_type::default_min, base_type::default_min);
+        static constexpr value_type default_max = value_type(base_type::default_max, base_type::default_max);
+        random_filler(value_type min_ = default_min, value_type max_ = default_max) 
+             : m_real_filler(min_.real(), max_.real()), m_imag_filler(min_.imag(), max_.imag()) {}
+        
+        value_type operator()() {
+            return value_type(m_real_filler(), m_imag_filler());
+        }
+        
+        template<typename Iterator>
+        void fill(Iterator begin, Iterator end) {
+            for (Iterator it=begin; it!=end; ++it) {
+                *it = (*this)();
+            }
+        }
+        
+        base_type m_real_filler, m_imag_filler;
+    };
+    
+    template<typename T>
+    struct random_filler<std::complex<T>, typename std::enable_if<std::is_floating_point<T>::value>::type>
+    {
+        typedef std::complex<T> value_type;
+        typedef T scalar_type;
+        typedef random_filler<T> base_type;
+        static constexpr value_type default_min = value_type(base_type::default_min, base_type::default_min);
+        static constexpr value_type default_max = value_type(base_type::default_max, base_type::default_max);
+        random_filler(value_type min_ = default_min, value_type max_ = default_max) 
+             : m_real_filler(min_.real(), max_.real()), m_imag_filler(min_.imag(), max_.imag()) {}
+        
+        value_type operator()() {
+            return value_type(m_real_filler(), m_imag_filler());
+        }
+        
+        template<typename Iterator>
+        void fill(Iterator begin, Iterator end) {
+            for (Iterator it=begin; it!=end; ++it) {
+                *it = (*this)();
+            }
+        }
+        
+        base_type m_real_filler, m_imag_filler;
+    };
+    
 }
 
 namespace spurt {
@@ -462,6 +580,8 @@ namespace spurt {
         typedef typename storage_type::eigen_vector_type eigen_type;
         typedef typename storage_type::eigen_vector_map_type eigen_map_type;
         typedef typename storage_type::const_eigen_vector_map_type const_eigen_map_type;
+        
+        typedef random_filler<value_type> random_filler_type;
         
         template<typename OtherStorage, typename = typename std::enable_if<OtherStorage::size == _size_>::type >
         using matching_vector = small_vector_interface<OtherStorage>;
@@ -606,9 +726,11 @@ namespace spurt {
         }
 
         // miscellaneous
-        static self_type random() {
-            self_type r(0);
-            r.as_eigen() = eigen_type::Random();
+        static self_type random(value_type a=random_filler_type::default_min, 
+                                value_type b=random_filler_type::default_max) {
+            random_filler_type filler(a, b);
+            self_type r;
+            filler.fill(r.begin(), r.end());
             return r;
         }
         
@@ -795,7 +917,7 @@ namespace spurt {
         {
             for (size_t i=0; i<_size_; ++i) 
             {
-                m_storage[i] *= other[i];
+                m_storage[i] /= other[i];
             }
             return (*this);
         }
@@ -805,7 +927,7 @@ namespace spurt {
         {
             for (size_t i=0; i<_size_; ++i) 
             {
-                m_storage[i] *= val;
+                m_storage[i] /= val;
             }
             return (*this);
         }
@@ -881,13 +1003,12 @@ namespace spurt {
         right_T_output<T>
         operator+(const T &val) const
         {
-            std::cout << "operator+ value\n";
             typedef right_T_type<T> out_type;
             right_T_output<T> r;
             out_type rhs = static_cast<out_type>(val);
             for (int i=0; i<_size_; ++i) 
             {
-                r[i] = static_cast<out_type>(m_storage[i])*rhs;
+                r[i] = static_cast<out_type>(m_storage[i]) + rhs;
             }
             return r;
         }
@@ -937,7 +1058,6 @@ namespace spurt {
         template <typename T, typename = typename must_be_scalar<T>::type>
         right_T_output<T> operator-(const T &val) const
         {
-            std::cout << "operator- value\n";
             typedef right_T_type<T> out_type;
             right_T_output<T> r;
             out_type rhs = static_cast<out_type>(val);
@@ -1036,6 +1156,7 @@ namespace spurt {
         return a * val;
     }
 
+    // Reductions
     template <typename Storage>
     bool all(const small_vector_interface<Storage> &a)
     {
@@ -1083,18 +1204,38 @@ namespace spurt {
     {
         return *std::max_element(a.begin(), a.end());
     }
-
+    
     template<typename Storage>
-    small_vector_interface<typename output_storage<Storage>::type> abs(const small_vector_interface<Storage>& a) 
+    typename Storage::value_type sum(const small_vector_interface<Storage>& v)
     {
-        small_vector_interface<Storage> r = a;
-        for (typename Storage::value_type& val : r) 
+        typedef typename Storage::value_type value_type;
+        value_type r = 0;
+        for (auto it=v.begin(); it!=v.end() ; ++it) 
         {
-            val = std::abs(val);
+            r += *it;
         }
         return r;
     }
 
+    template<typename Storage, typename ReduceOperator, 
+             typename ReturnType=typename ReduceOperator::return_type>
+    ReturnType reduce(const small_vector_interface<Storage>& a, 
+                      const ReduceOperator& reduce=ReduceOperator(),
+                      const ReturnType& init=ReturnType(0))
+    {
+        ReturnType r = init;
+        std::for_each(a.begin(), a.end(), [&](auto v) { reduce(r, v); });
+        return r;
+    }
+    
+    template<typename Storage>
+    typename Storage::value_type product(const small_vector_interface<Storage>& v)
+    {
+        typedef typename Storage::value_type value_type;
+        return reduce(v, [&](value_type& v0, value_type v) -> value_type { v0 *= v; return v0; }, value_type(1));
+    }
+
+    // broadcasters
     template<typename Storage, typename UnaryOperator>
     small_vector_interface<Storage>& apply(small_vector_interface<Storage>& a, const UnaryOperator& op=UnaryOperator())
     {
@@ -1117,11 +1258,40 @@ namespace spurt {
         return r;
     }
 
+    // unary mappings
     template<typename Storage>
     small_vector_interface<typename output_storage<Storage>::type> 
     square(const small_vector_interface<Storage>& a)
     {
         return map(a, [&](auto v) { return v*v; });
+    }
+    
+    template<typename Storage>
+    small_vector_interface<typename output_storage<Storage>::type>
+    floor(const small_vector_interface<Storage>& a)
+    {
+        return map(a, [&](auto v) { return std::floor(v); });
+    }
+    
+    template<typename Storage>
+    small_vector_interface<typename output_storage<Storage>::type>
+    ceil(const small_vector_interface<Storage>& a)
+    {
+        return map(a, [&](auto v) { return std::ceil(v); });
+    }
+
+    template<typename Storage>
+    small_vector_interface<typename output_storage<Storage>::type> 
+    abs(const small_vector_interface<Storage>& a) 
+    {
+        return map(a, [&](auto v) { return std::abs(v); });
+    }
+
+    template<typename Storage>
+    small_vector_interface<typename output_storage<Storage>::type> 
+    round(const small_vector_interface<Storage>& a) 
+    {
+        return map(a, [&](auto v) { return std::round(v); });
     }
     
     template<typename Storage>
@@ -1160,38 +1330,6 @@ namespace spurt {
         small_vector_interface<typename real_storage<Storage>::type> r;
         for (size_t i=0; i<Storage::size; ++i) r[i] = v[i].imag();
         return r;
-    }
-    
-    template<typename Storage>
-    typename Storage::value_type sum(const small_vector_interface<Storage>& v)
-    {
-        typedef typename Storage::value_type value_type;
-        value_type r = 0;
-        for (auto it=v.begin(); it!=v.end() ; ++it) 
-        {
-            r += *it;
-        }
-        return r;
-    }
-    
-    template<typename Storage>
-    typename Storage::value_type product(const small_vector_interface<Storage>& v)
-    {
-        typedef typename Storage::value_type value_type;
-        value_type r = 1;
-        for (auto it=v.begin(); it!=v.end() ; ++it) 
-        {
-            r *= *it;
-        }
-        return r;
-    }
-
-    template<typename Storage, typename ReduceOperator, 
-             typename ReturnType=typename ReduceOperator::return_type>
-    ReturnType reduce(const small_vector_interface<Storage>& a, 
-                      const ReduceOperator& reduce=ReduceOperator())
-    {
-        return reduce(a.begin(), a.end());
     }
 
     template<typename Storage>
@@ -1287,6 +1425,7 @@ namespace spurt {
         typedef T value_type;
         typedef DataBlock<T, M*N> storage_type;
         typedef small_vector_interface< storage_type > base_type;
+        typedef random_filler<value_type> random_filler_type;
         typedef DataBlockView< T, M, 1> column_view_type;
         typedef ConstDataBlockView< T, M, 1> const_column_view_type;
         typedef DataBlockView< T, N, M > row_view_type;
@@ -1303,7 +1442,6 @@ namespace spurt {
         typedef Eigen::Matrix<scalar_type, nrows, ncols> self_matrix_type;
         typedef Eigen::Map<self_matrix_type> self_map_type;
         typedef Eigen::Map<const self_matrix_type> const_self_map_type;
-        
         
         typedef typename base_type::iterator columnwise_iterator;
         typedef typename base_type::const_iterator const_columnwise_iterator;
@@ -1382,9 +1520,11 @@ namespace spurt {
             return r;
         }
         
-        static self_type random() {
+        static self_type random(value_type min=random_filler_type::default_min,
+                                value_type max=random_filler_type::default_max) {
+            random_filler_type filler(min, max);
             self_type r;
-            r.as_eigen() = self_matrix_type::Random();
+            filler.fill(r.template begin<columnwise_iterator>(), r.template end<columnwise_iterator>());
             return r;
         }
         

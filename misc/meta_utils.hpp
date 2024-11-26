@@ -40,6 +40,7 @@ struct type2string {};
     X(int); \
     X(long); \
     X(long long); \
+    X(unsigned long); \
     X(float); \
     X(double); \
     X(long double);

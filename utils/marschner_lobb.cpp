@@ -33,7 +33,7 @@ int main(int argc, const char* argv[]) {
     
     filename = spurt::filename::remove_extension(filename);
     
-    double step = 1/(double)(n-1);
+    double step = 2/(double)(n-1);
     
     std::vector<double> z(n*n, 0);
     for (size_t j=0; j<n; ++j) {

@@ -62,7 +62,7 @@ public:
 
     static void to_range(double& x) {
         if (x < -0.5 || x >= 0.5) {
-            x -= floor(x);
+            x -= std::floor(x);
             if (x >= 0.5) x -= 1;
             if (x < -0.5 || x >= 0.5) {
                 std::cerr << "ERROR in to_range: " << x << std::endl;

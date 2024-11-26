@@ -10,6 +10,7 @@ namespace spurt
 {
 namespace kernels
 {
+    // bleeding boundary handling
     template<typename Size_>
     inline int fix_index(Size_ a, Size_ s) {
         if (a < 0) return 0;
@@ -116,7 +117,7 @@ namespace kernels
         size_t size;
 
         double _gauss(double t) const {
-            return exp(-t * t / (2. * m_sig2));
+            return std::exp(-t * t / (2. * m_sig2));
         }
 
         Gaussian(double stddev=2, double cutoff=2)
@@ -128,7 +129,7 @@ namespace kernels
             m_norm = invsqrt2pi/m_sig;
         }
 
-        double operator()(double t, size_t dorder=0) {
+        double operator()(double t, size_t dorder=0) const {
             double u = (t < 0) ? -t : t;
             if (u >= size) return 0.;
 
@@ -190,17 +191,17 @@ private:
                           const {  
         value_type r = value_traits::zero();
         scalar_type allw = 0;
-        coord_type res(this->grid().resolution());
-        coord_type coord(c);
-        coord_type order(dorder);
-        pos_type pos(u);
+        const coord_type& res = this->grid().resolution();
+        const coord_type& coord = c;
+        const coord_type& order = dorder;
+        const pos_type& pos = u;
 
-        const size_t width = m_kernel.size;
+        const int width = static_cast<int>(m_kernel.size);
         for (int i = 1-width; i <= width; ++i) {
             int ii = kernels::fix_index(coord[0] + i, res[0]);
-            scalar_type w = m_kernel(pos[0] - i, dorder[0]);
-            allw += w;
-            r +=  w * this->m_data[ii];
+            scalar_type wi = m_kernel(pos[0] - i, dorder[0]);
+            allw += wi;
+            r +=  wi * this->m_data[ii];
         }
         return r/allw;
     }
@@ -210,21 +211,21 @@ private:
                           const {
         value_type r = value_traits::zero();
         scalar_type allw = 0;
-        coord_type res(this->grid().resolution());
-        coord_type coord(c);
-        coord_type order(dorder);
-        pos_type pos(u);
-        const size_t width = m_kernel.size;
+        const coord_type& res = this->grid().resolution();
+        const coord_type& coord = c;
+        const coord_type& order = dorder;
+        const pos_type& pos = u;
+        const int width = static_cast<int>(m_kernel.size);
         for (int j = 1 - width; j <= width; ++j)
         {
             int jj = kernels::fix_index(j + coord[1], res[1]);
-            scalar_type w = m_kernel(pos[1] - j, order[1]);
+            scalar_type wj = m_kernel(pos[1] - j, order[1]);
             for (int i = 1 - width; i <= width; ++i)
             {
                 int ii = kernels::fix_index(i + coord[0], res[0]);
-                w *= m_kernel(pos[0] - i, order[0]);
-                allw += w;
-                r += w * this->m_data[this->m_grid.index(ii, jj)];
+                scalar_type wij = wj * m_kernel(pos[0] - i, order[0]);
+                allw += wij;
+                r += wij * this->m_data[this->m_grid.index(ii, jj)];
             }
         }
         return r / allw;
@@ -233,31 +234,50 @@ private:
     value_type convolve3D(const pos_type &u, const coord_type &c, 
                           const coord_type &dorder = coord_type(0)) 
                           const {
+        bool verbose = false;
+        if (verbose) std::cout << "convolve3d: u=" << u << ", c=" << c << ", dorder=" << dorder << '\n';
+        if (verbose) std::cout << "width = " << m_kernel.size << '\n';
         value_type r = value_traits::zero();
         scalar_type allw = 0;
-        coord_type res(this->grid().resolution());
-        coord_type coord(c);
-        coord_type order(dorder);
-        pos_type pos(u);
-        const size_t width = m_kernel.size;
+        const coord_type& res = this->grid().resolution();
+        if (verbose) std::cout << "res = " << res << '\n';
+        const coord_type& coord = c;
+        const coord_type& order = dorder;
+        const pos_type& pos = u;
+        const int width = static_cast<int>(m_kernel.size);
         for (int k = 1-width; k <= width; ++k)
         {
+            if (verbose) std::cout << "k=" << k << '\n';
             int kk = kernels::fix_index(k+coord[2], res[2]);
-            scalar_type w = m_kernel(pos[2] - k, order[2]);
+            if (verbose) std::cout << "kk=" << kk << '\n';
+            scalar_type wk = m_kernel(pos[2] - k, order[2]);
+            if (verbose) std::cout << "kernel(" << pos[2]-k << ", " << order[2] << ")=" << wk << '\n';
             for (int j = 1-width; j <= width; ++j)
             {
+                if (verbose) std::cout << "j=" << j << '\n';
                 int jj = kernels::fix_index(j+coord[1], res[1]);
-                w *= m_kernel(pos[1] - j, order[1]);
+                if (verbose) std::cout << "jj=" << jj << '\n';
+                scalar_type wjk = wk * m_kernel(pos[1] - j, order[1]);
+                if (verbose) std::cout << "kernel(" << pos[1]-j << ", " << order[1] << ") = " << m_kernel(pos[1]-j, order[1]) << '\n';
                 for (int i = 1-width; i <= width; ++i)
                 {
+                    if (verbose) std::cout << "i=" << i << '\n';
                     int ii = kernels::fix_index(i+coord[0], res[0]);
-                    w *= m_kernel(pos[0] - i, order[0]);
-                    allw += w;
-                    r += w * this->m_data[this->m_grid.index(ii, jj, kk)];
+                    if (verbose) std::cout << "ii=" << ii << '\n';
+                    scalar_type wijk = wjk * m_kernel(pos[0] - i, order[0]);
+                    if (verbose) std::cout << "kernel(" << pos[0]-i << ", " << order[0] << ")=" << wijk << '\n';
+                    allw += wijk;
+                    if (verbose) std::cout << "allw(" << i << ", " << j << ", " << k << ", " << order << ")=" << allw << '\n';
+                    r += wijk * this->m_data[this->m_grid.index(ii, jj, kk)];
+                    if (verbose) std::cout << "r=" << r << '\n';
                 }
             }
         }
-        return r / allw;
+        if (verbose) {
+            std::cout << "Returning " << r << " / " << allw << " = " << r/allw << '\n';
+            if (std::abs(allw) < 1.0e-9) std::cout << "WARNING!!!\n";
+        }
+        return r; // / allw;
     }
 
     value_type convolve4D(const pos_type &u, const coord_type &c,
@@ -266,29 +286,29 @@ private:
     {
         value_type r = value_traits::zero();
         scalar_type allw = 0;
-        coord_type res(this->grid().resolution());
-        coord_type coord(c);
-        coord_type order(dorder);
-        pos_type pos(u);
-        const size_t width = m_kernel.size;
+        const coord_type&  res = this->grid().resolution();
+        const coord_type&  coord = c;
+        const coord_type& order = dorder;
+        const pos_type&  pos = u;
+        const int width = static_cast<int>(m_kernel.size);
         for (int l = 1 - width; l <= width; ++l)
         {
             int ll = kernels::fix_index(l + coord[3], res[3]);
-            scalar_type w = m_kernel(pos[3] - l, order[3]);
+            scalar_type wl = m_kernel(pos[3] - l, order[3]);
             for (int k = 1 - width; k <= width; ++k)
             {
                 int kk = kernels::fix_index(k + coord[2], res[2]);
-                w *= m_kernel(pos[2] - k, order[2]);
+                scalar_type wkl = wl * m_kernel(pos[2] - k, order[2]);
                 for (int j = 1 - width; j <= width; ++j)
                 {
                     int jj = kernels::fix_index(j + coord[1], res[1]);
-                    w *= m_kernel(pos[1] - j, order[1]);
+                    scalar_type wjkl = wkl * m_kernel(pos[1] - j, order[1]);
                     for (int i = 1 - width; i <= width; ++i)
                     {
                         int ii = kernels::fix_index(i + coord[0], res[0]);
-                        w *= m_kernel(pos[0] - i, order[0]);
-                        allw += w;
-                        r += w * this->m_data[this->m_grid.index(ii, jj, kk, ll)];
+                        scalar_type wijkl = wjkl * m_kernel(pos[0] - i, order[0]);
+                        allw += wijkl;
+                        r += wijkl * this->m_data[this->m_grid.index(ii, jj, kk, ll)];
                     }
                 }
             }
@@ -337,6 +357,7 @@ public:
     // interpolation
     value_type value(const pos_type &p) const {
         std::pair<coord_type, pos_type> r = this->grid().locate(p);
+        // std::cout << "position " << p << " was found in cell " << r.first << " with local coordinates " << r.second << '\n';
         return interpolate(r.second, r.first);
     }
     value_type value_in_voxel(const coord_type &vid, 
