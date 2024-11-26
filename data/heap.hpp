@@ -14,14 +14,14 @@ public:
     typedef std::vector<T> base_type;
     typedef T value_type;
     typedef Comp comparator;
-    comparator m_comparator;
+    comparator m_cmp;
 
-    heap(const comparator& cmp = comparator()) : base_type(), m_comparator(cmp) {}
+    heap(const comparator& cmp = comparator()) : base_type(), m_cmp(cmp) {}
 
     template <typename Iterator>
     heap(Iterator begin, Iterator end, const comparator& cmp = comparator()) 
-        : base_type(begin, end), m_comparator(cmp) {
-        std::make_heap(base_type::begin(), base_type::end(), m_comparator);
+        : base_type(begin, end), m_cmp(cmp) {
+        std::make_heap(base_type::begin(), base_type::end(), m_cmp);
     }
 
     value_type top() const
@@ -30,7 +30,7 @@ public:
     }
 
     value_type pop() { 
-        std::pop_heap(base_type::begin(), base_type::end(), m_comparator);
+        std::pop_heap(base_type::begin(), base_type::end(), m_cmp);
         value_type r = base_type::back();
         base_type::pop_back();
         return r;
@@ -38,7 +38,7 @@ public:
 
     void push(const value_type& v) {
         base_type::push_back(v);
-        std::push_heap(base_type::begin(), base_type::end(), m_comparator);
+        std::push_heap(base_type::begin(), base_type::end(), m_cmp);
     }
 };
 
@@ -48,8 +48,7 @@ class bounded_heap : public heap<T, Comp> {
 private:
     size_t find_min() const {
         size_t mid = base_type::size()/2;
-        comparator comp;
-        auto min_it = std::min_element(base_type::begin() + mid, base_type::end(), comp);
+        auto min_it = std::min_element(base_type::begin() + mid, base_type::end(), base_type::m_cmp);
         return std::distance(base_type::begin(), min_it);
     }
 
@@ -59,9 +58,8 @@ private:
     }
 
     void swim(size_t from) {
-        comparator cmp;
         size_t pid = parent(from);
-        while (from > 0 && cmp((*this)[pid], (*this)[from]))
+        while (from > 0 && base_type::m_cmp((*this)[pid], (*this)[from]))
         {
             std::swap((*this)[pid], (*this)[from]);
             from = pid;
