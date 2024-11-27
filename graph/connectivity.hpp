@@ -49,13 +49,13 @@ void compute_knn_connectivity(Graph_& graph, size_t knn, const std::vector<Posit
     spurt::ProgressDisplay progress;
     progress.start(npts);
     size_t n=0;
-    typedef std::list<point_t> neighbors_t;
+    typedef std::vector<point_t> neighbors_t;
     std::for_each(data_pts.begin(), data_pts.end(), 
                   [&] (const point_t& p) {
         neighbors_t nns;
         size_t i = p.data();
         locator.find_n_nearest_points(nns, p.position(), knn);
-        nns.sort(less_dist(p));
+        std::sort(nns.begin(), nns.end(), less_dist(p));
         typename neighbors_t::iterator it=nns.begin();
         for (++it; it!=nns.end(); ++it) {
             scalar_t dist=traits_t::norm(p.position()-it->position());

@@ -37,6 +37,6 @@ target_link_libraries(symplectic4d ${Teem_LIBRARIES} ${Boost_LIBRARIES} /usr/loc
 install(TARGETS symplectic4d RUNTIME DESTINATION bin)
 
 
-# add_executable(map4d map4d.cpp)
-# target_link_libraries(map4d ${Teem_LIBRARIES} ${Boost_LIBRARIES} /usr/local/lib/libtbb.dylib /usr/local/lib/libtbbmalloc.dylib /usr/local/lib/libtbbmalloc_proxy.dylib)
-# install(TARGETS map4d RUNTIME DESTINATION bin)
+add_executable(map4d map4d.cpp)
+target_link_libraries(map4d ${Teem_LIBRARIES} ${Boost_LIBRARIES} /usr/local/lib/libtbb.dylib /usr/local/lib/libtbbmalloc.dylib /usr/local/lib/libtbbmalloc_proxy.dylib)
+install(TARGETS map4d RUNTIME DESTINATION bin)

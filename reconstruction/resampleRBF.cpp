@@ -212,7 +212,7 @@ bbox3 bounds() {
 
 template<typename Locator>
 double what_radius(const vec3& x0, int N, Locator& nnl) {
-    std::list<typename Locator::point_type> neighbors;
+    std::vector<typename Locator::point_type> neighbors;
     nnl.find_n_nearest_points(neighbors, x0, N);
     double max = 0;
     std::for_each(neighbors.begin(), neighbors.end(), [&](auto n) { 

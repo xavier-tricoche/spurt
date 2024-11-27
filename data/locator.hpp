@@ -85,8 +85,9 @@ struct point_locator: public KDTree::KDTree< data_traits<Position>::nrows(),
         return *found.first;
     }
 
-    void find_n_nearest_points(std::list<point_type>& nn, const pos_type& c, 
-                               size_t n) {
+    void find_n_nearest_points(std::vector<point_type>& nn, const pos_type& c, 
+                               size_t n, bool sorted=true) {
+        nn.clear();
         if (base_type::empty())
             throw std::runtime_error("invalid query on empty tree");
         auto found =
@@ -94,6 +95,12 @@ struct point_locator: public KDTree::KDTree< data_traits<Position>::nrows(),
         std::for_each(found.begin(), found.end(), [&](auto p) { 
             nn.push_back(*p.first);
         });
+        
+        if (sorted) {
+            std::sort(nn.begin(), nn.end(), [&](const point_type& p0, const point_type& p1) {
+               return norm(p0.position()-c) < norm(p1.position()-c); 
+            });
+        }
     }
 
     bool find_nearest_within_range(point_type &p, const pos_type &c, 

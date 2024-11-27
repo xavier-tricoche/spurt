@@ -1,5 +1,5 @@
-#ifndef __METRIC_HPP__
-#define __METRIC_HPP__
+#ifndef m_METRIC_HPPm_
+#define m_METRIC_HPPm_
 
 #include <math/types.hpp>
 #include <math/bounding_box.hpp>
@@ -33,48 +33,48 @@ public:
     typedef spurt::bounding_box<vec_type>        bounds_type;
     
     metric() :
-        __bounds(vec_type(0), vec_type(0)), __periodic(false) {}
+        m_bounds(vec_type(0), vec_type(0)), m_periodic(false) {}
     metric(const bounds_type& bounds) :
-        __bounds(bounds), __periodic(false) {}
+        m_bounds(bounds), m_periodic(false) {}
     metric(const bounds_type& bounds, const bvec_type& periodic) :
-        __bounds(bounds), __periodic(periodic) {}
+        m_bounds(bounds), m_periodic(periodic) {}
         
     const bounds_type& bounds() const {
-        return __bounds;
+        return m_bounds;
     }
     
     bounds_type& bounds() {
-        return __bounds;
+        return m_bounds;
     }
     
     const bvec_type& periodic() const {
-        return __periodic;
+        return m_periodic;
     }
     
     bvec_type& periodic() {
-        return __periodic;
+        return m_periodic;
     }
     
     vec_type size() const {
-        return __bounds.size();
+        return m_bounds.size();
     }
     
     vec_type modulo(const vec_type& x) const {
-        vec_type y = x - __bounds.min();
+        vec_type y = x - m_bounds.min();
         const vec_type& sz = size();
         for (int i = 0 ; i < N ; ++i) {
-            if (__periodic[i]) {
+            if (m_periodic[i]) {
                 y[i] = __modulo(y[i], sz[i]);
             }
         }
-        return y + __bounds.min();
+        return y + m_bounds.min();
     }
     
     vec_type displacement(const vec_type& a, const vec_type& b) const {
         vec_type d = modulo(b) - modulo(a);
         const vec_type& sz = size();
         for (int i = 0 ; i < N ; ++i) {
-            if (__periodic[i]) {
+            if (m_periodic[i]) {
                 d[i] = __min_norm(d[i], sz[i]);
             }
         }
@@ -86,8 +86,8 @@ public:
     }
     
 private:
-    bounds_type __bounds;
-    bvec_type   __periodic;
+    bounds_type m_bounds;
+    bvec_type   m_periodic;
 };
 } // namespace spurt
 

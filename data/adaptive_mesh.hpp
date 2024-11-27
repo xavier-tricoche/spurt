@@ -1,14 +1,14 @@
 #ifndef __ADAPTIVE_MESH_HPP__
 #define __ADAPTIVE_MESH_HPP__
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 
 namespace spurt {
 template<typename T, typename PD, typename CD>
 struct AMR_quad {
-    typedef nvis::fixed_vector<T, 2>        pos_type;
-    typedef nvis::bounding_box<pos_type>    bounds_type;
+    typedef spurt::small_vector<T, 2>       pos_type;
+    typedef spurt::bounding_box<pos_type>   bounds_type;
     typedef PD                              point_data_type;
     typedef CD                              cell_data_type;
     
@@ -23,7 +23,7 @@ struct AMR_quad {
 };
 
 struct Lt_index {
-    bool operator()(const nvis::ivec3& i0, const nvis::ivec3& i1) {
+    bool operator()(const spurt::ivec3& i0, const spurt::ivec3& i1) {
         // check depth first
         if (i0[2] < i1[2]) {
             return true;
@@ -44,7 +44,7 @@ struct Lt_index {
 template<typename D>
 class AMR_data_container {
 public:
-    typedef nvis::ivec3                                 index_type;
+    typedef spurt::ivec3                                index_type;
     typedef D                                           data_type;
     typedef std::map<index_type, data_type, Lt_index>   map_type;
     typedef map_type::key_type                          key_type;
@@ -129,11 +129,11 @@ public:
     typedef AMR_root<T, PD, CD>                 root_type;
     typedef PD                                  point_data_type;
     typedef CD                                  cell_data_type;
-    typedef nvis::fixed_vector<value_type, 2>   pos_type;
-    typedef nvis::bounding_box<pos_type>        bounds_type;
+    typedef spurt::small_vector<value_type, 2>   pos_type;
+    typedef spurt::bounding_box<pos_type>        bounds_type;
     typedef self_type*                          pointer_type;
     typedef const self_type*                    const_pointer_type;
-    typedef nvis::ivec3                         index_type;
+    typedef spurt::ivec3                         index_type;
     
 private:
     static const index_type __corner_shift[] = {
@@ -195,11 +195,11 @@ class AMR_root {
     }
     
 public:
-    typedef nvis::fixed_vector<T, 2>            pos_type;
+    typedef spurt::small_vector<T, 2>            pos_type;
     typedef PD                                  point_data_type;
     typedef CD                                  cell_data_type;
-    typedef nvis::ivec3                         index_type;
-    typedef nvis::bounding_box<pos_type>        bounds_type;
+    typedef spurt::ivec3                         index_type;
+    typedef spurt::bounding_box<pos_type>        bounds_type;
     typedef AMR_node<T, PD, CD>                 node_type;
     
     AMR_root(int resx, int resy, const bounds_type& bounds)

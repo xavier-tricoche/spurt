@@ -3,6 +3,7 @@
 #include <misc/progress.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <math/stat.hpp>
+#include <data/locator.hpp>
 #include <array>
 #include <random>
 #include <thread>
@@ -22,23 +23,29 @@ using namespace spurt;
 typedef symplectic4D map_type;
 typedef map_type::state_type state_type;
 typedef map_type::bounds_type bounds_type;
-typedef sfcnn<state_type, 4, double> NNlocator_type;
+typedef point_locator<state_type, long> NNlocator_type;
+typedef NNlocator_type::point_type point_type;
 typedef std::vector<state_type> orbit_type;
 
 std::pair<double, double> compute_gaps(orbit_type& orb) {
     // ProgressDisplay timer(false);
     // timer.start();
-    NNlocator_type locator(&orb[0], orb.size());
+    std::vector<point_type> points;
+    for (int i=0; i<orb.size(); ++i) {
+        points.push_back(point_type(orb[i], i));
+    }
+    NNlocator_type locator(points.begin(), points.end());
     // timer.stop();
     // std::cout << "KD tree built in " << timer.cpu_time() << " s. (cpu) / "
         // << timer.wall_time() << " s. (wall)\n";
-    std::vector<long unsigned int> indices;
-    std::vector<double> distances;
+    std::vector<point_type> nns;
     std::vector<double> gaps;
     // timer.start();
     for (auto it=orb.begin(); it!=orb.end(); ++it) {
-        locator.ksearch(*it, 3, indices, distances);
-        gaps.push_back(distances[2]);
+        nns.clear();
+        locator.find_n_nearest_points(nns, *it, 3);
+        
+        gaps.push_back(norm(*it-nns.back().position()));
     }
     // timer.stop();
     // std::cout << "Gaps of " << orb.size() << " points computed in " << timer.cpu_time()
@@ -95,7 +102,6 @@ int main(int argc, const char* argv[]) {
 
     map_type amap(k1, k2, eps);
     slab_map slab(dim, thickness);
-    typedef std::vector<state_type> orbit_type;
     typedef std::vector<state_type> hits_type;
 
     const bounds_type bounds = amap.bounds();

@@ -2,7 +2,7 @@
 #define __INDEXED_POINT_HPP__
 
 #include <iostream>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 
 /*
     A spatial coordinate with an index to be used in a tree data structure
@@ -11,14 +11,14 @@
 
 namespace spurt {
 
-template<typename T, int N>
+template<typename T, int N, typename Index = size_t>
 class indexed_point {
 public:
-    typedef T                           value_type;
-    typedef nvis::fixed_vector<T, N>    vector_type;
-    typedef size_t                      index_type;
+    typedef T                     value_type;
+    typedef small_vector<T, N>    vector_type;
+    typedef Index                 index_type;
     
-    static size_t size() {
+    static int size() {
         return N;
     }
     

@@ -1,7 +1,7 @@
 #ifndef __ID_SET_HPP__
 #define __ID_SET_HPP__
 
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <boost/static_assert.hpp>
 
 namespace spurt
@@ -9,7 +9,7 @@ namespace spurt
 template<typename T, int N>
 struct id_set {
     typedef T                           value_type;
-    typedef nvis::fixed_vector<T, N>    vec_type;
+    typedef spurt::small_vector<T, N>   vec_type;
 
     id_set() : __ids(-1) {}
     id_set(const value_type ids[N]) {

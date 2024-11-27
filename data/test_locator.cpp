@@ -75,7 +75,7 @@ struct further {
 
 template<typename P>
 bool test_knn_solution(const std::vector<P>& allpoints, 
-                       const P& query, size_t knn, const std::list<P>& answer)
+                       const P& query, size_t knn, const std::vector<P>& answer)
 {
     typedef typename P::pos_type pos_type;
     // using a max distance heap with fixed capacity
@@ -193,7 +193,7 @@ void test_knn_locator(int n, int ns, int knn, float f)
             }
     
             spurt::timer _timer(true);
-            std::list<point_type> nns;
+            std::vector<point_type> nns;
             locator.find_n_nearest_points(nns, c, knn);
             _timer.stop();
             tbb_total_time += _timer.cpu_time();
