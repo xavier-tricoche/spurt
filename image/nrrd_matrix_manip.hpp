@@ -47,6 +47,12 @@ template<typename T>
 Nrrd* inverse(const Nrrd* nin, int Nrows, bool show_progress=false);
 
 template<typename T>
+Nrrd* determinant(const Nrrd* nin, int Nrows, bool show_progress=false);
+
+template<typename T>
+Nrrd* trace(const Nrrd* nin, int Nrows, bool show_progress=false);
+
+template<typename T>
 void SVD(Nrrd*& sings, Nrrd*& left, Nrrd*& right,
          const Nrrd* nin, int Nrows, int Ncols, bool show_progress=false);
 
@@ -102,6 +108,14 @@ void do_FTLE(T* out_ptr, T1* in_ptr, size_t N, int Nrows, bool show_progress=fal
 template<typename T, typename T1=T>
 void do_inverse(T* out_ptr, T1* in_ptr, size_t N,
                 int Nrows, bool show_progress=false);
+
+template<typename T, typename T1=T>
+void do_determinant(T* out_ptr, T1* in_ptr, size_t N,
+                    int Nrows, bool show_progress=false);
+
+template<typename T, typename T1=T>
+void do_trace(T* out_ptr, T1* in_ptr, size_t N,
+              int Nrows, bool show_progress=false);
 
 template<typename T, typename T1=T, typename T2=T1>
 void do_sum(T* out_ptr, T1* a_ptr, T2* b_ptr,
@@ -285,6 +299,38 @@ Nrrd* inverse(const Nrrd* nin, int Nrows, bool show_progress) {
         detail::do_inverse<T, float>(out_array, (float*)nin->data, N, Nrows, show_progress);
     else if (nin->type==nrrdTypeDouble)
         detail::do_inverse<T, double>(out_array, (double*)nin->data, N, Nrows, show_progress);
+    else {
+        throw std::runtime_error("Invalid data type:"+std::to_string(nin->type));
+    }
+
+    return detail::wrap_and_copy_header<T>(nin, out_array, Nrows*Nrows);
+}
+
+template<typename T>
+Nrrd* determinant(const Nrrd* nin, int Nrows, bool show_progress) {
+    size_t N=spurt::nrrd_utils::nrrd_size(nin, true);
+    T* out_array=(T*)malloc(N*sizeof(T));
+
+    if (nin->type==nrrdTypeFloat)
+        detail::do_determinant<T, float>(out_array, (float*)nin->data, N, Nrows, show_progress);
+    else if (nin->type==nrrdTypeDouble)
+        detail::do_determinant<T, double>(out_array, (double*)nin->data, N, Nrows, show_progress);
+    else {
+        throw std::runtime_error("Invalid data type:"+std::to_string(nin->type));
+    }
+
+    return detail::wrap_and_copy_header<T>(nin, out_array, Nrows*Nrows);
+}
+
+template<typename T>
+Nrrd* trace(const Nrrd* nin, int Nrows, bool show_progress) {
+    size_t N=spurt::nrrd_utils::nrrd_size(nin, true);
+    T* out_array=(T*)malloc(N*sizeof(T));
+
+    if (nin->type==nrrdTypeFloat)
+        detail::do_trace<T, float>(out_array, (float*)nin->data, N, Nrows, show_progress);
+    else if (nin->type==nrrdTypeDouble)
+        detail::do_trace<T, double>(out_array, (double*)nin->data, N, Nrows, show_progress);
     else {
         throw std::runtime_error("Invalid data type:"+std::to_string(nin->type));
     }
@@ -785,6 +831,42 @@ namespace spurt { namespace nrrd_manip { namespace detail {
             new (&inv) out_map_t(out_ptr, Nrows, Nrows);
             new (&mat) in_map_t(in_ptr, Nrows, Nrows);
             inv=mat.lu().inverse().template cast<T>();
+            progress.update(i);
+        }
+        progress.end();
+    }
+
+    template<typename T, typename T1>
+    void do_determinant(T* out_ptr, T1* in_ptr, size_t N,
+                        int Nrows, bool show_progress) {
+        typedef Eigen::Map< mat_t<T1> > in_map_t;
+
+        spurt::ProgressDisplay progress(show_progress);
+
+        int ncoef=Nrows*Nrows;
+        in_map_t mat(in_ptr, Nrows, Nrows);
+        progress.start(N, "Inverse");
+        for (size_t i=0; i<N; ++i, ++out_ptr, in_ptr+=ncoef) {
+            new (&mat) in_map_t(in_ptr, Nrows, Nrows);
+            *out_ptr=mat.template cast<T>().determinant();
+            progress.update(i);
+        }
+        progress.end();
+    }
+
+    template<typename T, typename T1>
+    void do_trace(T* out_ptr, T1* in_ptr, size_t N,
+                  int Nrows, bool show_progress) {
+        typedef Eigen::Map< mat_t<T1> > in_map_t;
+
+        spurt::ProgressDisplay progress(show_progress);
+
+        int ncoef=Nrows*Nrows;
+        in_map_t mat(in_ptr, Nrows, Nrows);
+        progress.start(N, "Inverse");
+        for (size_t i=0; i<N; ++i, ++out_ptr, in_ptr+=ncoef) {
+            new (&mat) in_map_t(in_ptr, Nrows, Nrows);
+            *out_ptr=mat.template cast<T>().trace();
             progress.update(i);
         }
         progress.end();

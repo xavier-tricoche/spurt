@@ -279,6 +279,50 @@ namespace nrrd_utils {
             return data;
         }
         
+        template<typename T, int N>
+        T* __matrix_determinant(const Nrrd* nin) {
+            typedef T value_t;            
+            typedef nrrd_matrix_wrapper<T, N, N> wrapper_t;
+            typedef typename wrapper_t::matrix_t matrix_t;
+
+            // nvis::timer tovh;
+            //
+            assert(N*N==nin->axis[0].size);
+            size_t nmats=nrrd_size(nin)/(N*N);
+            value_t* data=(value_t*)calloc(nmats, sizeof(value_t));
+            matrix_t* res=reinterpret_cast<value_t*>(data);
+            wrapper_t matrices(nin);
+            //
+            // toverhead += tovh.elapsed();
+            
+            for (size_t n=0; n<nmats; ++n) {
+                res[n]=matrices[n].determinant();
+            }
+            return data;
+        }
+        
+        template<typename T, int N>
+        T* __matrix_trace(const Nrrd* nin) {
+            typedef T value_t;            
+            typedef nrrd_matrix_wrapper<T, N, N> wrapper_t;
+            typedef typename wrapper_t::matrix_t matrix_t;
+
+            // nvis::timer tovh;
+            //
+            assert(N*N==nin->axis[0].size);
+            size_t nmats=nrrd_size(nin)/(N*N);
+            value_t* data=(value_t*)calloc(nmats, sizeof(value_t));
+            matrix_t* res=reinterpret_cast<value_t*>(data);
+            wrapper_t matrices(nin);
+            //
+            // toverhead += tovh.elapsed();
+            
+            for (size_t n=0; n<nmats; ++n) {
+                res[n]=matrices[n].trace();
+            }
+            return data;
+        }
+        
         template<typename T, int Nrows, int Ncols>
         void __matrix_SVD(const Nrrd* nin, 
                           T*& sv, /* singular values */
@@ -390,6 +434,24 @@ namespace nrrd_utils {
         Nrrd* operator()(const Nrrd* A) {
             value_t* data=detail::__matrix_inverse<value_t, N>(A);
             return wrap_and_copy_header<value_t, N*N>(A, data);
+        }
+    };
+    
+    template<typename T, int N>
+    struct nrrd_matrix_determinant {
+        typedef T value_t;
+        Nrrd* operator()(const Nrrd* A) {
+            value_t* data=detail::__matrix_determinant<value_t, N>(A);
+            return wrap_and_copy_header<value_t, 1>(A, data);
+        }
+    };
+    
+    template<typename T, int N>
+    struct nrrd_matrix_trace {
+        typedef T value_t;
+        Nrrd* operator()(const Nrrd* A) {
+            value_t* data=detail::__matrix_trace<value_t, N>(A);
+            return wrap_and_copy_header<value_t, 1>(A, data);
         }
     };
     

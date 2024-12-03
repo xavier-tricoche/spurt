@@ -33,7 +33,7 @@ struct Observer
         if (m_verbose)
         {
             std::ostringstream os;
-            os << "Observer: seeding at " << to_str((seed)) << " at time " << t << std::endl;
+            os << "Observer: seeding at " << seed << " at time " << t << std::endl;
             std::cout << os.str();
         }
     }
@@ -51,7 +51,7 @@ struct Observer
         if (m_verbose)
         {
             std::ostringstream os;
-            os << "\nObserver: p=" << to_str((p)) << ", t=" << t << std::endl;
+            os << "\nObserver: p=" << p << ", t=" << t << std::endl;
             std::cout << os.str();
         }
     }

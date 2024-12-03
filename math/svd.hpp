@@ -63,7 +63,7 @@ inline double pythag(double a, double b)
 
 template<typename T, int M, int N>
 void svdcmp(const small_matrix<T, M, N>& A, small_vector<T, N>& w,
-            small_matrix<T, M, N>& U, small_square_matrix<T, N>& V, double eps=1.0e-12)
+            small_matrix<T, M, N>& U, small_matrix<T, N>& V, double eps=1.0e-12)
 {
     // From Numerical Recipes:
     //
@@ -301,9 +301,9 @@ void svdcmp(const small_matrix<T, M, N>& A, small_vector<T, N>& w,
 }
 
 template<typename T, int N>
-inline small_square_matrix<T, N> to_mat(const small_vector<T, N>& w)
+inline small_matrix<T, N> to_mat(const small_vector<T, N>& w)
 {
-    small_square_matrix<T, N> r = small_square_matrix<T, N>::identity();
+    small_matrix<T, N> r = small_matrix<T, N>::identity();
     for (int i=0 ; i<N ; ++i) {
         r(i,i) = w[i];
     }
@@ -311,9 +311,9 @@ inline small_square_matrix<T, N> to_mat(const small_vector<T, N>& w)
 }
 
 template<typename T, int N>
-inline small_square_matrix<T, N> to_inv_mat(const small_vector<T, N>& w, double eps=1.0e-12)
+inline small_matrix<T, N> to_inv_mat(const small_vector<T, N>& w, double eps=1.0e-12)
 {
-    small_square_matrix<T, N> r = small_square_matrix<T, N>::identity();
+    small_matrix<T, N> r = small_matrix<T, N>::identity();
     double max = *std::max_element(w.begin(), w.end());
     for (int i=0 ; i<N ; ++i) {
         r(i,i) = (w[i]/max > eps ? 1./w[i] : 0);
@@ -325,7 +325,7 @@ template<typename T, int M, int N>
 inline small_matrix<T, M, N> pseudoinv(const small_matrix<T, M, N>& A, double eps=1.0e-12)
 {
     small_matrix<T, M, N> U;
-    small_square_matrix<T, N> V;
+    small_matrix<T, N> V;
     small_vector<T, N> w;
     svdcmp<T, M, N>(A, w, U, V, eps);
     return V*to_inv_mat<double, 3>(w, eps)*transpose(U);

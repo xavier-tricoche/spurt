@@ -1,15 +1,70 @@
 #include <Eigen/Core>
 #include <cstdlib>
-#include "math_array.hpp"
+#include "small_vector.hpp"
+#include "small_matrix.hpp"
 #include <algorithm>
 #include <iostream>
+// #include <misc/meta_utils.hpp>
+
+#include "small_matrix.hpp"
 
 template<typename T>
-struct randval {
-    T operator()() {
-        return static_cast<T>(std::rand())/static_cast<T>(RAND_MAX);
-    }
-};
+std::string whattypeami(T v) { return ""; }
+
+template<>
+std::string whattypeami(float f) {
+    return "float";
+}
+
+template<>
+std::string whattypeami(double d) {
+    return "double";
+}
+
+template<>
+std::string whattypeami(int i) {
+    return "int";
+}
+
+template<>
+std::string whattypeami(long i) {
+    return "long int";
+}
+
+template<>
+std::string whattypeami(unsigned long i) {
+    return "unsigned long int";
+}
+
+
+template<typename Matrix, typename Iterator>
+bool check_rowwise_iterator(const Matrix& m, Iterator begin, Iterator end) {
+    typename Matrix::value_type value_t;
+    const size_t nrows = m.nrows;
+    const size_t ncols = m.ncols;
+    Iterator it = begin;
+    for (size_t r=0; r<nrows; ++r) {
+        for (size_t c=0; c<ncols; ++c, ++it) {
+            if (m(r,c) != *it) return false;
+        }
+    } 
+    return true;
+}
+
+template<typename Matrix, typename Iterator>
+bool check_colwise_iterator(const Matrix& m, Iterator begin, Iterator end) {
+    typename Matrix::value_type value_t;
+    const size_t nrows = m.nrows;
+    const size_t ncols = m.ncols;
+    Iterator it = begin;
+    for (size_t c=0; c<ncols; ++c) {
+        for (size_t r=0; r<nrows; ++r, ++it) {
+            if (m(r,c) != *it) return false;
+        }
+    } 
+    return true;
+}
+
 
 int main(int argc, char* argv[]) {
 
@@ -22,18 +77,13 @@ int main(int argc, char* argv[]) {
     lexicographical_order lorder;
     eps_lexicographical_order elorder(1.0e-6);
 
-    randval<double> dd;
-    randval<float> ff;
-    randval<int> ii;
-
-    std::srand(time(nullptr));
     for (int i=0; i<4; ++i) {
-        d[i] = vec3(dd(), dd(), dd());
-        f[i] = fvec3(ff(), ff(), ff());
-        j[i] = ivec3(ff()*100, ff()*100, ff()*100);
+        d[i] = vec3::random(0, 1);
+        f[i] = fvec3::random(0, 1);
+        j[i] = ivec3::random(0, 100);
     }
-    vec2 a(dd(), dd());
-    vec4 b(dd(), dd(), dd(), dd());
+    vec2 a = vec2::random(0, 1);
+    vec4 b = vec4::random(0, 1);
 
     vec3 l = d[0] + d[1];
     std::cout << "sum of " << d[0] << " and " << d[1] << " is " << l << '\n';
@@ -69,22 +119,17 @@ int main(int argc, char* argv[]) {
 
     std::cout << "the square of " << d[3] << " is " << square(d[3]) << '\n';
 
-    small_square_matrix<double, 2> A(small_vector<double, 4>(dd(), dd(), dd(), dd())), B(small_vector<double, 4>(dd(), dd(), dd(), dd()));
+    /*
+    mat2 A = mat2::random(0,1);
+    mat2 B = mat2::random(0,1);
 
-    small_vector<double, 16> av({dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd(), dd()});
-
+    small_vector<double, 16> av = small_vector<double, 16>::random(0,1);
     typedef small_square_matrix<double, 4> sq4;
     static_assert(sq4::base_type::_size_ == 16, "Size of vector is wrong");
 
-    sq4 C(small_vector<double, 16>({dd(), dd(), dd(), dd(), 
-                                    dd(), dd(), dd(), dd(), 
-                                    dd(), dd(), dd(), dd(), 
-                                    dd(), dd(), dd(), dd()}));
+    sq4 C(av);
 
-    sq4 D(small_vector<float, 16>({ff(), ff(), ff(), ff(),
-                                   ff(), ff(), ff(), ff(), 
-                                   ff(), ff(), ff(), ff(), 
-                                   ff(), ff(), ff(), ff()}));
+    sq4 D = sq4::random(0, 1);
 
     std::cout << "A=" << A << ", B=" << B << ", C=" << C << ", D=" << D << '\n';
     auto E = A*B; 
@@ -104,20 +149,22 @@ int main(int argc, char* argv[]) {
     
     std::cout << "F is \n" << F << '\n';
     
-    auto rit = F.begin<sq4::rowwise_iterator>();
-    std::cout << "iterating over the matrix F rowwise:\n";
-    for (; rit!=F.end<sq4::rowwise_iterator>(); ++rit) {
-        std::cout << " " << *rit;
+    if (check_rowwise_iterator(F, F.begin<sq4::rowwise_iterator>(), F.end<sq4::rowwise_iterator>()))
+    {
+        std::cout << "Rowwise iterator check PASSED\n";
     }
-    std::cout << '\n';
-    auto cit = F.begin<sq4::columnwise_iterator>();
-    std::cout << "iterating over the matrix F columnwise:\n";
-    for (; cit!=F.end<sq4::columnwise_iterator>(); ++cit) {
-        std::cout << " " << *cit;
+    else {
+        std::cout << "Rowwise iterator check FAILED\n";
     }
-    std::cout << '\n';
     
-    std::cout << "F is \n" << F << '\n';
+    if (check_colwise_iterator(F, F.begin<sq4::colwise_iterator>(), F.end<sq4::colwise_iterator>()))
+    {
+        std::cout << "Colwise iterator check PASSED\n";
+    }
+    else {
+        std::cout << "Colwise iterator check FAILED\n";
+    }
+    
     std::cout << "iterating over row 2 of matrix F\n";
     for (auto it=F.row(2).begin(); it!=F.row(2).end(); ++it) std::cout << *it << ", ";
     std::cout << '\n';
@@ -156,6 +203,100 @@ int main(int argc, char* argv[]) {
     std::cout << "random lvec6 in default range=" << long6 << '\n';
     std::cout << "random mat4 in (-2, 2)=" << double44 << '\n';
     std::cout << "random imat5 in (-12, 12)=" << int55 << '\n';
+    
+    */
+    {
+        typedef small_matrix_interface<DataBlock<double, 4>, 2, 2> alt_mat2;
+        typedef small_matrix_interface<DataBlock<float, 4>, 2, 2> alt_fmat2;
+        typedef small_matrix_interface<DataBlock<double, 16>, 4, 4> alt_mat4;
+        typedef small_matrix_interface<DataBlock<float, 16>, 4, 4> alt_fmat4;
+        typedef small_matrix_interface<DataBlock<int, 25>, 5, 5> alt_imat5;
+        alt_mat2 _A = alt_mat2::random(0, 1);
+        alt_mat2 _B = alt_mat2::random(0, 1);
+
+        alt_mat4 _C = alt_mat4::random(0, 1);
+        alt_mat4 _D = alt_mat4::random(0, 1);
+
+        std::cout << "A=" << _A << ", B=" << _B << ", C=" << _C << ", D=" << _D << '\n';
+        auto _E = _A*_B; 
+        auto _F = _C*inverse(_D);
+        std::cout << "AxB=" << _E << '\n';
+        std::cout << "A+B=" << _A+_B << '\n';
+        std::cout << "A-B=" << _A-_B << '\n';
+        std::cout << "A/B=" << _A/_B << '\n';
+        std::cout << "4. + C=" << 4. + _C << '\n';
+        std::cout << "int(4) + C=" << (int(4) + _C) << '\n';
+        auto blah = int(4) + _C;
+        std::cout << "after storage value is " << blah << '\n';
+        std::cout << "C + 4.=" << _C + 4. << '\n';
+        std::cout << "C + int(4)=" << _C + int(4) << '\n';
+        std::cout << "C * 4.=" << _C*4. << '\n';
+        std::cout << "C * int(4)=" << _C*int(4) << '\n';
+        std::cout << "4. * C=" << 4.*_C << '\n';
+        std::cout << "int(4)*C=" << (int(4)*_C) << '\n';
+        auto blih = int(4) * _C;
+        std::cout <<"after storage value is " << blih << "\n";
+        std::cout << "C / 4.=" << _C/4. << '\n';
+        std::cout << "C / int(4)=" << _C/int(4) << '\n';
+        std::cout << "b=" << b << '\n';
+        std::cout << "C + b=" << _C + b << '\n';
+        std::cout << "C - b=" << _C - b << '\n';
+        std::cout << "C.*b=" << _C.linalg(false)*b << '\n';
+        
+        
+        std::cout << "C*D^{-1}=" << _F << "\n";
+        std::cout << "C*D^{-1}*D=" << _C*inverse(_D)*_D << '\n';
+        std::cout << "C*D^{-1}*D*C^{-1}=" << _C*inverse(_D)*_D*inverse(_C) << '\n';
+        std::cout << "F is \n" << _F << '\n';
+        
+        std::cout << "the output of C*D^{-1}*D*C^{-1} has size " << whattypeami((_C*inverse(_D)*_D*inverse(_C))(0,0)) << '\n';
+    
+        if (check_rowwise_iterator(_F, _F.begin<alt_mat4::rowwise_iterator>(), _F.end<alt_mat4::rowwise_iterator>()))
+        {
+            std::cout << "Alt rowwise iterator check PASSED\n";
+        }
+        else {
+            std::cout << "Alt rowwise iterator check FAILED\n";
+        }
+        
+        if (check_colwise_iterator(_F, _F.begin<alt_mat4::columnwise_iterator>(), _F.end<alt_mat4::columnwise_iterator>()))
+        {
+            std::cout << "Alt colwise iterator check PASSED\n";
+        }
+        else {
+            std::cout << "Alt colwise iterator check FAILED\n";
+        }
+    
+        std::cout << "iterating over row 2 of matrix F\n";
+        for (auto it=_F.row(2).begin(); it!=_F.row(2).end(); ++it) std::cout << *it << ", ";
+        std::cout << '\n';
+        std::cout << "printing row 2 directly:\n" << _F.row(2) << '\n';
+        std::cout << "iterating over column 1 of matrix F\n";
+        for (auto it=_F.column(1).begin(); it!=_F.column(1).end(); ++it) std::cout << *it << ", ";
+        std::cout << '\n';
+        std::cout << "printing column 1 directly:\n" << _F.column(1) << '\n';
+    
+        std::cout << "replacing col 3 of F with col 1 of F\n";
+        std::copy(_F.column(3).begin(), _F.column(3).end(), _F.column(1).begin());
+        std::cout << "F is now:\n" << _F << '\n';
+    
+        std::cout << "Using operator= to replace column 2 of F by column 0 of F\n";
+        std::cout << "performing " << _F.column(2) << " = " << _F.column(0) << '\n';
+    
+        std::cout << "now\n";
+        _F.column(2) = _F.column(0);
+        std::cout << "F is now:\n" << _F << '\n';
+    
+        std::cout << "same thing for row 0 and row 3\n";
+        _F.row(3) = _F.row(0);
+        std::cout << "F is now\n" << _F << '\n';
+    
+        alt_mat4 double44 = alt_mat4::random(-2. , 2.);
+        alt_imat5 int55 = alt_imat5::random(-12, 12);
+    
+        std::cout << "random mat4 in (-2, 2)=" << double44 << '\n';
+        std::cout << "random imat5 in (-12, 12)=" << int55 << '\n';
+    }
 
     return 0;
 }

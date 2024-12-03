@@ -99,10 +99,28 @@ void FTLE(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input,
 template<typename T>
 void inverter(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input,
               const std::vector<int>& dims) {
-    assert(input.size()==1 && dims.size()==1);
+    assert(input.size()==1 && (dims.size()==1 || (dims.size()==2 && dims[0]==dims[1])));
     output.resize(1);
     // output[0]=spurt::nrrd_manip::invert<T>(input[0], dims[0], show_progress);
     output[0]=spurt::nrrd_manip::inverse<T>(input[0], dims[0], show_progress);
+}
+
+template<typename T>
+void determinant(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input,
+              const std::vector<int>& dims) {
+    assert(input.size()==1 && (dims.size()==1 || (dims.size()==2 && dims[0]==dims[1])));
+    output.resize(1);
+    // output[0]=spurt::nrrd_manip::invert<T>(input[0], dims[0], show_progress);
+    output[0]=spurt::nrrd_manip::determinant<T>(input[0], dims[0], show_progress);
+}
+
+template<typename T>
+void trace(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input,
+           const std::vector<int>& dims) {
+    assert(input.size()==1 && (dims.size()==1 || (dims.size()==2 && dims[0]==dims[1])));
+    output.resize(1);
+    // output[0]=spurt::nrrd_manip::invert<T>(input[0], dims[0], show_progress);
+    output[0]=spurt::nrrd_manip::trace<T>(input[0], dims[0], show_progress);
 }
 
 template<typename T>
@@ -114,6 +132,8 @@ void select_operator(std::vector<Nrrd*>& output, const std::vector<Nrrd*>& input
      else if (operator_name=="sum") return addition<T>(output, input, dims);
      else if (operator_name=="subtraction") return subtraction<T>(output, input, dims);
      else if (operator_name=="invert") return inverter<T>(output, input, dims);
+     else if (operator_name=="determinant") return determinant<T>(output, input, dims);
+     else if (operator_name=="trace") return trace<T>(output, input, dims);
      else if (operator_name=="SVD") return SVDecomposer<T>(output, input, dims);
      else if (operator_name=="eigen") return Eigendecomposer<T>(output, input, dims);
      else if (operator_name=="transpose+product") return transpose_multiplier<T>(output, input, dims);
@@ -167,6 +187,8 @@ int main(int argc, const char* argv[]) {
         "transpose: Transpose matrices (1 Nrrd)\n"
         "SVD: Singular value decomposition (1 Nrrd)\n"
         "invert: Invert square matrices (1 Nrrd)\n"
+        "determinant: Self-explanatory (1 Nrrd)\n"
+        "trace: Self-explanatory (1 Nrrd)\n"
         "transpose-product: Transpose first then multiply with second (2 Nrrds)\n"
         "Eigen: Eigenvalues and eigenvectors (1 Nrrd)\n"
         "FTLE: Finite-time Lyapunov exponent from flow map gradient (1 Nrrd)\n"
@@ -260,6 +282,20 @@ int main(int argc, const char* argv[]) {
                    output_file_names.size()==1 &&
                    (dims.size()==1 || (dims.size()==2 && dims[0]==dims[1])));
             select_type(output, input, dims, "invert", tname);
+        }
+        else if (opname=="determinant" || opname=="det") {
+            opname="det";
+            assert(input_file_names.size()==1 &&
+                   output_file_names.size()==1 &&
+                   (dims.size()==1 || (dims.size()==2 && dims[0]==dims[1])));
+            select_type(output, input, dims, "determinant", tname);
+        }
+        else if (opname=="trace" || opname=="tr") {
+            opname="trace";
+            assert(input_file_names.size()==1 &&
+                   output_file_names.size()==1 &&
+                   (dims.size()==1 || (dims.size()==2 && dims[0]==dims[1])));
+            select_type(output, input, dims, "trace", tname);
         }
         else if (opname=="transprod" || opname=="transx" || 
                  opname=="tprod" || opname=="tx") {

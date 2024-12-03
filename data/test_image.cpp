@@ -25,7 +25,7 @@ typedef vec3 pos_type;
 typedef vec3 vector_type;
 typedef mat3 jacobian_type;
 typedef vec3 gradient_type;
-typedef vec6 hessian_type;
+typedef mat3 hessian_type;
 typedef bbox3 bounds_type;
 
 bool sequential = false;
@@ -147,11 +147,11 @@ void test_image(const coord_type& res, const bounds_type& bounds,
     grid_type outgrid(coord_type(floor(upres*res)), bounds);
     
     typedef image_type<vector_type, Kernel> vec_image_type;
-    typedef typename vec_image_type::derivative_type vec_derivative_type;
+    typedef typename vec_image_type::first_derivative_type vec_derivative_type;
     typedef typename vec_image_type::second_derivative_type vec_second_derivative_type;
     
     typedef image_type<scalar_type, Kernel> scl_image_type;
-    typedef typename scl_image_type::derivative_type scl_derivative_type;
+    typedef typename scl_image_type::first_derivative_type scl_derivative_type;
     typedef typename scl_image_type::second_derivative_type scl_second_derivative_type;
     
     std::string basename = spurt::filename::remove_extension(outname);

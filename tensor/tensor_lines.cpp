@@ -25,7 +25,7 @@ char* tl_out;
 int r;
 float col[3];
 
-typedef small_vector<double, 7> tensor_type;
+typedef mat3 tensor_type;
 typedef spurt::nrrd_field<tensor_type, 3, double> tensor_field_type;
 typedef EigenvectorField<tensor_field_type> eigenvector_field_type;
 typedef EigenvectorField<DoublePointLoad> dpl_eigenvectorfield_type;

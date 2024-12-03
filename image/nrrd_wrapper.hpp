@@ -13,6 +13,7 @@
 #include <math/bounding_box.hpp>
 #include <math/vector_manip.hpp>
 #include <misc/meta_utils.hpp>
+#include <data/raster_data.hpp>
 
 
 namespace spurt { namespace nrrd_utils {
@@ -449,6 +450,29 @@ inline void to_vector(std::vector<T>& vals, const Nrrd* nin)
 template<typename T>
 inline void to_vector(std::vector<T>& vals, const nrrd_wrapper& wrap) {
     to_vector<T>(vals, wrap.pointer());
+}
+
+template<typename Size_, typename Scalar_, size_t Dim, typename Value_, 
+         typename Coord_ = small_vector<Size_, Dim>, typename Pos_ = small_vector<Scalar_, Dim>>
+inline void to_raster(raster_data<Size_, Scalar_, Dim, Value_, Coord_, Pos_>& out, 
+                      const Nrrd* nin, bool is_scalar=true) 
+{
+    typedef raster_data<Size_, Scalar_, Dim, Value_, Coord_, Pos_> raster_type;
+    typedef typename raster_type::grid_type grid_type;
+    typedef typename raster_type::coord_type coord_type;
+    typedef typename raster_type::value_type value_type;
+    
+    auto bounds = get_bounds<Dim>(nin, is_scalar);
+    nrrd_traits traits(nin);
+    int offset = is_scalar ? 0 : 1;
+    assert(nin->dim == Dim+offset);
+    assert( !is_scalar || std::is_scalar<value_type>::value );
+    coord_type res = 0;
+    auto _res = traits.sizes();
+    for (int i=0; i<Dim; ++i) res[i] = _res[i];
+    grid_type agrid(res, bounds);
+    out = raster_type(agrid);
+    to_vector(out.data(), nin);
 }
 
 template<typename T1, typename T2>

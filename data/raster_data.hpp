@@ -117,6 +117,9 @@ public:
     {
         return m_data[idx];
     }
+    
+    std::vector<value_type>& data() { return m_data; }
+    const std::vector<value_type>& data() const { return m_data; }
 
 protected:
     grid_type m_grid;

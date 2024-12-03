@@ -3,7 +3,7 @@ set(FLOW_LIB_SRC
 )
 
 add_library( spurt_flow ${LIBMODE} ${FLOW_LIB_SRC} )
-target_link_libraries( spurt_flow ${Teem_LIBRARIES} )
+target_link_libraries( spurt_flow ${Teem_LIBRARIES} spurt_image )
 install( TARGETS spurt_flow
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib

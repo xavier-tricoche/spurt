@@ -1134,6 +1134,28 @@ namespace spurt {
     {
         return sqrt(norm_square(a));
     }
+    
+    template <typename Storage>
+    typename Storage::value_type
+    l1_norm(const small_vector_interface<Storage>& a) 
+    {
+        typename Storage::value_type r = 0;
+        std::for_each(a.begin(), a.end(), [&](auto v) { 
+            r += std::abs(v);
+        });
+        return r;
+    }
+    
+    template <typename Storage>
+    typename Storage::value_type
+    linf_norm(const small_vector_interface<Storage>& a)
+    {
+        typename Storage::value_type r=0;
+        std::for_each(a.begin(), a.end(), [&](auto v) {
+            r = std::max(r, std::abs(v));
+        });
+        return r;
+    }
 
     template <typename T, typename Storage>
     small_vector_interface<typename better_storage<Storage, T>::type>

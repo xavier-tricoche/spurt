@@ -10,10 +10,10 @@
 
 // voxel stuff
 
-typedef nvis::fixed_vector<int, 8>  voxel;
-typedef nvis::lexicographical_order Lt_voxel;
+typedef spurt::small_vector<int, 8>  voxel;
+typedef spurt::lexicographical_order Lt_voxel;
 Lt_voxel __Lt_voxel;
-inline voxel create_voxel(int i, const nvis::ivec3& size)
+inline voxel create_voxel(int i, const spurt::ivec3& size)
 {
     voxel v;
     v[0] = i;
@@ -29,8 +29,8 @@ inline voxel create_voxel(int i, const nvis::ivec3& size)
 
 // face stuff
 
-typedef nvis::fixed_vector<int, 4>  face;
-typedef nvis::lexicographical_order Lt_face;
+typedef spurt::small_vector<int, 4>  face;
+typedef spurt::lexicographical_order Lt_face;
 Lt_face __Lt_face;
 const int voxel_faces[][4] = {
     {0, 1, 2, 3},
@@ -469,13 +469,13 @@ bool triangulate(std::vector<triangle>& triangles,
     return true;
 }
 
-inline nvis::fvec3 coord(int i, const nvis::ivec3& size, const nvis::vec3& step)
+inline spurt::fvec3 coord(int i, const spurt::ivec3& size, const spurt::vec3& step)
 {
     int u, v, w, j = i / size[0];
     u = i % size[0];
     v = j % size[1];
     w = j / size[1];
-    return nvis::fvec3((float)u*step[0], (float)v*step[1], (float)w*step[2]);
+    return spurt::fvec3((float)u*step[0], (float)v*step[1], (float)w*step[2]);
 }
 
 int main(int argc, char* argv[])
@@ -489,8 +489,8 @@ int main(int argc, char* argv[])
     Nrrd* nin = spurt::readNrrd(argv[1]);
     std::vector<float> values;
     spurt::to_vector(values, nin);
-    nvis::ivec3 size;
-    nvis::vec3 step;
+    spurt::ivec3 size;
+    spurt::vec3 step;
     for (int i = 0 ; i < 3 ; ++i) {
         size[i] = nin->axis[i].size;
         step[i] = nin->axis[i].spacing;
@@ -649,10 +649,10 @@ int main(int argc, char* argv[])
     std::cerr << triangles.size() << " triangles in triangulation\n";
     
     std::map<vertex, int>       pos_ids;
-    std::vector<nvis::fvec3>    pos;
+    std::vector<spurt::fvec3>    pos;
     for (std::set<vertex>::const_iterator it = vertices.begin() ; it != vertices.end() ; ++it) {
         const vertex& v = *it;
-        nvis::fvec3 x;
+        spurt::fvec3 x;
         if (v.type == 0) {
             x = 0.5 * (coord(v.e.first, size, step) + coord(v.e.second, size, step));
         } else if (v.type == 1) {

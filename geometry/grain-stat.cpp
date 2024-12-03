@@ -8,7 +8,7 @@
 #include <image/nrrd_wrapper.hpp>
 #include <misc/progress.hpp>
 #include <math/basic_math.hpp>
-#include <math/tensor.hpp>
+#include <math/small_tensor.hpp>
 #include <math/types.hpp>
 
 char* outs, *file, *att;

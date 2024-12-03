@@ -5,7 +5,6 @@
 #include <math/types.hpp>
 #include <data/raster_data.hpp>
 
-
 namespace spurt
 {
 namespace kernels
@@ -155,6 +154,78 @@ namespace kernels
 
 } // namespace kernels
 
+namespace differential
+{
+    template<typename T, size_t SpatialDim, typename Enable = void>
+    struct derivatives {};
+    
+    template<typename T, size_t SpatialDim>
+    struct derivatives<T, SpatialDim,
+                       typename std::enable_if<std::is_scalar<T>::value>::type>
+    {
+        typedef T value_type;
+        typedef T scalar_type;
+        typedef small_vector<T, SpatialDim> first_derivative_type;
+        typedef small_matrix<T, SpatialDim> second_derivative_type;
+        
+        static void set_dfdxi(int i, const value_type& v, first_derivative_type& df) {
+            df[i] = v;
+        }
+        
+        static void set_d2fdxij(int i, int j, const value_type& v, second_derivative_type& d2f) {
+            d2f(i, j) = v;
+        }
+    };
+   
+    template<typename T, size_t SpatialDim>
+    struct derivatives<small_vector<T, SpatialDim>, SpatialDim, 
+                       typename std::enable_if<std::is_scalar<T>::value>::type>
+    {
+        typedef T scalar_type;
+        typedef small_matrix<T, SpatialDim, SpatialDim> first_derivative_type;
+        typedef small_vector<T, SpatialDim> value_type;
+        typedef small_tensor<T, SpatialDim, SpatialDim, SpatialDim> second_derivative_type;
+        
+        static void set_dfdxi(int i, const value_type& v, first_derivative_type& df) {
+            df.column(i) = v;
+        }
+        // static const value_type& dfdxi(int i, const first_derivative_type& df) {
+        //     return df.column(i);
+        // }
+        
+        static void set_d2fdxij(int i, int j, const value_type& v, second_derivative_type& d2f) {
+            d2f.column(i, j) = v;
+        }
+        // static const value_type& d2fdxij(int i, int j, const second_derivative_type& d2f) {
+        //     return d2f.column(i, j);
+        // }
+        
+    };
+   
+    template<typename T, size_t SpatialDim>
+    struct derivatives<small_matrix<T, SpatialDim>, SpatialDim, 
+                       typename std::enable_if<std::is_scalar<T>::value>::type>
+    {
+        typedef T scalar_type;
+        typedef small_tensor<T, SpatialDim, SpatialDim, SpatialDim> first_derivative_type;
+        typedef small_matrix<T, SpatialDim, SpatialDim> value_type;
+        typedef small_tensor<T, SpatialDim, SpatialDim, SpatialDim*SpatialDim> second_derivative_type;
+        
+        static void set_dfdxi(int i, const value_type& v, first_derivative_type& df) {
+            df.layer(i) = v;
+        }
+        
+        static void set_d2fdxij(int i, int j, const value_type& v, second_derivative_type& d2f) {
+            // there are N * N layers
+            // J(i,j) = dfi/dxj
+            // d2f/dxidxj = layers[i+j*N] 
+            
+            d2f.layer(i+j*SpatialDim) = v;
+        }
+        
+    };
+}
+
 template <typename Size_, typename Scalar_, size_t Dim, typename Value_,
           typename Kernel_=kernels::Linear, typename Coord_ = small_vector<Size_, Dim>,
           typename Pos_ = small_vector<Scalar_, Dim> >
@@ -164,7 +235,6 @@ public:
     typedef raster_data<Size_, Scalar_, Dim, Value_, Coord_, Pos_> base_type;
     typedef typename base_type::size_type size_type;
     static const size_type dimension = base_type::dimension;
-    static const size_type hess_dim = dimension*(dimension+1)/2;
 
     typedef typename base_type::scalar_type scalar_type;
     typedef typename base_type::pos_type pos_type;
@@ -174,8 +244,11 @@ public:
     typedef typename base_type::value_type value_type;
     typedef data_traits<value_type> value_traits;
 
-    typedef std::array<value_type, dimension> derivative_type;
-    typedef std::array<value_type, hess_dim>   second_derivative_type;
+    typedef differential::derivatives<value_type, Dim> deriv_info_type;
+    typedef typename deriv_info_type::first_derivative_type first_derivative_type;
+    typedef typename deriv_info_type::second_derivative_type second_derivative_type;
+    typedef typename deriv_info_type::value_type derivative_element;
+    
     typedef typename base_type::iterator iterator;
     typedef typename base_type::const_iterator const_iterator;
     typedef image<Size_, Scalar_, Dim, Value_, Kernel_, Coord_, Pos_> self_type;
@@ -190,94 +263,59 @@ private:
                           const coord_type &dorder = coord_type(0)) 
                           const {  
         value_type r = value_traits::zero();
-        scalar_type allw = 0;
         const coord_type& res = this->grid().resolution();
-        const coord_type& coord = c;
-        const coord_type& order = dorder;
-        const pos_type& pos = u;
-
         const int width = static_cast<int>(m_kernel.size);
         for (int i = 1-width; i <= width; ++i) {
-            int ii = kernels::fix_index(coord[0] + i, res[0]);
-            scalar_type wi = m_kernel(pos[0] - i, dorder[0]);
-            allw += wi;
+            int ii = kernels::fix_index(c[0] + i, res[0]);
+            scalar_type wi = m_kernel(u[0] - i, dorder[0]);
             r +=  wi * this->m_data[ii];
         }
-        return r/allw;
+        return r;
     }
 
     value_type convolve2D(const pos_type &u, const coord_type &c, 
                           const coord_type &dorder = coord_type(0)) 
                           const {
         value_type r = value_traits::zero();
-        scalar_type allw = 0;
         const coord_type& res = this->grid().resolution();
-        const coord_type& coord = c;
-        const coord_type& order = dorder;
-        const pos_type& pos = u;
         const int width = static_cast<int>(m_kernel.size);
         for (int j = 1 - width; j <= width; ++j)
         {
-            int jj = kernels::fix_index(j + coord[1], res[1]);
-            scalar_type wj = m_kernel(pos[1] - j, order[1]);
+            int jj = kernels::fix_index(j + c[1], res[1]);
+            scalar_type wj = m_kernel(u[1] - j, dorder[1]);
             for (int i = 1 - width; i <= width; ++i)
             {
-                int ii = kernels::fix_index(i + coord[0], res[0]);
-                scalar_type wij = wj * m_kernel(pos[0] - i, order[0]);
-                allw += wij;
+                int ii = kernels::fix_index(i + c[0], res[0]);
+                scalar_type wij = wj * m_kernel(u[0] - i, dorder[0]);
                 r += wij * this->m_data[this->m_grid.index(ii, jj)];
             }
         }
-        return r / allw;
+        return r;
     }
 
     value_type convolve3D(const pos_type &u, const coord_type &c, 
                           const coord_type &dorder = coord_type(0)) 
                           const {
-        bool verbose = false;
-        if (verbose) std::cout << "convolve3d: u=" << u << ", c=" << c << ", dorder=" << dorder << '\n';
-        if (verbose) std::cout << "width = " << m_kernel.size << '\n';
         value_type r = value_traits::zero();
-        scalar_type allw = 0;
         const coord_type& res = this->grid().resolution();
-        if (verbose) std::cout << "res = " << res << '\n';
-        const coord_type& coord = c;
-        const coord_type& order = dorder;
-        const pos_type& pos = u;
         const int width = static_cast<int>(m_kernel.size);
         for (int k = 1-width; k <= width; ++k)
         {
-            if (verbose) std::cout << "k=" << k << '\n';
-            int kk = kernels::fix_index(k+coord[2], res[2]);
-            if (verbose) std::cout << "kk=" << kk << '\n';
-            scalar_type wk = m_kernel(pos[2] - k, order[2]);
-            if (verbose) std::cout << "kernel(" << pos[2]-k << ", " << order[2] << ")=" << wk << '\n';
+            int kk = kernels::fix_index(k+c[2], res[2]);
+            scalar_type wk = m_kernel(u[2] - k, dorder[2]);
             for (int j = 1-width; j <= width; ++j)
             {
-                if (verbose) std::cout << "j=" << j << '\n';
-                int jj = kernels::fix_index(j+coord[1], res[1]);
-                if (verbose) std::cout << "jj=" << jj << '\n';
-                scalar_type wjk = wk * m_kernel(pos[1] - j, order[1]);
-                if (verbose) std::cout << "kernel(" << pos[1]-j << ", " << order[1] << ") = " << m_kernel(pos[1]-j, order[1]) << '\n';
+                int jj = kernels::fix_index(j+c[1], res[1]);
+                scalar_type wjk = wk * m_kernel(u[1] - j, dorder[1]);
                 for (int i = 1-width; i <= width; ++i)
                 {
-                    if (verbose) std::cout << "i=" << i << '\n';
-                    int ii = kernels::fix_index(i+coord[0], res[0]);
-                    if (verbose) std::cout << "ii=" << ii << '\n';
-                    scalar_type wijk = wjk * m_kernel(pos[0] - i, order[0]);
-                    if (verbose) std::cout << "kernel(" << pos[0]-i << ", " << order[0] << ")=" << wijk << '\n';
-                    allw += wijk;
-                    if (verbose) std::cout << "allw(" << i << ", " << j << ", " << k << ", " << order << ")=" << allw << '\n';
+                    int ii = kernels::fix_index(i+c[0], res[0]);
+                    scalar_type wijk = wjk * m_kernel(u[0] - i, dorder[0]);
                     r += wijk * this->m_data[this->m_grid.index(ii, jj, kk)];
-                    if (verbose) std::cout << "r=" << r << '\n';
                 }
             }
         }
-        if (verbose) {
-            std::cout << "Returning " << r << " / " << allw << " = " << r/allw << '\n';
-            if (std::abs(allw) < 1.0e-9) std::cout << "WARNING!!!\n";
-        }
-        return r; // / allw;
+        return r;
     }
 
     value_type convolve4D(const pos_type &u, const coord_type &c,
@@ -285,35 +323,30 @@ private:
                           const
     {
         value_type r = value_traits::zero();
-        scalar_type allw = 0;
-        const coord_type&  res = this->grid().resolution();
-        const coord_type&  coord = c;
-        const coord_type& order = dorder;
-        const pos_type&  pos = u;
+        const coord_type& res = this->grid().resolution();
         const int width = static_cast<int>(m_kernel.size);
         for (int l = 1 - width; l <= width; ++l)
         {
-            int ll = kernels::fix_index(l + coord[3], res[3]);
-            scalar_type wl = m_kernel(pos[3] - l, order[3]);
+            int ll = kernels::fix_index(l + c[3], res[3]);
+            scalar_type wl = m_kernel(u[3] - l, dorder[3]);
             for (int k = 1 - width; k <= width; ++k)
             {
-                int kk = kernels::fix_index(k + coord[2], res[2]);
-                scalar_type wkl = wl * m_kernel(pos[2] - k, order[2]);
+                int kk = kernels::fix_index(k + c[2], res[2]);
+                scalar_type wkl = wl * m_kernel(u[2] - k, dorder[2]);
                 for (int j = 1 - width; j <= width; ++j)
                 {
-                    int jj = kernels::fix_index(j + coord[1], res[1]);
-                    scalar_type wjkl = wkl * m_kernel(pos[1] - j, order[1]);
+                    int jj = kernels::fix_index(j + c[1], res[1]);
+                    scalar_type wjkl = wkl * m_kernel(u[1] - j, dorder[1]);
                     for (int i = 1 - width; i <= width; ++i)
                     {
-                        int ii = kernels::fix_index(i + coord[0], res[0]);
-                        scalar_type wijkl = wjkl * m_kernel(pos[0] - i, order[0]);
-                        allw += wijkl;
+                        int ii = kernels::fix_index(i + c[0], res[0]);
+                        scalar_type wijkl = wjkl * m_kernel(u[0] - i, dorder[0]);
                         r += wijkl * this->m_data[this->m_grid.index(ii, jj, kk, ll)];
                     }
                 }
             }
         }
-        return r / allw;
+        return r;
     }
 
     value_type convolve(const pos_type &u, const coord_type &c, 
@@ -366,20 +399,21 @@ public:
     }
 
     // derivative at arbitrary locations
-    derivative_type derivative(const pos_type &p) const {
+    first_derivative_type derivative(const pos_type &p) const {
         std::pair<coord_type, pos_type> r = this->grid().locate(p);
         return derivative_in_voxel(r.first, r.second);
     }
 
-    derivative_type derivative_in_voxel(const coord_type &vid, 
+    first_derivative_type derivative_in_voxel(const coord_type &vid, 
                                         const pos_type &p) const {
-        derivative_type df;
+        first_derivative_type df;
         coord_type order(0);
+        const pos_type& spc = this->grid().spacing();
         for (int d = 0; d < dimension; ++d)
         {
             order[d] = 1;
-            df[d] = convolve(p, vid, order);
-            df[d] /= this->grid().spacing()[d];
+            auto v = convolve(p, vid, order)/spc[d];
+            differential::derivatives<value_type, dimension>::set_dfdxi(d, v, df);
             order[d] = 0;
         }
         return df;
@@ -396,32 +430,26 @@ public:
                                                       const {
         second_derivative_type d2f;
         coord_type order(0);
-        int offset=0;
+        const pos_type& spc = this->grid().spacing();
         for (int d = 0; d < dimension; ++d)
         {
-            order[d] = 2; // diagonal
-            d2f[offset] = convolve(p, vid, order);
-            d2f[offset] /= this->grid().spacing()[d] * 
-                           this->grid().spacing()[d];
             order[d] = 1;
-            for (int dd=d+1; dd<dimension; ++dd) {
-                order[dd] = 1;
-                offset += 1;
-                d2f[offset] = convolve(p, vid, order);
-                d2f[offset] /= this->grid().spacing()[d]* 
-                               this->grid().spacing()[dd];
-                order[dd] = 0;
+            for (int d2=d; d2 < dimension; ++d2) {
+                order[d2]+= 1;
+                auto v = convolve(p, vid, order) / (spc[d]*spc[d2]);
+                differential::derivatives<value_type, dimension>::set_d2fdxij(d, d2, v, d2f);
+                if (d2>d)
+                    differential::derivatives<value_type, dimension>::set_d2fdxij(d2, d, v, d2f);
+                --order[d2];
             }
             order[d] = 0;
         }
         return d2f;
-    }
+    };
 
 private:
     kernel_type m_kernel;
 };
-
-
 
 template <typename Value, typename Kernel = kernels::Linear>
 using image2d = image<long, double, 2, Value, Kernel>;
