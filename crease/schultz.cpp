@@ -56,14 +56,15 @@ constexpr int exotic_case = 4;
 constexpr int not_enough_edges = 5;
 
 
-typedef image<long, double, 3, double, kernels::Linear, lvec3, vec3> scalar_image_type;
-typedef image<long, double, 3,   vec3, kernels::Linear, lvec3, vec3> vector_image_type;
-typedef image<long, double, 3,   mat3, kernels::Linear, lvec3, vec3> matrix_image_type;
+// scalar, vector, and tensor field with C2 B-spline interpolation
+typedef image<long, double, 3, double, kernels::MitchellNetravaliBC, lvec3, vec3> scalar_image_type;
+typedef image<long, double, 3,   vec3, kernels::MitchellNetravaliBC, lvec3, vec3> vector_image_type;
+typedef image<long, double, 3,   mat3, kernels::MitchellNetravaliBC, lvec3, vec3> matrix_image_type;
 typedef scalar_image_type::grid_type grid_type;
 typedef Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic> dyn_mat_type;
 
 template<typename Value_>
-using _image = image<long, double, 3, Value_, kernels::Linear, lvec3, vec3>;
+using _image = image<long, double, 3, Value_, kernels::MitchellNetravaliBC, lvec3, vec3>;
 
 typedef lvec3 CoordID;
 
@@ -95,30 +96,33 @@ int distance(const CoordID& c0, const CoordID& c1) {
     return linf_norm(c1-c0);
 }
 
-struct EdgeID 
+struct EdgeID : public std::pair<CoordId, CoordId>
 {
+    typedef CoordId value_type;
+    typedef std::pair<CoordId, CoordId> base_type;
+    typedef spurt::lexicographical_order less_type;
+
     EdgeID(const CoordID& c0, const CoordID& c1)
-        : m_c0(c0), m_c1(c1) {
-        spurt::lexicographical_order less;
-        if (less(c1, c0)) {
-            m_c1 = c0;
-            m_c0 = c1;
+        : base_type(c0, c1) {
+        less_type less;
+        if (less(base_type::second, base_type::first)) {
+            std::swap(base_type::first, base_type::second);
         }
     }
 
     bool operator<(const EdgeID& other) const {
-        spurt::lexicographical_order less;
-        if (less(m_c0, other.m_c0)) return true;
-        else if (less(other.m_c0, m_c0)) return false;
-        else return less(m_c1, other.m_c1);
+        less_type less;
+        if (less(base_type::first, other.first)) return true;
+        else if (less(other.first, base_type::first)) return false;
+        else return less(base_type::second, other.second);
     }
 
     CoordID& operator[](int i) {
         if (i==0) {
-            return m_c0;
+            return base_type::first;
         }
         else if (i==1) {
-            return m_c1;
+            return base_type::second;
         }
         else {
             throw std::runtime_error("Invalid index for EdgeID");
@@ -128,25 +132,23 @@ struct EdgeID
     const CoordID& operator[](int i) const {
         if (i == 0)
         {
-            return m_c0;
+            return base_type::first;
         }
         else if (i == 1)
         {
-            return m_c1;
+            return base_type::second;
         }
         else
         {
             throw std::runtime_error("Invalid index for EdgeID");
         }
     }
-
-    CoordID m_c0, m_c1;
 };
 
 std::ostream &
 operator<<(std::ostream &os, const EdgeID &e)
 {
-    os << "[" << e.m_c0 << " - " << e.m_c1 << "]";
+    os << "[" << e.first << " - " << e.second << "]";
     return os;
 }
 
@@ -191,6 +193,59 @@ std::pair<vec3, mat3> evall(const mat3& H) {
 
 mat3 schultz_tensorT(const mat3& H, double theta=0.01)
 {
+    /*
+    
+    A = Q^t L Q
+
+    A Q = L Q
+
+    aij qjk = lk qik 
+    
+    ELL_3M_TRANSPOSE(evecTrans,evecs);
+
+    (\nabla H)_E = Q (\nabla H) Q^t
+    diff = lmed - lmin
+    if (diff < theta):
+        l3 = (1-diff/theta)^2
+    else:
+        l3 = 0
+
+    (\nabla H)_E (xz) = (\nabla H)_E (zx) = (\nabla H)_E (xz) * (1-l3)/(lmax-lmin)
+    (\nabla H)_E (yz) = (\nabla H)_E (zy) = (\nabla H)_E (yz) * (1-l3)/(lmed-lmin)
+
+    if (diff < theta):
+        \nabla l3 = 2/theta * (1-diff/theta) * ((\nabla H)_E (zz) - (\nabla H)_E (yy))
+    else:
+        \nabla l3 = 0
+
+    (\nabla H)_E (zz) = \nabla l3
+    (\nabla H)_E (xx) = (\nabla H)_E (xy) = (\nabla H)_E (yx) = (\nabla H)_E (yy) = 0
+
+  if (ridge) {
+    double diff=evals[1]-evals[2];
+    double l3;
+    double l3der;
+    if (diff<evalDiffThresh)
+      l3=(1.0-diff/evalDiffThresh)*(1.0-diff/evalDiffThresh);
+    else l3=0.0;
+    hessderE[2]*=(1.0-l3)/(evals[0]-evals[2]);
+    hessderE[6]=hessderE[2];
+    hessderE[5]*=(1.0-l3)/(evals[1]-evals[2]);
+    hessderE[7]=hessderE[5];
+
+    if (diff<evalDiffThresh)
+      l3der = 2/evalDiffThresh*(1-diff/evalDiffThresh)*
+        (hessderE[8]-hessderE[4]);
+    else
+      l3der=0;
+    hessderE[8]=l3der;
+    hessderE[0]=hessderE[1]=hessderE[3]=hessderE[4]=0.0;
+
+
+
+    
+    */
+
     mat3 Q;
     vec3 l;
     sym_eigensystem(l, Q, H);
@@ -210,83 +265,12 @@ vec3 schultz_vectorh(const mat3& H, const vec3& g, double theta=0.01)
     return T*g - g;
 }
 
-double determinant(const vec3& g, const mat3& H, bool normalize=false) {
-    mat3 A;
-    A.column(0) = g;
-    A.column(1) = H * g;
-    A.column(2) = H * A.column(1);
+vec3 ridge_normal(const vec3& point, const mat3& H, const vec3& g, 
+                  const matrix_image& hessian)
+{
 
-    if (normalize) {
-        A.column(0) /= norm(g);
-        A.column(1) /= norm(A.column(1));
-        A.column(2) /= norm(A.column(2));
-    }
-    return determinant(A);
-};
-
-template<typename T>
-class LinearFunction {
-public:
-    typedef T value_type;
-
-    LinearFunction() : m_v0(), m_v1() {}
-
-    LinearFunction(const value_type& val0, const value_type& val1) :
-        m_v0(val0), m_v1(val1) {}
-
-    value_type operator()(double u) const {
-        return linear(u, m_v0, m_v1);
-    }
-
-private:
-    value_type m_v0, m_v1;
-};
-
-typedef LinearFunction<double> scalar_function;
-typedef LinearFunction<vec3> vector_function;
-typedef LinearFunction<mat3> matrix_function;
-
-class C0Criterion {
-public:
-    C0Criterion(const vector_function& gfunc, const matrix_function& hfunc) {
-        m_gfunc = gfunc;
-        m_hfunc = hfunc;
-    }
-
-    double operator()(double u) const {
-        auto g = m_gfunc(u);
-        auto h = m_hfunc(u);
-        return determinant(g, h);
-    }
-private:
-    vector_function m_gfunc;
-    matrix_function m_hfunc;
-};
-
-template<typename Func>
-double find_zero_crossing(const Func& func, double umin = 0, double umax = 1, double eps=1.0e-12, int maxn=100) {
-    // print('find zero crossing')
-    double fmin = func(umin);
-    double fmax = func(umax);
-    if (fmin * fmax >= 0) return -1;
-    // det(0) * det(1) < 0
-
-    double f = 1;  // default value
-    double u;
-    for (int n=0; ((umax - umin) > 1.0e-9 or std::fabs(f) > eps) and n < maxn; ++n) {
-        u = 0.5 * (umin + umax);
-        f = func(u);
-        if (fmin*f < 0) {
-            umax = u;
-            fmax = f;
-        } 
-        else {
-            umin = u; 
-            fmin = f;
-        } 
-    }
-    return u;
 }
+
 
 std::pair<vec3, double> project(const vec3& g, const mat3& h) {
     vec3 evals;
@@ -294,23 +278,6 @@ std::pair<vec3, double> project(const vec3& g, const mat3& h) {
     sym_eigensystem(evals, evecs, h);
     vec3 coords = spurt::abs(transpose(evecs)*g);
     return std::make_pair(coords, evals[2]);
-}
-
-bool check_solution(double u, const vector_function& gfunc, const matrix_function& hfunc,
-                    bool verbose=false) {
-    vec3 evals;
-    mat3 evecs;
-    sym_eigensystem(evals, evecs, hfunc(u));
-    vec3 coords = spurt::abs(transpose(evecs)*gfunc(u));
-    if (verbose) {
-        std::cout << "eigenvalues: " << evals << '\n'
-        << "eigenvectors: " << evecs << '\n'
-        << "coordinates: " << coords << '\n';
-    }
-
-    int which = std::distance(coords.begin(), std::min_element(coords.begin(), coords.end()));
-    double minval = coords[which];
-    return (which == 0) && minval < 1.0e-6*mean(coords);
 }
 
 template<typename T, size_t N>
@@ -365,179 +332,7 @@ int case_number(const std::array<bool, 12>& edges) {
         }
     }
     return cn;
-}
 
-typedef std::array<vec3, 3> triangle_type;
-int triangulate(std::vector<triangle_type>& out, 
-                 std::map<int, std::vector<vec3>> &edges, 
-                 std::ostream& os)
-{
-    os << "triangles: edges contains " << edges.size() << " edges with ridge points\n";
-    out.clear();
-
-    std::map<int, int> edge_to_nbsols;
-    int nbsols = 0;
-    for (auto iter=edges.begin(); iter!=edges.end(); ++iter) 
-    {
-        edge_to_nbsols[iter->first] = iter->second.size();
-        nbsols += iter->second.size();
-    }
-
-    os << "There are " << nbsols << " ridge points over " << edges.size() << " in total\n";
-
-    // if we only have 3 or less points, things are easy
-    if (edges.size() == 3 && nbsols == 3) 
-    {
-        triangle_type T;
-        int i=0;
-        for (auto iter=edges.begin(); iter!=edges.end(); ++iter, ++i) 
-        {
-            T[i] = iter->second[0];
-        }
-        out.push_back(T);
-        os << "3 points on 3 edges: success!\n";
-        return one_triangle;
-    }
-    else if (edges.size() < 3)
-    {
-        os << "We have only 2 (or less) edges in input of triangulation.\n"
-           << "Giving up (Case N<3)\n";
-        return not_enough_edges;
-    }
-    // If we have several points on one edge and two edges, 
-    // we could triangulate put that implies finding a ridge 
-    // that ends in this voxel.
-    /*
-        ------X---- 
-       |    / |    |
-       |   /  |    |
-       |  /   |    |
-        --X---X----
-    */
-
-    if (nbsols == edges.size()) 
-    {
-        // Calculate edge case number
-        int edge_case = 0;
-        for (auto iter=edges.begin(); iter!=edges.end(); ++iter) 
-        {
-            edge_case += 1 << iter->first;
-        }
-        os << "edge_case = " << edge_case << '\n';
-        int triangle_case = spurt::marching_cubes::edge_code_to_case_id[edge_case];
-        os << "triangle_case = " << triangle_case << '\n';
-
-        if (triangle_case == -1) // invalid
-        {
-            os << "the edges do not match a valid MC case...\n Giving up. (Case NoMC)\n";
-            return invalid_mc_case;
-        }
-
-        auto indices = spurt::marching_cubes::triTable[triangle_case];
-        for (int i=0; i<15 && indices[i]!=-1; i+=3) 
-        {
-            out.push_back(triangle_type({{edges[indices[i]][0], edges[indices[i+1]][0], edges[indices[i+2]][0]}}));
-            const triangle_type& t = out.back();
-            os << "added triangle: " << t << '\n';
-        }
-        os << "A valid MC case was found and " << out.size() << " triangles "
-           << "were created.\n";
-        return valid_mc_case;
-    }
-    else
-    {
-        // 3 or more edges, some of which have several points
-        // for now, do nothing
-        return exotic_case;
-    }
-}
-
-void fit_spline(tk::spline& spline, const std::vector<double>& u, C0Criterion& f) {
-    std::vector<double> values;
-    std::for_each(u.begin(), u.end(), [&](double x){ values.push_back(f(x)); });
-    spline.set_points(u, values);
-}
-
-std::vector<double> bisection_spline_local_extremum(tk::spline &, double, double, bool);
-
-std::vector<double> newton_spline_local_extremum(tk::spline &spline, double u0, double u1, bool verbose)
-{
-    // Newton:
-    // f(x+dx) = 0 = f(x) + f'(x)dx <=> dx = -f(x)/f'(x)
-    double f0 = spline(u0);
-    double f1 = spline(u1);
-    double u = -f0/(f1-f0); // initial guess (linear solution)
-    double f = spline.deriv(1, u);
-    int iter = 0;
-    std::vector<double> all_us;
-    if (verbose)
-    {
-        std::cout << "Looking for local extremum\n";
-    }
-    while (std::abs(f) > 1.0e-6 && iter < 10)
-    {
-        double d2f = spline.deriv(2, u);
-        all_us.push_back(u);
-        if (d2f == 0)
-        {
-            if (verbose) std::cout << "vanishing 2nd derivative: resorting to bisection\n";
-            return bisection_spline_local_extremum(spline, u0, u1, verbose);
-        }
-        double dx = -f / d2f;
-        double uu = u + dx;
-        if (uu > u1) u = u1;
-        else if (uu < u0) u = u0;
-        else u = uu;
-        if (verbose)
-        {
-            std::cout << "u=" << u << ", df/dt=" << f << ", d2f/dt2=" << d2f << ", dx=" << dx << '\n';
-        }
-        f = spline.deriv(1, u);
-        if (verbose)
-        {
-            std::cout << "df/dt=" << f << '\n';
-        }
-        iter += 1;
-    }
-    return all_us;
-}
-
-std::vector<double> bisection_spline_local_extremum(tk::spline& spline, double u0, double u1, bool verbose) 
-{
-    double f0 = spline.deriv(1, u0);
-    double f1 = spline.deriv(1, u1);
-    double u, t;
-    std::vector<double> all_us;
-    for (int i=0; i<10; ++i) 
-    {
-        t = -f0/(f1-f0);
-        u = (1-t)*u0 + t*u1;
-        all_us.push_back(u);
-        double f = spline.deriv(1, u);
-        if (verbose)
-        {
-            std::cout << "bisection search: iteration " << i << ", df/dt=" << f << ", u0=" << u0 << ", u1=" << u1 << '\n';
-        }
-        if (f*f0 > 0)
-        {
-            u0 = u;
-            f0 = f;
-        }
-        else
-        {
-            u1 = u;
-            f1 = f;
-        }
-    }
-    t = -f0/(f1-f0);
-    u = (1 - t) * u0 + t * u1;
-    all_us.push_back(u);
-    double f = spline.deriv(1, u);
-    if (verbose)
-    {
-        std::cout << "final derivative: " << f << '\n';
-    }
-    return all_us;
 }
 
 std::pair<int, double>
@@ -554,351 +349,13 @@ analyze_edge_schultz(const EdgeID &e,
     {
         double n0 = h0.norm();
         double n1 = h1.norm();
+        // model zero crossing as: (1-u) n0 - u n1 = 0 <=> u (n0 + n1) = n0
         double u = n0/(n1+n0);
         return std::pair(1, u);
     }
     else
     {
         return std::pair(0, 0.);
-    }
-}
-
-std::pair<int, std::vector<double>>
-analyze_edge(const EdgeID &e,
-             const vector_image_type &gradient,
-             const matrix_image_type &hessian,
-             const scalar_image_type &data,
-             bool verbose = false,
-             const int sampling_res = 10,
-             const double delta = 0.05,
-             const double mind = 0.001,
-             const double min_value = 0,
-             const double min_strength = 1.0e-9,
-             const double min_criterion = 1.0e-9,
-             const double min_determinant = 1.0e-9)
-{
-
-    CoordID vs[2];
-    vec3 gs[2];
-    mat3 hs[2];
-    double fs[2];
-    double cs[2];
-    double lmins[2];
-    for (int i=0; i<2; ++i) {
-        hs[i] = hessian(e[i][0], e[i][1], e[i][2]);
-        gs[i] = gradient(e[i][0], e[i][1], e[i][2]);
-        fs[i] = data(e[i][0], e[i][1], e[i][2]);
-        cs[i] = determinant(gs[i], hs[i]);
-        lmins[i] = evmin(hs[i]).first;
-    }
-    
-    vector_function gfunc = vector_function(gs[0], gs[1]);
-    matrix_function hfunc = matrix_function(hs[0], hs[1]);
-    C0Criterion cfunc(gfunc, hfunc);
-    
-    double du = 1./static_cast<double>(sampling_res-1);
-    std::map<double, double> values;
-    std::vector<double> xs;
-    
-    for (int i=0; i<sampling_res; ++i) {
-        xs.push_back(std::min(i*du, 1.));
-    }
-    tk::spline init_spline;
-    fit_spline(init_spline, xs, cfunc);
-    std::vector<double> derivs;
-    for (int i=0; i<xs.size(); ++i) {
-        derivs.push_back(init_spline.deriv(1, xs[i]));
-        values[xs[i]] = init_spline(xs[i]);
-    }
-
-    // check if derivative has constant sign in which case we are good
-    double asign = sign(derivs[0]);
-    std::vector<int> where;
-    if (verbose)
-    {
-        std::cout << "sampling spline derivative along edge\n";
-        std::cout << "sample #0: "  << derivs[0] << '\n';
-    }
-    for (int i=1; i<derivs.size(); ++i) {
-        if (verbose)
-        {
-            std::cout << "sample #" << i << ": " << derivs[i] << '\n';
-        }
-        double newsign = sign(derivs[i]);
-        if (asign * newsign < 0) {
-            if (verbose)
-            {
-                std::cout << "sign change\n";
-            }
-            where.push_back(i-1);
-            asign = newsign;
-        }
-    }
-    if (verbose)
-        std::cout << "spline derivative changed sign " << where.size() << " times\n";
-    if (!where.empty()) {
-        for (int i=0; i<where.size(); ++i) {
-            // find root of derivative
-            double u0 = xs[where[i]];
-            double u1 = xs[where[i]+1];
-            // double u = bisection_spline_local_extremum(init_spline, u0, u1, verbose);
-            std::vector<double> new_us = newton_spline_local_extremum(init_spline, u0, u1, verbose);
-            // found zero crossing of derivative
-            std::for_each(new_us.begin(), new_us.end(), [&](double u)
-            {
-                values[u] = cfunc(u);
-            });
-            // for (double c=0.1; c<=0.5; c+=0.1) 
-            // {
-            //     double v = (1-c)*u + c*u0;
-            //     values[v] = cfunc(v);
-            // }
-            // for (double c=0.1; c<=0.5; c+=0.1)
-            // {
-            //     double v = (1-c)*u + c*u1;
-            //     values[v] = cfunc(v);
-            // }
-        }
-    }
-
-    if (verbose) {
-        std::cout << "After spline-based refinement, samples are:\n";
-        for (auto iter=values.begin(); iter!=values.end(); ++iter) {
-            std::cout << std::setprecision(32) << iter->first << ": " << iter->second << '\n';
-        }
-    }
-
-    /*
-    std::vector<std::pair<double, double>> active_intervals;
-    for (int i=0; i<sampling_res-1; ++i)
-    {
-        active_intervals.push_back(std::make_pair(i*du, std::min((i+1)*du, 1.)));
-    }
-    
-    while (!active_intervals.empty())
-    {
-        std::vector<std::pair<double, double>> new_intervals;
-        if (verbose)
-        {
-            std::cout << "Starting new linearization round\n";
-            std::cout << "\t" << active_intervals.size() << " intervals to process\n";
-            std::cout << "current sampled values are:\n";
-            for (auto iter=values.begin(); iter!=values.end(); ++iter)
-            {
-                std::cout << std::setprecision(32) << iter->first << ": " << iter->second << '\n';
-            }
-        }
-        for (int i=0; i<active_intervals.size(); ++i)
-        {   
-            double u0 = active_intervals[i].first;
-            double u1 = active_intervals[i].second;
-            if (u1-u0 < mind) {
-                if (verbose)
-                    std::cout << "declining to refine between " << u0 << " and " << u1 << " because their distance is smaller than " << mind << '\n';
-                continue;
-            }
-            double f0 = values[u0];
-            double f1 = values[u1];
-            double u = 0.5*(u0 + u1);
-            double truth = cfunc(u);
-            double approx = 0.5*(f0 + f1);
-            double range = std::abs(f1-f0);
-            double rel_error = std::abs(approx-truth)/range;
-            if (rel_error > delta)
-            {
-                if (verbose)
-                {
-                    std::cout << "section between " << std::setprecision(32) << u0 << " and " << u1 << " is nonlinear: error=" << rel_error << '\n';
-                    std::cout << "interpolated value between " << std::setprecision(32) << f0 << " and " << f1 << " was " << approx << " but actual value is " << truth << '\n';
-                    std::cout << "\tadding f(" << std::setprecision(32) << u << ")=" << truth << '\n';
-                }
-                values[u] = truth;
-                new_intervals.push_back(std::make_pair(u0, u));
-                new_intervals.push_back(std::make_pair(u, u1));
-            }
-        }
-        new_intervals.swap(active_intervals);
-    }
-    */
-
-    std::vector<double> ridge_points;
-
-    for (auto iter=values.begin(); iter!=values.end(); ++iter)
-    {
-        auto next = iter;
-        ++next;
-        if (next == values.end()) break;
-        double u0 = iter->first;
-        double f0 = iter->second;
-        double u1 = next->first;
-        double f1 = next->second;
-        if (f0*f1 < 0)
-        {
-            if (verbose) {
-                std::cout << "zero crossing found between " << u0 << " and " << u1 << '\n';
-            }
-            double u = find_zero_crossing(cfunc, u0, u1);
-            if (check_solution(u, gfunc, hfunc, verbose))
-            {
-                if (verbose)
-                    std::cout << "ridge point found\n";
-                ridge_points.push_back(u);
-            }
-            else if (verbose) {
-                std::cout << "no ridge point found\n";
-            }
-        }
-    }
-
-    if (ridge_points.size() == 1)
-        return std::make_pair(one_ridge_points, ridge_points);
-    else if (ridge_points.size() > 1)
-        return std::make_pair(several_ridge_points, ridge_points);
-    else
-        return std::make_pair(no_ridge_points, std::vector<double>());
-}
-
-std::pair<double, double> evaluate(const vec3& point,
-                                   const scalar_image_type& values, 
-                                   const matrix_image_type& hessian) 
-{
-    vec3 low;
-    int dim = -1;
-    for (int i=0; i<3; ++i) {
-        low[i] = std::trunc(point[i]);
-        if (point[i] - low[i] > 1.0e-6) { // we are working in index space
-            dim = i;
-        }
-    }
-    if (dim == -1) {
-        std::ostringstream os;
-        os << "Invalid edge coordinate: " << point;
-        throw std::runtime_error(os.str());
-    }
-    vec3 high = low;
-    high[dim] += 1;
-    mat3 H0 = hessian(low[0], low[1], low[2]);
-    double v0 = values(low[0], low[1], low[2]);
-    mat3 H1 = hessian(high[0], high[1], high[2]);
-    double v1 = values(high[0], high[1], high[2]);
-    scalar_function v(v0, v1);
-    matrix_function h(H0, H1);
-    double u = (point[dim]-low[dim])/(high[dim]-low[dim]);
-    return std::make_pair(v(u), evmin(h(u)).first);
-}
-
-std::pair<int, std::vector<double>> process_edge(const EdgeID &e,
-                                                    const vector_image_type &gradient,
-                                                    const matrix_image_type &hessian,
-                                                    const scalar_image_type &data,
-                                                    bool verbose = false,
-                                                    const int sampling_res = 10,
-                                                    const double min_value = 0,
-                                                    const double min_strength = 1.0e-9,
-                                                    const double min_criterion = 1.0e-9,
-                                                    const double min_determinant = 1.0e-9)
-{
-    if (verbose) {
-        std::cout << "\n\nprocessing edge " << e << '\n';
-    }
-    std::vector<double> solutions; // initially empty
-    CoordID vs[2];
-    vec3 gs[2];
-    mat3 hs[2];
-    double fs[2];
-    double cs[2];
-    double lmins[2];
-    for (int i=0; i<2; ++i) {
-        hs[i] = hessian(e[i][0], e[i][1], e[i][2]);
-        gs[i] = gradient(e[i][0], e[i][1], e[i][2]);
-        fs[i] = data(e[i][0], e[i][1], e[i][2]);
-        cs[i] = determinant(gs[i], hs[i]);
-        lmins[i] = evmin(hs[i]).first;
-    }
-    
-    vector_function gfunc = vector_function(gs[0], gs[1]);
-    matrix_function hfunc = matrix_function(hs[0], hs[1]);
-    C0Criterion cfunc(gfunc, hfunc);
-    
-    if (verbose) 
-    {
-        std::cout << "\n";
-        std::cout << "criterion: " << std::fabs(cs[0]) << ", " << std::fabs(cs[1]) << " (" << min_criterion << ")\n";
-        std::cout << "hessian:   " << hs[0] << ", " << hs[1] << '\n'; 
-        std::cout << "gradient:  " << gs[0] << ", " << gs[1] << '\n';
-        std::cout << "values:    " << fs[0] << ", " << fs[1] << '\n';
-        std::cout << "lmins:     " << lmins[0] << ", " << lmins[1] << std::endl;
-    }
-
-    // check if we are dealing with a degenerate case or one that
-    // does not meet prescribed filtering criteria
-    if (std::max(std::fabs(cs[0]), std::fabs(cs[1])) < min_criterion) 
-    {
-        return std::make_pair(criterion_underflow, solutions);
-    }
-    else if (std::max(lmins[0], lmins[1]) > -std::fabs(min_strength)) 
-    {
-        return std::make_pair(weak_ridge, solutions);
-    }
-    else if (std::max(fs[0], fs[1]) < min_value) 
-    {
-        return std::make_pair(low_ridge, solutions);
-    }
-    
-    // initial uniform sampling
-    std::vector<double> dets;
-    double step = 1./double(sampling_res-1);
-    for (double u=0; u<1+step; u+=step) 
-    {
-        dets.push_back(cfunc(u));
-        if (verbose) 
-        {
-            std::cout << "det[" << u << "] = " << dets.back() << '\n';
-        }
-    }
-    
-    // adaptive zero-crossing search
-    for (int i=0; i<dets.size()-1; ++i) 
-    {
-        double u0 = i*step;
-        double u1 = u0 + step;
-        const double& det0 = dets[i];
-        const double& det1 = dets[i+1];
-        if (det0 * det1 < 0) 
-        {
-            if (verbose) 
-            {
-                std::cout << "zero crossing found between " << u0 << " and " << u1 << '\n';
-            }
-            double u = find_zero_crossing(cfunc, u0, u1);
-            if (verbose) 
-            {
-                std::cout << "zero crossing found at u=" << u << '\n';
-            }
-            if (u>=0 && check_solution(u, gfunc, hfunc, verbose)) 
-            {
-                solutions.push_back(u);
-                if (verbose)
-                    std::cout << "zero crossing found to be a ridge point\n";
-            }
-            else if (verbose) 
-            {
-                std::cout << "zero crossing is not a valid ridge point\n";
-            }
-        }
-    }
-
-    if (solutions.size() == 1) 
-    {
-        return std::make_pair(one_ridge_points, solutions);
-    }
-    else if (solutions.size() == 0) 
-    {
-        return std::make_pair(no_ridge_points, solutions); // code for nothing found
-    }
-    else 
-    {
-        return std::make_pair(several_ridge_points, solutions);
     }
 }
 
@@ -1058,23 +515,20 @@ int main(int argc, const char* argv[])
         optional_group(false, false, "Optional Group");
 
     cl::option_parser parser(argv[0],
-                             "Extract ridge surfaces from scalar volume using\nPeikert and Sadlo's level set method");
+                             "Extract ridge surfaces from scalar volume using\n Thomas Schultz's 2009 method");
     try 
     {
         parser.use_short_symbols(false);
         parser.use_brackets(true);
 
-        parser.add_value("value", data_name, "Scalar raster filename", required_group);
-        parser.add_value("gradient", gradient_name, "Gradient raster filename", required_group);
-        parser.add_value("hessian", hessian_name, "Hessian raster filename", required_group);
+        parser.add_value("value", data_name, "Scalar volume", required_group);
+        parser.add_value("gradient", gradient_name, "Gradient volume", required_group);
+        parser.add_value("hessian", hessian_name, "Hessian volume", required_group);
         parser.add_value("output", output_name, "Output filename", required_group);
         parser.add_value("minval", minval, 0., "Min scalar value", optional_group);
         parser.add_value("minstr", minstr, 0., "Min ridge strength", optional_group);
         parser.add_value("eps", eps, 1.0e-9, "Numerical precision", optional_group);
-        parser.add_value("mindist", mind, 0.02, "Min sampling distance", optional_group);
         parser.add_value("verbose", verbose, false, "Verbose output", optional_group);
-        parser.add_value("res", res, 10, "Initial (coarse) sampling resolution to find ridge points", optional_group);
-        parser.add_value("niter", niter, 100, "Max number of iterations of the zero crossing algorithm", optional_group);
         parser.add_value("voxel", voxel_str, voxel_str, "Coordinates of single voxel to process");
         parser.add_value("bounds", bounds_str, bounds_str, "Bounds of domain to consider");
         parser.parse(argc, argv);
@@ -1129,8 +583,8 @@ int main(int argc, const char* argv[])
         voxels.clear();
         const vec3& l = bounds.first;
         const vec3& h = bounds.second;
-        CoordID low(static_cast<int>(l[0]), static_cast<int>(l[1]), static_cast<int>(l[2]));
-        CoordID high(static_cast<int>(h[0]) + 1, static_cast<int>(h[1]) + 1, static_cast<int>(h[2]) + 1);
+        CoordID low = floor(l);
+        CoordID high = ceil(h);
         for (int k=low[2]; k<=high[2]; ++k) 
         {
             for (int j=low[1]; j<=high[1]; ++j)
