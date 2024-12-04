@@ -1,6 +1,9 @@
 #include <Eigen/Core>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 #include <vector>
+#include <exception>
+#include <stdexcept>
 
 namespace spurt {
 

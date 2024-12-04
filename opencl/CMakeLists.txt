@@ -24,7 +24,11 @@ if ( OpenCL_FOUND )
 
     foreach( name ${OPENCL_SRC} )
         add_executable( ${name} ${name}.cpp )
-        target_link_libraries( ${name} ${OpenCL_LIBRARY} ${Boost_LIBRARIES} ${TBB_LIBRARY_RELEASE} ${VTK_LIBRARIES} ${Teem_LIBRARIES} )
+        target_link_libraries( ${name} 
+            ${OpenCL_LIBRARY} 
+            ${Boost_LIBRARIES} 
+            TBB::tbb TBB::tbbmalloc TBB::tbbmalloc_proxy
+        )
     endforeach()
     install( TARGETS ${OPENCL_SRC} RUNTIME DESTINATION bin )
 else()

@@ -241,7 +241,6 @@ int main(int argc, char* argv[]) {
         std::cout << "b=" << b << '\n';
         std::cout << "C + b=" << _C + b << '\n';
         std::cout << "C - b=" << _C - b << '\n';
-        std::cout << "C.*b=" << _C.linalg(false)*b << '\n';
         
         
         std::cout << "C*D^{-1}=" << _F << "\n";

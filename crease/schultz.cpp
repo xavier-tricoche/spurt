@@ -56,17 +56,29 @@ constexpr int exotic_case = 4;
 constexpr int not_enough_edges = 5;
 
 
+typedef lvec3 coord_type;
+typedef vec3 pos_type;
+typedef double scalar_type;
+typedef long size_type;
+typedef vec3 vector_type;
+typedef mat3 matrix_type;
+typedef std::array<pos_type, 3> triangle_type;
+
 // scalar, vector, and tensor field with C2 B-spline interpolation
-typedef image<long, double, 3, double, kernels::MitchellNetravaliBC, lvec3, vec3> scalar_image_type;
-typedef image<long, double, 3,   vec3, kernels::MitchellNetravaliBC, lvec3, vec3> vector_image_type;
-typedef image<long, double, 3,   mat3, kernels::MitchellNetravaliBC, lvec3, vec3> matrix_image_type;
+typedef image<size_type, scalar_type, 3, scalar_type, 
+              kernels::MitchellNetravaliBC, coord_type, pos_type> 
+              scalar_image_type;
+typedef image<size_type, scalar_type, 3, vector_type, 
+              kernels::MitchellNetravaliBC, coord_type, pos_type> 
+              vector_image_type;
+typedef image<size_type, scalar_type, 3, matrix_type, 
+              kernels::MitchellNetravaliBC, coord_type, pos_type> 
+              matrix_image_type;
 typedef scalar_image_type::grid_type grid_type;
 typedef Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic> dyn_mat_type;
 
 template<typename Value_>
 using _image = image<long, double, 3, Value_, kernels::MitchellNetravaliBC, lvec3, vec3>;
-
-typedef lvec3 CoordID;
 
 template<typename Value_>
 void import_nrrd(_image<Value_>& out, const std::string& filename)
@@ -92,17 +104,17 @@ T sign(const T& value) {
     else return T(-1);
 }
 
-int distance(const CoordID& c0, const CoordID& c1) {
+int distance(const coord_type& c0, const coord_type& c1) {
     return linf_norm(c1-c0);
 }
 
-struct EdgeID : public std::pair<CoordId, CoordId>
+struct EdgeID : public std::pair<coord_type, coord_type>
 {
-    typedef CoordId value_type;
-    typedef std::pair<CoordId, CoordId> base_type;
+    typedef coord_type value_type;
+    typedef std::pair<coord_type, coord_type> base_type;
     typedef spurt::lexicographical_order less_type;
 
-    EdgeID(const CoordID& c0, const CoordID& c1)
+    EdgeID(const coord_type& c0, const coord_type& c1)
         : base_type(c0, c1) {
         less_type less;
         if (less(base_type::second, base_type::first)) {
@@ -117,7 +129,7 @@ struct EdgeID : public std::pair<CoordId, CoordId>
         else return less(base_type::second, other.second);
     }
 
-    CoordID& operator[](int i) {
+    coord_type& operator[](int i) {
         if (i==0) {
             return base_type::first;
         }
@@ -129,7 +141,7 @@ struct EdgeID : public std::pair<CoordId, CoordId>
         }
     }
 
-    const CoordID& operator[](int i) const {
+    const coord_type& operator[](int i) const {
         if (i == 0)
         {
             return base_type::first;
@@ -165,7 +177,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& v) {
 }
 
 template<typename T>
-T invlinear(const T& f0, const T& f1, double umin=0, double umax=1) {
+T invlinear(const T& f0, const T& f1, scalar_type umin=0, scalar_type umax=1) {
     // f = f0 + (u - umin) / (umax - umin) * (f1 - f0)
     // f = 0 <=> -f0 / (f1 - f0) = (u - umin) / (umax - umin)
     // f = 0 <=> u = -f0 / (f1 - f0) * (umax - umin) + umin    
@@ -173,25 +185,33 @@ T invlinear(const T& f0, const T& f1, double umin=0, double umax=1) {
 }
 
 template<typename T>
-T linear(double u, const T& v0, const T& v1) {
+T linear(scalar_type u, const T& v0, const T& v1) {
     return (1.-u)*v0 + u*v1;
 }
 
-std::pair<double, vec3> evmin(const mat3& H) {
-    vec3 evals;
-    mat3 evecs;
+std::pair<scalar_type, vector_type> evmin(const matrix_type& H) {
+    vector_type evals;
+    matrix_type evecs;
     sym_eigensystem(evals, evecs, H);
-    return std::make_pair(evals[2], vec3(evecs.column(2)));
+    return std::make_pair(evals[2], vector_type(evecs.column(2)));
 }
 
-std::pair<vec3, mat3> evall(const mat3& H) {
-    vec3 evals;
-    mat3 evecs;
+std::pair<vector_type, matrix_type> evall(const matrix_type& H) {
+    vector_type evals;
+    matrix_type evecs;
     sym_eigensystem(evals, evecs, H);
     return std::make_pair(evals, evecs);
 }
 
-mat3 schultz_tensorT(const mat3& H, double theta=0.01)
+scalar_type ridge_strength(const matrix_type& H) 
+{
+    vector_type evals;
+    matrix_type evecs;
+    sym_eigensystem(evals, evecs, H);
+    return evals[2];
+}
+
+matrix_type schultz_tensorT(const matrix_type& H, scalar_type theta=0.01)
 {
     /*
     
@@ -222,9 +242,9 @@ mat3 schultz_tensorT(const mat3& H, double theta=0.01)
     (\nabla H)_E (xx) = (\nabla H)_E (xy) = (\nabla H)_E (yx) = (\nabla H)_E (yy) = 0
 
   if (ridge) {
-    double diff=evals[1]-evals[2];
-    double l3;
-    double l3der;
+    scalar_type diff=evals[1]-evals[2];
+    scalar_type l3;
+    scalar_type l3der;
     if (diff<evalDiffThresh)
       l3=(1.0-diff/evalDiffThresh)*(1.0-diff/evalDiffThresh);
     else l3=0.0;
@@ -246,12 +266,12 @@ mat3 schultz_tensorT(const mat3& H, double theta=0.01)
     
     */
 
-    mat3 Q;
-    vec3 l;
+    matrix_type Q;
+    vector_type l;
     sym_eigensystem(l, Q, H);
-    mat3 lambda = mat3::identity();
+    matrix_type lambda = matrix_type::identity();
     lambda(2,2) = 0;
-    double dlambda = l[1] - l[2];
+    scalar_type dlambda = l[1] - l[2];
     if (dlambda < theta)
     {
         lambda(2,2) = (1. - dlambda/theta)*(1. - dlambda/theta);
@@ -259,24 +279,25 @@ mat3 schultz_tensorT(const mat3& H, double theta=0.01)
     return Q * lambda * transpose(Q);
 }
 
-vec3 schultz_vectorh(const mat3& H, const vec3& g, double theta=0.01)
+vector_type schultz_vectorh(const matrix_type& H, const vector_type& g, scalar_type theta=0.01)
 {
-    mat3 T = schultz_tensorT(H, theta);
+    matrix_type T = schultz_tensorT(H, theta);
     return T*g - g;
 }
 
-vec3 ridge_normal(const vec3& point, const mat3& H, const vec3& g, 
-                  const matrix_image& hessian)
+vector_type ridge_normal(const pos_type& point, const matrix_type& H, const vector_type& g, 
+                  const matrix_image_type& hessian)
 {
-
+    // to be implemented
+    return vector_type(0);
 }
 
 
-std::pair<vec3, double> project(const vec3& g, const mat3& h) {
-    vec3 evals;
-    mat3 evecs;
+std::pair<pos_type, scalar_type> project(const vector_type& g, const matrix_type& h) {
+    vector_type evals;
+    matrix_type evecs;
     sym_eigensystem(evals, evecs, h);
-    vec3 coords = spurt::abs(transpose(evecs)*g);
+    pos_type coords = spurt::abs(transpose(evecs)*g);
     return std::make_pair(coords, evals[2]);
 }
 
@@ -335,22 +356,22 @@ int case_number(const std::array<bool, 12>& edges) {
 
 }
 
-std::pair<int, double>
+std::pair<int, scalar_type>
 analyze_edge_schultz(const EdgeID &e,
                      const vector_image_type &gradient,
                      const matrix_image_type &hessian,
                      const scalar_image_type &data,
                      bool verbose = false,
-                     double theta = 0.01)
+                     scalar_type theta = 0.01)
 {
-    vec3 h0 = schultz_vectorh(hessian(e[0]), gradient(e[0]));
-    vec3 h1 = schultz_vectorh(hessian(e[1]), gradient(e[1]));
+    vector_type h0 = schultz_vectorh(hessian(e[0]), gradient(e[0]));
+    vector_type h1 = schultz_vectorh(hessian(e[1]), gradient(e[1]));
     if (inner(h0, h1) < 0) 
     {
-        double n0 = h0.norm();
-        double n1 = h1.norm();
+        scalar_type n0 = h0.norm();
+        scalar_type n1 = h1.norm();
         // model zero crossing as: (1-u) n0 - u n1 = 0 <=> u (n0 + n1) = n0
-        double u = n0/(n1+n0);
+        scalar_type u = n0/(n1+n0);
         return std::pair(1, u);
     }
     else
@@ -376,7 +397,7 @@ struct parser_traits<int>
 };
 
 template<>
-struct parser_traits<double> 
+struct parser_traits<scalar_type> 
 {
     static std::regex get()
     {
@@ -411,10 +432,10 @@ void parse_values(std::vector<T>& out, const std::string& str, size_t n)
     }
 }
 
-void edge_neighbors(std::vector<CoordID>& neighbors, const EdgeID& eid) 
+void edge_neighbors(std::vector<coord_type>& neighbors, const EdgeID& eid) 
 {
-    CoordID i0 = eid[0];
-    CoordID i1 = eid[1];
+    coord_type i0 = eid[0];
+    coord_type i1 = eid[1];
     int dim=0;
     for (int i=0; i<3; ++i) 
     {
@@ -426,7 +447,7 @@ void edge_neighbors(std::vector<CoordID>& neighbors, const EdgeID& eid)
     }
     neighbors.resize(4);
     int low = std::min(i0[dim], i1[dim]);
-    CoordID ref = eid[0];
+    coord_type ref = eid[0];
     ref[dim] = low;
     std::fill(neighbors.begin(), neighbors.end(), ref);
     neighbors[1][(dim+1)%3]--;
@@ -452,10 +473,10 @@ void grow_cluster(std::set<int>& cluster, int start, const dyn_mat_type& dist)
     }
 }
 
-void find_neighbors(std::vector<std::vector<CoordID>>& neighbors, 
-                    const std::map<CoordID, std::vector<int>, spurt::lexicographical_order> voxels) 
+void find_neighbors(std::vector<std::vector<coord_type>>& neighbors, 
+                    const std::map<coord_type, std::vector<int>, spurt::lexicographical_order> voxels) 
 {
-    std::vector<CoordID> all_voxels;
+    std::vector<coord_type> all_voxels;
     std::cout << "creating an array of voxels\n";
     for (auto iter=voxels.begin(); iter!=voxels.end(); ++iter)
     {
@@ -485,7 +506,7 @@ void find_neighbors(std::vector<std::vector<CoordID>>& neighbors,
                 grow_cluster(acluster, j, dist);
             }
         }
-        std::vector<CoordID> ids;
+        std::vector<coord_type> ids;
         std::for_each(acluster.begin(), acluster.end(), [&](int n) {
             ids.push_back(all_voxels[n]);
         });
@@ -496,14 +517,108 @@ void find_neighbors(std::vector<std::vector<CoordID>>& neighbors,
     }
 }
 
+std::pair<scalar_type, scalar_type> evaluate(const pos_type& point,
+                                   const scalar_image_type& values, 
+                                   const matrix_image_type& hessian) 
+{
+    scalar_type f = values.value(point);
+    matrix_type H = hessian.value(point);
+    return std::make_pair(f, ridge_strength(H));
+}
+
+int triangulate(std::vector<triangle_type>& out, 
+                 std::map<int, std::vector<pos_type>> &edges, 
+                 std::ostream& os)
+{
+    os << "triangles: edges contains " << edges.size() << " edges with ridge points\n";
+    out.clear();
+
+    std::map<int, int> edge_to_nbsols;
+    int nbsols = 0;
+    for (auto iter=edges.begin(); iter!=edges.end(); ++iter) 
+    {
+        edge_to_nbsols[iter->first] = iter->second.size();
+        nbsols += iter->second.size();
+    }
+
+    os << "There are " << nbsols << " ridge points over " << edges.size() << " in total\n";
+
+    // if we only have 3 or less points, things are easy
+    if (edges.size() == 3 && nbsols == 3) 
+    {
+        triangle_type T;
+        int i=0;
+        for (auto iter=edges.begin(); iter!=edges.end(); ++iter, ++i) 
+        {
+            T[i] = iter->second[0];
+        }
+        out.push_back(T);
+        os << "3 points on 3 edges: success!\n";
+        return one_triangle;
+    }
+    else if (edges.size() < 3)
+    {
+        os << "We have only 2 (or less) edges in input of triangulation.\n"
+           << "Giving up (Case N<3)\n";
+        return not_enough_edges;
+    }
+    // If we have several points on one edge and two edges, 
+    // we could triangulate put that implies finding a ridge 
+    // that ends in this voxel.
+    /*
+        ------X---- 
+       |    / |    |
+       |   /  |    |
+       |  /   |    |
+        --X---X----
+    */
+
+    if (nbsols == edges.size()) 
+    {
+        // Calculate edge case number
+        int edge_case = 0;
+        for (auto iter=edges.begin(); iter!=edges.end(); ++iter) 
+        {
+            edge_case += 1 << iter->first;
+        }
+        os << "edge_case = " << edge_case << '\n';
+        int triangle_case = spurt::marching_cubes::edge_code_to_case_id[edge_case];
+        os << "triangle_case = " << triangle_case << '\n';
+
+        if (triangle_case == -1) // invalid
+        {
+            os << "the edges do not match a valid MC case...\n Giving up. (Case NoMC)\n";
+            return invalid_mc_case;
+        }
+
+        auto indices = spurt::marching_cubes::triTable[triangle_case];
+        for (int i=0; i<15 && indices[i]!=-1; i+=3) 
+        {
+            out.push_back(triangle_type({{edges[indices[i]][0], edges[indices[i+1]][0], edges[indices[i+2]][0]}}));
+            const triangle_type& t = out.back();
+            os << "added triangle: " << t << '\n';
+        }
+        os << "A valid MC case was found and " << out.size() << " triangles "
+           << "were created.\n";
+        return valid_mc_case;
+    }
+    else
+    {
+        // 3 or more edges, some of which have several points
+        // for now, do nothing
+        return exotic_case;
+    }
+}
+
+
 int main(int argc, const char* argv[]) 
 {
     std::string data_name, gradient_name, hessian_name, output_name;
-    double minval, minstr, eps, mind;
+    scalar_type minval, minstr, eps, mind;
     int res, niter;
     bool verbose;
-    CoordID voxel_id;
-    std::pair<vec3, vec3> bounds;
+    coord_type voxel_id;
+    std::pair<pos_type, pos_type> bounds;
     std::string voxel_str = "(-1, -1, -1)";
     std::string bounds_str = "(0, -1; 0, -1; 0, -1)";
     
@@ -556,8 +671,8 @@ int main(int argc, const char* argv[])
         std::cout << iv << '\n';
         voxel_id = { iv[0], iv[1], iv[2] };
 
-        std::vector<double> dv;
-        parse_values<double>(dv, bounds_str, 6);
+        std::vector<scalar_type> dv;
+        parse_values<scalar_type>(dv, bounds_str, 6);
         std::cout << dv << '\n';
         bounds.first = { dv[0], dv[2], dv[4] };
         bounds.second = { dv[1], dv[3], dv[5] };
@@ -571,7 +686,7 @@ int main(int argc, const char* argv[])
     import_nrrd(hessian, hessian_name);
 
     auto shape = values.grid().resolution();
-    std::vector< CoordID > voxels;
+    std::vector< coord_type > voxels;
     if (voxel_id[0] != -1)
     {
         voxels.clear();
@@ -581,16 +696,16 @@ int main(int argc, const char* argv[])
     else if (bounds.first[0] < bounds.second[0])
     {
         voxels.clear();
-        const vec3& l = bounds.first;
-        const vec3& h = bounds.second;
-        CoordID low = floor(l);
-        CoordID high = ceil(h);
+        const pos_type& l = bounds.first;
+        const pos_type& h = bounds.second;
+        coord_type low = floor(l);
+        coord_type high = ceil(h);
         for (int k=low[2]; k<=high[2]; ++k) 
         {
             for (int j=low[1]; j<=high[1]; ++j)
             {
                 for (int i=low[0]; i<=high[0]; ++i) {
-                    voxels.push_back(CoordID(i,j,k));
+                    voxels.push_back(coord_type(i,j,k));
                 }
             }
         }
@@ -605,14 +720,14 @@ int main(int argc, const char* argv[])
             {
                 for (int i = 0; i < shape[0] - 1; ++i, ++_n)
                 {
-                    voxels[_n] = CoordID({{i, j, k}});
+                    voxels[_n] = coord_type({{i, j, k}});
                 }
             }
         }
     }
     std::cout << "There are " << voxels.size() << " voxels in input for a total of " << 12*voxels.size() << " (redundant) edges\n";
 
-    std::map<EdgeID, std::vector<vec3> > all_processed_edges;
+    std::map<EdgeID, std::vector<pos_type> > all_processed_edges;
     int nskipped = 0;
     int nfailed_to_triangulate = 0;
     int nnot_enough_points = 0;
@@ -627,71 +742,32 @@ int main(int argc, const char* argv[])
     int nfiltered = 0;
     // keep track of what triangles stem from what voxels to remove them 
     // if neededin case their containing voxels are subdivided. 
-    std::map<CoordID, std::vector<int>, spurt::lexicographical_order> voxel_to_triangles;
+    std::map<coord_type, std::vector<int>, spurt::lexicographical_order> voxel_to_triangles;
     std::vector<triangle_type> all_triangles;
     std::vector<vec4> rejected;
-
-    if (voxel_id[0] != -1)
-    {
-        std::vector<mat3> H(8);
-        std::vector<vec3> g(8);
-        for (int i=0; i<8; ++i)
-        {
-            auto shift = spurt::marching_cubes::vertices[i];
-            CoordID pid = voxel_id + CoordID(shift[0], shift[1], shift[2]);
-            H[i] = hessian(pid[0], pid[1], pid[2]);
-            g[i] = gradient(pid[0], pid[1], pid[2]);
-        }
-        std::vector<double> det_values(2*101*101*101);
-        for (int k=0; k<=100; ++k)
-        {
-            double z = k*0.01;
-            double Z = 1.-z;
-            for (int j=0; j<=100; ++j)
-            {
-                double y = j*0.01;
-                double Y = 1.-y;
-                for (int i=0; i<=100; ++i)
-                {
-                    double x = i*0.01;
-                    double X = 1.-x;
-                    mat3 theH = X * Y * Z * H[0] + x * Y * Z * H[1] + x * y * Z * H[2] + X * y * Z * H[3] +
-                                X * Y * z * H[4] + x * Y * z * H[5] + x * y * z * H[6] + X * y * z * H[7];
-                    vec3 theg = X * Y * Z * g[0] + x * Y * Z * g[1] + x * y * Z * g[2] + X * y * Z * g[3] +
-                                X * Y * z * g[4] + x * Y * z * g[5] + x * y * z * g[6] + X * y * z * g[7];
-                    det_values[2 * (i + 101 * (j + 101 * k))    ] = determinant(theg, theH);
-                    det_values[2 * (i + 101 * (j + 101 * k)) + 1] = (project(theg, theH).first)[0];
-                }
-            }
-        }
-        size_t sizes[4] = {2, 101, 101, 101};
-        std::ostringstream os;
-        os << output_name << "_voxel_" << voxel_id[0] << "_" << voxel_id[1] << "_" << voxel_id[2] << ".nrrd";
-        spurt::nrrd_utils::writeNrrd((void *)&det_values[0], os.str(), nrrdTypeDouble, 4, sizes);
-    }
 
     spurt::ProgressDisplay progress;
 
     struct broken_voxel {
-        CoordID id;
-        std::vector<double> values;
-        std::vector<double> strengths;
-        std::vector<vec3> gradients;
-        std::vector<mat3> hessians;
-        std::map<int, std::vector<vec3> > edge_points;
+        coord_type id;
+        std::vector<scalar_type> values;
+        std::vector<scalar_type> strengths;
+        std::vector<vector_type> gradients;
+        std::vector<matrix_type> hessians;
+        std::map<int, std::vector<pos_type> > edge_points;
     };
     std::vector<broken_voxel> broken_voxels;
     std::vector<EdgeID> double_edges;
-    std::vector<CoordID> to_subdivide;
+    std::vector<coord_type> to_subdivide;
     std::vector<int> voxel_to_edge;
-    std::map<CoordID, std::vector<int>, spurt::lexicographical_order> voxel_counter;
+    std::map<coord_type, std::vector<int>, spurt::lexicographical_order> voxel_counter;
 
     srand48(130819751900);
     progress.begin(voxels.size(), "Extract ridges", 10000, "tris: 0, done: 0, ok: 0, skip: 0, underflow: 0, weak: 0, low: 0, none: 0, even: 0, failed: 0");
     for (int n=0; n<voxels.size(); ++n) 
     {
-        CoordID id = voxels[n];
-        // verbose = (id == CoordID(6, 14, 13));
+        coord_type id = voxels[n];
+        // verbose = (id == coord_type(6, 14, 13));
         // verbose = (id[0] >= 150 && id[0] <= 160 && id[1] >= 60 && id[1] <= 75 && id[2] >= 60 && id[2] <=65);
         if (verbose)
         {
@@ -699,12 +775,12 @@ int main(int argc, const char* argv[])
         }
 
         // check if current voxel satisfies threshold requirements
-        std::vector<double> v_values(8);
-        std::vector<double> s_values(8);
+        std::vector<scalar_type> v_values(8);
+        std::vector<scalar_type> s_values(8);
         for (int i=0; i<8; ++i)
         {
             auto shift = spurt::marching_cubes::vertices[i];
-            CoordID v = id + CoordID(shift[0], shift[1], shift[2]);
+            coord_type v = id + coord_type(shift[0], shift[1], shift[2]);
             v_values[i] = values(id[0], id[1], id[2]);
             auto h = hessian(id[0], id[1], id[2]);
             s_values[i] = evmin(h).first;
@@ -717,7 +793,7 @@ int main(int argc, const char* argv[])
         }
 
         // verbose = (id[0] >= 8 && id[0]<=10 && id[1]>=14 && id[1]<=19 && id[2]>=14 && id[2]<=17);
-        std::map<int, std::vector<vec3>> found;
+        std::map<int, std::vector<pos_type>> found;
         std::string update_str = "tris: " + std::to_string(all_triangles.size()) + 
             ", ok: " + std::to_string(nsucceeded) + 
             ", skip: " + std::to_string(nskipped) + 
@@ -730,8 +806,8 @@ int main(int argc, const char* argv[])
         std::ostringstream log;
         for (int i = 0; i < 12; ++i) 
         {
-            CoordID v0 = id + CoordID(ivec3(spurt::marching_cubes::canonical_edge_coordinates[i][0]));
-            CoordID v1 = id + CoordID(ivec3(spurt::marching_cubes::canonical_edge_coordinates[i][1]));
+            coord_type v0 = id + coord_type(ivec3(spurt::marching_cubes::canonical_edge_coordinates[i][0]));
+            coord_type v1 = id + coord_type(ivec3(spurt::marching_cubes::canonical_edge_coordinates[i][1]));
             EdgeID edgeid(v0, v1);
             auto iter = all_processed_edges.find(edgeid);
             if (iter != all_processed_edges.end())
@@ -766,9 +842,9 @@ int main(int argc, const char* argv[])
                 auto result = analyze_edge_schultz(edgeid, gradient, hessian, values, verbose, 0.01);
                 if (result.first == 1)
                 {                
-                    found[i] = std::vector<vec3>();
+                    found[i] = std::vector<pos_type>();
                     if (verbose) std::cout << "process_edge returned 1 solution\n";
-                    double u = result.second;
+                    scalar_type u = result.second;
                     found[i].push_back((1. - u) * edgeid[0] + u * edgeid[1]);
                     if (verbose) std::cout << "Found now contains " << found.size() << " entries\n";
                     all_processed_edges[edgeid] = found[i];
@@ -778,7 +854,7 @@ int main(int argc, const char* argv[])
                     if (verbose)
                         std::cout << "no ridge point\n";
                     nnone++;
-                    all_processed_edges[edgeid] = std::vector<vec3>();
+                    all_processed_edges[edgeid] = std::vector<pos_type>();
                 }
                 nprocessed++;
             }
@@ -824,7 +900,7 @@ int main(int argc, const char* argv[])
                 {
                     for (int l=0; l<iter->second.size(); ++l)
                     {
-                        const vec3& p = iter->second[l];
+                        const pos_type& p = iter->second[l];
                         vec4 q({p[0], p[1], p[2], tri_case});
                         rejected.push_back(q);
                     }
@@ -833,7 +909,7 @@ int main(int argc, const char* argv[])
                 voxel.id = id;
                 voxel.edge_points = found;
                 for (int vid=0; vid<8; ++vid) {
-                    CoordID pid = id + CoordID(spurt::marching_cubes::vertices[vid]);
+                    coord_type pid = id + coord_type(spurt::marching_cubes::vertices[vid]);
                     voxel.values.push_back(values(pid[0], pid[1], pid[2]));
                     voxel.gradients.push_back(gradient(pid[0], pid[1], pid[2]));
                     voxel.hessians.push_back(hessian(pid[0], pid[1], pid[2]));
@@ -849,7 +925,7 @@ int main(int argc, const char* argv[])
             {
                 for (int l=0; l<iter->second.size(); ++l)
                 {
-                    const vec3& p = iter->second[l];
+                    const pos_type& p = iter->second[l];
                     vec4 q({p[0], p[1], p[2], not_enough_edges});
                     rejected.push_back(q);
                 }
@@ -860,7 +936,7 @@ int main(int argc, const char* argv[])
             voxel.edge_points = found;
             for (int vid = 0; vid < 8; ++vid)
             {
-                CoordID pid = id + CoordID(ivec3(spurt::marching_cubes::vertices[vid]));
+                coord_type pid = id + coord_type(ivec3(spurt::marching_cubes::vertices[vid]));
                 voxel.values.push_back(values(pid[0], pid[1], pid[2]));
                 voxel.gradients.push_back(gradient(pid[0], pid[1], pid[2]));
                 voxel.hessians.push_back(hessian(pid[0], pid[1], pid[2]));
@@ -871,7 +947,7 @@ int main(int argc, const char* argv[])
     }
     std::cout << "There were " << double_edges.size() << " edges containing more than one ridge point\n";
     std::cout << "Of the " << to_subdivide.size() << " associated voxels, " << voxel_counter.size() << " voxels are unique\n";
-    // std::vector<std::vector<CoordID>> all_clusters;
+    // std::vector<std::vector<coord_type>> all_clusters;
     // find_neighbors(all_clusters, voxel_counter);
     // std::cout << "These " << voxel_counter.size() << " voxels form " << all_clusters.size() << " clusters\n";
     // std::ofstream o("clusters.txt");
@@ -885,7 +961,7 @@ int main(int argc, const char* argv[])
     //         auto edges = voxel_counter[cluster[i]];
     //         std::for_each(edges.begin(), edges.end(), [&](int k)
     //         {
-    //             edge_ids.insert(double_edges[k]);
+    //             edge_ids.insert(scalar_type_edges[k]);
     //         });
     //     }
     //     std::cout << "Cluster #" << i << " contains " << edge_ids.size() << " problematic edges\n";
@@ -901,7 +977,7 @@ int main(int argc, const char* argv[])
     // }
     // o.close();
 
-    std::vector<vec3> all_edge_points;
+    std::vector<pos_type> all_edge_points;
     for (auto iter=all_processed_edges.begin(); iter!=all_processed_edges.end(); ++iter)
     {
         auto pts = iter->second;
@@ -921,16 +997,16 @@ int main(int argc, const char* argv[])
     progress.begin(broken_voxels.size(), "Repair ridges", 10000, "tris: 0, done: 0, ok: 0, skip: 0, underflow: 0, weak: 0, low: 0, none: 0, even: 0, failed: 0");
     for (int n = 0; n < broken_voxels.size(); ++n)
     {
-        CoordID id = broken_voxels[n].id;
-        std::map<int, std::vector<vec3>> found;
+        coord_type id = broken_voxels[n].id;
+        std::map<int, std::vector<pos_type>> found;
         std::string update_str = "fixed: " + std::to_string(nfixed) +
                                  ", failed: " + std::to_string(nfailed);
         progress.update(n, update_str);
         std::ostringstream log;
         for (int i = 0; i < 12; ++i)
         {
-            CoordID v0 = id + CoordID(ivec3(spurt::marching_cubes::canonical_edge_coordinates[i][0]));
-            CoordID v1 = id + CoordID(ivec3(spurt::marching_cubes::canonical_edge_coordinates[i][1]));
+            coord_type v0 = id + coord_type(ivec3(spurt::marching_cubes::canonical_edge_coordinates[i][0]));
+            coord_type v1 = id + coord_type(ivec3(spurt::marching_cubes::canonical_edge_coordinates[i][1]));
             EdgeID edgeid(v0, v1);
             auto iter = all_processed_edges.find(edgeid);
             assert(iter != all_processed_edges.end());
@@ -942,52 +1018,7 @@ int main(int argc, const char* argv[])
             {
                 if (verbose)
                     std::cout << "\n\nedge #" << i << " of voxel " << id << ": " << edgeid << " is being reprocessed" << '\n';
-                auto result = process_edge(edgeid, gradient, hessian, values, verbose, 10*res, minval, minstr, eps, eps);
-                auto coordinates = result.second;
-                if (!coordinates.empty())
-                {
-                    found[i] = std::vector<vec3>();
-                    if (verbose)
-                        std::cout << "process_edge returned " << coordinates.size() << " solutions\n";
-                    for (int k = 0; k < coordinates.size(); ++k)
-                    {
-                        double u = coordinates[k];
-                        found[i].push_back((1. - u) * edgeid[0] + u * edgeid[1]);
-                    }
-                    if (verbose)
-                        std::cout << "Found now contains " << found.size() << " entries\n";
-                    all_processed_edges[edgeid] = found[i];
-                }
-                else if (result.first == criterion_underflow)
-                {
-                    if (verbose)
-                        std::cout << "criterion underflow\n";
-                    all_processed_edges[edgeid] = std::vector<vec3>();
-                }
-                else if (result.first == weak_ridge)
-                {
-                    if (verbose)
-                        std::cout << "weak ridge\n";
-                    all_processed_edges[edgeid] = std::vector<vec3>();
-                }
-                else if (result.first == low_ridge)
-                {
-                    if (verbose)
-                        std::cout << "low ridge\n";
-                    all_processed_edges[edgeid] = std::vector<vec3>();
-                }
-                else if (result.first == no_ridge_points)
-                {
-                    if (verbose)
-                        std::cout << "no ridge point\n";
-                    all_processed_edges[edgeid] = std::vector<vec3>();
-                }
-                else
-                {
-                    if (verbose)
-                        std::cout << "unrecognized case\n";
-                    all_processed_edges[edgeid] = std::vector<vec3>();
-                }
+                // to be implemented: edge processing with Schultz T tensor criterion
                 nprocessed++;
             }
         }
@@ -1042,7 +1073,7 @@ int main(int argc, const char* argv[])
         size_t sizes[3] = { 3, 3, all_triangles.size() };
         spurt::nrrd_utils::writeNrrd((void*)&all_triangles[0], output_name + "_mesh.nrrd", 
                                      nrrdTypeDouble, 3, sizes);
-        std::vector<std::array<double, 2>> attributes(3*all_triangles.size());
+        std::vector<std::array<scalar_type, 2>> attributes(3*all_triangles.size());
         std::cout << "interpolating value and ridge strength...\n";
         std::cout << "there are " << all_triangles.size() << " triangles\n";
         for (size_t n=0; n<all_triangles.size(); ++n)
@@ -1091,13 +1122,13 @@ int main(int argc, const char* argv[])
             }
             output << "    * gradients:\n";
             for (int k=0; k<8; ++k) {
-                const vec3& g = voxel.gradients[k];
+                const vector_type& g = voxel.gradients[k];
                 output << "        [" << k << "]: [" << std::scientific << g[0] << ", " << g[1] << ", " << g[2] << "]\n";
             }
             output << "    * hessians:\n";
             for (int k = 0; k < 8; ++k)
             {
-                const mat3 &h = voxel.hessians[k];
+                const matrix_type &h = voxel.hessians[k];
                 output << "        [" << k << "]: [" << std::scientific
                        << "[" << h(0, 0) << ", " << h(0, 1) << ", " << h(0, 2) << "], "
                        << "[" << h(1, 0) << ", " << h(1, 1) << ", " << h(1, 2) << "], "
@@ -1107,14 +1138,14 @@ int main(int argc, const char* argv[])
             output << "    * strengths:\n";
             for (int k=0; k<8; ++k)
             {
-                const double& s = voxel.strengths[k];
+                const scalar_type& s = voxel.strengths[k];
                 output << "        [" << k << "]: " << std::scientific << s << '\n'; 
             }
             output << "    * edge points:\n";
             for (auto iter=voxel.edge_points.begin(); iter!=voxel.edge_points.end(); ++iter) {
                 output << "        [" << iter->first << "]: [";
                 for (int k=0; k<iter->second.size(); ++k) {
-                    const vec3& p = iter->second[k];
+                    const pos_type& p = iter->second[k];
                     output << std::scientific
                         << "[" << p[0] << ", " << p[1] << ", " << p[2] << "], ";
                 } 

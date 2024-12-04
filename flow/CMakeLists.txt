@@ -50,8 +50,9 @@ if( ${VTK_FOUND} )
     foreach( name ${FLOW_EXEC_SRC} )
         add_executable( ${name} ${EXECUTABLE_FLAG} ${name}.cpp )
 		target_link_libraries( ${name} ${VTK_LIBRARIES} ${Teem_LIBRARIES} BARG
-			spurt_image spurt_flow ${Boost_LIBRARIES} ${TBB_LIBRARY_RELEASE} #${TBB_IMPORTED_TARGETS}
-			${TBB_LIBRARIES} ${NetCDF_LIBRARIES} )
+			spurt_image spurt_flow ${Boost_LIBRARIES} 
+            TBB::tbb TBB::tbbmalloc TBB::tbbmalloc_proxy
+            ${NetCDF_LIBRARIES} )
         install( TARGETS ${name} RUNTIME DESTINATION bin )
     endforeach()
 else()

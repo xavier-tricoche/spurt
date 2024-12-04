@@ -73,9 +73,10 @@ endif()
 
 foreach( target ${MAPS_LIB_EXEC_SRC} )
     add_executable( ${target} ${target}.cpp )
-    target_link_libraries( ${target} ${Teem_LIBRARIES} xavier_maps_lib
-        ${TBB_LIBRARY_RELEASE} ${TBB_LIBRARIES}
-        ${VTK_LIBRARIES}
+    target_link_libraries( ${target} 
+        ${Teem_LIBRARIES} 
+        xavier_maps_lib
+        TBB::tbb TBB::tbbmalloc TBB::tbbmalloc_proxy
     )
     install( TARGETS ${target} RUNTIME DESTINATION bin )
 endforeach()

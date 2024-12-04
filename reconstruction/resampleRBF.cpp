@@ -23,7 +23,6 @@
 #include <vtkPointSet.h>
 #include <vtkDataArray.h>
 #include <vtkPointData.h>
-#include <sfcnn.hpp>
 #include <math/rbf.hpp>
 
 using namespace spurt;

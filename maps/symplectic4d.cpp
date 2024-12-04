@@ -146,15 +146,16 @@ int main(int argc, const char* argv[]) {
         }
     }
 
-    std::cout << "Blah" << std::endl;
+    std::cout << "Exporting slab points..." << std::endl;
     std::array<int, 2> dims{ {5, nhits} };
     std::string name = filename + "_hits_n=" + std::to_string(nsamples) + "_it=" + std::to_string(max_iter) + "_s=" + std::to_string(val) + ".nrrd";
     if (nhits != 0) {
         nrrd_utils::writeNrrdFromContainers(hits, name, dims);
     }
-    std::cout << "Blih" << std::endl;
+    std::cout << "Exporting complete orbits..." << std::endl;
     dims[1] = npoints;
     name = filename + "_orbits_n=" + std::to_string(nsamples) + "_it=" + std::to_string(max_iter) + "_s=" + std::to_string(val) + ".nrrd";
     nrrd_utils::writeNrrdFromContainers(points, name, dims);
+    std::cout << "done\n";
     return 0;
 }

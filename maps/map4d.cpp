@@ -8,7 +8,6 @@
 #include <random>
 #include <thread>
 #include <iostream>
-#include <sfcnn.hpp>
 
 #include <tbb/parallel_for.h>
 #include <tbb/tbb.h>

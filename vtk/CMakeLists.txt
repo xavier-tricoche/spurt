@@ -1,4 +1,4 @@
-set( XAVIER_VTK_SRCS
+set( SPURT_VTK_SRCS
 	vectors_from_scalars
     view_grains
     view_grains_animation
@@ -25,13 +25,13 @@ set( XAVIER_VTK_SRCS
 
 if( ${VTK_FOUND} )
     # include( ${VTK_USE_FILE} )
-    foreach( name ${XAVIER_VTK_SRCS} )
+    foreach( name ${SPURT_VTK_SRCS} )
         add_executable( ${name} ${EXECUTABLE_FLAG} ${name}.cpp )
         target_link_libraries( ${name} ${VTK_LIBRARIES} ${Teem_LIBRARIES} ${Boost_LIBRARIES} )
         install( TARGETS ${name} RUNTIME DESTINATION bin )
     endforeach()
 else()
-	message( WARNING "VTK executables: " ${XAVIER_VTK_SRCS} " cannot be built."
+	message( WARNING "VTK executables: " ${SPURT_VTK_SRCS} " cannot be built."
         "\nVTK is not available in this installation."
     )
 endif()
