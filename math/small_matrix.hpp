@@ -164,24 +164,23 @@ namespace spurt {
         using rhs_vector = small_vector_interface<Storage>;
         
         // Constructors
-        small_matrix_interface(scalar_type val=0, bool linalg_mode=true) 
-        : base_type(val), m_linalg_mode(linalg_mode) {}
+        small_matrix_interface(scalar_type val=0) 
+        : base_type(val) {}
 
         template<typename OtherStorage>
-        small_matrix_interface(const like_vector_S<OtherStorage>& other, bool linalg_mode=true)
-        : base_type(other), m_linalg_mode(linalg_mode) {}
+        small_matrix_interface(const like_vector_S<OtherStorage>& other)
+        : base_type(other) {}
 
         template<typename T=scalar_type>
-        small_matrix_interface(const like_array<T>& other, bool linalg_mode=true) 
-            : base_type(other), m_linalg_mode(linalg_mode) {}
+        small_matrix_interface(const like_array<T>& other) 
+            : base_type(other) {}
         
         template<typename T=scalar_type>
-        small_matrix_interface(std::initializer_list<T> vals) : base_type(vals), m_linalg_mode(true) {}
+        small_matrix_interface(std::initializer_list<T> vals) : base_type(vals) {}
 
         template<typename OtherStorage>
         small_matrix_interface(const like_matrix_S<OtherStorage>& other) 
-            : base_type(static_cast<const like_vector_S<OtherStorage>&>(other)), 
-              m_linalg_mode(other.m_linalg_mode) {}
+            : base_type(static_cast<const like_vector_S<OtherStorage>&>(other)) {}
               
         like_vector<value_type>& as_vector() {
             return static_cast< like_vector<value_type>& >(*this);
@@ -215,17 +214,6 @@ namespace spurt {
             return r;
         }
 
-        self_type& linalg(bool active=true) 
-        {
-            m_linalg_mode = active;
-            return *this;
-        }
-
-        bool is_linalg() const 
-        {
-            return m_linalg_mode;
-        }
-
         // Accessors
         const scalar_type& operator()(int i, int j) const 
         {
@@ -257,19 +245,17 @@ namespace spurt {
         }
 
         // Matrix multiplication
-        // When sizes match, it can either be a LA multiplication or a coefficient-wise.
-        // In that case, the linalg_mode flag is used to disambiguate
+        // When sizes match, it can either be a LA multiplication or a 
+        // coefficient-wise. LA multiplication assumed
         template <typename OtherStorage>
         auto_copy_S<OtherStorage> operator*(const like_matrix_S<OtherStorage> &rhs) const
         {
             typedef auto_type_S<OtherStorage> out_type;
             typedef like_matrix<out_type> out_mat_type;
             out_mat_type r;
-            if (!m_linalg_mode) // coefficient-wise (array-like)
-                r = base_type::operator*(rhs);
-            else // matrix-matrix multiplication with same-sized matrix
-                r.as_eigen() = as_const_eigen().template cast<out_type>() * 
-                               rhs.as_const_eigen().template cast<out_type>();
+            // matrix-matrix multiplication with same-sized matrix
+            r.as_eigen() = as_const_eigen().template cast<out_type>() * 
+                           rhs.as_const_eigen().template cast<out_type>();
             return r;
         }
         
@@ -316,10 +302,8 @@ namespace spurt {
             typedef auto_type_S<OtherStorage> out_type;
             typedef like_matrix<out_type> out_mat_type;
             out_mat_type r;
-            if (!m_linalg_mode) // coefficient-wise (array-like)
-                r = base_type::operator/(rhs.as_const_vector());
-            else // matrix-matrix multiplication with same-sized matrix
-                r.as_eigen() = as_const_eigen().template cast<out_type>() * 
+            // matrix-matrix multiplication with same-sized matrix
+            r.as_eigen() = as_const_eigen().template cast<out_type>() * 
                                rhs.as_const_eigen().template cast<out_type>().inverse();
             return r;
         }
@@ -356,10 +340,8 @@ namespace spurt {
             typedef auto_type_S<OtherStorage> out_type;
             typedef auto_output_S<OtherStorage, ncols> out_mat_type;
             out_mat_type r;
-            if (!m_linalg_mode) // coefficient-wise (array-like)
-                r = base_type::operator/(rhs.as_const_vector());
-            else // matrix-matrix multiplication with same-sized matrix
-                r.as_eigen() = as_const_eigen().template cast<out_type>() * 
+            // matrix-matrix multiplication with same-sized matrix
+            r.as_eigen() = as_const_eigen().template cast<out_type>() * 
                                rhs.as_const_eigen().template cast<out_type>().inverse();
             return r;
         }
@@ -420,7 +402,6 @@ namespace spurt {
             return base_type::operator-(val);
         }
             
-
         self_map_type as_eigen()
         {
             return self_map_type(&((*this)(0,0)));
@@ -429,8 +410,6 @@ namespace spurt {
         const_self_map_type as_const_eigen() const {
             return const_self_map_type(&((*this)(0,0)));
         }
-        
-        bool m_linalg_mode;
     };
 
     // short-hand for memory-owning small_matrix_interface, squared by default

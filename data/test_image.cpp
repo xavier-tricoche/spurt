@@ -158,9 +158,9 @@ void test_image(const coord_type& res, const bounds_type& bounds,
     std::string origname = basename + "_original.nrrd";
     std::ostringstream oss;
     oss << basename << "_x" << upres << "_";
-    std::string valname  =  oss.str() + "_value.nrrd";
-    std::string dername  =  oss.str() + "_deriv.nrrd";
-    std::string ddername =  oss.str() + "_2ndderiv.nrrd";
+    std::string valname  =  oss.str() + "f.nrrd";
+    std::string dername  =  oss.str() + "gv.nrrd";
+    std::string ddername =  oss.str() + "H.nrrd";
     
     std::cout << "original grid resolution: " << ingrid.resolution() << '\n';
     std::cout << "output grid resolution: " << outgrid.resolution() << '\n';
@@ -180,13 +180,14 @@ void test_image(const coord_type& res, const bounds_type& bounds,
     else {
         dataset_type<scalar_type> indata(ingrid, 0);
         dataset_type<scalar_type> outvalues(outgrid, 0);
-        dataset_type<scl_derivative_type> outderiv(outgrid);
-        dataset_type<scl_second_derivative_type> out2ndderiv(outgrid);
+        dataset_type<scl_derivative_type> outderiv(outgrid, 0);
+        dataset_type<scl_second_derivative_type> out2ndderiv(outgrid, 0);
         fill_image<scalar_type>(indata, fname);
         scl_image_type img(indata);
         fill_image_impl<scalar_type>(outvalues, [&](const pos_type& p) { return img.value(p); });
         fill_image_impl<scl_derivative_type>(outderiv, [&](const pos_type& p) { return img.derivative(p); });
         fill_image_impl<scl_second_derivative_type>(out2ndderiv, [&](const pos_type& p) { return img.second_derivative(p); });
+        // fill_image_impl<scl_second_derivative_type>(out2ndderiv, [&](const pos_type& p) { return mat3(p[0]); });
         spurt::save_as_nrrd(valname, outvalues);
         spurt::save_as_nrrd(origname, indata);
         spurt::save_as_nrrd<size_type, scalar_type, 3, scl_derivative_type, coord_type, pos_type, gradient_type>(dername, outderiv);

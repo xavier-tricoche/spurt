@@ -436,7 +436,7 @@ struct data_traits<small_matrix<T, M, N>>
     typedef small_matrix<T, M, N> data_type;
     typedef T value_type;
 
-    constexpr static size_t size() { return data_type::ncols * data_type::nrows; }
+    constexpr static size_t size() { return M*N; }
     constexpr static size_t ncols() { return M; }
     constexpr static size_t nrows() { return N; }
     constexpr static size_t mem_size()

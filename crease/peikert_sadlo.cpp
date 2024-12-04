@@ -451,6 +451,7 @@ struct C3_vector_interpolator {
 
     bool value(vector_type& v, size_t index) const {
         m_dataset->GetPointData()->GetVectors()->GetTuple(index, &v[0]);
+        return true;
     }
 
     bool jacobian(matrix_type& J, const position_type& x) const {

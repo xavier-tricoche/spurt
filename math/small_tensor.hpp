@@ -241,9 +241,9 @@ namespace spurt {
     outer(const small_vector_interface<Storage1>& v1,
           const small_vector_interface<Storage2>& v2,
           const small_vector_interface<Storage3>& v3) {
-          const size_t& M = Storage1::size;
-          const size_t& N = Storage2::size;
-          const size_t& P = Storage3::size;
+          constexpr size_t M = Storage1::size;
+          constexpr size_t N = Storage2::size;
+          constexpr size_t P = Storage3::size;
           
           typedef typename internal::better_type3<Storage1, Storage2, Storage3>::type out_type;
           small_tensor<out_type, M, N, P> r = 0;
