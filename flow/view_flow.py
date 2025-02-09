@@ -8,6 +8,7 @@ import time
 import os
 import vtk_camera
 import vtk_colors
+import regex as re
 
 from scipy.interpolate import RegularGridInterpolator
 
@@ -51,7 +52,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--path', type=str, help='Path of data files to prepend to their name')
     parser.add_argument('-o', '--output', type=str, help='Output basename for rendered frames')
     parser.add_argument('-c', '--color', type=str, default='value', help='Attribute to use for color coding')
-    parser.add_argument('-m', '--max', type=float, default=-1, help='Max LAVD value for color map')
+    parser.add_argument('-n', '--normalize', action='store_true', help='Apply time normalization to LAVD values')
     parser.add_argument('--camera', type=str, help='Input camera settings')
     parser.add_argument('-v', '--verbose', action='store_true', help='Toggle verbose mode')
 
@@ -69,16 +70,20 @@ if __name__ == '__main__':
     vals = []
     names = []
     maxs = []
+    times = []
 
     make2dcolors()
 
     verts = vtk.vtkCellArray()
     
     single_frame = len(step_names) == 1
+    timestr = re.compile(r".*([0]*[0-9]{5})h")
 
     for i, name in enumerate(step_names):
         if name[-1] == '\n':
             name = name[:-1]
+        times.append(int(timestr.search(name).group(1)))
+        
         if not os.path.exists(name) and os.path.split(name)[0] == '':
             if args.path is not None:
                 name = os.path.join(args.path, name)
@@ -88,6 +93,7 @@ if __name__ == '__main__':
         names.append(name)
         data, _ = nrrd.read(name) # [x, y, lavd] x M x N
         vals.append(np.copy(data[2,:,:].ravel(order='F')))
+        vals[-1] /= float(times[-1])
         data[2,:,:] = 0
         if not i:
             npts = data.shape[1]*data.shape[2]
@@ -101,12 +107,19 @@ if __name__ == '__main__':
         if args.verbose:
             print(f'Step #{i}, name: {name}, bounding box: [{np.min(pos[-1][0,:])}, {np.min(pos[-1][1,:])}] -> [{np.max(pos[-1][0,:])}, {np.max(pos[-1][1,:])}], value range: [{np.min(vals[-1])}, {np.max(vals[-1])}')
 
+    allvalues = np.concatenate(vals, axis=0)
+    print(allvalues.shape)
+    invalid = np.less(allvalues, 0)
+    valid = np.delete(allvalues, invalid)
+    print(f'there are {np.nonzero(invalid)[0].shape} invalid values')
+    print(f'after removing them, there are {valid.shape} valid values left')
+    print(f'percentile of all valid values: {np.percentile(valid, [0, 1, 5, 10, 25, 50, 75, 90, 95, 99, 100])}')
+    ctrl_pts = np.percentile(valid, [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
+
+
     maxvalue = np.max(maxs)
     if args.color == 'value':
-        if args.max is not None:
-            ctf = vtk_colors.make_colormap('viridis', [0, args.max])
-        else:
-            ctf = vtk_colors.make_colormap('viridis', [0, maxvalue])
+        ctf = vtk_colors.make_colormap('viridis', ctrl_pts)
         ctf.AddRGBPoint(0, 0, 0, 0)
     elif args.color == 'pos' or args.color == 'position':
         colors = make2dcolors(width, height, color1=[0,0,255], color2=[255, 255, 0])
