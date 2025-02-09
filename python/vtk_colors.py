@@ -135,11 +135,9 @@ def make_colormap(scheme_name, ctrl_pts):
         print(f'Requested color scheme {scheme_name} has index {g}')
     n = colors.GetNumberOfColors()
     # print(f'{n} colors')
-    if len(ctrl_pts) == 2:
-        f = interpolate.interp1d(x=[0, n-1], y=ctrl_pts)
+    if len(ctrl_pts) >= 2:
+        f = interpolate.interp1d(x=np.linspace(start=0, stop=n-1, num=len(ctrl_pts), endpoint=True), y=ctrl_pts)
         ctrl_pts = f(range(n))
-    elif len(ctrl_pts) != n:
-        raise ValueError('Numbers of colors and control points don\'t match')
     cmap = vtk.vtkColorTransferFunction()
     for i in range(n):
         c = colors.GetColor(i)
@@ -149,4 +147,23 @@ def make_colormap(scheme_name, ctrl_pts):
             d[j] = float(c[j])/255.
         cmap.AddRGBPoint(ctrl_pts[i], d[0], d[1], d[2])
         # print(f'{i}: {ctrl_pts[i]} . {c} / {d}')
+    return cmap
+
+
+def make_diverging_colormap(negcpts, poscpts, mid=0, leftcolor=[0,0,1], rightcolor=[1,0,0]):
+    cmap = vtk.vtkColorTransferFunction()
+    leftc = np.array(leftcolor)
+    rightc = np.array(rightcolor)
+    centerc = np.zeros(3, dtype=float)
+    # neg[0] < neig[1] < ... < neg[M-1] < mid
+    # mid < pos[0] < pos[1] < ... < pos[N-1]
+    us = np.linspace(0, 1, len(negcpts), endpoint=False)
+    for u, v in zip(us, negcpts):
+        col = (1-u)*leftc + u*centerc
+        cmap.AddRGBPoint(v, col[0], col[1], col[2])
+    cmap.AddRGBPoint(mid, 1, 1, 1)
+    us = np.linspace(0, 1, len(poscpts)+1, endpoint=True)[1:]
+    for u, v in zip(us, poscpts):
+        col = (1-u)*centerc + u*rightc
+        cmap.AddRGBPoint(v, col[0], col[1], col[2])
     return cmap
