@@ -103,7 +103,7 @@ namespace spurt { namespace vector {
              typename Value2_=typename Vector2_::value_type>
     inline void copy(const Vector1_& src, Vector2_& dest, size_t shift1=0, size_t shift2=0) {
         auto s1 = std::distance(src.begin(), src.end());
-        auto s2 = std::distance(dest.begin(), dest.end())
+        auto s2 = std::distance(dest.begin(), dest.end());
         assert(s1-shift1 == s2-shift2);
         for (size_t i=shift1; i<s1; ++i) {
             dest[shift2+i]=src[i];

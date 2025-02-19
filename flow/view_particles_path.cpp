@@ -14,17 +14,17 @@
 #include <graphics/colors.hpp>
 #include <format/filename.hpp>
 
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 #include <math/bounding_box.hpp>
 
 #include <boost/filesystem.hpp>
 
-typedef nvis::fixed_vector< double, 2 > vec2d;
-typedef nvis::fixed_vector< double, 3 > vec3d;
-typedef nvis::fixed_vector< int, 2 >    vec2i;
-typedef nvis::fixed_vector< int, 3 >    vec3i;
-typedef nvis::bounding_box< vec2d >    bbox2d;
-typedef nvis::vec4                       vec4;
+typedef spurt::small_vector< double, 2 > vec2d;
+typedef spurt::small_vector< double, 3 > vec3d;
+typedef spurt::small_vector< int, 2 >    vec2i;
+typedef spurt::small_vector< int, 3 >    vec3i;
+typedef spurt::bounding_box< vec2d >    bbox2d;
+typedef spurt::vec4                       vec4;
 
 typedef vec4                            pos_t;
 typedef std::vector<pos_t>       trajectory_t;
@@ -49,8 +49,8 @@ double radius=0.1;
 double scale=0.001;
 int color_method=0; // constant
 size_t nframes=10;
-nvis::vec2 range(0, -1);
-nvis::ivec2 start(0, 0);
+vec2d range(0, -1);
+vec2i start(0, 0);
 float point_size = 2;
 bool do_colorbar = false;
 bool normalize = false;
@@ -149,10 +149,10 @@ vtkSmartPointer<vtkColorTransferFunction> create_ctf(const std::vector<double>& 
     VTK_CREATE(vtkColorTransferFunction, ctf);
 
     if (name_cmap.empty()) {
-        std::vector<nvis::fvec3> scale;
+        std::vector<spurt::fvec3> scale;
 
         // heat map:
-        std::vector<nvis::fvec3> heat_scale;
+        std::vector<spurt::fvec3> heat_scale;
         heat_scale.push_back(spurt::black);
         heat_scale.push_back(spurt::red);
         heat_scale.push_back(spurt::yellow);
@@ -292,8 +292,9 @@ int main(int argc, char* argv[]) {
     std::string extension;
     if (!name_out.empty()) {
         boost::filesystem::path p(name_out);
-        name_out =
-         p.parent_path().string() + '/' + p.stem().string();
+        if (!p.parent_path().empty())
+            name_out = p.parent_path().string() + '/';
+        name_out += p.stem().string();
         extension = p.extension().string();
         if (verbose) std::cout << "name_out = " << name_out << '\n';
     }
@@ -314,7 +315,7 @@ int main(int argc, char* argv[]) {
     std::vector<trajectory_t> trajectories;
     std::map<int, size_t> id2pos;
     int natt = datasets[0]->axis[0].size;
-    nvis::bbox2 bounds;
+    spurt::bbox2 bounds;
     size_t total_npts=0;
     std::vector<double> timesteps;
 
@@ -369,7 +370,7 @@ int main(int argc, char* argv[]) {
                 }
             }
 
-            bounds.add(nvis::subv<0,2,double>(pt));
+            bounds.add(vec2d(pt[0], pt[1]));
 
             timesteps.push_back(pt[2]);
 

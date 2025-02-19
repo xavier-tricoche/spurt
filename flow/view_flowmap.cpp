@@ -4,15 +4,17 @@
 #include <misc/progress.hpp>
 #include <math/stat.hpp>
 #include <graphics/colors.hpp>
+#include <string>
 
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 #include <math/bounding_box.hpp>
 
-typedef nvis::fixed_vector< double, 2 > vec2d;
-typedef nvis::fixed_vector< double, 3 > vec3d;
-typedef nvis::fixed_vector< int, 2 >    vec2i;
-typedef nvis::fixed_vector< int, 3 >    vec3i;
-typedef nvis::bounding_box< vec2d >    bbox2d;
+typedef spurt::small_vector<float, 3> vec3f;
+typedef spurt::small_vector<double, 3> vec3d; 
+typedef spurt::small_vector<double, 2> vec2d;
+typedef spurt::small_vector<int, 3> vec3i;
+typedef spurt::small_vector<int, 2> vec2i;
+typedef spurt::bounding_box<vec2d> bbox2d;
 
 std::string name_in, name_out, name_mask, name_cmap_in, name_cmap_out;
 bool verbose;
@@ -176,8 +178,8 @@ vtkSmartPointer<vtkActor> create_image() {
 	}
 
 	std::cout << "id_0 = " << id_0 << ", n_ids = " << n_ids << ", size = " << copy.size() << '\n';
-	nvis::vec3 blue(0,0,1);
-	nvis::vec3 yellow(1,1,0);
+	vec3d blue(0,0,1);
+	vec3d yellow(1,1,0);
 
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
     mapper->SetInputData(data);
@@ -187,7 +189,7 @@ vtkSmartPointer<vtkActor> create_image() {
 	ctf->AddRGBPoint(0, 0, 0, 0);
 	for (int i=0; i<10; ++i) {
 		float u = (float)i/10;
-		nvis::vec3 c = (1.-u)*blue + u*yellow;
+		vec3d c = (1.-u)*blue + u*yellow;
 		float v = copy[id_0 + u*n_ids];
 		ctf->AddRGBPoint(v, c[0], c[1], c[2]);
 	}
@@ -233,7 +235,7 @@ vtkSmartPointer<vtkActor> create_points() {
 	vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
 
 	if (use_spheres) {
-		VTK_SMART(vtkPolyData) spheres = vtk_utils::make_spheres(data, nvis::norm(gbounds.size())/1000., 6, 6);
+		VTK_SMART(vtkPolyData) spheres = vtk_utils::make_spheres(data, spurt::norm(gbounds.size())/1000., 6, 6);
 		mapper->SetInputData(spheres);
 	}
 	else {
@@ -245,7 +247,7 @@ vtkSmartPointer<vtkActor> create_points() {
 	vtkSmartPointer<vtkColorTransferFunction> ctf = vtkSmartPointer<vtkColorTransferFunction>::New();
 
 	if (name_cmap_in.empty()) {
-		std::vector<nvis::fvec3> scale;
+		std::vector<vec3f> scale;
 
 		/*
 		// heat map:
@@ -384,7 +386,7 @@ int main(int argc, char* argv[]) {
 	colors->SetNumberOfComponents(3);
 	colors->SetNumberOfTuples(npts);
 	colors->SetName("Colors");
-	nvis::vec3 black(0), red(255,0,0), white(255,255,255), blue(0,0,255), cf;
+	vec3d black(0), red(255,0,0), white(255,255,255), blue(0,0,255), cf;
 	nvis::fixed_vector<unsigned char, 3> c;
 	for (size_t i=0; i<npts; ++i) {
 		float x = raster[3*i];
@@ -420,8 +422,8 @@ int main(int argc, char* argv[]) {
 	}
 
 	std::cout << "id_0 = " << id_0 << ", n_ids = " << n_ids << ", size = " << copy.size() << '\n';
-	nvis::vec3 blue(0,0,1);
-	nvis::vec3 yellow(1,1,0);
+	vec3d blue(0,0,1);
+	vec3d yellow(1,1,0);
 
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
     mapper->SetInputData(data);
@@ -431,7 +433,7 @@ int main(int argc, char* argv[]) {
 	ctf->AddRGBPoint(0, 0, 0, 0);
 	for (int i=0; i<10; ++i) {
 		float u = (float)i/10;
-		nvis::vec3 c = (1.-u)*blue + u*yellow;
+		vec3d c = (1.-u)*blue + u*yellow;
 		float v = copy[id_0 + u*n_ids];
 		ctf->AddRGBPoint(v, c[0], c[1], c[2]);
 	}

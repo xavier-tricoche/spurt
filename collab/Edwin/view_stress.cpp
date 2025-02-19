@@ -29,7 +29,7 @@
 #include "vtkTextProperty.h"
 
 #include <string>
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 #include <VTK/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <set>

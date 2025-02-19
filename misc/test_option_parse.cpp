@@ -6,120 +6,6 @@
 #include <misc/option_parse.hpp>
 #include <math/types.hpp>
 
-
-struct time_of_day {
-    int hour, minute, second;
-};
-
-std::ostream& operator<<(std::ostream& out, time_of_day& tod)
-{
-    out << tod.hour << ':' << tod.minute << ':' <<  tod.second;
-    return out;
-}
-
-void validate(time_of_day& tod, const std::vector<std::string>& s) {
-    // Expected format:
-    // X:Y:Z
-    
-    namespace po = boost::program_options;
-    
-    std::cout << "****\n****\n****\nentering custom validate:\n";
-    for (int i=0; i<s.size(); ++i) {
-        std::cout << "parameter #" << i+1 << ": " << s[i] << '\n';
-    }
-    
-    // tokenize input string
-    std::vector<std::string> tokenized;
-    for (int i=0; i<s.size(); ++i) {
-        char * cstr = new char [s[i].length()+1];
-        std::strcpy (cstr, s[i].c_str());
-        char* token=std::strtok(cstr, ": ");
-        while (token!=NULL) {
-            std::cout << "token=" << token << '\n';
-            tokenized.push_back(token);
-            token=std::strtok(NULL, ": ");
-        }
-    }
-    if (tokenized.empty()) {
-        throw po::invalid_syntax(po::invalid_syntax::missing_parameter);
-    }
-    else if (tokenized.size()>3) {
-        throw po::invalid_syntax(po::invalid_syntax::extra_parameter);
-    }
-    tod.hour = std::stoi(tokenized[0]);
-    if (tokenized.size()>1) {
-        tod.minute = std::stoi(tokenized[1]);
-        if (tokenized.size()==3) {
-            tod.second = std::stoi(tokenized[2]);
-        }
-    }
-}
-
-// typedef spurt::command_line::custom_parser< time_of_day >::parser_type parser_t;
-
-// void validate(boost::any& v, const std::vector<std::string>& values,
-//               time_of_day* target_type, int) {
-//
-//     std::cout << "****\n****\n****\nEntering time_of_day validate with "
-//         << values.size() << " strings\n";
-//
-//     if (v.empty()) {
-//         v = boost::any(time_of_day());
-//     }
-//     time_of_day* tv = boost::any_cast<time_of_day>(&v);
-//     assert(NULL != tv);
-//     validate(*tv, values);
-// }
-
-void validate(boost::any& v, const std::vector<std::string>& values,
-              time_of_day* target_type, long) {
-                  
-    std::cout << "****\n****\n****\nEntering time_of_day validate with "
-        << values.size() << " strings\n";
-    
-    if (v.empty()) {
-        v = boost::any(time_of_day());
-    }
-    time_of_day* tv = boost::any_cast<time_of_day>(&v);
-    assert(NULL != tv);
-    validate(*tv, values);
-}
-
-namespace boost { namespace program_options {
-
-// template<>
-// void validate<>(boost::any& v, const std::vector<std::string>& values,
-//                 time_of_day* target_type, int) {
-//
-//     std::cout << "****\n****\n****\nEntering time_of_day validate within boost::po namespace with "
-//         << values.size() << " strings\n";
-//
-//     if (v.empty()) {
-//         v = boost::any(time_of_day());
-//     }
-//     time_of_day* tv = boost::any_cast<time_of_day>(&v);
-//     assert(NULL != tv);
-//     validate(*tv, values);
-// }
-
-template<>
-void validate<>(boost::any& v, const std::vector<std::string>& values,
-                time_of_day* target_type, long) {
-              
-    std::cout << "****\n****\n****\nEntering time_of_day validate within boost::po namespace with "
-        << values.size() << " strings\n";
-
-    if (v.empty()) {
-        v = boost::any(time_of_day());
-    }
-    time_of_day* tv = boost::any_cast<time_of_day>(&v);
-    assert(NULL != tv);
-    validate(*tv, values);
-}
-}
-
-}
-
 int main(int argc, const char* argv[]) {
 
     namespace xcl = spurt::command_line;
@@ -141,7 +27,6 @@ int main(int argc, const char* argv[]) {
     std::vector<short> svec;
     std::vector<std::string> tod_str;
     typedef std::vector<short>::iterator iter;
-    time_of_day t_o_d;
     
     xcl::option_traits 
         required_group(true, false, "Required Options"), 
@@ -167,12 +52,9 @@ int main(int argc, const char* argv[]) {
         parser.add_tuple<3>("3tuple", iv, iv, "A tuple of 3 integers");
         parser.add_tuple<2>("2tuple", fv, fv, "A tuple of 2 floats");
         parser.add_tuple<4>("4tuple", dv, dv, "A tuple of 4 doubles");
-        // parser.add_tuple<5>("5tuple", da, da, "A tuple of 5 doubles");
-        // parser.add_sequence("tod", tod_str, "A time of day: X:Y:Z", optional_group, "<time>");
-        // parser.add_custom< time_of_day >("tod", t_o_d, "A custom parameter type: time of day: X:Y:Z", 1, required_group, "time");
+        parser.add_tuple<5>("5tuple", da, da, "A tuple of 5 doubles");
         
         parser.parse(argc, argv);
-        // validate(t_o_d, tod_str);
     }
     catch(std::runtime_error& e) {
         std::cerr << "ERROR(1): " << argv[0] << " threw exception:\n" 
@@ -190,17 +72,17 @@ int main(int argc, const char* argv[]) {
     }
     
     std::cout << "Parameter values:\n"
-        << "c     = " << c << '\n'
-        << "sh    = " << sh << '\n'
-        << "i     = " << i << '\n'
-        << "f     = " << f << '\n'
-        << "d     = " << dd << '\n'
-        << "st    = " << str << '\n'
-        << "st2   = " << str2 << '\n'
-        << "iv    = " << iv << '\n'
-        << "fv    = " << fv << '\n'
-        << "dv    = " << dv << '\n'
-        << "tod   = " << t_o_d << '\n';
+        << "letter       = " << c << '\n'
+        << "number       = " << sh << '\n'
+        << "other_number = " << i << '\n'
+        << "real         = " << f << '\n'
+        << "double       = " << dd << '\n'
+        << "input        = " << str << '\n'
+        << "ouput        = " << str2 << '\n'
+        << "3tuple       = " << iv << '\n'
+        << "2tuple       = " << fv << '\n'
+        << "4tuple       = " << dv << '\n'
+        << "numbers      = ";
     std::for_each(svec.begin(), svec.end(), [] (short s) { std::cout << s << ", "; });
     std::cout << "\n";
     

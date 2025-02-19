@@ -6,8 +6,8 @@
 
 #include <math/types.hpp>
 #include <math/bounding_box.hpp>
-#include <util/wall_timer.hpp>
-#include <vis/streamline.hpp>
+#include <misc/progress.hpp>
+#include <nvis-vis/streamline.hpp>
 
 #include "ftle.hpp"
 #include "data/image.hpp"
@@ -50,17 +50,21 @@ typedef spurt::nrrd_data_traits<Nrrd*>  field_type;
 struct field_wrapper {
     field_wrapper(const field_type& field) : __field(field) {}
     
-    bool operator()(double, const nvis::vec3& x, nvis::vec3& f) const {
+    bool operator()(double, const spurt::vec3& x, spurt::vec3& f) const {
         return __field.get_value(x, f);
     }
     
-    const nvis::bbox3& bounds() const {
+    const spurt::bbox3& bounds() const {
         return __field.bounds();
     }
     
     const field_type&   __field;
 };
 
+template<typename Vector>
+inline spurt::vec3 as_vec3(const Vector& v) {
+    return spurt::vec3(v[0], v[1], v[2])
+}
 
 struct integration_monitor {
 
@@ -74,7 +78,7 @@ struct integration_monitor {
     typedef nvis::streamline::int_step  step_type;
     
     integration_monitor(size_t max_steps, double min_step_size, double max_time,
-                        const nvis::bbox3& bounds)
+                        const spurt::bbox3& bounds)
         : __counter(0), __length(0), __max_nb_steps(max_steps), __max_time(max_time),
           __min_step_size(min_step_size), __bounds(bounds), __state(OK) {}
           
@@ -82,7 +86,7 @@ struct integration_monitor {
         __counter = 0;
         __length = 0;
         __state = OK;
-        __last_pos = nvis::vec3(0);
+        __last_pos = spurt::vec3(0);
     }
     
     bool operator()(const step_type& step) {
@@ -90,26 +94,26 @@ struct integration_monitor {
         std::cerr << "check\n";
         
         ++__counter;
-        double dx = nvis::norm(nvis::subv<0, 3>(step.y1()) - nvis::subv<0, 3>(step.y0()));
+        double dx = spurt::norm(as_vec3(step.y1()-step.y0()));
         __length += dx;
-        if (!__bounds.inside(nvis::subv<0, 3>(step.y1()))) {
+        if (!__bounds.inside(as_vec3(step.y1()))) {
             // binary search for exit point
             double tmin = step.t0();
             double tmax = step.t1();
             while (tmax - tmin > 1.0e-6) {
                 double t = 0.5 * (tmin + tmax);
-                if (!__bounds.inside(nvis::subv<0, 3>(step.y(t)))) {
+                if (!__bounds.inside(as_vec3(step.y(t)))) {
                     tmax = t;
                 } else {
                     tmin = t;
                 }
             }
             __state = OUT_OF_BOUNDS;
-            __last_pos = nvis::subv<0, 3>(step.y(0.5 * (tmin + tmax)));
+            __last_pos = as_vec3(step.y(0.5 * (tmin + tmax)));
             return true;
         } else if (__counter >= __max_nb_steps) {
             __state = MAX_NB_STEPS;
-            __last_pos = nvis::subv<0, 3>(step.y1());
+            __last_pos = as_vec3(step.y1());
             std::cerr << "too many steps\n";
             return true;
         } else if (step.t1() > __max_time) {
@@ -118,15 +122,15 @@ struct integration_monitor {
                 throw std::runtime_error("invalid step");
             }
             __state = MAX_TIME;
-            __last_pos = nvis::subv<0, 3>(step.y(__max_time));
+            __last_pos = as_vec3(step.y(__max_time));
             return true;
         } else if (dx < __min_step_size) {
             __state = STEP_SIZE_UNDERFLOW;
-            __last_pos = nvis::subv<0, 3>(step.y1());
+            __last_pos = as_vec3(step.y1());
             std::cerr << "step size underflow\n";
             return true;
         } else {
-            __last_pos = nvis::subv<0, 3>(step.y1());
+            __last_pos = as_vec3(step.y1());
             return false;
         }
     }
@@ -134,8 +138,8 @@ struct integration_monitor {
     size_t      __counter, __max_nb_steps;
     double      __length, __max_time, __min_step_size;
     state       __state;
-    nvis::bbox3 __bounds;
-    nvis::vec3  __last_pos;
+    spurt::bbox3 __bounds;
+    spurt::vec3  __last_pos;
 };
 
 std::ostream& operator<<(std::ostream& os, const integration_monitor& monitor)
@@ -172,7 +176,7 @@ int main(int argc, const char* argv[])
     field_type vf(nin);
     field_wrapper wrapper(vf);
     
-    nvis::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
+    spurt::ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
     std::cerr << "Resolution = " << res << std::endl;
     spurt::raster_grid<3> sampling_grid(res, wrapper.bounds());
     spurt::image<nvis::vec3, 3> flowmaps[2]

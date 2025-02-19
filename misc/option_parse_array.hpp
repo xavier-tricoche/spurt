@@ -174,6 +174,15 @@ XAVIER_COMMAND_LINE_VECTOR_TYPES
     X(unsigned, 7); \
     X(unsigned, 8); \
     X(unsigned, 9); \
+    X(long, 1); \
+    X(long, 2); \
+    X(long, 3); \
+    X(long, 4); \
+    X(long, 5); \
+    X(long, 6); \
+    X(long, 7); \
+    X(long, 8); \
+    X(long, 9); \
     X(size_t,   1); \
     X(size_t,   2); \
     X(size_t,   3); \

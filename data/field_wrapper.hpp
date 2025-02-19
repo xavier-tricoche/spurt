@@ -5,7 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <teem/nrrd.h>
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 #include <math/bounding_box.hpp>
 #include <image/nrrd_wrapper.hpp>
 
@@ -16,8 +16,8 @@ template<>
 class nrrd_data_traits<Nrrd*> {
 public:
     typedef double                              scalar_type;
-    typedef nvis::fixed_vector<scalar_type, 3>  vector_type;
-    typedef nvis::vec3                          point_type;
+    typedef spurt::small_vector<scalar_type, 3> vector_type;
+    typedef spurt::vec3                         point_type;
     
     nrrd_data_traits(const Nrrd* nin) {
         if (nin->dim < 3) {
@@ -27,8 +27,7 @@ public:
             __size[i] = nin->axis[nin->dim-3+i].size;
         }
         __bounds = spurt::nrrd_utils::get_bounds<3>(nin);
-//      std::cerr << "bounds are " << __bounds << "\n";
-        __step = __bounds.size() / point_type(__size - nvis::ivec3(1, 1, 1));
+        __step = __bounds.size() / point_type(__size - spurt::ivec3(1, 1, 1));
         __scalar_values = spurt::nrrd_utils::to_array<scalar_type>(nin);
         __offset[0] = 0;
         __offset[1] = 1;
@@ -57,7 +56,7 @@ public:
         if (!g2l(y, x)) {
             return false;
         }
-        nvis::ivec3 id(floor(y[0]), floor(y[1]), floor(y[2]));
+        spurt::ivec3 id(std::floor(y[0]), std::floor(y[1]), std::floor(y[2]));
         point_type z = y - point_type(id);
         scalar_type u = z[0], v = z[1], w = z[2];
         scalar_type U = 1. - u, V = 1. - v, W = 1. - w;
@@ -79,7 +78,7 @@ public:
         if (!g2l(y, x)) {
             return false;
         }
-        nvis::ivec3 id(floor(y[0]), floor(y[1]), floor(y[2]));
+        spurt::ivec3 id(std::floor(y[0]), std::floor(y[1]), std::floor(y[2]));
         point_type z = y - point_type(id);
         scalar_type u = z[0], v = z[1], w = z[2];
         scalar_type U = 1. - u, V = 1. - v, W = 1. - w;
@@ -90,12 +89,14 @@ public:
         int n = index(id);
         f = vector_type(0);
         for (int i=0 ; i<8 ; ++i) {
-            f += weight[i] * nvis::suba<scalar_type, 3>(__scalar_values, n+__offset[i]);
+            f += weight[i] * spurt::vec3(__scalar_values[3*(n+__offset[i])  ],
+                                         __scalar_values[3*(n+__offset[i])+1],
+                                         __scalar_values[3*(n+__offset[i])+2]);
         }
         return true;
     }
     
-    const nvis::bbox3& bounds() const {
+    const spurt::bbox3& bounds() const {
         return __bounds;
     }
     
@@ -109,15 +110,15 @@ private:
         return true;
     }
     
-    int index(const nvis::ivec3& id) const {
+    int index(const spurt::ivec3& id) const {
         return id[0] + __size[0]*(id[1] + __size[1]*id[2]);
     }
     
-    nvis::ivec3                             __size;
-    nvis::bbox3                             __bounds;
-    point_type                              __step;
-    scalar_type*                            __scalar_values;
-    int                                     __offset[8];
+    spurt::ivec3     __size;
+    spurt::bbox3     __bounds;
+    point_type       __step;
+    scalar_type*     __scalar_values;
+    int              __offset[8];
 };
 
 template<typename _nrrd_data_traits>

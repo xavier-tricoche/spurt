@@ -47,7 +47,10 @@ public:
         m_cell_res = m_res - 1;
         if (cell_based) m_cell_res += 1;
         m_spacing = sz / m_cell_res;
+
+#ifdef SPURT_DEBUG
         std::cout << "grid constructor: npos = " << m_npos << ", bounds = " << m_bounds << ", cell res = " << m_cell_res << ", size = " << sz << ", spacing = " << m_spacing << '\n'; 
+#endif
     }
     raster_grid(const coord_type& resolution, const pos_type& origin,
                 const pos_type& spacing, bool cell_based=false)

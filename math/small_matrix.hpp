@@ -99,10 +99,13 @@ namespace spurt {
                  typename = typename internal::fits<OtherStorage, _size_, 1>::type>
         using like_matrix_S = small_matrix_interface<OtherStorage, nrows, ncols>;
         
-        template<typename OtherStorage = storage_type, 
+        template<typename OtherStorage, 
                  typename = typename internal::fits<OtherStorage, _size_, 1>::type >
         using like_array_S = std::array<typename OtherStorage::value_type, _size_> ;
-        
+
+        template<typename OtherStorage, 
+                 size_t P, typename = typename std::enable_if<OtherStorage::size == ncols*P>::type>
+        using rhs_matrix_S = small_matrix_interface<OtherStorage, ncols, P>;
         
         // Storage for output types
         typedef like_vector<datablock<bool>> bool_vector;
@@ -139,15 +142,16 @@ namespace spurt {
         template<typename OtherStorage>
         using auto_copy_S = auto_copy<typename OtherStorage::value_type>;
         
-        template<typename T, size_t P>
-        using auto_output = small_matrix_interface<DataBlock<auto_type<T>, _size_>, nrows, P>;
-        
-        template<typename OtherStorage, size_t P>
-        using auto_output_S = auto_output<typename OtherStorage::value_type, P>;
+        // template<typename OtherStorage, size_t P>
+        // using auto_output_S = auto_output<typename OtherStorage::value_type, P>;
+
+        template<typename OtherStorage, size_t P,
+                 typename = typename std::enable_if<OtherStorage::size == P*ncols>::type>
+        using auto_output_S = small_matrix_interface<DataBlock<auto_type<typename OtherStorage::value_type>, nrows*P>, nrows, P>;
         
         template<typename OtherStorage>
         using auto_output_vector = 
-            small_vector_interface<DataBlock<auto_type_S<OtherStorage>, ncols>>;
+            small_vector_interface<DataBlock<auto_type_S<OtherStorage>, M>>;
         
         template< typename OtherStorage, size_t P, 
                   typename = typename std::enable_if<OtherStorage::size == ncols*P>::type>
@@ -166,6 +170,8 @@ namespace spurt {
         // Constructors
         small_matrix_interface(scalar_type val=0) 
         : base_type(val) {}
+        
+        small_matrix_interface(storage_type storage) : base_type(storage) {}
 
         template<typename OtherStorage>
         small_matrix_interface(const like_vector_S<OtherStorage>& other)
@@ -181,6 +187,14 @@ namespace spurt {
         template<typename OtherStorage>
         small_matrix_interface(const like_matrix_S<OtherStorage>& other) 
             : base_type(static_cast<const like_vector_S<OtherStorage>&>(other)) {}
+
+        template<typename OtherStorage>
+        self_type& operator=(const like_matrix_S<OtherStorage>& other) {
+            if (this->m_storage.data == nullptr)
+                throw std::runtime_error("Illegal lvalue assignment to unallocated memory");
+            std::copy(other.begin(), other.end(), begin());
+            return *this;
+        }
               
         like_vector<value_type>& as_vector() {
             return static_cast< like_vector<value_type>& >(*this);
@@ -245,13 +259,14 @@ namespace spurt {
         }
 
         // Matrix multiplication
-        // When sizes match, it can either be a LA multiplication or a 
+        // When square, it can either be a LA multiplication or a 
         // coefficient-wise. LA multiplication assumed
-        template <typename OtherStorage>
-        auto_copy_S<OtherStorage> operator*(const like_matrix_S<OtherStorage> &rhs) const
+        /*
+        template <typename OtherStorage, size_t P>
+        auto_output_S<OtherStorage, P> operator*(const rhs_matrix<OtherStorage> &rhs) const
         {
             typedef auto_type_S<OtherStorage> out_type;
-            typedef like_matrix<out_type> out_mat_type;
+            typedef auto_output_S<out_type> out_mat_type;
             out_mat_type r;
             // matrix-matrix multiplication with same-sized matrix
             r.as_eigen() = as_const_eigen().template cast<out_type>() * 
@@ -259,17 +274,33 @@ namespace spurt {
             return r;
         }
         
-        // If sizes don't match but are LA compatible, it is a LA multiplication
-        template <typename OtherStorage, size_t P, typename = typename std::enable_if<P!=N>::type>
-        auto_output_S<OtherStorage, P> operator*(const rhs_matrix<OtherStorage, P> &rhs) const
+        // When not square, it must be a coefficient-wise multiplication
+        template <typename OtherStorage, 
+                  typename = typename std::enable_if<!is_square>::type>
+        auto_copy_S<OtherStorage> operator*(const like_matrix_S<OtherStorage> &rhs) const
         {
             typedef auto_type_S<OtherStorage> out_type;
+            typedef like_matrix<out_type> out_mat_type;
+            out_mat_type r;
+            // matrix-matrix multiplication with same-sized matrix
+            r.as_eigen() = 
+                (as_const_eigen().array().template cast<out_type>() * 
+                 rhs.as_const_eigen().array().template cast<out_type>()).matrix();
+            return r;
+        }*/
+
+        template <typename OtherStorage, size_t P>
+        auto_output_S<OtherStorage, P> operator*(const rhs_matrix<OtherStorage, P> &rhs) const
+        {
             typedef auto_output_S<OtherStorage, P> out_matrix_type;
+            typedef typename out_matrix_type::value_type out_type;
             out_matrix_type r;
+
             r.as_eigen() = as_const_eigen().template cast<out_type>() * 
                            rhs.as_const_eigen().template cast<out_type>();
             return r;
         }
+
 
         // Multiplication by a vector must be LA matrix vector product
         template <typename OtherStorage>
@@ -532,6 +563,26 @@ namespace spurt {
         small_matrix<typename Storage::value_type, M> r;
         r.as_eigen() = m.as_const_eigen().inverse();
         return r;
+    }
+
+    template<typename Storage, size_t M, size_t N,
+             typename = typename std::enable_if<(M>N)>::type >
+    small_matrix<typename Storage::value_type, N, M>
+    moore_penrose_pseudoinverse(const small_matrix_interface<Storage, M, N>& m) {
+        return inverse(transpose(m)*m)*transpose(m);
+    }
+
+    template<typename Storage, size_t M, size_t N,
+             typename std::enable_if<(M<N)>::type >
+    small_matrix<typename Storage::value_type, N, M>
+    moore_penrose_pseudoinverse(const small_matrix_interface<Storage, M, N>& m) {
+        return transpose(m)*inverse(m*transpose(m));
+    }
+
+    template<typename Storage, size_t M>
+    small_matrix<typename Storage::value_type, M, M>
+    moore_penrose_pseudoinverse(const small_matrix_interface<Storage, M, M>& m) {
+        return inverse(m);
     }
     
     template<typename Storage1, typename Storage2>

@@ -18,12 +18,12 @@ int edges[][4] =
 int canonical_edge_coordinates[][2][3] = 
         { { { 0, 0, 0 }, { 1, 0, 0 } },   //  0
           { { 1, 0, 0 }, { 1, 1, 0 } },   //  1
-          { { 0, 1, 0 }, { 1, 1, 0 } },   //  2 
-          { { 0, 0, 0 }, { 0, 1, 0 } },   //  3
+          { { 1, 1, 0 }, { 0, 1, 0 } },   //  2 
+          { { 0, 1, 0 }, { 0, 0, 0 } },   //  3
           { { 0, 0, 1 }, { 1, 0, 1 } },   //  4
           { { 1, 0, 1 }, { 1, 1, 1 } },   //  5
-          { { 0, 1, 1 }, { 1, 1, 1 } },   //  6
-          { { 0, 0, 1 }, { 0, 1, 1 } },   //  7
+          { { 1, 1, 1 }, { 0, 1, 1 } },   //  6
+          { { 0, 1, 1 }, { 0, 0, 1 } },   //  7
           { { 0, 0, 0 }, { 0, 0, 1 } },   //  8
           { { 1, 0, 0 }, { 1, 0, 1 } },   //  9
           { { 1, 1, 0 }, { 1, 1, 1 } },   // 10
@@ -49,6 +49,68 @@ int canonical_face_edge_indices[][4] =
     { 0,  9, 4,  8 }, { 1, 10, 5,  9 },
     { 2, 11, 6, 10 }, { 3,  8, 7, 11 }
 };
+
+int face_edge_neighbor(int faceid, int edgeid) {
+    switch (faceid) {
+    case 0: {
+        switch (edgeid) {
+            case 0: return 2;
+            case 1: return 3;
+            case 2: return 4;
+            case 3: return 5;
+            default: throw std::runtime_error("invalid edge id for face");
+        }
+    }
+    case 1: {
+        switch (edgeid) {
+            case 4: return 2;
+            case 5: return 3;
+            case 6: return 4;
+            case 7: return 5;
+            default: throw std::runtime_error("invalid edge id for face");
+        }
+    }
+    case 2: {
+        switch (edgeid) {
+            case 0: return 0;
+            case 9: return 3;
+            case 4: return 1;
+            case 8: return 5;
+            default: throw std::runtime_error("invalid edge id for face");
+        }
+    }
+    case 3: {
+        switch (edgeid) {
+            case 1:  return 0;
+            case 10: return 4;
+            case 5:  return 1;
+            case 9:  return 2;
+            default: throw std::runtime_error("invalid edge id for face");
+        }
+    }
+    case 4: {
+        switch (edgeid) {
+            case 2:  return 0;
+            case 10: return 3;
+            case 6:  return 1;
+            case 11: return 5;
+            default: throw std::runtime_error("invalid edge id for face");
+        }
+    }
+    case 5: {
+        switch (edgeid) {
+            case 3:  return 0;
+            case 11: return 4;
+            case 7:  return 1;
+            case 8:  return 2;
+            default: throw std::runtime_error("invalid edge id for face");
+        }
+    }
+    default: {
+        throw std::runtime_error("Invalid face id");
+    }
+    }
+}
 
 char triTable[256][16] ={
      {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, // 0

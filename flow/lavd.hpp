@@ -15,12 +15,14 @@
 // #include <boost/date_time/posix_time/posix_time.hpp>
 // #include <boost/date_time/gregorian/gregorian.hpp>
 
+#include <nvis-math/fixed_vector.hpp>
+#include <nvis-math/bounding_box.hpp>
 #include <image/probe.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <misc/log_helper.hpp>
 #include <misc/progress.hpp>
 #include <vtk/vtk_utils.hpp>
-#include <data/raster.hpp>
+#include <data/image.hpp>
 
 #define __VERBOSE_LAVD__
 
@@ -52,9 +54,9 @@ typedef nvis::bounding_box< vec2 >     bbox_t;
 typedef nvis::fixed_vector< long, 2 > coord_t;
 typedef nvis::bounding_box< lvec2 >  coord_range_t;
 
-typedef spurt::image< vec3, 3, value_t, size_t > vector_field_t;
-typedef spurt::image< value_t, 3, value_t, size_t > scalar_field_t;
-typedef spurt::image< value_t, 1, value_t, size_t > scalar_line_t;
+typedef spurt::image< long, value_t, 3, vec3> vector_field_t;
+typedef spurt::image< long, value_t, 3, value_t> scalar_field_t;
+typedef spurt::image< long, value_t, 1, value_t> scalar_line_t;
 
 #define __VERBOSE_LAVD__
 

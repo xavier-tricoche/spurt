@@ -3,17 +3,18 @@
 
 #include <teem/nrrd.h>
 #include <iostream>
-#include <iterator>
 #include <memory>
 #include <vector>
 #include <stdexcept>
 #include <array>
 
 #include <math/types.hpp>
+#include <math/data_traits.hpp>
 #include <math/bounding_box.hpp>
 #include <math/vector_manip.hpp>
 #include <misc/meta_utils.hpp>
 #include <data/raster_data.hpp>
+#include <misc/progress.hpp>
 
 
 namespace spurt { namespace nrrd_utils {
@@ -402,13 +403,68 @@ inline void to_vector(std::vector<T1>& vals, const void* data, size_t size)
 {
     typedef data_traits<T1> traits_type;
     typedef typename traits_type::value_type value_type;
-    size_t nvals = traits_type::size();
 
+#ifdef SPURT_DEBUG
+    std::cout << "to_vector begin...\n";
+#endif
     vals.resize(size);
+    spurt::ProgressDisplay progress;
+    progress.start(size, "Filling up vector");
     value_type* ptr = (value_type *)&(vals[0]);
-    for (size_t i = 0 ; i < size*nvals ; ++i) {
+    for (size_t i = 0 ; i < size ; ++i) {
         (*ptr++) = ((T2*)data)[i];
+        progress.update(i);
     }
+    progress.end();
+
+#ifdef SPURT_DEBUG
+    std::cout << "to_vector ended\n";
+#endif
+}
+
+template<typename T1, typename T2>
+inline void to_allocated_block(T1* out_data, const void* in_data, size_t size) {
+    // no resizing or allocation here...
+    T1* out_ptr = out_data;
+    const T2* in_ptr = static_cast<const T2*>(in_data);
+    for (size_t i=0; i<size; ++i) {
+        (*out_ptr++) = (*in_ptr++);
+    }
+}
+
+template<typename T>
+bool matching_types(const Nrrd* nin) 
+{
+    switch (nin->type) {
+    case nrrdTypeChar:
+        return std::is_same<T, char>::value;
+    case nrrdTypeUChar:
+        return std::is_same<T, unsigned char>::value;
+    case nrrdTypeShort:
+        return std::is_same<T, short>::value;
+    case nrrdTypeUShort:
+        return std::is_same<T, unsigned short>::value;
+    case nrrdTypeInt:
+        return std::is_same<T, int>::value;
+    case nrrdTypeUInt:
+        return std::is_same<T, unsigned int>::value;
+    case nrrdTypeLLong:
+        return std::is_same<T, long>::value;
+    case nrrdTypeULLong:
+        return std::is_same<T, unsigned long>::value;
+    case nrrdTypeFloat:
+        return std::is_same<T, float>::value;
+    case nrrdTypeDouble:
+        return std::is_same<T, double>::value;
+    default:
+        throw std::runtime_error("unrecognized data type\n");
+    }
+}
+
+template<typename T>
+bool matching_sizes(const Nrrd* nin) 
+{
+    return spurt::data_traits<T>::size() == nin->axis[0].size;
 }
 
 template<typename T>
@@ -420,7 +476,6 @@ inline void to_vector(std::vector<T>& vals, const Nrrd* nin)
     }
     // std::cerr << "size = " << size << std::endl;
 
-    vals.clear();
     switch (nin->type) {
     case nrrdTypeChar:
         return to_vector<T, char>(vals, nin->data, size);
@@ -448,31 +503,82 @@ inline void to_vector(std::vector<T>& vals, const Nrrd* nin)
 }
 
 template<typename T>
+inline void to_allocated_block(T* out_data, const Nrrd* nin)
+{
+    size_t size = 1;
+    for (size_t i = 0 ; i < nin->dim ; ++i) {
+        size *= nin->axis[i].size;
+    }
+    // std::cerr << "size = " << size << std::endl;
+
+    switch (nin->type) {
+    case nrrdTypeChar:
+        return to_allocated_block<T, char>(out_data, nin->data, size);
+    case nrrdTypeUChar:
+        return to_allocated_block<T, unsigned char>(out_data, nin->data, size);
+    case nrrdTypeShort:
+        return to_allocated_block<T, short>(out_data, nin->data, size);
+    case nrrdTypeUShort:
+        return to_allocated_block<T, unsigned short>(out_data, nin->data, size);
+    case nrrdTypeInt:
+        return to_allocated_block<T, int>(out_data, nin->data, size);
+    case nrrdTypeUInt:
+        return to_allocated_block<T, unsigned int>(out_data, nin->data, size);
+    case nrrdTypeLLong:
+        return to_allocated_block<T, long int>(out_data, nin->data, size);
+    case nrrdTypeULLong:
+        return to_allocated_block<T, unsigned long int>(out_data, nin->data, size);
+    case nrrdTypeFloat:
+        return to_allocated_block<T, float>(out_data, nin->data, size);
+    case nrrdTypeDouble:
+        return to_allocated_block<T, double>(out_data, nin->data, size);
+    default:
+        throw std::runtime_error("unrecognized data type\n");
+    }
+}
+
+template<typename T>
 inline void to_vector(std::vector<T>& vals, const nrrd_wrapper& wrap) {
     to_vector<T>(vals, wrap.pointer());
 }
 
 template<typename Size_, typename Scalar_, size_t Dim, typename Value_, 
          typename Coord_ = small_vector<Size_, Dim>, typename Pos_ = small_vector<Scalar_, Dim>>
-inline void to_raster(raster_data<Size_, Scalar_, Dim, Value_, Coord_, Pos_>& out, 
-                      const Nrrd* nin, bool is_scalar=true) 
+inline raster_data<Size_, Scalar_, Dim, Value_, Coord_, Pos_> 
+to_raster(const Nrrd* nin, bool is_scalar=true) 
 {
     typedef raster_data<Size_, Scalar_, Dim, Value_, Coord_, Pos_> raster_type;
     typedef typename raster_type::grid_type grid_type;
     typedef typename raster_type::coord_type coord_type;
     typedef typename raster_type::value_type value_type;
     
+#ifdef SPURT_DEBUG
+    std::cout << "to_raster: value is " << (is_scalar ? "scalar" : "not scalar") << '\n';
+#endif
     auto bounds = get_bounds<Dim>(nin, is_scalar);
     nrrd_traits traits(nin);
     int offset = is_scalar ? 0 : 1;
     assert(nin->dim == Dim+offset);
-    assert( !is_scalar || std::is_scalar<value_type>::value );
+    assert( (!is_scalar && matching_sizes<Value_>(nin)) || 
+            (is_scalar && std::is_scalar<value_type>::value) );
     coord_type res = 0;
     auto _res = traits.sizes();
-    for (int i=0; i<Dim; ++i) res[i] = _res[i];
+    for (int i=0; i<Dim; ++i) res[i] = _res[i+offset];
+#ifdef SPURT_DEBUG
+    std::cout << "Resolution is " << res << '\n';
+#endif
     grid_type agrid(res, bounds);
-    out = raster_type(agrid);
-    to_vector(out.data(), nin);
+    raster_type r(agrid, false);
+    if (matching_types<Scalar_>(nin)) {
+        r.set_data((value_type*)nin->data);
+    }
+    else {
+        std::shared_ptr<value_type> data(new value_type[agrid.size()]);
+        Scalar_* ptr = reinterpret_cast<Scalar_*>(data.get());
+        to_allocated_block(ptr, nin);
+        r.set_data(data);
+    }
+    return r;
 }
 
 template<typename T1, typename T2>

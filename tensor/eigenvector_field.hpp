@@ -39,7 +39,7 @@ public:
         vec3 evals;
         mat3 evecs;
         spurt::sym_eigensystem(evals, evecs, tensor);
-        return spurt::vec4(evec(0, which), evecs(1,which), evecs(2,which), evals[which]);
+        return spurt::vec4(evecs(0, which), evecs(1,which), evecs(2,which), evals[which]);
     }
     
 private:

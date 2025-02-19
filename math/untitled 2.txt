@@ -1,0 +1,271 @@
+#pragma once
+
+#include <math/math_array.hpp>
+
+namespace spurt {
+    // small_matrix:
+    // a matrix interface to a small_vector_interface using Eigen for
+    // linear algebra computation. Storage is *column-major* but
+    // iterators are available for both column-wise and row-wise traversal
+    template<typename T, size_t M, size_t N>
+    class small_matrix : public small_vector_interface<DataBlock<T, M*N> >
+    {
+    public:
+        typedef T scalar_type;
+        typedef T value_type;
+        typedef DataBlock<T, M*N> storage_type;
+        typedef small_vector_interface< storage_type > base_type;
+        typedef random_filler<value_type> random_filler_type;
+        typedef DataBlockView< T, M, 1> column_view_type;
+        typedef ConstDataBlockView< T, M, 1> const_column_view_type;
+        typedef DataBlockView< T, N, M > row_view_type;
+        typedef ConstDataBlockView< T, N, M > const_row_view_type;
+        typedef small_vector_interface< column_view_type > column_type;
+        typedef small_vector_interface< const_column_view_type > const_column_type;
+        typedef small_vector_interface< row_view_type > row_type;
+        typedef small_vector_interface< const_row_view_type > const_row_type;
+        static constexpr size_t _size_ = M*N;
+        static constexpr size_t nrows = M;
+        static constexpr size_t ncols = N;
+        typedef small_matrix<scalar_type, nrows, ncols> self_type;
+        typedef small_matrix<scalar_type, ncols, nrows> self_transpose_type;
+        typedef Eigen::Matrix<scalar_type, nrows, ncols> self_matrix_type;
+        typedef Eigen::Map<self_matrix_type> self_map_type;
+        typedef Eigen::Map<const self_matrix_type> const_self_map_type;
+        
+        typedef typename base_type::iterator columnwise_iterator;
+        typedef typename base_type::const_iterator const_columnwise_iterator;
+        
+        typedef OuterIterator<scalar_type, scalar_type*, scalar_type&, M, N> rowwise_iterator;
+        typedef OuterIterator<scalar_type, const scalar_type*, const scalar_type&, M, N> const_rowwise_iterator;
+        
+        template<typename Iterator = columnwise_iterator>
+        Iterator begin() { return Iterator(base_type::m_storage.data); }
+        
+        template<typename Iterator = columnwise_iterator>
+        Iterator end() { return Iterator(base_type::m_storage.data + _size_); } 
+        
+        template<typename ConstIterator = const_columnwise_iterator>
+        ConstIterator begin() const { return ConstIterator(base_type::m_storage.data); }
+        
+        template<typename ConstIterator = const_columnwise_iterator>
+        ConstIterator end() const { return ConstIterator(base_type::m_storage.data + _size_); }
+        
+        template<typename T1>
+        using right_type = typename better_type<scalar_type, T1>::type;
+        
+        template<typename T1>
+        using right_duplicate = small_matrix<right_type<T1>, nrows, ncols>;
+        
+        template<typename T1, size_t P>
+        using right_output = small_matrix<right_type<T1>, nrows, P>;
+        
+        template<typename OtherStorage>
+        using right_output_vector = small_vector_interface<DataBlock<right_type<typename OtherStorage::value_type>, ncols>>;
+        
+        template <typename T1, size_t P>
+        using rhs_matrix = small_matrix<T1, ncols, P>;
+        
+        template <typename T1, size_t P>
+        using rhs_eigen_matrix = Eigen::Matrix<T1, ncols, P>;
+        
+        template<typename T1, size_t P>
+        using rhs_map_type = Eigen::Map<rhs_eigen_matrix<T1,P>>;
+        
+        template<typename T1>
+        using similar_matrix = small_matrix<T1, nrows, ncols>;
+        
+        template<typename Storage, 
+                 typename = typename std::enable_if<Storage::size == _size_>::type>
+        using similar_vector = small_vector_interface<Storage>;
+        
+        template<typename Storage, 
+                 typename = typename std::enable_if<Storage::size == N>::type>
+        using rhs_vector = small_vector_interface<Storage>;
+                 
+        template<typename T1>
+        using similar_array = std::array<T1, nrows*ncols>;
+        
+        small_matrix(scalar_type val=0, bool linalg_mode=true) 
+        : base_type(val), m_linalg_mode(linalg_mode) {}
+
+        template<typename OtherStorage>
+        small_matrix(const similar_vector<OtherStorage>& other, bool linalg_mode=true)
+        : base_type(other), m_linalg_mode(linalg_mode) {}
+
+        template<typename T1=scalar_type>
+        small_matrix(const similar_array<T1>& other, bool linalg_mode=true) 
+            : base_type(other), m_linalg_mode(linalg_mode) {}
+        
+        template<typename T1=scalar_type>
+        small_matrix(std::initializer_list<T> vals) : base_type(vals), m_linalg_mode(true) {}
+
+        template<typename T1>
+        small_matrix(const similar_matrix<T1>& other) 
+            : base_type(static_cast<const similar_vector<storage_type>&>(other)), m_linalg_mode(other.m_linalg_mode) {}
+
+        static self_type identity() {
+            self_type r;
+            r.as_eigen() = self_matrix_type::Identity();
+            return r;
+        }
+        
+        static self_type random(value_type min=random_filler_type::default_min,
+                                value_type max=random_filler_type::default_max) {
+            random_filler_type filler(min, max);
+            self_type r;
+            filler.fill(r.template begin<columnwise_iterator>(), r.template end<columnwise_iterator>());
+            return r;
+        }
+        
+        self_transpose_type transpose() const {
+            self_transpose_type r;
+            r.as_eigen() = as_const_eigen().transpose();
+            return r;
+        }
+
+        self_type& linalg(bool active=true) 
+        {
+            m_linalg_mode = active;
+            return *this;
+        }
+
+        bool is_linalg() const 
+        {
+            return m_linalg_mode;
+        }
+
+        const scalar_type& operator()(int i, int j) const 
+        {
+            return static_cast<const base_type&>(*this)[j*nrows+i];
+        }
+        scalar_type& operator()(int i, int j) 
+        {
+            return static_cast<base_type&>(*this)[j*nrows+i];
+        }
+
+        column_type column(int j)
+        {
+            return column_type(column_view_type(&((*this)(0,j))));
+        }
+        
+        const_column_type column(int j) const 
+        {
+            return const_column_type(const_column_view_type(&((*this)(0,j))));
+        }
+
+        row_type row(int i)
+        {
+            return row_type(row_view_type(&((*this)(i,0))));
+        }
+        
+        const_row_type row(int i) const
+        {
+            return const_row_type(const_row_view_type(&((*this)(i,0))));
+        }
+
+        template <typename T1, size_t P>
+        right_output<T1, P> operator*(const rhs_matrix<T1, P> &rhs)
+        {
+            typedef right_type<T1> out_type;
+            typedef right_output<T1, P> out_matrix;
+            typedef Eigen::Map<Eigen::Matrix<out_type, nrows, P>> out_map_type;
+            if (!m_linalg_mode)
+                return self_type(base_type::operator*(rhs));
+            else
+            {
+                out_matrix r;
+                r.as_eigen() = as_const_eigen().template cast<out_type>() * 
+                               rhs.as_const_eigen().template cast<out_type>();
+                return r;
+            }
+        }
+
+        template <typename Storage>
+        right_output_vector<Storage>
+        operator*(const rhs_vector<Storage> &rhs) const
+        {
+            typedef right_type<typename Storage::value_type> out_type;
+            right_output_vector<Storage> r;
+            r.as_eigen() = as_const_eigen().template cast<out_type>() * 
+                           rhs.as_const_eigen().template cast<out_type>();
+            return r;
+        }
+
+        self_map_type as_eigen()
+        {
+            return self_map_type(&((*this)(0,0)));
+        }
+
+        const_self_map_type as_const_eigen() const {
+            return const_self_map_type(&((*this)(0,0)));
+        }
+        
+        bool m_linalg_mode;
+    };
+
+    template<typename T, size_t M, size_t N>
+    std::ostream& operator<<(std::ostream& os, const small_matrix<T, M, N>& m) 
+    {
+        os << '\n' << m.as_const_eigen() << '\n';
+        return os;
+    }
+
+    template<typename T, size_t M>
+    using small_square_matrix = small_matrix<T, M, M>;
+    
+    typedef small_square_matrix<double, 2> mat2;
+    typedef small_square_matrix<double, 3> mat3;
+    typedef small_square_matrix<double, 4> mat4;
+    typedef small_square_matrix<double, 5> mat5;
+    typedef small_square_matrix<double, 6> mat6;
+    
+    typedef small_square_matrix<double, 2> dmat2;
+    typedef small_square_matrix<double, 3> dmat3;
+    typedef small_square_matrix<double, 4> dmat4;
+    typedef small_square_matrix<double, 5> dmat5;
+    typedef small_square_matrix<double, 6> dmat6;
+    
+    typedef small_square_matrix<float, 2> fmat2;
+    typedef small_square_matrix<float, 3> fmat3;
+    typedef small_square_matrix<float, 4> fmat4;
+    typedef small_square_matrix<float, 5> fmat5;
+    typedef small_square_matrix<float, 6> fmat6;
+    
+    typedef small_square_matrix<std::complex<double>, 2> cmat2;
+    typedef small_square_matrix<std::complex<double>, 3> cmat3;
+    typedef small_square_matrix<std::complex<double>, 4> cmat4;
+    typedef small_square_matrix<std::complex<double>, 5> cmat5;
+    typedef small_square_matrix<std::complex<double>, 6> cmat6;
+    
+    typedef small_square_matrix<std::complex<double>, 2> dcmat2;
+    typedef small_square_matrix<std::complex<double>, 3> dcmat3;
+    typedef small_square_matrix<std::complex<double>, 4> dcmat4;
+    typedef small_square_matrix<std::complex<double>, 5> dcmat5;
+    typedef small_square_matrix<std::complex<double>, 6> dcmat6;
+    
+    typedef small_square_matrix<std::complex<float>, 2> fcmat2;
+    typedef small_square_matrix<std::complex<float>, 3> fcmat3;
+    typedef small_square_matrix<std::complex<float>, 4> fcmat4;
+    typedef small_square_matrix<std::complex<float>, 5> fcmat5;
+    typedef small_square_matrix<std::complex<float>, 6> fcmat6;
+    
+    typedef small_square_matrix<int, 2> imat2;
+    typedef small_square_matrix<int, 3> imat3;
+    typedef small_square_matrix<int, 4> imat4;
+    typedef small_square_matrix<int, 5> imat5;
+    typedef small_square_matrix<int, 6> imat6;
+    
+    typedef small_square_matrix<long int, 2> lmat2;
+    typedef small_square_matrix<long int, 3> lmat3;
+    typedef small_square_matrix<long int, 4> lmat4;
+    typedef small_square_matrix<long int, 5> lmat5;
+    typedef small_square_matrix<long int, 6> lmat6;
+    
+    typedef small_square_matrix<size_t, 2> smat2;
+    typedef small_square_matrix<size_t, 3> smat3;
+    typedef small_square_matrix<size_t, 4> smat4;
+    typedef small_square_matrix<size_t, 5> smat5;
+    typedef small_square_matrix<size_t, 6> smat6;
+    
+} // namespace spurt

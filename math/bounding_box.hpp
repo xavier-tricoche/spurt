@@ -35,6 +35,11 @@ struct bounding_box
         }
     }
 
+    void clear() {
+        m_min = value_traits::zero();
+        m_max = value_traits::zero();
+    }
+
     value_type size() const {
         return value_traits::minus(m_max, m_min); 
     }

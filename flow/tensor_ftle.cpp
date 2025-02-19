@@ -25,7 +25,7 @@ size_t nsamples[3];
 char* tl_out;
 int nb_seeds;
 
-typedef Eigen::Matrix<double, 7, 1> tensor_type;
+typedef spurt::small_vector<double, 7> tensor_type;
 typedef spurt::nrrd_field< tensor_type, 3, double > tensor_field_type;
 
 #define __EXPORT_FTLE__
@@ -129,7 +129,7 @@ int main(int argc, const char* argv[])
     
     ivec3 res(nsamples[0], nsamples[1], nsamples[2]);
     std::cerr << "Resolution = " << res << std::endl;
-    rgrid3 sampling_grid(res, efield->bounds());
+    rgrid3d sampling_grid(res, efield->bounds());
     spurt::raster3d<vec3> flowmaps[2]
         = { spurt::raster3d<vec3>(sampling_grid),
             spurt::raster3d<vec3>(sampling_grid)
@@ -259,7 +259,7 @@ int main(int argc, const char* argv[])
                         double length_io = length;
                         flowmaps[dir](c) = ftle::eigen_flow_map(*efield, seed, h, length_io, error, nmax);
                         const vec3& z = flowmaps[dir](c);
-                        if (any(isinvalid(z)) {
+                        if (any(isinvalid(z))) {
                             flowmaps[dir](c) = zero;
                         }
 #ifdef __EXPORT_LENGTH__

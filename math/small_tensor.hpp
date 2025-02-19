@@ -127,6 +127,8 @@ namespace spurt {
         // Constructors
         small_tensor_interface(scalar_type val=0) 
         : base_type(val) {}
+        
+        small_tensor_interface(storage_type storage) : base_type(storage) {}
 
         template<typename OtherStorage>
         small_tensor_interface(const like_vector_S<OtherStorage>& other)

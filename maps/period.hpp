@@ -4,21 +4,22 @@
 #include <vector>
 #include <iostream>
 #include <map>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
+#include <math/bounding_box.hpp>
 #include <poincare/metric.hpp>
-#include "cohen_sutherland.hpp"
+#include <graphics/cohen_sutherland.hpp>
 
 #ifdef FFTW3
 #include <fftw3.h>
 #endif
 
 namespace {
-nvis::bbox2 bounds(const std::vector<nvis::vec2>& p)
+spurt::bbox2 bounds(const std::vector<spurt::vec2>& p)
 {
     if (p.empty()) {
-        return nvis::bbox2();
+        return spurt::bbox2();
     }
-    nvis::bbox2 bbox(p[0], p[0]);
+    spurt::bbox2 bbox(p[0], p[0]);
     for (int i = 1 ; i < p.size() ; ++i) {
         bbox.add(p[i]);
     }
@@ -44,20 +45,20 @@ struct Lt_pair_second {
 
 namespace spurt {
 
-void clip(std::list<std::pair<nvis::vec2, nvis::vec2> >& clipped,
-          const nvis::vec2& _x, const nvis::vec2& _y,
+void clip(std::list<std::pair<spurt::vec2, spurt::vec2> >& clipped,
+          const spurt::vec2& _x, const spurt::vec2& _y,
           const map_metric& metric)
 {
     const map_metric::bounds_type& bounds = metric.bounds();
     
-    nvis::vec2 xy = metric.displacement(_x, _y);
-    nvis::vec2 x = metric.modulo(_x);
-    nvis::vec2 y = metric.modulo(_y);
+    spurt::vec2 xy = metric.displacement(_x, _y);
+    spurt::vec2 x = metric.modulo(_x);
+    spurt::vec2 y = metric.modulo(_y);
     clipped.clear();
     if (bounds.inside(x+xy)) {
         clipped.push_back(std::make_pair(x, x+xy));
     } else {
-        std::pair<nvis::vec2, nvis::vec2> tmp1, tmp2;
+        std::pair<spurt::vec2, spurt::vec2> tmp1, tmp2;
         cohen_sutherland::clip(tmp1, x, x+xy, bounds);
         cohen_sutherland::clip(tmp2, y, y-xy, bounds);
         clipped.push_back(tmp1);
@@ -98,17 +99,17 @@ struct Lt_fabs {
 };
 }
 
-inline void output_broken_chain(const std::vector<nvis::vec2>& steps,
+inline void output_broken_chain(const std::vector<spurt::vec2>& steps,
                                 const map_metric& metric)
 {
     size_t size = steps.size();
-    const nvis::vec2& x0 = steps.front();
+    const spurt::vec2& x0 = steps.front();
     std::cerr << "\n\ndisplaying pathologic orbit seeded at " << x0 << std::endl;
     std::cerr << "orbit contains " << size << " points\n";
     std::vector< double > q(size - 1);
     std::vector< double > d(size - 1);
     for (unsigned int i = 1 ; i < size ; ++i) {
-        nvis::vec2 dist = steps[i] - x0;
+        spurt::vec2 dist = steps[i] - x0;
         q[i-1] = (double)i / dist[0] * metric.width();
         d[i-1] = metric.distance(x0, steps[i]);
         std::cerr << "step #" << i << "/" << size << ": x=" << steps[i] << ", q_approx = " << q[i] << ", d = " << d[i] << std::endl;
@@ -128,7 +129,7 @@ inline void output_broken_chain(const std::vector<nvis::vec2>& steps,
 }
 
 inline double
-min_dist_period_x_periodic(unsigned int p, const std::vector<nvis::vec2>& steps,
+min_dist_period_x_periodic(unsigned int p, const std::vector<spurt::vec2>& steps,
                            const map_metric& metric)
 {
     if (steps.size() <= p) {
@@ -153,7 +154,7 @@ min_dist_period_x_periodic(unsigned int p, const std::vector<nvis::vec2>& steps,
 }
 
 inline double
-dist_based_x_period(const std::vector<nvis::vec2>& steps, const map_metric& metric)
+dist_based_x_period(const std::vector<spurt::vec2>& steps, const map_metric& metric)
 {
     // NB: this method has quadratic complexity...
     
@@ -185,18 +186,18 @@ dist_based_x_period(const std::vector<nvis::vec2>& steps, const map_metric& metr
 }
 
 std::pair<double, double>
-inline period_x_periodic(const std::vector<nvis::vec2>& steps, const map_metric& metric)
+inline period_x_periodic(const std::vector<spurt::vec2>& steps, const map_metric& metric)
 {
     if (steps.size() <= 1) {
         return std::make_pair(-1, 0);
     }
     
-    const nvis::vec2& x0 = steps.front();
+    const spurt::vec2& x0 = steps.front();
     
     std::vector< double > q(steps.size() - 1);
     std::vector< double > d(steps.size() - 1);
     for (int i = 1 ; i < steps.size() ; ++i) {
-        nvis::vec2 dist = steps[i] - x0;
+        spurt::vec2 dist = steps[i] - x0;
         q[i-1] = (double)i / dist[0] * metric.width();
         d[i-1] = metric.distance(x0, steps[i]);
     }
@@ -219,7 +220,7 @@ inline period_x_periodic(const std::vector<nvis::vec2>& steps, const map_metric&
         // std::cerr << "invalid period: " << total_q << " / " << total_w << std::endl;
         // std::cerr << "setting to 0\n";
         // if (x0[1]>40)
-        nvis::bbox2 box = bounds(steps);
+        spurt::bbox2 box = bounds(steps);
         if (true || box.max()[1] > 32) {
             output_broken_chain(steps, metric);
         }
@@ -230,8 +231,8 @@ inline period_x_periodic(const std::vector<nvis::vec2>& steps, const map_metric&
 }
 
 std::pair<double, double>
-inline period_x_periodic(const std::vector<nvis::vec2>& steps,
-                         const nvis::vec2& x0, const map_metric& metric)
+inline period_x_periodic(const std::vector<spurt::vec2>& steps,
+                         const spurt::vec2& x0, const map_metric& metric)
 {
     if (!steps.size()) {
         return std::make_pair(-1, 0);
@@ -240,7 +241,7 @@ inline period_x_periodic(const std::vector<nvis::vec2>& steps,
     std::vector< double > q(steps.size());
     std::vector< double > d(steps.size());
     for (unsigned int i = 0 ; i < steps.size() ; ++i) {
-        nvis::vec2 dist = steps[i] - x0;
+        spurt::vec2 dist = steps[i] - x0;
         q[i] = (double)(i + 1) / dist[0] * metric.width();
         d[i] = metric.distance(x0, steps[i]);
     }
@@ -277,7 +278,7 @@ inline period_x_periodic(const std::vector<nvis::vec2>& steps,
         // std::cerr << "invalid period: " << total_q << " / " << total_w << std::endl;
         // std::cerr << "setting to 0\n";
         // if (x0[1]>40)
-        nvis::bbox2 box = bounds(steps);
+        spurt::bbox2 box = bounds(steps);
         if (box.max()[1] > 32) {
             output_broken_chain(steps, metric);
         }
@@ -289,8 +290,8 @@ inline period_x_periodic(const std::vector<nvis::vec2>& steps,
 
 #ifdef FFTW3
 std::pair<double, double>
-inline period_x_periodic_fourier(const std::vector<nvis::vec2>& steps,
-                                 const nvis::vec2& x0, const map_metric& metric)
+inline period_x_periodic_fourier(const std::vector<spurt::vec2>& steps,
+                                 const spurt::vec2& x0, const map_metric& metric)
 {
     if (!steps.size()) {
         return std::make_pair(-1, 0);
@@ -299,7 +300,7 @@ inline period_x_periodic_fourier(const std::vector<nvis::vec2>& steps,
     std::vector< double > q(steps.size() + 1);
     q[0] = 0;
     for (int i = 0 ; i < steps.size() ; ++i) {
-        nvis::vec2 dp = metric.distance(x0, steps[i]);
+        spurt::vec2 dp = metric.distance(x0, steps[i]);
         q[i+1] = dp[0];
     }
     return std::make_pair(fft(q), 0.);

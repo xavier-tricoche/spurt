@@ -1,4 +1,4 @@
-# set( CREASE_SRC
+# set( Spurt_CREASE_SRC
 #     measure_wrapper.cpp
 #     extractor.cpp
 #     pvo.cpp
@@ -12,75 +12,46 @@
 #   ARCHIVE DESTINATION lib
 # )
 
+include_directories(
+    .
+    ${Spurt_SOURCE_DIR}
+)
+
+set( Spurt_CREASE_EXEC_SRC_WITH_VTK
+    peikert_sadlo
+    peikert
+    multires_peikert
+    schultz
+    parallel_schultz
+    schultz_Jan2025
+    schultz_Feb2025
+    filter_crease
+)
+
+set( Spurt_CREASE_EXEC_SRC_NO_VTK
+    gH_sspace_selection
+    gH_filtered_sspace_selection
+)
+
 if ( VTK_FOUND )
-    add_executable( peikert_sadlo ${EXECUTABLE_FLAG} peikert_sadlo.cpp )
-    target_link_libraries( peikert_sadlo
+    foreach( exec ${Spurt_CREASE_EXEC_SRC_WITH_VTK} )
+        add_executable( ${exec} ${EXECUTABLE_FLAG} ${exec}.cpp )
+        target_link_libraries(${exec}
                            ${Teem_LIBRARIES}
                            ${Boost_LIBRARIES}
                            ${CELLTREE_LIBRARIES}
                            ${NetCDF_LIBRARIES}
                            ${VTK_LIBRARIES}
-                           BARG)
-    install( TARGETS peikert_sadlo RUNTIME DESTINATION bin )
+                           spurt_barg )
+        install( TARGETS ${exec} RUNTIME DESTINATION bin )
+    endforeach()
 endif()
 
-add_executable( peikert ${EXECUTABLE_FLAG} peikert.cpp )
-target_link_libraries( peikert
+foreach( exec ${Spurt_CREASE_EXEC_SRC_NO_VTK} )
+    add_executable( ${exec} ${EXECUTABLE_FLAG} ${exec}.cpp ) 
+    target_link_libraries( ${exec}
                        ${Teem_LIBRARIES}
                        ${Boost_LIBRARIES}
-                       ${VTK_LIBRARIES} )
-install( TARGETS peikert RUNTIME DESTINATION bin )
-
-add_executable( schultz ${EXECUTABLE_FLAG} schultz.cpp )
-target_link_libraries( schultz
-                       ${Teem_LIBRARIES}
-                       ${Boost_LIBRARIES} )
-install( TARGETS schultz RUNTIME DESTINATION bin )
-
-add_executable( multires_peikert ${EXECUTABLE_FLAG} multires_peikert.cpp )
-target_link_libraries( multires_peikert
-                       ${Teem_LIBRARIES}
-                       ${Boost_LIBRARIES}
-                       ${VTK_LIBRARIES}  )
-install( TARGETS multires_peikert RUNTIME DESTINATION bin )
-
-# add_executable( crease_surface ${EXECUTABLE_FLAG} crease_surface.cpp )
-# target_link_libraries( crease_surface
-#                        ${Teem_LIBRARIES}
-#                        ${Boost_LIBRARIES}
-#                        ${VTK_LIBRARIES} )
-# install( TARGETS crease_surface RUNTIME DESTINATION bin )
-
-# add_executable( creaseline ${EXECUTABLE_FLAG} creaseline.cpp )
-# target_link_libraries( creaseline
-#                        ${Teem_LIBRARIES}
-#                        ${Boost_LIBRARIES}
-#                        ${VTK_LIBRARIES}
-#                        spurt_image
-#                        spurt_crease)
-# install( TARGETS creaseline RUNTIME DESTINATION bin )
-#
-# add_executable( creaseline2d ${EXECUTABLE_FLAG} creaseline2d.cpp )
-# target_link_libraries( creaseline2d
-#                        ${Teem_LIBRARIES}
-#                        ${Boost_LIBRARIES}
-#                        ${VTK_LIBRARIES}
-#                        spurt_image
-#                        spurt_crease)
-# install( TARGETS creaseline2d RUNTIME DESTINATION bin )
-#
-# add_executable( creaseline3d ${EXECUTABLE_FLAG} creaseline3d.cpp )
-# target_link_libraries( creaseline3d
-#                        ${Teem_LIBRARIES}
-#                        ${Boost_LIBRARIES}
-#                        ${VTK_LIBRARIES}
-#                        spurt_image
-#                        spurt_crease)
-# install( TARGETS creaseline3d RUNTIME DESTINATION bin )
-
-# add_executable( crease_surface_v2 ${EXECUTABLE_FLAG} crease_surface_v2.cpp )
-# target_link_libraries( crease_surface_v2
-#                        ${Teem_LIBRARIES}
-#                        ${Boost_LIBRARIES}
-#                        ${VTK_LIBRARIES} )
-# install( TARGETS crease_surface_v2 RUNTIME DESTINATION bin )
+                       TBB::tbb TBB::tbbmalloc TBB::tbbmalloc_proxy  )
+    install( TARGETS gH_sspace_selection RUNTIME DESTINATION bin )
+endforeach()

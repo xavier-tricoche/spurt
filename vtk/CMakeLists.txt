@@ -1,26 +1,14 @@
 set( SPURT_VTK_SRCS
 	vectors_from_scalars
-    view_grains
-    view_grains_animation
-    view_stress
-    view_stress_static
-    view_grains_static
     streamlines
-    # grains_orientation_by_size
-    new_grains_orientation_by_size
-    # orientation_segmentation
     view_colormap
 	color_scalar_image
-    # new_grain_stress
-    # new_streamlines
-    values_on_grains
 	volume_render
     volume_renderer
-    streamlines_density
-    streamlines_grains
-    # test_lic
+    test_lic
     view_lines
     test_jacobian
+    test_filter_ccs
 )
 
 if( ${VTK_FOUND} )

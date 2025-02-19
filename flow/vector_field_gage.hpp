@@ -7,9 +7,7 @@
 #include <iostream>
 #include <stdexcept>
 
-// teem-related interface
-#include <image/probe.hpp>
-#include <image/nrrd_wrapper.hpp>
+#include <data/image>
 
 namespace spurt {
 

@@ -2,9 +2,15 @@
 
 #include <array>
 #include <cmath>
+#include <mutex>
+#include <thread>
+
 #include <math/types.hpp>
 #include <data/raster_data.hpp>
+#include <misc/progress.hpp>
 
+#include <tbb/parallel_for.h>
+#include <tbb/tbb.h>
 namespace spurt
 {
 namespace kernels
@@ -30,7 +36,7 @@ namespace kernels
             else if (dorder == 0)
                 return 1. - u;
             else if (dorder == 1)
-                return (t < 0) ? -1. : 1.;
+                return (t < 0) ? 1. : -1.;
             else
                 return 0.;
         }
@@ -177,14 +183,14 @@ namespace differential
         }
     };
    
-    template<typename T, size_t SpatialDim>
-    struct derivatives<small_vector<T, SpatialDim>, SpatialDim, 
-                       typename std::enable_if<std::is_scalar<T>::value>::type>
+    template<typename Storage, size_t SpatialDim>
+    struct derivatives<small_vector_interface<Storage>, SpatialDim, void>
     {
-        typedef T scalar_type;
-        typedef small_matrix<T, SpatialDim, SpatialDim> first_derivative_type;
-        typedef small_vector<T, SpatialDim> value_type;
-        typedef small_tensor<T, SpatialDim, SpatialDim, SpatialDim> second_derivative_type;
+        typedef typename Storage::value_type scalar_type;
+        typedef small_vector_interface<Storage> value_type;
+        typedef small_matrix<scalar_type, SpatialDim, SpatialDim> first_derivative_type;
+        typedef small_tensor<scalar_type, SpatialDim, SpatialDim, SpatialDim> second_derivative_type;
+
         
         static void set_dfdxi(int i, const value_type& v, first_derivative_type& df) {
             df.column(i) = v;
@@ -202,20 +208,22 @@ namespace differential
         
     };
    
-    template<typename T, size_t SpatialDim>
-    struct derivatives<small_matrix<T, SpatialDim>, SpatialDim, 
-                       typename std::enable_if<std::is_scalar<T>::value>::type>
+    template<typename Storage, size_t SpatialDim>
+    struct derivatives<small_matrix_interface<Storage, SpatialDim, SpatialDim>, 
+                       SpatialDim, void>
     {
-        typedef T scalar_type;
-        typedef small_tensor<T, SpatialDim, SpatialDim, SpatialDim> first_derivative_type;
-        typedef small_matrix<T, SpatialDim, SpatialDim> value_type;
-        typedef small_tensor<T, SpatialDim, SpatialDim, SpatialDim*SpatialDim> second_derivative_type;
+        typedef typename Storage::value_type scalar_type;
+        typedef small_matrix_interface<Storage, SpatialDim, SpatialDim> value_type;
+        typedef small_tensor<scalar_type, SpatialDim, SpatialDim, SpatialDim> first_derivative_type;
+        typedef small_tensor<scalar_type, SpatialDim, SpatialDim, SpatialDim*SpatialDim> second_derivative_type;
         
-        static void set_dfdxi(int i, const value_type& v, first_derivative_type& df) {
+        static void set_dfdxi(int i, const value_type& v, 
+                              first_derivative_type& df) {
             df.layer(i) = v;
         }
         
-        static void set_d2fdxij(int i, int j, const value_type& v, second_derivative_type& d2f) {
+        static void set_d2fdxij(int i, int j, const value_type& v, 
+                                second_derivative_type& d2f) {
             // there are N * N layers
             // J(i,j) = dfi/dxj
             // d2f/dxidxj = layers[i+j*N] 
@@ -252,6 +260,9 @@ public:
     typedef typename base_type::iterator iterator;
     typedef typename base_type::const_iterator const_iterator;
     typedef image<Size_, Scalar_, Dim, Value_, Kernel_, Coord_, Pos_> self_type;
+
+    template<typename OtherKernel_>
+    using matching_image_type = image<Size_, Scalar_, Dim, Value_, OtherKernel_, Coord_, Pos_>;
     typedef Kernel_ kernel_type;
 
 private:
@@ -268,7 +279,7 @@ private:
         for (int i = 1-width; i <= width; ++i) {
             int ii = kernels::fix_index(c[0] + i, res[0]);
             scalar_type wi = m_kernel(u[0] - i, dorder[0]);
-            r +=  wi * this->m_data[ii];
+            r +=  wi * (*this)[ii];
         }
         return r;
     }
@@ -287,7 +298,7 @@ private:
             {
                 int ii = kernels::fix_index(i + c[0], res[0]);
                 scalar_type wij = wj * m_kernel(u[0] - i, dorder[0]);
-                r += wij * this->m_data[this->m_grid.index(ii, jj)];
+                r += wij * (*this)[this->m_grid.index(ii, jj)];
             }
         }
         return r;
@@ -311,7 +322,7 @@ private:
                 {
                     int ii = kernels::fix_index(i+c[0], res[0]);
                     scalar_type wijk = wjk * m_kernel(u[0] - i, dorder[0]);
-                    r += wijk * this->m_data[this->m_grid.index(ii, jj, kk)];
+                    r += wijk * (*this)[this->m_grid.index(ii, jj, kk)];
                 }
             }
         }
@@ -341,7 +352,7 @@ private:
                     {
                         int ii = kernels::fix_index(i + c[0], res[0]);
                         scalar_type wijkl = wjkl * m_kernel(u[0] - i, dorder[0]);
-                        r += wijkl * this->m_data[this->m_grid.index(ii, jj, kk, ll)];
+                        r += wijkl * (*this)[this->m_grid.index(ii, jj, kk, ll)];
                     }
                 }
             }
@@ -372,6 +383,10 @@ private:
 public:
     image(const kernel_type &k = kernel_type()) : m_kernel(k) {}
     image(const self_type &other) = default;
+    template<typename K_>
+    image(const matching_image_type<K_>& other, 
+          const kernel_type& k = kernel_type())
+        : base_type(other), m_kernel(k) {}
     image(const grid_type &grid, const kernel_type &k = kernel_type())
         : base_type(grid), m_kernel(k) {}
     image(const grid_type &grid, const std::vector<value_type> &data,
@@ -381,8 +396,7 @@ public:
     image(const grid_type &grid, _Iterator begin, _Iterator end,
           const kernel_type &k = kernel_type())
         : base_type(grid, begin, end), m_kernel(k) {}
-    image(const base_type &data,
-          const kernel_type &k = kernel_type())
+    image(base_type &data, const kernel_type &k = kernel_type())
         : base_type(data), m_kernel(k) {}
 
     ~image() {}
@@ -464,5 +478,82 @@ template <typename Value, typename Kernel = kernels::Linear>
 using image3f = image<long, float, 3, Value, Kernel>;
 template <typename Value, typename Kernel = kernels::Linear>
 using image4f = image<long, float, 4, Value, Kernel>;
+
+
+template<typename Container>
+void print_range(const Container& c, const std::string& what) {
+    std::cout << "the range of " << what << " is: min: " << *std::min_element(c.begin(), c.end())
+            << ", max: " << *std::max_element(c.begin(), c.end()) << '\n';
+}
+
+template<typename Kernel_, 
+         typename Size_, typename Scalar_, size_t Dim, typename Value_,
+         typename Coord_ = small_vector<Size_, Dim>,
+         typename Pos_ = small_vector<Scalar_, Dim> >
+raster_data<Size_, Scalar_, Dim, Value_, Coord_, Pos_>
+image_convolution(
+    const raster_data<Size_, Scalar_, Dim, Value_, Coord_, Pos_>& input, 
+    const Kernel_& kernel, const Coord_& orders = Coord_(0))
+{
+    typedef raster_data<Size_, Scalar_, Dim, Value_, Coord_, Pos_> raster_t;
+    typedef Value_ value_t;
+    typedef Pos_ pos_t;
+    typedef Coord_ coord_t;
+    typedef Scalar_ scalar_t;
+
+    // sampled kernel
+    std::vector<scalar_t> h(2*kernel.size+1);
+    // "h[-k]" = h[kernel.size-k] 
+
+    raster_t out1(input.grid(), input.begin(), input.end()); // copy input
+    raster_t out2(input.grid(), value_t(0));
+
+    raster_t *ptr1 = &out1;
+    raster_t *ptr2 = &out2;
+    // (X * K^N) = ( ( ( (X * K) * K ) * K ) ... ) * K
+
+    auto res = input.grid().resolution();
+    size_t npts = input.grid().size();
+
+    std::atomic<size_t> tbb_progress_counter;
+    std::mutex update_progress_mutex;
+
+    // complexity Dim x npts x (2*kernel.size()+1)
+    ProgressDisplay progress;
+    progress.begin(npts*Dim, "Image convolution", 500);
+    tbb_progress_counter = 0;
+    long sz = kernel.size; // cast size to signed type for kernel indexing
+    for (size_t d=0; d<Dim; ++d) {
+        for (long i=-sz; i<=sz; ++i) {
+            h[i+sz] = kernel(static_cast<scalar_t>(i), orders[d]);
+        }
+        tbb::parallel_for(tbb::blocked_range<size_t>(0, npts),
+                          [&](tbb::blocked_range<size_t> r) {
+            for (size_t n=r.begin(); n!=r.end(); ++n)
+            {
+                std::unique_lock<std::mutex> lock(update_progress_mutex, std::defer_lock);
+                if (lock.try_lock())
+                {
+                    progress.update(tbb_progress_counter);
+                }
+
+                ++tbb_progress_counter;
+
+                auto c = input.grid().coordinates(n);
+                for (long k=-sz; k<=sz; ++k) {
+                    coord_t u = c;
+                    u[d] = std::min<Size_>(std::max<Size_>(u[d]-k, 0), res[d]-1);
+                    (*ptr2)[n] += h[sz + k] * (*ptr1)(u);
+                }
+            }
+        });
+        // swap images
+        std::swap(ptr1, ptr2);
+        ptr2->initialize(value_t(0));
+    }
+
+    progress.end();
+    return *ptr1;
+}
 
 } // namespace spurt

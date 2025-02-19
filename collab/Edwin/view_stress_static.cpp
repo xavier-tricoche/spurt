@@ -26,7 +26,7 @@
 #include "vtkStructuredPointsReader.h"
 
 #include <string>
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 #include <VTK/vtk_utils.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <set>
@@ -37,11 +37,6 @@
 struct dataset_info {
     std::string mesh_base;
     std::string stress;
-    std::string fa;
-    std::string size;
-    std::string westin;
-    std::string dir;
-    std::string shot;
     std::string id_to_tags;
     std::string stress_span;
     nvis::vec3 up, position, focal_point;
@@ -51,14 +46,10 @@ struct dataset_info {
 };
 
 int     param_id;
-double  param_mina;
-double  param_maxa;
-double  param_minv;
-double  param_maxv;
+double  param_s;
 char*   param_ssf;
 bool    param_v;
-double  param_g;
-bool    param_shot;
+bool    param_grains;
 
 void initialize(int argc, char* argv[])
 {
@@ -73,12 +64,8 @@ void initialize(int argc, char* argv[])
     airMopAdd(mop, hparm, (airMopper)hestParmFree, airMopAlways);
     hparm->elideSingleOtherType = AIR_TRUE;
     hestOptAdd(&hopt, "id",     "dataset ID",       airTypeInt,     1, 1, &param_id,            NULL,       "dataset ID: 0: textured, 1: untextured, 2: MC_r00b09, 3: MC_r06b09, 4: MC_r10b09");
-    hestOptAdd(&hopt, "mina",   "min anisotropy",   airTypeDouble,  0, 1, &param_mina,          "0",        "min grain anisotropy");
-    hestOptAdd(&hopt, "maxa",   "max anisotropy",   airTypeDouble,  0, 1, &param_maxa,          "1",        "max grain anisotropy");
-    hestOptAdd(&hopt, "minv",   "min volume",       airTypeDouble,  0, 1, &param_minv,          "0",        "min grain volume");
-    hestOptAdd(&hopt, "maxv",   "max volume",       airTypeDouble,  0, 1, &param_maxv,          "-1",       "max grain volume");
-    hestOptAdd(&hopt, "g",      "gamma",            airTypeDouble,  0, 1, &param_g,             "1",        "color gamma");
-    hestOptAdd(&hopt, "shot",   "screenshot",       airTypeBool,    0, 0, &param_shot,          "0",        "screenshot mode");
+    hestOptAdd(&hopt, "s",      "delta stress",     airTypeDouble,  0, 1, &param_s,             "0",        "stress isovalue");
+    hestOptAdd(&hopt, "grain",  "show grains",      airTypeBool,    0, 0, &param_grains,        "0",        "show intersected grains");
     hestOptAdd(&hopt, "v",      "verbose",          airTypeBool,    0, 0, &param_v,             "0",        "verbose mode (debugging)");
 
     hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
@@ -105,7 +92,7 @@ typedef nvis::fixed_vector<uchar, 3>    color_type;
 inline color_type vec2col(const nvis::vec3& dir, double cl)
 {
     nvis::vec3 e(dir);
-    double weight = pow(cl, param_g);
+    double weight = pow(cl, 0.4);
     double norm = nvis::norm(e);
     if (!norm || cl == 0) {
         return color_type(127, 127, 127);
@@ -185,31 +172,21 @@ int main(int argc, char* argv[])
 {
     initialize(argc, argv);
 
-    if (param_maxv < 0) {
-        param_maxv = std::numeric_limits<double>::max();
-    }
-
     // hard-coded settings for available datasets
     dataset_info textured_info, untextured_info, mc_info_00, mc_info_06, mc_info_10_09;
     std::string mesh_base = "/scratch4/data/Garcia/Microstructure/geometry/";
     std::string stat_base = "/scratch4/data/Garcia/Stat/";
     std::string stress_base = "/scratch4/data/Garcia/Stress/vtk/";
-    std::string shot_base = "/scratch4/data/Garcia/Screenshots/";
 
     textured_info.mesh_base = mesh_base + "TexBNKT_190_190_37";
     textured_info.stress = stress_base + "trace-Estress_TexturedBNKT_b09.vtk";
-    textured_info.fa = stat_base + "Textured_b09-fa.nrrd";
-    textured_info.size = stat_base + "Textured_b09-size.nrrd";
-    textured_info.westin = stat_base + "Textured_b09-westin.nrrd";
-    textured_info.dir = stat_base + "Textured_b09-direction.nrrd";
-    textured_info.shot = shot_base + "Textured_b09.tiff";
     textured_info.id_to_tags = stat_base + "Textured_b09-ids_to_tags.nrrd";
     textured_info.stress_span = stat_base + "Textured_b09-grain-span.nrrd";
-    textured_info.position = nvis::vec3(-38.2382, -20.2557, 27.1584);
-    textured_info.focal_point = nvis::vec3(17.1675, 19.0469, 3.32833);
-    textured_info.up = nvis::vec3(0.254529, 0.213122, 0.943289);
-    textured_info.near = 17.6447;
-    textured_info.far = 140.982;
+    textured_info.position = nvis::vec3(-36.3331, -8.47804, 28.695);
+    textured_info.focal_point = nvis::vec3(16.9142, 19.7463, 3.89301);
+    textured_info.up = nvis::vec3(0.291739, 0.258784, 0.920825);
+    textured_info.near = 18.0374;
+    textured_info.far = 124.656;
     textured_info.step = nvis::vec3(0.2, 0.2, 0.4);
     textured_info.valid_bounds.min() = nvis::vec3(10., 10., 5.);
     textured_info.valid_bounds.max() = nvis::vec3(179., 179., 31.);
@@ -217,18 +194,13 @@ int main(int argc, char* argv[])
 
     untextured_info.mesh_base = mesh_base + "UnTexBNKT_01_140_140_70";
     untextured_info.stress = stress_base + "trace-Estress_UntexturedBNKT_b09.vtk";
-    untextured_info.fa = stat_base + "Untextured_b09-fa.nrrd";
-    untextured_info.size = stat_base + "Untextured_b09-size.nrrd";
-    untextured_info.westin = stat_base + "Untextured_b09-westin.nrrd";
-    untextured_info.dir = stat_base + "Untextured_b09-direction.nrrd";
-    untextured_info.shot = shot_base + "Untextured_b09.tiff";
     untextured_info.id_to_tags = stat_base + "Untextured_b09-ids_to_tags.nrrd";
     untextured_info.stress_span = stat_base + "Untextured_b09-grain-span.nrrd";
-    untextured_info.position = nvis::vec3(-11.7274, -4.0038, 11.1954);
-    untextured_info.focal_point = nvis::vec3(15.4841, 11.0543, -3.40036);
-    untextured_info.up = nvis::vec3(0.352451, 0.239877, 0.904565);
-    untextured_info.near = 5.28852;
-    untextured_info.far = 39.2914;
+    untextured_info.position = nvis::vec3(-12.6458, -3.45589, 10.6859);
+    untextured_info.focal_point = nvis::vec3(17.4109, 12.476, -3.31413);
+    untextured_info.up = nvis::vec3(0.291739, 0.258784, 0.920825);
+    untextured_info.near = 8.08427;
+    untextured_info.far = 36.5545;
     untextured_info.step = nvis::vec3(0.07, 0.07, 0.1);
     untextured_info.valid_bounds.min() = nvis::vec3(10., 10., 10.);
     untextured_info.valid_bounds.max() = nvis::vec3(129., 129., 59.);
@@ -236,18 +208,13 @@ int main(int argc, char* argv[])
 
     mc_info_00.mesh_base = mesh_base + "MC_588grains_110cubed";
     mc_info_00.stress = stress_base + "trace-Estress_CG_588Grains_r00b09.vtk";
-    mc_info_00.fa = stat_base + "CG_588Grains_r00b09-fa.nrrd";
-    mc_info_00.size = stat_base + "CG_588Grains_r00b09-size.nrrd";
-    mc_info_00.westin = stat_base + "CG_588Grains_r00b09-westin.nrrd";
-    mc_info_00.dir = stat_base + "CG_588Grains_r00b09-direction.nrrd";
-    mc_info_00.shot = shot_base + "CG_588Grains.tiff";
     mc_info_00.id_to_tags = stat_base + "CG_588Grains_r00b09-ids_to_tags.nrrd";
     mc_info_00.stress_span = stat_base + "CG_588Grains_r00b09-grain-span.nrrd";
-    mc_info_00.position = nvis::vec3(-324.175, -118.824, 264.273);
-    mc_info_00.focal_point = nvis::vec3(38.2538, 78.0644, 115.621);
-    mc_info_00.up = nvis::vec3(0.286275, 0.183103, 0.940489);
-    mc_info_00.near = 157.65;
-    mc_info_00.far = 961.655;
+    mc_info_00.position = nvis::vec3(-318.363, -111.902, 286.273);
+    mc_info_00.focal_point = nvis::vec3(39.8581, 77.9774, 119.417);
+    mc_info_00.up = nvis::vec3(0.291739, 0.258784, 0.920825);
+    mc_info_00.near = 214.331;
+    mc_info_00.far = 888.836;
     mc_info_00.step = nvis::vec3(2, 2, 2);
     mc_info_00.valid_bounds.min() = nvis::vec3(10., 10., 10.);
     mc_info_00.valid_bounds.max() = nvis::vec3(99., 99., 99.);
@@ -255,18 +222,13 @@ int main(int argc, char* argv[])
 
     mc_info_06.mesh_base = mesh_base + "MC_588grains_110cubed";
     mc_info_06.stress = stress_base + "trace-Estress_CG_588Grains_r06b09.vtk";
-    mc_info_06.fa = stat_base + "CG_588Grains_r00b09-fa.nrrd";
-    mc_info_06.size = stat_base + "CG_588Grains_r00b09-size.nrrd";
-    mc_info_06.westin = stat_base + "CG_588Grains_r00b09-westin.nrrd";
-    mc_info_06.dir = stat_base + "CG_588Grains_r00b09-direction.nrrd";
-    mc_info_06.shot = shot_base + "CG_588Grains.tiff";
     mc_info_06.id_to_tags = stat_base + "CG_588Grains_r06b09-ids_to_tags.nrrd";
     mc_info_06.stress_span = stat_base + "CG_588Grains_r06b09-grain-span.nrrd";
-    mc_info_06.position = nvis::vec3(-324.175, -118.824, 264.273);
-    mc_info_06.focal_point = nvis::vec3(38.2538, 78.0644, 115.621);
-    mc_info_06.up = nvis::vec3(0.286275, 0.183103, 0.940489);
-    mc_info_06.near = 157.65;
-    mc_info_06.far = 961.655;
+    mc_info_06.position = nvis::vec3(-318.363, -111.902, 286.273);
+    mc_info_06.focal_point = nvis::vec3(39.8581, 77.9774, 119.417);
+    mc_info_06.up = nvis::vec3(0.291739, 0.258784, 0.920825);
+    mc_info_06.near = 214.331;
+    mc_info_06.far = 888.836;
     mc_info_06.step = nvis::vec3(2, 2, 2);
     mc_info_06.valid_bounds.min() = nvis::vec3(10., 10., 10.);
     mc_info_06.valid_bounds.max() = nvis::vec3(99., 99., 99.);
@@ -274,18 +236,13 @@ int main(int argc, char* argv[])
 
     mc_info_10_09.mesh_base = mesh_base + "MC_588grains_110cubed";
     mc_info_10_09.stress = stress_base + "trace-Estress_CG_588Grains_r10b09.vtk";
-    mc_info_10_09.fa = stat_base + "CG_588Grains_r00b09-fa.nrrd";
-    mc_info_10_09.size = stat_base + "CG_588Grains_r00b09-size.nrrd";
-    mc_info_10_09.westin = stat_base + "CG_588Grains_r00b09-westin.nrrd";
-    mc_info_10_09.dir = stat_base + "CG_588Grains_r00b09-direction.nrrd";
-    mc_info_10_09.shot = shot_base + "CG_588Grains.tiff";
     mc_info_10_09.id_to_tags = stat_base + "CG_588Grains_r10b09-ids_to_tags.nrrd";
     mc_info_10_09.stress_span = stat_base + "CG_588Grains_r10b09-grain-span.nrrd";
-    mc_info_10_09.position = nvis::vec3(-324.175, -118.824, 264.273);
-    mc_info_10_09.focal_point = nvis::vec3(38.2538, 78.0644, 115.621);
-    mc_info_10_09.up = nvis::vec3(0.286275, 0.183103, 0.940489);
-    mc_info_10_09.near = 157.65;
-    mc_info_10_09.far = 961.655;
+    mc_info_10_09.position = nvis::vec3(-318.363, -111.902, 286.273);
+    mc_info_10_09.focal_point = nvis::vec3(39.8581, 77.9774, 119.417);
+    mc_info_10_09.up = nvis::vec3(0.291739, 0.258784, 0.920825);
+    mc_info_10_09.near = 214.331;
+    mc_info_10_09.far = 888.836;
     mc_info_10_09.step = nvis::vec3(2, 2, 2);
     mc_info_10_09.valid_bounds.min() = nvis::vec3(10., 10., 10.);
     mc_info_10_09.valid_bounds.max() = nvis::vec3(99., 99., 99.);
@@ -351,40 +308,16 @@ int main(int argc, char* argv[])
     vtkSmartPointer<vtkStructuredPointsReader> stress_field_reader = vtkSmartPointer<vtkStructuredPointsReader>::New();
     stress_field_reader->SetFileName(info.stress.c_str());
     stress_field_reader->Update();
-//    vtkStructuredPoints* stress_field = stress_field_reader->GetOutput();
+    vtkStructuredPoints* stress_field = stress_field_reader->GetOutput();
 
     Nrrd* __ids = spurt::nrrd_utils::readNrrd(info.id_to_tags);
     spurt::nrrd_utils::nrrd_data_wrapper<int> ids(__ids);
     std::cerr << info.id_to_tags << " loaded.\n";
 
-    Nrrd* __fa = spurt::nrrd_utils::readNrrd(info.fa);
-    spurt::nrrd_utils::nrrd_data_wrapper<float> fa(__fa);
-    std::cerr << info.fa << " loaded.\n";
-    int nb_grains = __fa->axis[0].size;
-
-    Nrrd* __size = spurt::nrrd_utils::readNrrd(info.size);
-    spurt::nrrd_utils::nrrd_data_wrapper<float> size(__size);
-    std::cerr << info.size << " loaded.\n";
-
     Nrrd* __gstress = spurt::nrrd_utils::readNrrd(info.stress_span);
     spurt::nrrd_utils::nrrd_data_wrapper<float> grain_stress(__gstress);
     std::cerr << info.stress_span << " loaded.\n";
-
-    Nrrd* __westin = spurt::nrrd_utils::readNrrd(info.westin);
-    spurt::nrrd_utils::nrrd_data_wrapper<float> westin(__westin);
-    std::cerr << info.westin << " loaded.\n";
-
-    Nrrd* __dir = spurt::nrrd_utils::readNrrd(info.dir);
-    spurt::nrrd_utils::nrrd_data_wrapper<float> dir(__dir);
-    std::cerr << info.dir << " loaded.\n";
-
-    std::map<int, color_type> colors;
-    for (int i = 0 ; i < nb_grains ; ++i) {
-        nvis::vec3 _d(dir[3*i], dir[3*i+1], dir[3*i+2]);
-        colors[ids[i]] = vec2col(_d, westin[3*i]);
-        // std::cerr << "color(" << ids[i] << ") is " << nvis::ivec3(colors[ids[i]]) << '\n';
-    }
-    std::cerr << "colors set.\n";
+    int nb_grains = __gstress->axis[1].size;
 
     std::map<int, tag_type> vertex_tags;
     std::fstream attributes(vertex_tag_name.c_str());
@@ -453,22 +386,22 @@ int main(int argc, char* argv[])
     cube_edges->SetPoints(cube_pts);
     cube_edges->SetLines(cube_lines);
 
-    // vtkSmartPointer<vtkUnsignedCharArray> color = vtkSmartPointer<vtkUnsignedCharArray>::New();
-    // color->SetNumberOfComponents(3);
-    // color->SetName("Colors");
-    // unsigned char col[][3] = {
-    //  {0, 0, 0}, {255, 0, 0}, {255, 255, 0}, {0, 255, 0},
-    //  {0, 0, 255}, {255, 0, 255}, {255, 255, 255}, {0, 255, 255}
-    // };
-    // color->InsertNextTypedTuple(col[0]);
-    // color->InsertNextTypedTuple(col[1]);
-    // color->InsertNextTypedTuple(col[2]);
-    // color->InsertNextTypedTuple(col[3]);
-    // color->InsertNextTypedTuple(col[4]);
-    // color->InsertNextTypedTuple(col[5]);
-    // color->InsertNextTypedTuple(col[6]);
-    // color->InsertNextTypedTuple(col[7]);
-    // cube_edges->GetPointData()->SetScalars(color);
+    vtkSmartPointer<vtkUnsignedCharArray> color = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    color->SetNumberOfComponents(3);
+    color->SetName("Colors");
+    unsigned char col[][3] = {
+        {0, 0, 0}, {255, 0, 0}, {255, 255, 0}, {0, 255, 0},
+        {0, 0, 255}, {255, 0, 255}, {255, 255, 255}, {0, 255, 255}
+    };
+    color->InsertNextTypedTuple(col[0]);
+    color->InsertNextTypedTuple(col[1]);
+    color->InsertNextTypedTuple(col[2]);
+    color->InsertNextTypedTuple(col[3]);
+    color->InsertNextTypedTuple(col[4]);
+    color->InsertNextTypedTuple(col[5]);
+    color->InsertNextTypedTuple(col[6]);
+    color->InsertNextTypedTuple(col[7]);
+    cube_edges->GetPointData()->SetScalars(color);
 
     vtkSmartPointer<vtkTubeFilter> edge_tubes = vtkSmartPointer<vtkTubeFilter>::New();
     edge_tubes->SetInputData(cube_edges);
@@ -517,16 +450,51 @@ int main(int argc, char* argv[])
     vtkSmartPointer<vtkRenderWindowInteractor> iren = vtkSmartPointer<vtkRenderWindowInteractor>::New();
     iren->SetRenderWindow(ren_win);
 
+    vtkSmartPointer<vtkContourFilter> contour = vtkSmartPointer<vtkContourFilter>::New();
+    contour->SetNumberOfContours(1);
+    contour->ComputeNormalsOn();
+    contour->SetInputConnection(stress_field_reader->GetOutputPort());
+
+    std::cerr << "contour filter initialized\n";
+    std::cerr << "stress isovalue = " << param_s << '\n';
+    contour->SetValue(0, param_s);
+
+    std::cerr << "isosurface comprises "
+              << contour->GetOutput()->GetPolys()->GetNumberOfCells()
+              << " cells\n";
+
+    vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
+    normals->SetInputConnection(contour->GetOutputPort());
+    normals->SplittingOff();
+
+    vtkSmartPointer<vtkSmoothPolyDataFilter> smooth = vtkSmartPointer<vtkSmoothPolyDataFilter>::New();
+    smooth->SetInputConnection(normals->GetOutputPort());
+    smooth->SetRelaxationFactor(0.25);
+    smooth->SetNumberOfIterations(10);
+
+    vtkSmartPointer<vtkPolyDataMapper> iso_mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    iso_mapper->SetInputConnection(smooth->GetOutputPort());
+    iso_mapper->ScalarVisibilityOff();
+
+    vtkSmartPointer<vtkActor> iso_actor = vtkSmartPointer<vtkActor>::New();
+    iso_actor->SetMapper(iso_mapper);
+    iso_actor->GetProperty()->SetColor(1, 0, 1);
+    iso_actor->GetProperty()->SetOpacity(0.5);
+    iso_actor->GetProperty()->SetInterpolationToPhong();
+    // iso_actor->GetProperty()->EdgeVisibilityOn();
+    // iso_actor->GetProperty()->BackfaceCullingOff();
+    // iso_actor->GetProperty()->SetAmbientColor(1, 0, 1);
+    // iso_actor->GetProperty()->SetEdgeColor(1, 0, 1);
+
     vtkSmartPointer<vtkActor> mesh_actor, edge_actor;
 
-    if (true) {
+    if (param_grains) {
         std::cerr << "we are showing grains\n";
         // included grains
         std::set<int> selected_grains;
         for (int i = 0 ; i < nb_grains ; ++i) {
             if (ids[i] >= 0 &&
-                    size[i] <= param_maxv && size[i] >= param_minv &&
-                    fa[i] >= param_mina && fa[i] <= param_maxa) {
+                    grain_stress[2*i] <= param_s && grain_stress[2*i+1] >= param_s) {
                 selected_grains.insert(ids[i]);
             }
         }
@@ -557,47 +525,9 @@ int main(int argc, char* argv[])
         }
         std::cerr << selected_triangles->GetNumberOfCells() << " triangles passed the test\n";
 
-        // assign colors to triangles based on the orientation of their grain(s)
-        selected_triangles->InitTraversal();
-        vtkSmartPointer<vtkUnsignedCharArray> color = vtkSmartPointer<vtkUnsignedCharArray>::New();
-        color->SetNumberOfComponents(3);
-        color->SetName("Colors");
-        while (true) {
-            const vtkIdType* ids;
-            vtkIdType npts;
-            if (!selected_triangles->GetNextCell(npts, ids)) {
-                break;
-            }
-            std::vector<int> tmp1, tmp2, tmp3;
-
-            std::set_intersection(vertex_tags[ids[0]].begin(),
-                                  vertex_tags[ids[0]].end(),
-                                  vertex_tags[ids[1]].begin(),
-                                  vertex_tags[ids[1]].end(),
-                                  std::back_inserter(tmp1));
-            std::set_intersection(vertex_tags[ids[2]].begin(),
-                                  vertex_tags[ids[2]].end(),
-                                  tmp1.begin(), tmp1.end(),
-                                  std::back_inserter(tmp2));
-            std::set_intersection(tmp2.begin(), tmp2.end(),
-                                  selected_grains.begin(),
-                                  selected_grains.end(),
-                                  std::back_inserter(tmp3));
-            if (!tmp3.size()) {
-                std::cerr << "WARNING: current triangle has invalid corner tags\n";
-            } else {
-                int ref_id = tmp3.back(); // largest included index common to all 3 vertices
-                // std::cerr << "ref_id is " << ref_id << " with color " << nvis::ivec3(colors[ref_id]) << '\n';
-                // std::cerr << "inserting color " << colors[ref_id] << " = " << nvis::vec3(colors[ref_id]) / nvis::vec3(255, 255, 255) << '\n';
-                color->InsertNextTypedTuple(colors[ref_id].begin());
-            }
-        }
-
-
         vtkSmartPointer<vtkPolyData> selected_mesh = vtkSmartPointer<vtkPolyData>::New();
         selected_mesh->SetPoints(pts);
         selected_mesh->SetPolys(selected_triangles);
-        selected_mesh->GetCellData()->SetScalars(color);
 
         vtkSmartPointer<vtkCellArray> selected_lines = vtkSmartPointer<vtkCellArray>::New();
         lines->InitTraversal();
@@ -618,8 +548,8 @@ int main(int argc, char* argv[])
         mesh_mapper->SetInputData(selected_mesh);
         mesh_actor = vtkSmartPointer<vtkActor>::New();
         mesh_actor->SetMapper(mesh_mapper);
-        // mesh_actor->GetProperty()->SetColor(1, 1, 1);
-        mesh_actor->GetProperty()->SetOpacity(0.8);
+        mesh_actor->GetProperty()->SetColor(1, 1, 1);
+        mesh_actor->GetProperty()->SetOpacity(0.3);
 
         vtkSmartPointer<vtkPolyData> selected_edges = vtkSmartPointer<vtkPolyData>::New();
         selected_edges->SetPoints(edges->GetPoints());
@@ -641,21 +571,9 @@ int main(int argc, char* argv[])
         ren->AddActor(edge_actor);
     }
     ren->AddActor(cube_actor);
+    ren->AddActor(iso_actor);
 
     ren_win->Render();
-
-    if (param_shot) {
-        vtkSmartPointer<vtkWindowToImageFilter> capture = vtkSmartPointer<vtkWindowToImageFilter>::New();
-        capture->SetInput(ren_win);
-
-        vtkSmartPointer<vtkTIFFWriter> writer = vtkSmartPointer<vtkTIFFWriter>::New();
-        writer->SetInputConnection(capture->GetOutputPort());
-
-        writer->SetFileName(info.shot.c_str());
-        std::cerr << "about to write to file " << info.shot << '\n';
-        writer->Write();
-    } else {
-        iren->Initialize();
-        iren->Start();
-    }
+    iren->Initialize();
+    iren->Start();
 }

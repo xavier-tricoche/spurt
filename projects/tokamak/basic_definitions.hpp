@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <list>
-#include <math/fixed_vector.hpp>
+#include <math/types.hpp>
 #include <boost/rational.hpp>
 #include <poincare/metric.hpp>
 #include "period.hpp"
@@ -14,38 +14,38 @@ class orbit {
 public:
     orbit() : __points(), __q(-1.) {}
     
-    orbit(const std::vector<nvis::vec2>& points, double period = -1)
+    orbit(const std::vector<spurt::vec2>& points, double period = -1)
         : __points(points), __q(period) {}
         
-    orbit(const std::vector<nvis::vec2>& points, const std::vector<nvis::vec2>& errors,
+    orbit(const std::vector<spurt::vec2>& points, const std::vector<spurt::vec2>& errors,
           double period = -1)
         : __points(points), __errors(errors), __q(period) {}
         
-    orbit(const std::list<nvis::vec2>& points, double period = -1)
+    orbit(const std::list<spurt::vec2>& points, double period = -1)
         : __points(points.begin(), points.end()), __q(period) {}
         
-    orbit(const std::list<nvis::vec2>& points, const std::list<nvis::vec2>& errors, double period = -1)
+    orbit(const std::list<spurt::vec2>& points, const std::list<spurt::vec2>& errors, double period = -1)
         : __points(points.begin(), points.end()), __errors(errors.begin(), errors.end()), __q(period) {}
         
     size_t size() const {
         return __points.size();
     }
     
-    const nvis::vec2& operator[](size_t i) const {
+    const spurt::vec2& operator[](size_t i) const {
         assert(i < __points.size());
         return __points[i];
     }
     
-    nvis::vec2& operator[](size_t i) {
+    spurt::vec2& operator[](size_t i) {
         assert(i < __points.size());
         return __points[i];
     }
     
-    const std::vector<nvis::vec2>& points() const {
+    const std::vector<spurt::vec2>& points() const {
         return __points;
     }
     
-    const std::vector<nvis::vec2>& errors() const {
+    const std::vector<spurt::vec2>& errors() const {
         return __errors;
     }
     
@@ -58,8 +58,8 @@ public:
     }
     
 private:
-    std::vector<nvis::vec2>     __points;
-    std::vector<nvis::vec2>     __errors;
+    std::vector<spurt::vec2>     __points;
+    std::vector<spurt::vec2>     __errors;
     double __q;
 };
 
@@ -85,7 +85,7 @@ public:
         return __map_orbits[__orbit].period();
     }
     
-    const nvis::vec2& pos() const {
+    const spurt::vec2& pos() const {
         assert(__orbit < __map_orbits.size());
         return __map_orbits[__orbit][__index];
     }
@@ -98,8 +98,8 @@ public:
         return period();
     }
     
-    const nvis::vec2& error() const {
-        const std::vector<nvis::vec2>& errors = __map_orbits[__orbit].errors();
+    const spurt::vec2& error() const {
+        const std::vector<spurt::vec2>& errors = __map_orbits[__orbit].errors();
         return errors[__index];
     }
     
@@ -108,7 +108,7 @@ private:
 };
 
 template<typename map_metric>
-nvis::vec2 vector_value(const point_data& pt, int period, const map_metric& metric)
+spurt::vec2 vector_value(const point_data& pt, int period, const map_metric& metric)
 {
     const orbit& chain = __map_orbits[pt.orbit_id()];
     size_t N = chain.size();
@@ -118,35 +118,35 @@ nvis::vec2 vector_value(const point_data& pt, int period, const map_metric& metr
                   << " seeded at " << __map_orbits[pt.orbit_id()][0]
                   << std::endl;
         double large = std::numeric_limits<double>::max();
-        return nvis::vec2(large, large);
+        return spurt::vec2(large, large);
     }
     int i = pt.index();
     if (i >= period && i + period < N) {
-        const nvis::vec2& x0 = chain[i-period];
-        const nvis::vec2& x2 = chain[i+period];
+        const spurt::vec2& x0 = chain[i-period];
+        const spurt::vec2& x2 = chain[i+period];
         return 0.5*(metric.displacement(x0, x2));
     } else if (i + period < N) {
-        const nvis::vec2& x1 = chain[i];
-        const nvis::vec2& x2 = chain[i+period];
+        const spurt::vec2& x1 = chain[i];
+        const spurt::vec2& x2 = chain[i+period];
         return metric.displacement(x1, x2);
     } else if (i >= period) {
-        const nvis::vec2& x0 = chain[i-period];
-        const nvis::vec2& x1 = chain[i];
+        const spurt::vec2& x0 = chain[i-period];
+        const spurt::vec2& x1 = chain[i];
         return metric.displacement(x0, x1);
     } else {
         double large = std::numeric_limits<double>::max();
-        return nvis::vec2(large, large);
+        return spurt::vec2(large, large);
         
         // std::cerr << "WARNING: lacking values for period " << period
         //           << " on a chain of length " << N
         //           << " seeded at " << __map_orbits[pt.orbit_id()][0]
         //           << std::endl;
-        // return nvis::vec2(0, 0);
+        // return spurt::vec2(0, 0);
     }
 }
 
 template<typename map_metric>
-std::pair<nvis::vec2, nvis::vec2> vector_and_error_value(const point_data& pt, int period, const map_metric& metric)
+std::pair<spurt::vec2, spurt::vec2> vector_and_error_value(const point_data& pt, int period, const map_metric& metric)
 {
     const orbit& chain = __map_orbits[pt.orbit_id()];
     size_t N = chain.size();
@@ -156,42 +156,42 @@ std::pair<nvis::vec2, nvis::vec2> vector_and_error_value(const point_data& pt, i
                   << " seeded at " << __map_orbits[pt.orbit_id()][0]
                   << std::endl;
         double large = std::numeric_limits<double>::max();
-        return std::make_pair(nvis::vec2(large, large), large);
+        return std::make_pair(spurt::vec2(large, large), large);
     }
     int i = pt.index();
     if (i >= period && i + period < N) {
-        const nvis::vec2& x0 = chain[i-period];
-        const nvis::vec2& x2 = chain[i+period];
+        const spurt::vec2& x0 = chain[i-period];
+        const spurt::vec2& x2 = chain[i+period];
         return std::make_pair(0.5*(metric.displacement(x0, x2)), chain.errors()[i-period] + chain.errors()[i+period]);
     } else if (i + period < N) {
-        const nvis::vec2& x1 = chain[i];
-        const nvis::vec2& x2 = chain[i+period];
+        const spurt::vec2& x1 = chain[i];
+        const spurt::vec2& x2 = chain[i+period];
         return std::make_pair(metric.displacement(x1, x2), chain.errors()[i] + chain.errors()[i+period]);
     } else if (i >= period) {
-        const nvis::vec2& x0 = chain[i-period];
-        const nvis::vec2& x1 = chain[i];
+        const spurt::vec2& x0 = chain[i-period];
+        const spurt::vec2& x1 = chain[i];
         return std::make_pair(metric.displacement(x0, x1), chain.errors()[i-period] + chain.errors()[i]);
     } else {
         double large = std::numeric_limits<double>::max();
-        return std::make_pair(nvis::vec2(large, large), large);
+        return std::make_pair(spurt::vec2(large, large), large);
         
         // std::cerr << "WARNING: lacking values for period " << period
         //           << " on a chain of length " << N
         //           << " seeded at " << __map_orbits[pt.orbit_id()][0]
         //           << std::endl;
-        // return nvis::vec2(0, 0);
+        // return spurt::vec2(0, 0);
     }
 }
 
 template<typename map_metric>
-nvis::vec2 vector_value(size_t orbit_id, size_t idx, size_t period, const map_metric& metric)
+spurt::vec2 vector_value(size_t orbit_id, size_t idx, size_t period, const map_metric& metric)
 {
     point_data pd(orbit_id, idx);
     return vector_value(pd, period, metric);
 }
 
 template<typename map_metric>
-std::pair<nvis::vec2, nvis::vec2> vector_and_error_value(size_t orbit_id, size_t idx, size_t period, const map_metric& metric)
+std::pair<spurt::vec2, spurt::vec2> vector_and_error_value(size_t orbit_id, size_t idx, size_t period, const map_metric& metric)
 {
     point_data pd(orbit_id, idx);
     return vector_and_error_value(pd, period, metric);
@@ -239,8 +239,8 @@ struct orbit_integrator {
                      const spurt::map_metric& metric)
         : __nsteps(nsteps), __integ(integrator), __metric(metric) {}
         
-    void operator()(const nvis::vec2& x0,
-                    std::vector<nvis::vec2>& points,
+    void operator()(const spurt::vec2& x0,
+                    std::vector<spurt::vec2>& points,
                     std::vector<spurt::point_data>& data) const {
                     
         const integrator_type* pmap = __integ.clone();
@@ -256,7 +256,7 @@ struct orbit_integrator {
             return;
         }
         
-        std::vector<nvis::vec2> errors(returned_values.size() + 1);
+        std::vector<spurt::vec2> errors(returned_values.size() + 1);
         points.resize(returned_values.size() + 1);
         data.resize(returned_values.size() + 1);
         points[0] = x0;

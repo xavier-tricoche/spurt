@@ -1,7 +1,8 @@
 #ifndef __COHEN_SUTHERLAND_HPP__
 #define __COHEN_SUTHERLAND_HPP__
 
-#include <math/fixed_vector.hpp>
+#include <utility>
+#include <math/types.hpp>
 #include <math/bounding_box.hpp>
 
 namespace cohen_sutherland {
@@ -16,7 +17,7 @@ const int TOP = 8;    // 1000
 
 // Compute the bit code for a point (x, y) using the clip rectangle
 // bounded diagonally by (xmin, ymin), and (xmax, ymax)
-OutCode ComputeOutCode(double x, double y, const nvis::bbox2& bounds)
+OutCode ComputeOutCode(double x, double y, const spurt::bbox2& bounds)
 {
     OutCode code;
     
@@ -44,9 +45,9 @@ OutCode ComputeOutCode(double x, double y, const nvis::bbox2& bounds)
 // Cohen–Sutherland clipping algorithm clips a line from
 // P0 = (x0, y0) to P1 = (x1, y1) against a rectangle with
 // diagonal from (xmin, ymin) to (xmax, ymax).
-bool clip(std::pair<nvis::vec2, nvis::vec2>& clipped,
-          const nvis::vec2& p0, const nvis::vec2& p1,
-          const nvis::bbox2& bounds)
+bool clip(std::pair<spurt::vec2, spurt::vec2>& clipped,
+          const spurt::vec2& p0, const spurt::vec2& p1,
+          const spurt::bbox2& bounds)
 {
     bool accept = false;
     
@@ -106,8 +107,8 @@ bool clip(std::pair<nvis::vec2, nvis::vec2>& clipped,
         }
     }
     if (accept) {
-        clipped.first = nvis::vec2(x0, y0);
-        clipped.second = nvis::vec2(x1, y1);
+        clipped.first = spurt::vec2(x0, y0);
+        clipped.second = spurt::vec2(x1, y1);
     }
     
     return accept;

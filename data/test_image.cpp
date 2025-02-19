@@ -166,8 +166,8 @@ void test_image(const coord_type& res, const bounds_type& bounds,
     std::cout << "output grid resolution: " << outgrid.resolution() << '\n';
     if (fname == "ABC" || fname == "abc")
     {
-        dataset_type<vector_type> indata(ingrid, 0);
-        dataset_type<vector_type> outvalues(outgrid, 0);
+        dataset_type<vector_type> indata(ingrid, vector_type(0));
+        dataset_type<vector_type> outvalues(outgrid, vector_type(0));
         dataset_type<vec_derivative_type> outderiv(outgrid);
         fill_image<vector_type>(indata, "ABC");
         vec_image_type img(indata);
@@ -178,10 +178,10 @@ void test_image(const coord_type& res, const bounds_type& bounds,
         spurt::save_as_nrrd<size_type, scalar_type, 3, vec_derivative_type, coord_type, pos_type, jacobian_type>(dername, outderiv);
     }
     else {
-        dataset_type<scalar_type> indata(ingrid, 0);
-        dataset_type<scalar_type> outvalues(outgrid, 0);
-        dataset_type<scl_derivative_type> outderiv(outgrid, 0);
-        dataset_type<scl_second_derivative_type> out2ndderiv(outgrid, 0);
+        dataset_type<scalar_type> indata(ingrid, scalar_type(0));
+        dataset_type<scalar_type> outvalues(outgrid, scalar_type(0));
+        dataset_type<scl_derivative_type> outderiv(outgrid, scl_derivative_type(0));
+        dataset_type<scl_second_derivative_type> out2ndderiv(outgrid, scl_second_derivative_type(0));
         fill_image<scalar_type>(indata, fname);
         scl_image_type img(indata);
         fill_image_impl<scalar_type>(outvalues, [&](const pos_type& p) { return img.value(p); });

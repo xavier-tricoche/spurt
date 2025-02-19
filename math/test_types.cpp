@@ -238,10 +238,7 @@ int main(int argc, char* argv[]) {
         std::cout <<"after storage value is " << blih << "\n";
         std::cout << "C / 4.=" << _C/4. << '\n';
         std::cout << "C / int(4)=" << _C/int(4) << '\n';
-        std::cout << "b=" << b << '\n';
-        std::cout << "C + b=" << _C + b << '\n';
-        std::cout << "C - b=" << _C - b << '\n';
-        
+        std::cout << "b=" << b << '\n';      
         
         std::cout << "C*D^{-1}=" << _F << "\n";
         std::cout << "C*D^{-1}*D=" << _C*inverse(_D)*_D << '\n';

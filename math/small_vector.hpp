@@ -82,21 +82,23 @@ namespace spurt
         const_iterator begin() const { return m_storage.begin(); }
         const_iterator end() const { return m_storage.end(); }
 
+        // this will break if type is a view...
         small_vector_interface(scalar_type val=0) : m_storage() {
             std::fill(begin(), end(), val);
         }
         
         small_vector_interface(storage_type storage) : m_storage(storage) {}
         
-        small_vector_interface(const self_type& other) {
-            std::copy(other.begin(), other.end(), begin());
+        small_vector_interface(const self_type& other) 
+            : m_storage(other.m_storage){
+            // std::copy(other.begin(), other.end(), begin());
         }
 
         template<typename OtherStorage>
         small_vector_interface(const matching_vector<OtherStorage>& other) 
-            : m_storage() 
+            : m_storage(other.m_storage) 
         {
-            std::copy(other.begin(), other.end(), begin());
+            // std::copy(other.begin(), other.end(), begin());
         }
 
         template<typename OtherStorage>
@@ -162,7 +164,7 @@ namespace spurt
             return static_cast<const value_type*>(m_storage.data);
         }
         
-        size_t size() const { return _size_; }
+        constexpr size_t size() const { return _size_; }
 
         template <typename T, typename = 
         typename std::enable_if<std::is_scalar<T>::value>::type>
@@ -282,7 +284,7 @@ namespace spurt
         {
             bool_vector r;
             for (size_t i=0; i<_size_; ++i) { 
-                r[i] = (m_storage[i] == static_cast<scalar_type>(other[i]));
+                r[i] = (m_storage[i] == static_cast<scalar_type>(other[i])); 
             }
             return r;
         }
@@ -302,7 +304,7 @@ namespace spurt
         {
             bool_vector r;
             for (size_t i=0; i<_size_; ++i) { 
-                r[i] = (m_storage[i] != static_cast<scalar_type>(other[i]));
+                r[i] = m_storage[i] != static_cast<scalar_type>(other[i]);
             }
             return r;
         }
@@ -688,6 +690,18 @@ namespace spurt
     {
         return *std::max_element(a.begin(), a.end());
     }
+
+    template<typename Storage>
+    size_t argmin(const small_vector_interface<Storage>& v)
+    {
+        return std::distance(v.begin(), std::min_element(v.begin(), v.end()));
+    }
+
+    template<typename Storage>
+    size_t argmax(const small_vector_interface<Storage>& v)
+    {
+        return std::distance(v.begin(), std::max_element(v.begin(), v.end()));
+    }
     
     template<typename Storage>
     typename Storage::value_type sum(const small_vector_interface<Storage>& v)
@@ -928,8 +942,8 @@ namespace spurt
 
         template <typename Storage1, typename Storage2, 
                   typename = typename std::enable_if<Storage1::size == Storage2::size>::type >
-        static bool equal(const small_vector_interface<Storage1> &v1, 
-                          const small_vector_interface<Storage2> &v2)
+        bool equal(const small_vector_interface<Storage1> &v1, 
+                   const small_vector_interface<Storage2> &v2) const
         {
             for (auto i = 0; i < Storage1::size; ++i)
             {
@@ -940,7 +954,7 @@ namespace spurt
         }
 
         template <typename Storage>
-        static bool is_zero(const small_vector_interface<Storage> &v)
+        bool is_zero(const small_vector_interface<Storage> &v) const
         {
             for (auto i = 0; i < Storage::size; ++i)
             {

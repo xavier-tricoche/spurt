@@ -7,10 +7,11 @@ file(GLOB SOURCES
 
 if( ${VTK_FOUND} )
     #make this a library
-	add_library( BARG ${LIBMODE} ${SOURCES} )
-	target_link_libraries( BARG ${VTK_LIBRARIES} )
+	add_library( spurt_barg ${LIBMODE} ${SOURCES} )
+	target_link_libraries( spurt_barg ${VTK_LIBRARIES} )
 else()
-    message( WARNING "VTK-dependent executables for the boundary-aware-rectgrid project"
+    message( WARNING 
+             "VTK-dependent executables for the boundary-aware-rectgrid project"
              " cannot be built because VTK was not found" )
 endif()
 

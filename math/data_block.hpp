@@ -247,6 +247,12 @@ namespace spurt
         DataBlock(const self_type& other) {
             std::copy(other.begin(), other.end(), begin());
         }
+
+        template<typename OtherStorage, 
+                 typename = typename std::enable_if<size == OtherStorage::size>::type>
+        DataBlock(const OtherStorage& other) {
+            std::copy(other.begin(), other.end(), begin());
+        }
         
         iterator begin() { return iterator(data); }
         iterator end() { return iterator(data + size); }
@@ -259,9 +265,9 @@ namespace spurt
         eigen_vector_map_type as_eigen() { return eigen_vector_map_type(data); }
         const_eigen_vector_map_type as_const_eigen() const { return const_eigen_vector_map_type(data); }
         template<size_t M, size_t N, typename = typename std::enable_if<M*N==size>::type>
-        eigen_matrix_map_type<M, N> as_eigen_matrix() { return eigen_matrix_map_type(data); }
+        eigen_matrix_map_type<M, N> as_eigen_matrix() { return eigen_matrix_map_type<M,N>(data); }
         template<size_t M, size_t N, typename = typename std::enable_if<M*N==size>::type>
-        const_eigen_matrix_map_type<M, M> as_const_eigen_matrix() { return const_eigen_matrix_map_type(data); }
+        const_eigen_matrix_map_type<M, M> as_const_eigen_matrix() { return const_eigen_matrix_map_type<M,N>(data); }
         
         value_type data[size];
     };
@@ -300,10 +306,18 @@ namespace spurt
             
         DataBlockView(value_type* _data=nullptr) : data(_data) {}
         DataBlockView(const self_type& other) : data(other.data) {}
+
+        template<typename OtherStorage, 
+                 typename = typename std::enable_if<size == OtherStorage::size &&
+                 !std::is_const<OtherStorage>::value>::type>
+        DataBlockView(OtherStorage& other) : data(other.data) {}
         
         template<typename OtherStorage, 
                  typename = typename std::enable_if<size == OtherStorage::size>::type>
         self_type& operator=(const OtherStorage& other) {
+            if (data == nullptr) {
+                throw std::runtime_error("Illegal lvalue reference to nonallocated memory");
+            }
             std::copy(other.begin(), other.end(), begin());
             return *this;
         }

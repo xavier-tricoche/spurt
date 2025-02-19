@@ -1,5 +1,7 @@
-# This is the root Xavier CMakeLists file
+# This is the root Spurt CMakeLists file
 cmake_minimum_required(VERSION 3.20)
+
+set(CMAKE_CXX_STANDARD 17) # Force CMake to use C++17 to compile
 
 # Run cmake --help-policy CMP<num> to see documentation.
 if( COMMAND cmake_policy )
@@ -8,7 +10,7 @@ if( COMMAND cmake_policy )
   cmake_policy( SET CMP0167 NEW )
 endif( COMMAND cmake_policy )
 
-project( XAVIER )
+project( spurt )
 
 set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake" )
 set( THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party )
@@ -20,7 +22,15 @@ if( NOT CMAKE_BUILD_TYPE )
       FORCE)
 endif()
 
-option( BUILD_OPTION_OPENMP "use openmp parallelization" OFF )
+string( TOLOWER "${CMAKE_BUILD_TYPE}" build_type_lower )
+if( ${build_type_lower} MATCHES "debug" )
+    message(WARNING "CMAKE_BUILD_TYPE is ${build_type_lower}")
+    add_compile_definitions( SPURT_DEBUG )
+else()
+    message(WARNING "CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
+endif()
+
+option( BUILD_OPTION_OPENMP "use openmp parallelization" ON )
 
 option( BUILD_OPTION_TBB "use tbb parallelization" ON )
 
@@ -28,38 +38,20 @@ option( OLD_COMPILER "deactivate \"recent\" C++ features" OFF )
 
 set( LIBMODE SHARED )
 
-# use, i.e. don't skip the full RPATH for the build tree
-#set(CMAKE_SKIP_BUILD_RPATH FALSE)
-
-# when building, use the install RPATH already
-#set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-
-#set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib" "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/")
-
-# add the automatically determined parts of the RPATH
-# which point to directories outside the build tree to the install RPATH
-#set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
+# Mac OS does weird stuff with dynamic libs
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(CMAKE_MACOSX_RPATH 1)
 endif()
 
 #######################################################################
 
-set( XAVIER_SOURCE_DIR ${CMAKE_SOURCE_DIR} )
-
-set( NVIS_INCLUDE_DIR     ${CMAKE_SOURCE_DIR}/third_party/nvis )
-set( ExprTK_INCLUDE_DIR   ${CMAKE_SOURCE_DIR}/third_party/fastmathparser )
-set( KDTREEPP_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/third_party/kdtree++ )
-set( Tapkee_INCLUDE_DIR   ${CMAKE_SOURCE_DIR}/third_party/tapkee )
-set( STANN_INCLUDE_DIR    ${CMAKE_SOURCE_DIR}/third_party/stann )
-set( CELLTREE_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/third_party/celltree/src )
+set( Spurt_SOURCE_DIR ${CMAKE_SOURCE_DIR} )
 
 # required packages
 set( Boost_USE_STATIC_LIBS      OFF )
 set( Boost_USE_MULTITHREADED    ON  )
 set( Boost_USE_STATIC_RUNTIME   OFF )
-find_package( Boost 1.55 REQUIRED
+find_package( Boost 1.75 REQUIRED # something fairly recent
               COMPONENTS
               filesystem
               system
@@ -86,39 +78,34 @@ find_package( TBB )       # parallelism
 
 # build configuration
 
-set( NVIS_INCLUDE_DIR ${THIRD_PARTY_DIR}/nvis )
-set( Tapkee_INCLUDE_DIR ${THIRD_PARTY_DIR}/tapkee )
-set( ExprTK_INCLUDE_DIR ${THIRD_PARTY_DIR}/fastmathparser )
-set( KDTREEPP_INCLUDE_DIR ${THIRD_PARTY_DIR}/kdtree++ )
+set( NVIS_INCLUDE_DIR     ${CMAKE_SOURCE_DIR}/third_party/nvis )
+set( ExprTK_INCLUDE_DIR   ${CMAKE_SOURCE_DIR}/third_party/fastmathparser )
+set( KDTREEPP_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/third_party/kdtree++ )
+set( CELLTREE_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/third_party/celltree/src )
+set( CELLTREE_LIBRARIES celltree )
 set( TOKAMAK_INCLUDE_DIR ${THIRD_PARTY_DIR}/tokamak )
 set( TOKAMAK_LIBRARIES tokamak )
-set( CELLTREE_INCLUDE_DIR ${THIRD_PARTY_DIR}/celltree/src )
-set( CELLTREE_LIBRARIES celltree )
-set( STANN_INCLUDE_DIR ${THIRD_PARTY_DIR}/stann )
 set( GMM_INCLUDE_DIR ${THIRD_PARTY_DIR} )
 
 # mandatory includes
-include_directories( ${Teem_INCLUDE_DIRS} )
-include_directories( ${XAVIER_SOURCE_DIR} )
-include_directories( ${NVIS_INCLUDE_DIR}  )
-include_directories( ${Boost_INCLUDE_DIRS} )
-include_directories( ${Eigen_INCLUDE_DIR} )
-include_directories( ${PNG_INCLUDE_DIRS} )
-include_directories( ${Tapkee_INCLUDE_DIR} )
-include_directories( ${ExprTK_INCLUDE_DIR} )
-include_directories( ${KDTREEPP_INCLUDE_DIR} )
-include_directories( ${STANN_INCLUDE_DIR} )
-include_directories( ${CELLTREE_INCLUDE_DIR} )
-include_directories( ${THIRD_PARTY_DIR} )
+include_directories( 
+    .
+    ${Spurt_SOURCE_DIR} 
+    ${Boost_INCLUDE_DIRS}
+    ${Eigen_INCLUDE_DIR}
+    ${PNG_INCLUDE_DIRS}
+    ${Teem_INCLUDE_DIRS}
+    ${NVIS_INCLUDE_DIR} 
+    ${KDTREEPP_INCLUDE_DIR}
+    ${CELLTREE_INCLUDE_DIR}
+    ${THIRD_PARTY_DIR}
+)
+message( WARNING "include dirs are " ${INCLUDE_DIRECTORIES} ) 
+message( WARNING "spurt source dir is " ${Spurt_SOURCE_DIR})
 add_definitions( ${PNG_DEFINITIONS} )
-include_directories( . )
 
 set( AVAILABLE_PACKAGES "" )
 set( MISSING_PACKAGES "" )
-
-set( CGARTH_CELLTREE_LIBRARIES celltree )
-set( CGARTH_TOKAMAK_LIBRARIES tokamak )
-
 
 if( VTK_FOUND )
     list( APPEND ${AVAILABLE_PACKAGES} "VTK" )
@@ -166,16 +153,6 @@ else()
     list( APPEND ${MISSING_PACKAGES} "NetCDF" )
 endif()
 
-# if both VTK and NetCDF are available we need to link against
-# VTK_NETCDF to deal with cases where VTK's <netcdf.h> is included
-# instead of the system's one (sigh...)
-# if( VTK_FOUND AND NetCDF_FOUND )
-#     find_library( VTK_NETCDF_LIBRARY
-#         NAME "vtkNetCDF"
-#         HINTS ${VTK_LIBRARY_DIRS}
-#     )
-# endif()
-
 if( HDF5_FOUND )
     list( APPEND ${AVAILABLE_PACKAGES} "HDF5" )
 else()
@@ -197,7 +174,6 @@ endif()
 if( HDF5_FOUND )
     # message( "HDF5 was found: INCLUDE_DIR=" ${HDF5_INCLUDE_DIR} ", LIBRARIES=" ${HDF5_LIBRARIES})
 else()
-    # message( "HDF5 was not found! INCLUDE_DIRS=" ${HDF5_INCLUDE_DIRS} ", LIBRARIES=" ${HDF5_LIBRARIES})
     if ( HDF5_hdf5_LIBRARY_RELEASE )
         # message( "Found HDF5_hdf5_LIBRARY_RELEASE=" ${HDF5_hdf5_LIBRARY_RELEASE} )
         list( APPEND HDF5_LIBRARIES ${HDF5_hdf5_LIBRARY_RELEASE} )
@@ -243,17 +219,17 @@ endif()
 
 #######################################################################
 
-#set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-unused-result -Wno-deprecated-declarations" )
-
 if( BUILD_OPTION_OPENMP )
-  set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp" )
+    if (APPLE)
+        set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xpreprocessor -fopenmp" )
+        set( OPENMP_LIBS "-lomp" )
+    else()
+        set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp" )
+    endif()
 endif()
 
 if( BUILD_OPTION_TBB )
-endif()
-
-if ( OLD_COMPILER )
-    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__OLD_C11_COMPILER__")
+    set( TBB_ALL_LIBS "TBB::tbb TBB::tbbmalloc TBB::tbbmalloc_proxy" )
 endif()
 
 #######################################################################
@@ -265,7 +241,7 @@ set( EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin )
 link_directories( ${LIBRARY_OUTPUT_PATH} )
 
 # individual libs
-list( APPEND XAVIER_LIBRARIES
+list( APPEND Spurt_LIBRARIES
 	boundary-aware-rectgrid
     third_party
     crease
@@ -287,15 +263,10 @@ list( APPEND XAVIER_LIBRARIES
     tensor
     topology
     utils
-    #VTK
-
-    # The libraries below are only relevant in the context of specific collaborations
-    #collab
-    #granular
-    #waves
+    vtk
 )
 
-foreach( lib ${XAVIER_LIBRARIES})
+foreach( lib ${Spurt_LIBRARIES})
   add_subdirectory( ${lib} )
 endforeach()
 
@@ -303,10 +274,10 @@ endforeach()
 # determine targets to be build and define their linking
 ######################################################################
 
-IF( NOT XAVIER_INSTALL_PRESET_IS_SET )
-  SET( CMAKE_INSTALL_PREFIX "$ENV{HOME}/XAVIER.default_install_dir" CACHE PATH "Install path prefix, prepended onto install directories." FORCE )
-  SET( XAVIER_INSTALL_PRESET_IS_SET 1 CACHE INTERNAL "Default install path written" FORCE )
-ENDIF( NOT XAVIER_INSTALL_PRESET_IS_SET )
+IF( NOT Spurt_INSTALL_PRESET_IS_SET )
+  SET( CMAKE_INSTALL_PREFIX "$ENV{HOME}/Spurt.default_install_dir" CACHE PATH "Install path prefix, prepended onto install directories." FORCE )
+  SET( Spurt_INSTALL_PRESET_IS_SET 1 CACHE INTERNAL "Default install path written" FORCE )
+ENDIF( NOT Spurt_INSTALL_PRESET_IS_SET )
 
 install( DIRECTORY bin DESTINATION . USE_SOURCE_PERMISSIONS)
 install( DIRECTORY scripts DESTINATION . USE_SOURCE_PERMISSIONS)
@@ -316,8 +287,8 @@ install( DIRECTORY utils/GLSLShaderCode DESTINATION utils USE_SOURCE_PERMISSIONS
 ######################################################################
 # install all binaries
 ######################################################################
-foreach( target ${XAVIER_TARGETS} )
+foreach( target ${Spurt_TARGETS} )
   install( TARGETS ${target}
         RUNTIME DESTINATION bin
   )
-endforeach( target ${XAVIER_TARGETS} )
+endforeach( target ${Spurt_TARGETS} )
