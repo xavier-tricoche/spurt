@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cmath>
 #include <exception>
+#include <filesystem>
 #include <mutex>
 #include <locale>
 #include <regex>
@@ -31,6 +32,9 @@
 // TBB
 #include <tbb/parallel_for.h>
 #include <tbb/tbb.h>
+
+// Boost C++
+#include <boost/json/src.hpp>
 
 using namespace spurt;
 
@@ -200,7 +204,7 @@ struct Connectivity : public std::array<T, N>
 template<typename T, size_t N, typename Order>
 std::ostream& operator<<(std::ostream& os, const Connectivity<T, N, Order>& c) {
     os << "[ ";
-    std::copy(c.begin(), c.end(), std::ostream_iterator<T>(std::cout, " "));
+    std::copy(c.begin(), c.end(), std::ostream_iterator<T>(os, " "));
     os << " ]";
     return os;
 }
@@ -1747,6 +1751,127 @@ void visualize(const container_wrapper<crease_point_t>& cpoints,
     interactor->Start();
 }
 
+struct json_traits {
+    typedef boost::json::value jvalue_t;
+    typedef boost::json::array jarray_t;
+
+    template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+    jvalue_t map(const T& t) {
+        return jvalue_t(t);
+    }
+
+    template<typename T, size_t N>
+    jvalue_t map(const std::array<T, N>& a) {
+        jarray_t jv;
+        for (const T& t : a) {
+            jv.push_back(map(t));
+        }
+        return jv;
+    }
+
+    template<typename T, size_t N>
+    jvalue_t map(const spurt::small_vector<T, N>& v) {
+        jarray_t jv;
+        for (const T& t : v) {
+            jv.push_back(map(t));
+        }
+        return jv;
+    }
+
+    template<typename T>
+    jvalue_t map(const std::vector<T>& v) {
+        jarray_t jv;
+        for (const T& t : v) {
+            jv.push_back(map(t));
+        }
+        return jv;
+    }
+
+    template<typename T, size_t N, typename Order>
+    jvalue_t map(const Connectivity<T, N, Order>& c) {
+        jarray_t jv;
+        for (const T& t : c) {
+            jv.push_back(map(t));
+        }
+        return jv;
+    }
+
+    jvalue_t map(const face_info_t& f) {
+        jvalue_t jv = {
+            { "face_id", map(f.face_id) },
+            { "Lpoint_index", map(f.Lpoint_index) },
+            { "segments", map(f.segments) }
+        };
+        return jv;
+    }
+    
+    template<typename T>
+    jvalue_t operator()(const T& t) {
+        return map(t);
+    }
+};
+
+void export_crease_points(const container_wrapper<crease_point_t>& unique_crease_points, const std::string& filename) {
+    using namespace boost::json;
+    std::ofstream out(filename, std::ios::out);
+    out << "[";
+    for (size_type i=0; i<unique_crease_points.size(); ++i) {
+        const crease_point_t& cp = unique_crease_points[i];
+        const pos_type& p = cp.position;
+        const edge_index_t& e = cp.edge_index;
+        const face_index_t& f = cp.face_index;
+        json_traits jt;
+        value jv = {
+            { "index", i},
+            { "position", jt(p) },
+            { "edge_index", jt(e) },
+            { "face_index", jt(f) },
+            { "value", cp.value},
+            { "strength", cp.strength},
+            { "singular", cp.singular}
+        };
+        out << jv;
+        if (i < unique_crease_points.size()-1) out << ",";
+    }
+    out << "]";
+    out.close();
+}
+
+void export_faces(const std::vector<face_info_t>& all_faces, 
+                  const std::string& filename){
+    std::ofstream out(filename, std::ios::out);
+    out << "[";
+    using namespace boost::json;
+    json_traits jt;
+    for (size_type i=0; i<all_faces.size(); ++i) {
+        const face_info_t& f = all_faces[i];
+        out << jt(f);
+        if (i<all_faces.size()-1) out << ",";
+    }
+    out << "]";
+    out.close();
+}
+
+void export_voxels(const std::vector<voxel_info_t>& all_voxels, 
+                   const std::string& filename) {
+    std::ofstream out(filename, std::ios::out);
+    out << "[";
+    using namespace boost::json;
+    json_traits jt;
+    for (size_type i=0; i<all_voxels.size(); ++i) {
+        const voxel_info_t& v = all_voxels[i];
+        value jv = {
+            { "voxel_id", jt(v.voxel_id) },
+            { "ridge_faces", jt(v.ridge_faces) },
+            { "ridge_triangles", jt(v.ridge_triangles) }
+        };
+        out << jv;
+        if (i < all_voxels.size()-1) out << ",";
+    }
+    out << "]";
+    out.close();
+}
+
 int main(int argc, const char* argv[]) 
 {
     std::string scalar_name, gradient_name, hessian_name, output_name, strength_name;
@@ -1755,7 +1880,7 @@ int main(int argc, const char* argv[])
     size_type minsize;
     int res, niter;
     int verbose;
-    bool vis;
+    bool vis, export_data;
     coord_type voxel_id = invalid_coord;
     bounds_type bounds(pos_type(0.), pos_type(-1.));
     spurt::vec4 dv(0.1, 0.2, 0.3, 0.4);
@@ -1785,6 +1910,7 @@ int main(int argc, const char* argv[])
         parser.add_tuple<3>("voxel", voxel_id, voxel_id, "Coordinates of single voxel to process");
         parser.add_tuple<3>("blower", bounds.min(), bounds.min(), "Lower bounds of domain to consider");
         parser.add_tuple<3>("bupper", bounds.max(), bounds.max(), "Upper bounds of domain to consider");
+        parser.add_flag("export", export_data, "Export all intermeidate data", optional_group);
         parser.parse(argc, argv);
     }
     catch (std::runtime_error &e)
@@ -1986,6 +2112,8 @@ int main(int argc, const char* argv[])
     
     */
 
+    // export unique_crease_points
+
     // now processing active faces
     std::vector<face_info_t> all_faces;
     unique_faces(all_faces, edge_to_crease_point_index, all_voxel_indices);
@@ -2088,6 +2216,8 @@ int main(int argc, const char* argv[])
     std::cout << "  * found: " << n_faces_found << '\n';
     std::cout << "  * singular: " << n_singular << '\n';
     std::cout << "  * pathological: " << n_pathological << '\n';
+
+    // export all_faces
     
     /*
         Algorithm
@@ -2276,6 +2406,14 @@ int main(int argc, const char* argv[])
     std::cout << "There were " << nmorepts << " cycles with more than 12 points\n";
     
     std::cout << "done: " << active_voxels.size() << ", triangulated: " << n_triangulated << ", triangles: " << all_triangles.size() << ", failed: " << n_failed << '\n';
+
+    if (export_data) {
+        typedef std::filesystem::path path_type;
+        std::string stem = path_type(output_name).replace_extension().string();
+        export_crease_points(unique_crease_points, stem + "_crease_points.json");
+        export_faces(all_faces, stem + "_faces.json");
+        export_voxels(active_voxels, stem + "_voxels.json");
+    }
 
     visualize(unique_crease_points, all_triangles, all_open_cycles, output_name, vis);
 
