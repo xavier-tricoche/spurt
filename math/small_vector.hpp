@@ -398,13 +398,10 @@ namespace spurt
         right_S_output<OtherStorage>
         operator/(const matching_vector<OtherStorage> &other) const
         {
-            typedef right_S_type<OtherStorage> out_type;
             right_S_output<OtherStorage> r;
             for (int i = 0; i < _size_; ++i)
             {
-                out_type v0 = static_cast<out_type>(m_storage[i]);
-                out_type v1 = static_cast<out_type>(other[i]);
-                r[i] = v0 / v1;
+                r[i] = m_storage[i] / other[i];
             }
             return r;
         }

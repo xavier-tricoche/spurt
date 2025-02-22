@@ -8,6 +8,7 @@
 /dataSources.local.xml
 .idea
 build*
+debug*
 .DS_Store
 CMakeFiles
 Makefile
