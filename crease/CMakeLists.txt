@@ -25,6 +25,7 @@ set( Spurt_CREASE_EXEC_SRC_WITH_VTK
     parallel_schultz
     schultz_Jan2025
     schultz_Feb2025
+    schultz_cleanedup
     filter_crease
 )
 

@@ -103,7 +103,6 @@ const coord_type invalid_coord = coord_type(invalid_size);
 template <typename Value>
 using image3 = image<size_type, scalar_type, 3, Value,
                      kernels::MitchellNetravaliBC,
-                     // kernels::Linear,
                      coord_type, pos_type>;
 
 typedef image3<scalar_type> scalar_image_type;
@@ -111,48 +110,6 @@ typedef image3<vector_type> vector_image_type;
 typedef image3<matrix_type> matrix_image_type;
 typedef scalar_image_type::grid_type grid_type;
 typedef Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic> dyn_mat_type;
-
-template <typename Iterator>
-std::vector<int> arg_sort(Iterator begin, Iterator end, bool fwd = true)
-{
-    std::vector<int> ranks(std::distance(begin, end));
-    std::iota(ranks.begin(), ranks.end(), 0);
-    std::sort(ranks.begin(), ranks.end(), [&](int a, int b)
-              {
-        if (fwd) return *(begin+a) < *(begin+b);
-        else return *(begin+a) > *(begin+b); });
-    return ranks;
-}
-
-void add_voxel_faces(VTK_SMART(vtkFloatArray) coords,
-                     VTK_SMART(vtkCellArray) cells,
-                     const pos_type &min, const pos_type &max)
-{
-    using namespace spurt::marching_cubes;
-    pos_type bounds[] = {min, max};
-    long id0 = coords->GetNumberOfTuples();
-    for (int v = 0; v < 8; ++v)
-    {
-        auto vertex = vertices[v];
-        coords->InsertNextTuple3(bounds[vertex[0]][0],
-                                 bounds[vertex[1]][1],
-                                 bounds[vertex[2]][2]);
-    }
-    // triangulate faces
-    for (int f = 0; f < 6; ++f)
-    {
-        auto face = canonical_face_indices[f];
-        cells->InsertNextCell(3);
-        cells->InsertCellPoint(id0 + face[0]);
-        cells->InsertCellPoint(id0 + face[1]);
-        cells->InsertCellPoint(id0 + face[2]);
-
-        cells->InsertNextCell(3);
-        cells->InsertCellPoint(id0 + face[0]);
-        cells->InsertCellPoint(id0 + face[2]);
-        cells->InsertCellPoint(id0 + face[3]);
-    }
-}
 
 template <typename Value>
 image3<Value> import_nrrd(const std::string &filename)
@@ -167,20 +124,6 @@ image3<Value> import_nrrd(const std::string &filename)
     typedef typename image3<Value>::base_type raster_type;
     raster_type raster = spurt::nrrd_utils::to_raster<size_type, scalar_type, 3, Value>(nin, std::is_scalar<Value>::value);
     return image3<Value>(raster);
-}
-
-template <typename T>
-T sign(const T &value)
-{
-    if (value >= 0)
-        return T(1);
-    else
-        return T(-1);
-}
-
-int distance(const coord_type &c0, const coord_type &c1)
-{
-    return linf_norm(c1 - c0);
 }
 
 // Class to uniquely represent a small set of objects of the same type
@@ -298,71 +241,6 @@ std::ostream &operator<<(std::ostream &os, const std::vector<T> &v)
     os << "]";
     return os;
 }
-
-face_index_t face_local_to_global(const coord_type &voxel, int localfaceid)
-{
-    std::array<coord_type, 4> cd;
-    for (int i = 0; i < 4; ++i)
-    {
-        int vid = spurt::marching_cubes::canonical_face_indices[localfaceid][i];
-        int *c = spurt::marching_cubes::vertices[vid];
-        coord_type delta(c[0], c[1], c[2]);
-        cd[i] = voxel + delta;
-    }
-    return face_index_t(cd[0], cd[1], cd[2], cd[3]);
-}
-
-face_index_t face_edge_neighbor_to_global(const coord_type &voxel,
-                                          int face, int edge_id)
-{
-    int f = spurt::marching_cubes::face_edge_neighbor(face, edge_id);
-    return face_local_to_global(voxel, f);
-}
-
-namespace peikert
-{
-    // Peikert-Sadlo Eurovis 2008 method
-    template <typename T>
-    T invlinear(const T &f0, const T &f1, scalar_type umin = 0, scalar_type umax = 1)
-    {
-        // f = f0 + (u - umin) / (umax - umin) * (f1 - f0)
-        // f = 0 <=> -f0 / (f1 - f0) = (u - umin) / (umax - umin)
-        // f = 0 <=> u = -f0 / (f1 - f0) * (umax - umin) + umin
-        return umin - f0 / (f1 - f0) * (umax - umin);
-    }
-
-    template <typename T>
-    T linear(scalar_type u, const T &v0, const T &v1)
-    {
-        return (1. - u) * v0 + u * v1;
-    }
-
-    std::pair<pos_type, scalar_type>
-    project(const vector_type &g, const matrix_type &h)
-    {
-        vector_type evals;
-        matrix_type evecs;
-        sym_eigensystem(evals, evecs, h);
-        pos_type coords = spurt::abs(transpose(evecs) * g);
-        return std::make_pair(coords, evals[2]);
-    }
-
-    double determinant(const vector_type &g, const matrix_type &H, bool normalize = false)
-    {
-        matrix_type A;
-        A.column(0) = g;
-        A.column(1) = H * g;
-        A.column(2) = H * A.column(1);
-
-        if (normalize)
-        {
-            A.column(0) /= g.norm();
-            A.column(1) /= spurt::norm(A.column(1));
-            A.column(2) /= spurt::norm(A.column(2));
-        }
-        return spurt::determinant(A);
-    };
-} // Peikert-Sadlo method stuff ends
 
 std::pair<scalar_type, vector_type> evmin(const matrix_type &H)
 {
@@ -498,8 +376,6 @@ vector_type ridge_normal(const pos_type &point,
                          scalar_type theta,
                          bool verbose = false)
 {
-    if (verbose)
-        std::cout << "value of h at ridge point: " << vector_h(g, H, theta) << '\n';
     auto H_prime = hessian.derivative(point); // 3rd order tensor
     matrix_type h_prime;
     h_prime.column(0) = vector_dh(g, H, H.column(0), H_prime.layer(0), theta);
@@ -510,14 +386,7 @@ vector_type ridge_normal(const pos_type &point,
     vector_type hevals;
     matrix_type hevecs;
     sym_eigensystem(hevals, hevecs, h_prime);
-    if (verbose)
-    {
-        std::cout << "eigenvalues of h_prime: " << hevals << '\n';
-        std::cout << "eigenvectors of h_prime: " << hevecs << '\n';
-    }
     vector_type hevals_plus = spurt::abs(hevals);
-    if (verbose)
-        std::cout << "Return eigenvector #" << spurt::argmax(hevals_plus) << '\n';
     return hevecs.column(spurt::argmax(hevals_plus));
 }
 
@@ -554,59 +423,8 @@ std::ostream &operator<<(std::ostream &os, const std::array<T, N> &a)
     return os;
 }
 
-int case_number(const std::array<bool, 12> &edges)
-{
-#ifdef SPURT_DEBUG
-    std::cout << "edges=" << edges << '\n';
-#endif
-    std::array<int, 8> states({{0, 0, 0, 0, 0, 0, 0, 0}});
-    // 0: not set
-    // -1 or 1: positive or negative value
-    states[0] = -1; // arbitrary initialization
-    // The following order ensures that vertices are visited in order
-    int edges_order[] = {0, 1, 2, 8, 9, 10, 11, 3, 4, 5, 6, 7};
-    for (int e = 0; e < 12; ++e)
-    {
-        int edgeid = edges_order[e];
-        auto v0 = spurt::marching_cubes::canonical_edge_indices[edgeid][0];
-        auto v1 = spurt::marching_cubes::canonical_edge_indices[edgeid][1];
-        if (v0 > v1)
-        {
-            std::swap(v0, v1);
-        }
-        if (e < 7)
-        {
-            if (edges[edgeid])
-                states[v1] = -states[v0];
-            else
-                states[v1] = states[v0];
-        }
-        else
-        {
-            if ((edges[edgeid] && edges[v1] * edges[v0] > 0) ||
-                (!edges[edgeid] && edges[v1] * edges[v0] < 0))
-                return -1; // failed
-        }
-
-#ifdef SPURT_DEBUG
-        std::cout << "e=" << e << ", edgeid=" << edgeid << ", states=" << states << '\n';
-#endif
-    }
-
-    int cn = 0;
-    for (int i = 0; i < 8; ++i)
-    {
-        if (states[i] > 0)
-        {
-            cn += 1 << i;
-        }
-    }
-    return cn;
-}
-
 struct h_root_finder
 {
-
     int edge_dim(const edge_index_t &e)
     {
         coord_type de = spurt::abs(e[1] - e[0]);
@@ -682,9 +500,6 @@ struct h_root_finder
                 int maxiter = -1, scalar_type eps = 1.0e-6,
                 bool verbose = false)
     {
-#ifdef SPURT_DEBUG
-        verbose = true;
-#endif
         scalar_type u0 = u;
         const pos_type p0 = m_gradient.grid()(e[0]);
         const pos_type p1 = m_gradient.grid()(e[1]);
@@ -710,14 +525,8 @@ struct h_root_finder
             {
                 break;
             }
-            if (verbose)
-            {
-                std::cout << std::fixed << std::setprecision(12) << "Newton iteration " << i << ", old u=" << u1 << ", new u=" << u << ", delta=" << u - u1 << ", du=" << du << ", dv=" << dv << ", h=" << h0 << ", |h|=" << spurt::norm(h0) << ", dh=" << dh << '\n';
-            }
             if (spurt::norm(h) < eps)
             {
-                if (verbose)
-                    std::cout << "solution found: |h|(" << u << ") = " << spurt::norm(h) << '\n';
                 return true;
             }
         }
@@ -737,17 +546,9 @@ process_edge(const edge_index_t &e,
              const matrix_image_type &hessian,
              scalar_type theta,
              int verbose = 0,
-             bool improve = false)
+             bool improve = true)
 {
     typedef Eigen::Array<scalar_type, 3, 1> array_type;
-#ifdef SPURT_DEBUG
-    verbose = 2;
-    improve = true;
-#endif
-    if (verbose >= 2)
-    {
-        std::cout << "processing edge " << e << '\n';
-    }
     vector_type h0 = vector_h(gradient(e[0]), hessian(e[0]), theta);
     vector_type h1 = vector_h(gradient(e[1]), hessian(e[1]), theta);
     if (inner(h0, h1) < 0)
@@ -771,192 +572,19 @@ process_edge(const edge_index_t &e,
                 ubest = u;
             }
         }
-        if (verbose > 2)
-            std::cout << "best u was found at " << ubest << " for hnorm=" << bestnorm;
-        // scalar_type u = n0/(n1+n0);
         scalar_type u = ubest;
-        if (verbose >= 2)
-        {
-            std::cout << "zero crossing detected: h0=" << h0 << ", h1=" << h1 << ", u=" << u << ", n0=" << n0 << ", n1=" << n1 << '\n';
-            auto T1 = tensor_T(hessian(e[0]), theta);
-            auto T2 = tensor_T(hessian(e[1]), theta);
-            std::cout << "T1=" << T1 << '\n';
-            std::cout << "T2=" << T2 << '\n';
-            std::cout << "edge linearity test: " << edge_linearity_value(T1, T2) << '\n';
-
-            std::string name = "edge_" + to_string(e) + ".csv";
-            std::ofstream of(name, std::ios::out);
-            of << "u,hx,hy,hz,|h|\n";
-            for (int i = 0; i <= 200; ++i)
-            {
-                scalar_type u = i / 200.0;
-                pos_type p = (1 - u) * gradient.grid()(e[0]) + u * gradient.grid()(e[1]);
-                vector_type h = vector_h(gradient.value(p), hessian.value(p), theta);
-                of << u << "," << h[0] << "," << h[1] << "," << h[2] << "," << spurt::norm(h) << '\n';
-            }
-            of.close();
-        }
 
         if (improve)
         {
             pos_type p = (1 - u) * e[0] + u * e[1];
             vector_type h = vector_h(gradient.value(p), hessian.value(p), theta);
             scalar_type hinit = spurt::norm(h);
-            if (verbose >= 2)
-            {
-                std::cout << std::fixed << std::setprecision(12) << "current h value is |h(" << u << ")|=" << spurt::norm(h) << '\n';
-            }
             h_root_finder root(gradient, hessian, theta, 100);
-            if (root.search(u, h, e))
-            {
-                if (verbose >= 2)
-                {
-                    std::cout << "h value improved to " << h << ", u is now " << u << '\n';
-                }
-            }
-            else if (verbose >= 2)
-            {
-                std::cout << "Newton search failed to converge h\n";
-                std::cout << "h is now |h(" << u << ")| = " << spurt::norm(h) << '\n';
-                scalar_type hfinal = spurt::norm(h);
-                if (hfinal < 0.001 * hinit)
-                    std::cout << "strong improvement\n";
-                else if (hfinal < 0.01 * hinit)
-                    std::cout << "significant improvement\n";
-                else if (hfinal < 0.1 * hinit)
-                    std::cout << "small improvement\n";
-                else if (hfinal < hinit)
-                    std::cout << "marginal improvement\n";
-                else
-                    std::cout << "no improvement\n";
-            }
+            auto ignored = root.search(u, h, e);
         }
         return std::pair(1, u);
     }
     return std::pair(0, 0);
-}
-
-template <typename T>
-struct parser_traits;
-
-template <>
-struct parser_traits<int>
-{
-    static std::regex get()
-    {
-        return std::regex("([-0-9]+)");
-    }
-    static int cast(const std::string &s)
-    {
-        return std::stoi(s);
-    }
-};
-
-template <>
-struct parser_traits<scalar_type>
-{
-    static std::regex get()
-    {
-        return std::regex("([+-]? *[0-9]+(\\.[0-9]+)?)");
-    }
-    static int cast(const std::string &s)
-    {
-        return std::stod(s);
-    }
-};
-
-template <typename T = int>
-void parse_values(std::vector<T> &out, const std::string &str, size_t n)
-{
-    std::regex myregex = parser_traits<T>::get();
-    auto begin = std::sregex_iterator(str.begin(), str.end(), myregex);
-    auto end = std::sregex_iterator();
-#ifdef SPURT_DEBUG
-    std::cout << "Found " << std::distance(begin, end) << " values\n";
-#endif
-    if (std::distance(begin, end) == n)
-    {
-        int i = 0;
-        for (std::sregex_iterator iter = begin; iter != end; ++iter, ++i)
-        {
-            std::smatch match = *iter;
-#ifdef SPURT_DEBUG
-            std::cout << "value=" << match.str() << std::endl;
-#endif
-            out.push_back(parser_traits<T>::cast(match.str()));
-        }
-    }
-    else
-    {
-        throw std::runtime_error("invalid input");
-    }
-}
-
-void grow_cluster(std::set<int> &cluster, int start, const dyn_mat_type &dist)
-{
-    if (cluster.find(start) == cluster.end())
-    {
-        cluster.insert(start);
-        for (int i = start + 1; i < dist.cols(); ++i)
-        {
-            if (dist(start, i) == 1)
-            {
-                if (cluster.find(i) == cluster.end())
-                {
-                    grow_cluster(cluster, i, dist);
-                }
-            }
-        }
-    }
-}
-
-void find_neighbors(std::vector<std::vector<coord_type>> &neighbors,
-                    const std::map<coord_type, std::vector<int>, spurt::lexicographical_order> voxels)
-{
-    std::vector<coord_type> all_voxels;
-#ifdef SPURT_DEBUG
-    std::cout << "creating an array of voxels\n";
-#endif
-    for (auto iter = voxels.begin(); iter != voxels.end(); ++iter)
-    {
-        all_voxels.push_back(iter->first);
-    }
-    int nvoxels = all_voxels.size();
-#ifdef SPURT_DEBUG
-    std::cout << "done. creating a distance matrix\n";
-#endif
-    dyn_mat_type dist = dyn_mat_type::Zero(nvoxels, nvoxels);
-    for (int i = 0; i < nvoxels - 1; ++i)
-    {
-        for (int j = i + 1; j < nvoxels; ++j)
-        {
-            dist(i, j) = dist(j, i) = distance(all_voxels[i], all_voxels[j]);
-        }
-    }
-#ifdef SPURT_DEBUG
-    std::cout << "done.\n";
-#endif
-    std::vector<int> cluster_id(nvoxels, -1);
-    for (int i = 0; i < nvoxels; ++i)
-    {
-        if (cluster_id[i] >= 0)
-            continue;
-        std::set<int> acluster;
-        acluster.insert(i);
-        for (int j = i + 1; j < nvoxels; ++j)
-        {
-            if (dist(i, j) == 1)
-            {
-                grow_cluster(acluster, j, dist);
-            }
-        }
-        std::vector<coord_type> ids;
-        std::for_each(acluster.begin(), acluster.end(), [&](int n)
-                      { ids.push_back(all_voxels[n]); });
-        neighbors.push_back(ids);
-        std::for_each(acluster.begin(), acluster.end(), [&](int n)
-                      { cluster_id[n] = neighbors.size() - 1; });
-    }
 }
 
 std::pair<scalar_type, scalar_type>
@@ -968,152 +596,11 @@ evaluate(const pos_type &point, const scalar_image_type &values,
     return std::make_pair(f, ridge_strength(H));
 }
 
-int triangulate(std::vector<triangle_type> &out,
-                std::map<int, pos_type> &edges,
-                std::ostream &os)
-{
-    os << "triangles: edges contains " << edges.size() << " edges with ridge points\n";
-    out.clear();
-
-    // if we only have 3 or less points, things are easy
-    if (edges.size() == 3)
-    {
-        triangle_type T;
-        int i = 0;
-        for (auto iter = edges.begin(); iter != edges.end(); ++iter, ++i)
-        {
-            T[i] = iter->second;
-        }
-        out.push_back(T);
-        os << "3 points on 3 edges: " << T << ": success!\n";
-        return one_triangle;
-    }
-    else if (edges.size() < 3)
-    {
-        os << "We have only 2 (or less) edges in input of triangulation.\n"
-           << "Giving up (Case N<3)\n";
-        return not_enough_edges;
-    }
-    else
-    {
-        // Calculate edge case number
-        int edge_case = 0;
-        for (auto iter = edges.begin(); iter != edges.end(); ++iter)
-        {
-            edge_case += 1 << iter->first;
-        }
-        os << "edge_case = " << edge_case << '\n';
-        int triangle_case = spurt::marching_cubes::edge_code_to_case_id[edge_case];
-        os << "triangle_case = " << triangle_case << '\n';
-
-        if (triangle_case == -1) // invalid
-        {
-            os << "the edges do not match a valid MC case...\n Giving up. (Case NoMC)\n";
-            return invalid_mc_case;
-        }
-
-        auto indices = spurt::marching_cubes::triTable[triangle_case];
-        for (int i = 0; i < 15 && indices[i] != -1; i += 3)
-        {
-            out.push_back(triangle_type({{edges[indices[i]][0], edges[indices[i + 1]][0], edges[indices[i + 2]][0]}}));
-            const triangle_type &t = out.back();
-            os << "added triangle: " << t << '\n';
-        }
-        os << "A valid MC case was found and " << out.size() << " triangles "
-           << "were created.\n";
-        return valid_mc_case;
-    }
-}
-
 size_t nfour = 0;
 size_t nthree = 0;
 size_t nmore_than_four = 0;
 size_t ntwo = 0;
 size_t n_one = 0;
-int crude_meshing(const std::map<int, size_type> &found,
-                  vtkCellArray *tris,
-                  vtkCellArray *edges,
-                  vtkCellArray *verts,
-                  std::ostream &os = std::cout)
-{
-    std::vector<size_type> ids;
-    for (auto it = found.begin(); it != found.end(); ++it)
-    {
-        ids.push_back(it->second);
-    }
-    if (ids.size() == 3)
-    {
-        ++nthree;
-        tris->InsertNextCell(3);
-        tris->InsertCellPoint(ids[0]);
-        tris->InsertCellPoint(ids[1]);
-        tris->InsertCellPoint(ids[2]);
-        return one_triangle;
-    }
-    else if (ids.size() > 3)
-    {
-        if (ids.size() == 4)
-            ++nfour;
-        else
-            ++nmore_than_four;
-        // Calculate edge case number
-        int edge_case = 0;
-        for (auto iter = found.begin(); iter != found.end(); ++iter)
-        {
-            edge_case += 1 << iter->first;
-        }
-        os << "edge_case = " << edge_case << '\n';
-        int triangle_case = spurt::marching_cubes::edge_code_to_case_id[edge_case];
-        os << "triangle_case = " << triangle_case << '\n';
-
-        if (triangle_case == -1) // invalid
-        {
-            for (int i = 0; i < ids.size() - 1; ++i)
-            {
-                for (int j = i + 1; j < ids.size(); ++j)
-                {
-                    edges->InsertNextCell(2);
-                    edges->InsertCellPoint(ids[i]);
-                    edges->InsertCellPoint(ids[j]);
-                }
-            }
-            os << "the edges do not match a valid MC case...\n Giving up. (Case NoMC)\n";
-            return invalid_mc_case;
-        }
-        else
-        {
-            auto indices = spurt::marching_cubes::triTable[triangle_case];
-            for (int i = 0; i < 15 && indices[i] != -1; i += 3)
-            {
-                tris->InsertNextCell(3);
-                tris->InsertCellPoint(found.at(indices[i]));
-                tris->InsertCellPoint(found.at(indices[i + 1]));
-                tris->InsertCellPoint(found.at(indices[i + 2]));
-            }
-            os << "A valid MC case was found\n";
-            return valid_mc_case;
-        }
-    }
-    else if (ids.size() == 2)
-    {
-        ++ntwo;
-        edges->InsertNextCell(2);
-        edges->InsertCellPoint(ids[0]);
-        edges->InsertCellPoint(ids[1]);
-        return not_enough_edges;
-    }
-    else if (ids.size() == 1)
-    {
-        ++n_one;
-        verts->InsertNextCell(1);
-        verts->InsertCellPoint(ids[0]);
-        return not_enough_edges;
-    }
-    else
-    {
-        return not_enough_edges;
-    }
-}
 
 // voxel ridge information
 struct CreasePoint
@@ -1381,148 +868,6 @@ struct value_set
     vector_type normal;
 };
 
-struct broken_voxel
-{
-    coord_type id;
-    pos_type min, max;
-    std::array<value_set, 8> vox_values;
-    std::vector<value_set> edg_values;
-    std::vector<pos_type> edg_points;
-    std::vector<pos_type> L_points;
-    std::vector<std::pair<int, int>> face_edges;
-};
-
-void export_broken_voxels(const std::vector<broken_voxel> &voxels,
-                          const std::string filename)
-{
-
-    std::cout << "filename = " << filename << '\n';
-    VTK_CREATE(vtkFloatArray, vox_v);
-    VTK_CREATE(vtkFloatArray, vox_s);
-    VTK_CREATE(vtkFloatArray, vox_g);
-    VTK_CREATE(vtkFloatArray, vox_h);
-    VTK_CREATE(vtkFloatArray, vox_c);
-    vox_c->SetNumberOfComponents(3);
-    vox_v->SetNumberOfComponents(1);
-    vox_s->SetNumberOfComponents(1);
-    vox_g->SetNumberOfComponents(3);
-    vox_h->SetNumberOfComponents(9);
-    VTK_CREATE(vtkCellArray, faces);
-
-    VTK_CREATE(vtkFloatArray, edg_v);
-    VTK_CREATE(vtkFloatArray, edg_s);
-    VTK_CREATE(vtkFloatArray, edg_g);
-    VTK_CREATE(vtkFloatArray, edg_h);
-    VTK_CREATE(vtkFloatArray, edg_c);
-    VTK_CREATE(vtkFloatArray, edg_n);
-    edg_c->SetNumberOfComponents(3);
-    edg_v->SetNumberOfComponents(1);
-    edg_s->SetNumberOfComponents(1);
-    edg_g->SetNumberOfComponents(3);
-    edg_h->SetNumberOfComponents(9);
-    edg_n->SetNumberOfComponents(3);
-    VTK_CREATE(vtkCellArray, verts);
-    VTK_CREATE(vtkCellArray, segments);
-
-    for (const broken_voxel &v : voxels)
-    {
-        // Insert voxel geometry
-        add_voxel_faces(vox_c, faces, v.min, v.max);
-        for (int i = 0; i < 8; ++i)
-        {
-            auto data = v.vox_values[i];
-            vox_v->InsertNextTuple1(data.value);
-            vox_s->InsertNextTuple1(data.strength);
-            vox_g->InsertNextTuple3(
-                data.gradient[0], data.gradient[1], data.gradient[2]);
-            vox_h->InsertNextTuple9(
-                data.hessian(0, 0), data.hessian(0, 1), data.hessian(0, 2),
-                data.hessian(1, 0), data.hessian(1, 1), data.hessian(1, 2),
-                data.hessian(2, 0), data.hessian(2, 1), data.hessian(2, 2));
-        }
-
-        std::map<int, int> edge_point_indexing;
-        for (int i = 0; i < v.edg_points.size(); ++i)
-        {
-            auto p = v.edg_points[i];
-            auto d = v.edg_values[i];
-            int id = edg_c->GetNumberOfTuples();
-            edge_point_indexing[i] = id;
-            edg_c->InsertNextTuple3(p[0], p[1], p[2]);
-            edg_v->InsertNextTuple1(d.value);
-            edg_s->InsertNextTuple1(d.strength);
-            edg_g->InsertNextTuple3(
-                d.gradient[0], d.gradient[1], d.gradient[2]);
-            edg_n->InsertNextTuple3(d.normal[0], d.normal[1], d.normal[2]);
-            edg_h->InsertNextTuple9(
-                d.hessian(0, 0), d.hessian(0, 1), d.hessian(0, 2),
-                d.hessian(1, 0), d.hessian(1, 1), d.hessian(1, 2),
-                d.hessian(2, 0), d.hessian(2, 1), d.hessian(2, 2));
-            verts->InsertNextCell(1);
-            verts->InsertCellPoint(id);
-        }
-        for (int i = 0; i < v.L_points.size(); ++i)
-        {
-            auto p = v.L_points[i];
-            int id = edg_c->GetNumberOfTuples();
-            edg_c->InsertNextTuple3(p[0], p[1], p[2]);
-            verts->InsertNextCell(1);
-            verts->InsertCellPoint(id);
-        }
-        for (int i = 0; i < v.face_edges.size(); ++i)
-        {
-            auto idpair = v.face_edges[i];
-            int id0 = edge_point_indexing[idpair.first];
-            int id1 = edge_point_indexing[idpair.second];
-            segments->InsertNextCell(2);
-            segments->InsertCellPoint(id0);
-            segments->InsertCellPoint(id1);
-        }
-    }
-
-    VTK_CREATE(vtkPolyData, vpoly);
-    VTK_CREATE(vtkPoints, vpoints);
-    vpoints->SetData(vox_c);
-    vpoly->SetPoints(vpoints);
-    vpoly->SetPolys(faces);
-    vox_v->SetName("value");
-    vox_s->SetName("ridge_strength");
-    vox_g->SetName("gradient");
-    vox_h->SetName("hessian");
-    vpoly->GetPointData()->AddArray(vox_v);
-    vpoly->GetPointData()->AddArray(vox_s);
-    vpoly->GetPointData()->AddArray(vox_g);
-    vpoly->GetPointData()->AddArray(vox_h);
-
-    VTK_CREATE(vtkXMLPolyDataWriter, writer);
-    writer->SetFileName((filename + "_voxel_points.vtp").c_str());
-    writer->SetInputData(vpoly);
-    writer->Write();
-
-    VTK_CREATE(vtkPolyData, cpoly);
-    std::cout << "cpoints contains " << edg_c->GetNumberOfTuples() << " points\n";
-    VTK_CREATE(vtkPoints, cpoints);
-    cpoints->SetData(edg_c);
-    cpoly->SetPoints(cpoints);
-    cpoly->SetVerts(verts);
-    cpoly->SetLines(segments);
-    edg_v->SetName("value");
-    std::cout << "values contain " << edg_v->GetNumberOfTuples() << " values\n";
-    edg_s->SetName("ridge_strength");
-    edg_g->SetName("gradient");
-    edg_h->SetName("hessian");
-    edg_n->SetName("normal");
-    cpoly->GetPointData()->AddArray(edg_v);
-    cpoly->GetPointData()->AddArray(edg_s);
-    cpoly->GetPointData()->AddArray(edg_g);
-    cpoly->GetPointData()->AddArray(edg_h);
-    cpoly->GetPointData()->AddArray(edg_n);
-
-    writer->SetFileName((filename + "_crease_points.vtp").c_str());
-    writer->SetInputData(cpoly);
-    writer->Write();
-}
-
 template <typename T>
 struct container_wrapper : public std::vector<T>
 {
@@ -1597,45 +942,22 @@ void compute_cycles(std::vector<std::vector<size_type>> &cycles,
     std::set<size_type> checked;
 
     std::vector<size_type> unique_ids = gmap.unique_ids();
-    if (verbose)
-    {
-        std::cout << "input segments are:\n";
-        for (auto s : segments)
-        {
-            std::cout << s[0] << " <-> " << s[1] << '\n';
-        }
-
-        std::cout << "unique ids:\n";
-        std::copy(unique_ids.begin(), unique_ids.end(), std::ostream_iterator<size_type>(std::cout, " "));
-        std::cout << '\n';
-    }
     for (size_type id : unique_ids)
     {
-        if (verbose)
-            std::cout << "entering new loop at " << id << '\n';
         if (checked.find(id) != checked.end())
         {
-            if (verbose)
-                std::cout << "skipping already visited id\n";
             continue;
         }
         checked.insert(id);
         cycles.push_back(cycle_t());
         cycles.back().push_back(id);
-        if (verbose)
-            std::cout << "new cycle started at " << id << '\n';
-
         size_type from = id;
         size_type at = gmap.next_id(id);
         while (at != invalid_size)
         {
-            if (verbose)
-                std::cout << "In loop: from=" << from << ", at=" << at << '\n';
             cycles.back().push_back(at);
             if (at == id)
             {
-                if (verbose)
-                    std::cout << "cycle closed. done\n";
                 break;
             }
             checked.insert(at);
@@ -1674,9 +996,6 @@ bool connect_crease_points(face_info_t &faceinfo,
 {
     if (crease_point_ids.size() == 1)
     {
-#ifdef SPURT_DEBUG
-        std::cout << "WARNING: odd number of crease points in input\n";
-#endif
         return false;
     }
     else if (crease_point_ids.size() == 2)
@@ -1686,9 +1005,6 @@ bool connect_crease_points(face_info_t &faceinfo,
     }
     else
     {
-#ifdef SPURT_DEBUG
-        std::cout << "There are more than 2 crease points in input\n";
-#endif
         std::vector<int> valid_indices;
         size_type L_index = invalid_size;
         std::vector<vector_type> normals;
@@ -1702,18 +1018,9 @@ bool connect_crease_points(face_info_t &faceinfo,
                 auto g = gradient.value(p);
                 auto h = hessian.value(p);
                 normals.push_back(ridge_normal(p, g, h, gradient, hessian, theta0));
-#ifdef SPURT_DEBUG
-                std::cout << "crease point #" << id << " has normal " << normals.back() << '\n';
-                std::cout << "p=" << p << '\n'
-                          << "g=" << g << '\n'
-                          << "h=" << h << '\n';
-#endif
             }
             else
             {
-#ifdef SPURT_DEBUG
-                std::cout << "crease point #" << id << " is a L point\n";
-#endif
                 L_index = id;
             }
         }
@@ -1727,9 +1034,6 @@ bool connect_crease_points(face_info_t &faceinfo,
                 pairings.push_back({valid_indices[i], valid_indices[j]});
             }
         }
-#ifdef SPURT_DEBUG
-        std::cout << "there are " << pairings.size() << " possible pairings\n";
-#endif
         for (auto apair : pairings)
         {
             auto id0 = crease_point_ids[apair[0]];
@@ -1740,18 +1044,10 @@ bool connect_crease_points(face_info_t &faceinfo,
             seg /= spurt::norm(seg);
             scores.push_back(std::abs(spurt::inner(seg, normals[apair[0]])) +
                              std::abs(spurt::inner(seg, normals[apair[1]])));
-#ifdef SPURT_DEBUG
-            std::cout << "edge between " << crease_points[id0] << " and " << crease_points[id1] << " received score " << scores.back() << '\n';
-            std::cout << "seg=" << seg << '\n';
-            std::cout << "inner products: with " << normals[apair[0]] << "=" << spurt::inner(seg, normals[apair[0]]) << ", and with " << normals[apair[1]] << "=" << spurt::inner(seg, normals[apair[1]]) << '\n';
-#endif
         }
         int best = std::distance(
             scores.begin(),
             std::min_element(scores.begin(), scores.end()));
-#ifdef SPURT_DEBUG
-        std::cout << "best pair index was " << best << '\n';
-#endif
 
         const size_type &best_id0 = crease_point_ids[pairings[best][0]];
         const size_type &best_id1 = crease_point_ids[pairings[best][1]];
@@ -1782,17 +1078,6 @@ void visualize(const container_wrapper<crease_point_t> &cpoints,
 {
     std::cout << "There are " << cpoints.size() << " points in input\n";
     std::cout << "There are " << all_triangles.size() << " triangles in input\n";
-#ifdef SPURT_DEBUG
-    std::cout << "crease points\n";
-    for (size_type i = 0; i < cpoints.size(); ++i)
-    {
-        std::cout << i << ": " << cpoints[i] << '\n';
-    }
-    for (size_type i = 0; i < all_triangles.size(); ++i)
-    {
-        std::cout << i << ": " << all_triangles[i] << '\n';
-    }
-#endif
     std::vector<pos_type> points(cpoints.size(), pos_type(0));
     std::vector<scalar_type> values(cpoints.size(), 0);
     std::vector<scalar_type> strengths(cpoints.size(), 0);
@@ -1829,10 +1114,6 @@ void visualize(const container_wrapper<crease_point_t> &cpoints,
     pd = vtk_utils::add_scalars(pd, values, true, "values", false);
     pd = vtk_utils::add_scalars(pd, strengths, true, "ridge_strength", true);
 
-#ifdef SPURT_DEBUG
-    pd->PrintSelf(std::cout, vtkIndent(1));
-#endif
-
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
     writer->SetInputData(pd);
     auto name = filename::replace_extension(fname, "vtp");
@@ -1849,7 +1130,6 @@ void visualize(const container_wrapper<crease_point_t> &cpoints,
     mesh_actor->SetMapper(mesh_mapper);
     mesh_actor->GetProperty()->SetLineWidth(2);
     mesh_actor->GetProperty()->VertexVisibilityOn();
-    // mesh_actor->GetProperty()->EdgeVisibilityOn();
 
     VTK_CREATE(vtkRenderer, renderer);
     renderer->AddActor(mesh_actor);
@@ -2035,7 +1315,6 @@ int main(int argc, const char *argv[])
         parser.add_value("strength", strength_name, "Ridge strength volume", required_group);
         parser.add_value("minval", minval_str, "0", "Min scalar value", optional_group);
         parser.add_value("minstr", minstr_str, "0", "Min ridge strength (<=0)", optional_group);
-        parser.add_value("verbose", verbose, 0, "Verbose output", optional_group);
         parser.add_flag("vis", vis, "Visualize resulting surfaces", optional_group);
         parser.add_tuple<3>("voxel", voxel_id, voxel_id, "Coordinates of single voxel to process");
         parser.add_tuple<3>("blower", bounds.min(), bounds.min(), "Lower bounds of domain to consider");
@@ -2106,20 +1385,10 @@ int main(int argc, const char *argv[])
     }
     else
     {
-#ifdef SPURT_DEBUG
-        std::cout << "selected voxels..." << std::flush;
-#endif
         select_voxel_indices(all_voxel_indices, bounds, shape);
-#ifdef SPURT_DEBUG
-        std::cout << " done\n";
-#endif
     }
     std::vector<edge_index_t> all_edge_indices;
     unique_edge_indices(all_edge_indices, all_voxel_indices);
-
-    if (verbose)
-        std::cout << "There are " << all_voxel_indices.size() << " voxels in input for a total of " << all_edge_indices.size() << " unique edges\n";
-
     /*
 
         Algorithm:
@@ -2153,37 +1422,20 @@ int main(int argc, const char *argv[])
     VTK_CREATE(vtkCellArray, vtk_cells);
     VTK_CREATE(vtkCellArray, vtk_lines);
     VTK_CREATE(vtkCellArray, vtk_verts);
-
-    std::vector<broken_voxel> broken_voxels;
     std::vector<edge_index_t> double_edges;
     std::vector<coord_type> to_subdivide;
     std::vector<int> voxel_to_edge;
 
     srand48(130819751900);
-    std::cout << "Processing all " << all_edge_indices.size() << " unique edges\n";
-    if (verbose > 1)
-    {
-        std::cout << "These edges are:\n";
-        for (int i = 0; i < all_edge_indices.size(); ++i)
-        {
-            std::cout << all_edge_indices[i] << '\n';
-        }
-    }
-
     std::atomic<int> edge_counter = 0;
     progress.begin(all_edge_indices.size(), "Extract ridge points", 10000, "done: 0, found: 0, weak: 0");
     std::mutex update_mtx;
     std::mutex edge_add_mtx;
-#ifndef SPURT_DEBUG
     tbb::parallel_for(tbb::blocked_range<int>(0, all_edge_indices.size()),
                       [&](tbb::blocked_range<int> r)
                       {
                           for (int n = r.begin(); n < r.end(); ++n)
                           {
-#else
-    for (int n = 0; n < all_edge_indices.size(); ++n)
-    {
-#endif
                               const edge_index_t &the_edge_index = all_edge_indices[n];
                               ++edge_counter;
                               std::unique_lock<std::mutex> lock(update_mtx, std::defer_lock);
@@ -2234,9 +1486,7 @@ int main(int argc, const char *argv[])
                               }
                               nprocessed++;
                           }
-#ifndef SPURT_DEBUG
                       });
-#endif
     // all valid edges have now been processed
     std::cout << "\n\nEdge processing complete:\n";
     std::cout << progress << '\n';
@@ -2258,15 +1508,6 @@ int main(int argc, const char *argv[])
     std::vector<face_info_t> all_faces;
     unique_faces(all_faces, edge_to_crease_point_index, all_voxel_indices);
 
-    if (verbose > 1)
-    {
-        std::cout << "The unique faces are:\n";
-        for (int i = 0; i < all_faces.size(); ++i)
-        {
-            std::cout << all_faces[i].face_id << '\n';
-        }
-    }
-
     std::atomic<size_type> n_pathological = 0;
     std::atomic<size_type> n_singular = 0;
     std::atomic<size_type> n_failed = 0;
@@ -2278,16 +1519,11 @@ int main(int argc, const char *argv[])
     progress.begin(all_faces.size(), "Extract ridge points", 10000, "done: 0, found: 0, pathological: 0, singular: 0");
     std::atomic<size_type> n_faces_found = 0;
 
-#ifndef SPURT_DEBUG
     tbb::parallel_for(tbb::blocked_range<int>(0, all_faces.size()),
                       [&](tbb::blocked_range<int> r)
                       {
                           for (int n = r.begin(); n < r.end(); ++n)
                           {
-#else
-    for (int n = 0; n < all_faces.size(); ++n)
-    {
-#endif
                               face_info_t &the_face = all_faces[n];
                               const face_index_t &the_face_index = the_face.face_id;
                               ++face_counter;
@@ -2321,13 +1557,6 @@ int main(int argc, const char *argv[])
                                   }
                               }
 
-                              if (verbose > 1)
-                              {
-                                  std::lock_guard<std::mutex> lock(debug_mtx);
-                                  std::cout << "processing face " << the_face_index << '\n';
-                                  std::cout << "There are " << active_edges.size() << " active edges\n";
-                              }
-
                               if (active_edges.size() % 2)
                               {
                                   crease_point_t Lpoint;
@@ -2336,10 +1565,6 @@ int main(int argc, const char *argv[])
                                       std::lock_guard<std::mutex> lock(lpoint_add_mtx);
                                       the_face.Lpoint_index = unique_crease_points.add(Lpoint);
                                       crease_point_indices.push_back(the_face.Lpoint_index);
-                                      if (verbose > 1)
-                                      {
-                                          std::cout << "A L point was found at " << Lpoint << '\n';
-                                      }
                                       ++n_singular;
                                   }
                                   else
@@ -2348,20 +1573,8 @@ int main(int argc, const char *argv[])
 
                               connect_crease_points(the_face, crease_point_indices, unique_crease_points, gradient, hessian, theta0);
                               ++n_faces_found;
-                              if (verbose > 1)
-                              {
-                                  std::lock_guard<std::mutex> lock(debug_mtx);
-                                  std::cout << "afer connecting the points, face " << the_face_index << " contains Lpoint with index " << the_face.Lpoint_index << " and " << the_face.segments.size() << "segments\n";
-                                  std::cout << "These segment are:\n";
-                                  for (auto s : the_face.segments)
-                                  {
-                                      std::cout << s << '\n';
-                                  }
-                              }
                           }
-#ifndef SPURT_DEBUG
                       });
-#endif
     // all active faces have now been processed
     std::cout << "\n\nFace processing complete.\n";
     std::cout << progress << '\n';
@@ -2390,17 +1603,11 @@ int main(int argc, const char *argv[])
     size_type n_triangulated = 0;
     std::cout << "\nProcessing all " << active_voxels.size() << " unique active voxels\n";
     progress.begin(active_voxels.size(), "Mesh active voxels", 10000, "done: 0, solved: 0, triangles: 0");
-#ifndef SPURT_DEBUG
     tbb::parallel_for(tbb::blocked_range<int>(0, active_voxels.size()),
                       [&](tbb::blocked_range<int> r)
                       {
                           for (int n = r.begin(); n < r.end(); ++n)
                           {
-#else
-    {
-        for (int n = 0; n < active_voxels.size(); ++n)
-        {
-#endif
                               voxel_info_t &the_voxel = active_voxels[n];
                               const coord_type &the_voxel_index = the_voxel.voxel_id;
                               ++voxel_counter;
@@ -2446,45 +1653,10 @@ int main(int argc, const char *argv[])
                                   std::scoped_lock<std::mutex> lock(debug_mtx);
                                   compute_cycles(cycles, voxel_face_segments, true);
                               }
-
-                              if (verbose > 1)
-                              {
-                                  std::scoped_lock<std::mutex> alock(debug_mtx);
-                                  std::cout << "Processing voxel " << the_voxel_index << '\n';
-                                  std::cout << "There are " << all_triangles.size() << " triangles so far\n";
-                                  std::cout << "face segments are:\n";
-                                  for (int k = 0; k < voxel_face_segments.size(); ++k)
-                                  {
-                                      std::cout << voxel_face_segments[k] << '\n';
-                                  }
-                              }
-                              if (verbose > 0)
-                              {
-                                  std::scoped_lock<std::mutex> alock(debug_mtx);
-                                  std::cout << "\ncycles are:\n";
-                                  for (auto c : cycles)
-                                  {
-                                      std::copy(c.begin(), c.end(), std::ostream_iterator<size_type>(std::cout, ", "));
-                                      std::cout << '\n';
-                                      if (c[0] != c.back())
-                                      {
-                                          std::cout << "this is not a cycle\n";
-                                      }
-                                  }
-                                  std::cout << '\n';
-                              }
-
                               for (auto c : cycles)
                               {
                                   if (c.size() < 4 || c.front() != c.back())
                                   {
-                                      if (verbose > 1)
-                                      {
-                                          std::scoped_lock<std::mutex> alock(debug_mtx);
-                                          std::cout << "ERROR: one returned cycle is ";
-                                          std::copy(c.begin(), c.end(), std::ostream_iterator<size_type>(std::cout, ", "));
-                                          std::cout << '\n';
-                                      }
                                       std::scoped_lock<std::mutex> alock(add_cycles_mtx);
                                       all_open_cycles.push_back(c);
                                   }
@@ -2550,12 +1722,6 @@ int main(int argc, const char *argv[])
                                   }
                                   else if (c.size() > 11)
                                   {
-#ifdef DEBUG
-                                      std::scoped_lock<std::mutex> alock(debug_mtx);
-                                      std::cout << "ERROR: the current cycle contains more than 10 points\n";
-                                      std::copy(c.begin(), c.end(), std::ostream_iterator<size_type>(std::cout, ", "));
-                                      std::cout << '\n';
-#endif
                                       ++nmorepts;
                                       n_failed++;
                                   }
@@ -2565,18 +1731,12 @@ int main(int argc, const char *argv[])
                               else
                               {
                                   std::scoped_lock<std::mutex> alock(add_triangles_mtx);
-#ifdef SPURT_DEBUG
-                                  std::cout << "There were " << the_voxel.ridge_triangles.size() << " triangles for this voxel\n";
-#endif
-
                                   all_triangles.insert(all_triangles.end(), the_voxel.ridge_triangles.begin(), the_voxel.ridge_triangles.end());
                                   ++n_triangulated;
                               }
                           }
                       }
-#ifndef SPURT_DEBUG
     );
-#endif
     progress.end();
     std::cout << "All voxels processed.\n";
     std::cout << progress << std::endl;
