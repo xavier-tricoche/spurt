@@ -220,6 +220,7 @@ struct NrrdScalarField {
 			}
             throw std::runtime_error( os.str() );
         }
+        const Nrrd* nrrd = m_wrapper.get_ctx()->pvl[0]->nin;
         return s;
     }
 
@@ -406,6 +407,9 @@ struct NrrdODERHS {
             std::ostringstream os;
             os << "Interrupting integration because " << x << " is outside selected region: "
                 << "min: " << m_region.min() << ", max: " << m_region.max();
+            //
+            //printf("Interrupting integration because %lf %lf is outside selected region: min: %lf %lf, max: %lf %lf\n", x[0], x[1], m_region.min()[0], m_region.min()[1], m_region.max()[0], m_region.max()[1]);
+            //
             throw std::runtime_error(os.str());
         }
         vec3 v;
@@ -826,7 +830,9 @@ void export_results(value_t current_time, value_t wall_time, value_t cpu_time,
 {
     typedef T export_value_t;
 
-    size_t nb_samples = resx * resy;
+    //size_t nb_samples = resx * resy;
+    size_t nb_samples = all_trajectories.size();
+    //printf("Writing %ld samples\n", nb_samples);
 
     std::string qualifier;
     if (final) qualifier = "Overall";
@@ -857,9 +863,16 @@ void export_results(value_t current_time, value_t wall_time, value_t cpu_time,
 
     _log_(1) << "Setting Nrrd header values... " << std::flush;
     std::vector<size_t> __res(3);
+    
     __res[0] = 3;
-    __res[1] = resx;
-    __res[2] = resy;
+    //__res[1] = resx;
+    //__res[2] = resy;
+    __res[1] = 1;
+    __res[2] = nb_samples;
+    
+    //__res[0] = nb_samples;
+    //__res[1] = 3;
+    //__res[2] = 1;
 
     std::vector<double> __mins(3);
     __mins[0] = AIR_NAN;

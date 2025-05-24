@@ -98,7 +98,7 @@ public:
 
     // constructors
     raster_grid();
-    raster_grid(const self_type& other) = default;
+    //raster_grid(const self_type& other) = default;
     raster_grid(const coord_type& resolution, const bounds_type& bounds,
                 bool cell_based=false);
     raster_grid(const coord_type& resolution, const point_type& origin,
@@ -180,7 +180,7 @@ public:
 
     // constructors
     raster_data() {}
-	raster_data(const self_type& other) = default;
+    //raster_data(const self_type& other) = default;
     raster_data(const grid_type& grid);
     raster_data(const grid_type& grid, const std::vector<value_type>& data);
     raster_data(const grid_type& grid, value_type init_val);
@@ -338,7 +338,7 @@ private:
 
 public:
     image() {}
-    image(const self_type& other) = default;
+    //image(const self_type& other) = default;
     image(const grid_type& grid) : base_type(grid) {}
     image(const grid_type& grid, const std::vector<value_type>& data)
         : base_type(grid, data) {}

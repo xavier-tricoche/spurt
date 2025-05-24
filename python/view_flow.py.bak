@@ -1,0 +1,318 @@
+import numpy as np
+import vtk
+from vtk.util import numpy_support as nps
+import argparse 
+import sys
+import nrrd
+import time
+import os
+import vtk_camera
+import vtk_colors
+import regex as re
+import math
+
+from scipy.interpolate import RegularGridInterpolator
+from scipy.ndimage import map_coordinates
+
+actors = 5
+
+def make2dcolors(width=64, height=64, color1=[0,0,255], color2=[255,0,0]):
+    init = np.zeros((2,2,3))
+    init[0,0,:] = [0,0,0]
+    init[1,0,:] = color1 
+    init[0,1,:] = color2
+    init[1,1,:] = [255, 255, 255]
+
+    interp = RegularGridInterpolator(([0., 1.], [0., 1.]), init)
+
+    x = np.linspace(start=0, stop=1, num=width, endpoint=True)
+    y = np.linspace(start=0, stop=1, num=height, endpoint=True)
+    pts = [np.array([u,v]) for v in y for u in x]
+    r = interp(pts)
+    data = np.array(r).astype(np.uint8)
+    return data
+
+def key_pressed_callback(obj, event):
+    # ---------------------------------------------------------------
+    # Attach actions to specific keys
+    # ---------------------------------------------------------------
+    key = obj.GetKeySym()
+    if key == "h":
+        print("Commands:\n 's': save frame\n 'c': save camera setting\n 'h': print this message\n 'q': quit the program")
+    elif key == "s":
+        save_frame()
+    elif key == "c":
+        vtk_camera.save_camera(renderer=obj.GetRenderWindow().GetRenderers().GetFirstRenderer())
+        print(f'Camera settings saved to camera.json')
+    elif key == "q":
+        if args.verbose:
+            print("User requested exit.")
+        sys.exit()
+        
+def make_logarithmic_colorscale(valid, minv, maxv, a=2, dv=10):
+    vs = np.arange(0, 1.01, 1/float(dv), dtype=float)
+    print(vs)
+    ctf = vtk.vtkColorTransferFunction()
+    exp_ = float(1)
+    #minv = np.min(valid)
+    #maxv = np.max(valid)
+    
+    #print(vs)
+    
+    neg_values = valid[valid < 0]
+    pos_values = valid[valid > 0]
+
+    #print(neg_values)
+    #print(pos_values)
+    
+    #Create control points
+    ctrl = np.arange(0, 101, 100/dv, dtype=int)
+    print(ctrl)
+    #neg_ctrl = np.percentile(neg_values, ctrl)
+    #pos_ctrl = np.percentile(pos_values, ctrl)
+    neg_ctrl = np.arange(minv, 0+1, -minv/dv)
+    pos_ctrl = np.arange(0, maxv+1, maxv/dv)
+    pos_ctrl = np.flip(pos_ctrl)
+    
+    print(neg_ctrl, minv)
+    print(pos_ctrl, maxv)
+    
+    for i in range(len(vs)):
+        v = vs[i]
+        #ctf.AddRGBPoint(neg_ctrl[i], (v**a), (v**a), 1) #White
+        ctf.AddRGBPoint(neg_ctrl[i], 0.1, 0.1, 0.1+0.9*(math.log(1+9*vs[10-i])/math.log(10)))
+        exp_ *= float(a)
+    #ctf.AddRGBPoint(0, 1, 1, 1)    #White
+    ctf.AddRGBPoint(0, 0.1, 0.1, 0.1)
+    exp_ = float(1)
+    for i in range(len(vs)):
+        v = vs[i]
+        #ctf.AddRGBPoint(pos_ctrl[i], 1, (v**a), (v**a)) #White
+        ctf.AddRGBPoint(pos_ctrl[i], 0.1+0.9*(math.log(1+9*vs[10-i])/math.log(10)), 0.1, 0.1)
+        exp_ *= float(1)
+    return ctf    
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Visualize path of particles')
+    parser.add_argument('-i', '--input', type=str, required=True, help='Input filename')
+    parser.add_argument('-r', '--res', type=int, nargs=2, default=[2000, 1600], help='Window resolution')
+    parser.add_argument('-p', '--path', type=str, help='Path of data files to prepend to their name')
+    parser.add_argument('-o', '--output', type=str, help='Output basename for rendered frames')
+    parser.add_argument('-c', '--color', type=str, default='value', help='Attribute to use for color coding')
+    parser.add_argument('-n', '--normalize', action='store_true', help='Apply time normalization to LAVD values')
+    parser.add_argument('--camera', type=str, help='Input camera settings')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Toggle verbose mode')
+
+    args = parser.parse_args()
+
+    if os.path.splitext(args.input)[1] == '.txt':
+        print(f'import filenames from {args.input}')
+        step_names = []
+        with open(args.input) as fp:
+            step_names = fp.readlines()
+    else:
+        step_names = [ args.input ]
+
+    pos = []
+    vals = []
+    names = []
+    maxs = []
+    mins = []
+    times = []
+
+    make2dcolors()
+
+    #verts = vtk.vtkCellArray()
+    verts = []
+    
+    single_frame = len(step_names) == 1
+    timestr = re.compile(r".*([0]*[0-9]{5})h")
+
+    for i, name in enumerate(step_names):
+        if name[-1] == '\n':
+            name = name[:-1]
+        print(name)
+        times.append(int(timestr.search(name).group(1)))
+        
+        if not os.path.exists(name) and os.path.split(name)[0] == '':
+            if args.path is not None:
+                name = os.path.join(args.path, name)
+            elif os.path.split(args.input)[0] != '':
+                name = os.path.join(os.path.split(args.input)[0], name)
+        if args.verbose: print(f'name={name}')
+        names.append(name)
+        data, _ = nrrd.read(name) # [x, y, lavd] x M x N
+        vals.append(np.copy(data[2,:,:].ravel(order='F')))
+        #vals[-1] /= float(times[-1])
+        data[2,:,:] = 0
+        #if not i:
+        #    npts = data.shape[1]*data.shape[2]
+        #    width = data.shape[1]
+        #    height = data.shape[2]
+        #    for n in range(npts):
+        #        verts.InsertNextCell(1)
+        #        verts.InsertCellPoint(n)
+        npts = data.shape[1] * data.shape[2]
+        width = data.shape[1]
+        height = data.shape[2]
+        verts.append(vtk.vtkCellArray())
+        #for n in range(npts):
+        #        verts[i].InsertNextCell(1)
+        #        verts[i].InsertCellPoint(n)
+        
+        pos.append(np.swapaxes(data.reshape((3,-1), order='F'), 0, 1))
+        maxs.append(np.max(vals[-1]))
+        mins.append(np.min(vals[-1]))
+        #print(mins[-1], maxs[-1])
+        if args.verbose:
+            print(f'Step #{i}, name: {name}, bounding box: [{np.min(pos[-1][0,:])}, {np.min(pos[-1][1,:])}] -> [{np.max(pos[-1][0,:])}, {np.max(pos[-1][1,:])}], value range: [{np.min(vals[-1])}, {np.max(vals[-1])}')
+
+    allvalues = np.concatenate(vals, axis=0)
+    print(allvalues.shape)
+    #invalid = np.less(allvalues, 0)
+    #valid = np.delete(allvalues, invalid)
+    valid = allvalues
+    #print(f'there are {np.nonzero(invalid)[0].shape} invalid values')
+    #print(f'after removing them, there are {valid.shape} valid values left')
+    #print(f'percentile of all valid values: {np.percentile(valid, [0, 1, 5, 10, 25, 50, 75, 90, 95, 99, 100])}')
+    #ctrl_pts = np.percentile(valid, [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
+    
+    mask_data, header = nrrd.read("../python/ocean_mask.nrrd")
+    axis_mins = header.get("axis mins", None)
+    dims = header.get("sizes", None)
+    spacings = header.get("spacings", None)
+
+    maxvalue = np.max(maxs)
+    minvalue = np.min(mins)
+    if args.color == 'value':
+        #ctf = vtk_colors.make_colormap('viridis', ctrl_pts)
+        ctf = make_logarithmic_colorscale(valid, minvalue, maxvalue, a=10)
+    elif args.color == 'pos' or args.color == 'position':
+        colors = make2dcolors(width, height, color1=[0,0,255], color2=[255, 255, 0])
+
+    if args.color != 'value':
+        print(colors.shape)
+        colors = nps.numpy_to_vtk(colors)
+        
+    ren = vtk.vtkRenderer()
+    win = vtk.vtkRenderWindow()
+    win.AddRenderer(ren)
+    ren.SetBackground(0, 0, 0)
+    win.SetSize(args.res[0], args.res[1])
+    
+    mapper = []
+    actor = []
+    for i in range(actors):
+        mapper.append(vtk.vtkPolyDataMapper())
+        mapper[i].ScalarVisibilityOn()
+        if args.color == 'value':
+            mapper[i].SetLookupTable(ctf)
+        actor.append(vtk.vtkActor())
+        actor[i].SetMapper(mapper[i])
+        actor[i].GetProperty().SetPointSize(i+2)                     #Increase size to fill in holes
+        actor[i].GetProperty().RenderPointsAsSpheresOn()
+        ren.AddActor(actor[i])
+    
+    if args.camera is not None:
+        ren.SetActiveCamera(vtk_camera.load_camera(args.camera))
+
+    if args.output is not None:
+        capture = vtk.vtkWindowToImageFilter()
+        capture.SetInput(win)
+        writer = vtk.vtkJPEGWriter()
+        writer.SetInputConnection(capture.GetOutputPort())
+
+    count = 0
+    verts2 = []
+    node = [0.0]*6
+    control_points = []
+    for i in range(21):
+        ctf.GetNodeValue(i, node)
+        control_points.append(tuple(node))
+    
+    print(len(verts))
+    for p, f, name in zip(pos, vals, names):
+        #print(f'p={p},\n {p.shape}')
+        if args.verbose: print(name)
+        shortname = os.path.splitext(os.path.split(name)[1])[0]
+        poly = []
+        ps = []
+        fs = []
+        for j in range(actors):
+        #modify data
+            invalid = []
+            verts2.append([])
+            verts2[j].append(vtk.vtkCellArray())
+            for i in range(len(f)):
+                x = (p[i][0] - axis_mins[0]) / spacings[0]
+                y = (p[i][1] - axis_mins[1]) / spacings[1]
+                #x = np.clip(x, 0, dims[0]-1)
+                #y = np.clip(y, 0, dims[1]-1)
+                mask_value = map_coordinates(mask_data, [[x], [y]], order=1)
+                #if(mask_value != 0 and x > 1700 and y < 100):
+                if(mask_value != 0):
+                    #Within the mask
+                    if(f[i] > control_points[10+2*j+1][0]  or f[i] < control_points[10-2*j][0]):
+                        invalid.append(False)
+                    else:
+                        invalid.append(True)
+                    pass
+                else:
+                    invalid.append(True)
+                    #invalid.append(False)
+                    pass
+            mask_array = np.array(invalid)
+            
+            #print(hex(id(p[~mask_array])))  # Memory address of p slice
+            #print(hex(id(f[~mask_array])))  # Memory address of f slice
+
+            p_filtered = p[~mask_array].copy()
+            f_filtered = f[~mask_array].copy()
+            #print(hex(id(p_filtered)))
+            #print(hex(id(f_filtered)))
+            ps.append(p_filtered)
+            fs.append(f_filtered)
+            #print(hex(id(ps[j])))
+            #print(hex(id(fs[j])))
+            for n in range(len(fs[j])):
+                verts2[j][count].InsertNextCell(1)
+                verts2[j][count].InsertCellPoint(n)
+            #
+            coords = nps.numpy_to_vtk(ps[j])
+            pts = vtk.vtkPoints()
+            pts.SetData(coords)
+            scl = nps.numpy_to_vtk(fs[j])
+            poly.append(vtk.vtkPolyData())
+            poly[j].SetPoints(pts)
+            poly[j].GetPointData().SetScalars(scl)
+            poly[j].SetVerts(verts2[j][count])
+            if args.color != 'value':
+                poly[j].GetPointData().SetScalars(colors)
+            mapper[j].SetInputData(poly[j])
+        count = count + 1
+        
+        #print(hex(id(p)))
+        #print(hex(id(f)))
+        #for i in range(actors):
+        #    print(verts2[i])
+        #    print(len(fs[i]), hex(id(fs[i])))
+        #    print(len(ps[i]), hex(id(ps[i])))
+            
+        if args.camera is None:
+            ren.ResetCamera()
+        if single_frame:
+            inter = vtk.vtkRenderWindowInteractor()
+            inter.SetRenderWindow(win)
+            inter.Initialize()
+        win.Render()
+        if single_frame and args.output is None:
+            inter.AddObserver("KeyPressEvent", key_pressed_callback)
+            inter.Start()
+        elif args.output is not None:
+            win.Render()
+            capture.Modified()
+            capture.Update()
+            writer.SetFileName(f'{args.output}_{shortname}.jpg')
+            writer.Write()
+        else:
+            time.sleep(1)

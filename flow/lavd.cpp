@@ -29,6 +29,16 @@
 #include <Eigen/Core>
 #include <Eigen/SVD>
 
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/Delaunay_triangulation_2.h>
+#include <map>
+#include <cmath>
+
+// Define CGAL Kernel
+typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
+typedef CGAL::Delaunay_triangulation_2<K> Delaunay;
+typedef K::Point_2 Point;
+
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -116,8 +126,10 @@ void parse_restart_file() {
 	_log_(2) << "parsing restart file" << std::endl;
 	Nrrd* nin = spurt::nrrd_utils::readNrrd(restart_name);
 	spurt::nrrd_utils::nrrd_traits traits(nin);
-	res[0] = traits.sizes()[1];
-	res[1] = traits.sizes()[2];
+    //Use designated resolution, don't use file resolution
+    //res[0] = traits.sizes()[1];
+    //res[1] = traits.sizes()[2];
+    nb_samples = traits.sizes()[2];
 
 	std::cout << "resolution: " << res[0] << " x " << res[1] << std::endl;
 
@@ -146,6 +158,7 @@ void parse_restart_file() {
 		else if (param == "epsilon") eps = std::stod(val_as_str);
 		else if (param == "resolution") {
 			if (std::regex_search(val_as_str, res_match, res_regex)) {
+                //Use designated resolution, don't use file resolution
 				res[0] = std::stoi(res_match[1].str());
 				res[1] = std::stoi(res_match[2].str());
 			}
@@ -291,7 +304,8 @@ struct observer
         try {
             value_t w = m_vort( vec3(x[0], x[1], t ) );
             value_t aw = m_avg_vort( vec1(t) );
-            return fabs(w-aw);
+            //return fabs(w-aw);
+            return w - aw;
         }
         catch (std::exception& e) {
             _log_(1) << "exception caught in vorticity_deviation:\n"
@@ -341,6 +355,7 @@ void import_data(const std::vector< std::string >& vel_filenames,
 
     size_t n_available = std::min(nslices, vel_filenames.size()-start_id+support_radius);
     size_t n_used = std::min(n_available, static_cast<size_t>((t_max-t_init)/t_between_files+2*support_radius));
+    //printf("n_used: %ld\n", n_used);
     _log_(1)
         << "import_data: start_id=" << start_id
         << ", #filenames=" << vel_filenames.size()
@@ -367,6 +382,13 @@ void import_data(const std::vector< std::string >& vel_filenames,
 		_log_(1) << "printing contents of vorticity input Nrrd #" << i << "\n";
 		print(vor_tsteps[i-first]);
         _log_(1) << "done" << std::endl;
+        //Check for negative vorticities
+        //size_t totalElements = vor_tsteps[i-first]->axis[0].size * vor_tsteps[i - first]->axis[1].size;
+        //printf("totalElements: %ld\n", totalElements);
+        //for (size_t idx = 0; idx < totalElements; ++idx) {
+        //    value_t value = nrrd_value(vor_tsteps[i-first], idx);
+        //    printf("%lf\n", value);
+        //}
     }
     last_time_step = first + n_used - 1;
     value_t outer_tmin = /*t_init +*/ first*t_between_files;
@@ -381,7 +403,14 @@ void import_data(const std::vector< std::string >& vel_filenames,
     }
 
     current_vorticity_volume = spurt::lavd::create_nrrd_volume(vor_tsteps, outer_tmin, t_between_files);
-    current_t_min = start_id*t_between_files;
+    //Check for negative vorticities
+    //size_t totalElements = current_vorticity_volume->axis[0].size * current_vorticity_volume->axis[1].size;
+    //printf("totalElements: %ld\n", totalElements);
+    //for (size_t idx = 0; idx < totalElements; ++idx) {
+    //    value_t value = nrrd_value(current_vorticity_volume, idx);
+    //    printf("%lf\n", value);
+    //}
+    //current_t_min = start_id*t_between_files;
     // if (outer_tmin > t_init) {
     //     current_t_min += support_radius*t_between_files;
     // }
@@ -553,6 +582,68 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
     );
 }
 
+//
+LAVD_state lavd_state_lerp(LAVD_state a, LAVD_state b, LAVD_state c, Point center) {
+    LAVD_state new_state = {};
+    new_state.m_vd = (a.m_vd + b.m_vd + c.m_vd) / 3;
+    new_state.m_acc_vd = (a.m_acc_vd + b.m_acc_vd + c.m_acc_vd) / 3;
+    new_state.m_time = (a.m_time + b.m_time + c.m_time) / 3;
+    new_state.m_acc_time = (a.m_acc_time + b.m_acc_time + c.m_acc_time) / 3;
+    new_state.m_pos[0] = center.x();
+    new_state.m_pos[1] = center.y();
+    new_state.m_stopped = false;
+    return new_state;
+}
+
+int add_border_states(value_t time, NrrdScalarField<1>* avg_vorticityf, NrrdScalarField<3>* vorticityf) {
+    int added = 0;
+    step_x = region.size()[0] / static_cast<value_t>(res[0] - 1);
+    step_y = region.size()[1] / static_cast<value_t>(res[1] - 1);
+    //printf("%lf %lf\n", step_x, step_y);
+    //printf("%lf %lf\n", region.size()[0], region.size()[1]);
+    //printf("%lf %lf\n", static_cast<value_t>(res[0] - 1), static_cast<value_t>(res[1] - 1));
+    int i = 0;
+    //Calculate border positions
+    std::vector<vec2> positions = {};
+    //printf("%lf, %lf\n", step_x, step_y);
+    for (i=1; i < res[0] - 1; i++) {
+        positions.push_back(region.min() + vec2(i * step_x, 1 * step_y));
+        positions.push_back(region.min() + vec2(i * step_x, region.max()[1] - region.min()[1] - step_y));
+        added+=2;
+    }
+    for (i = 1; i < res[1] - 1; i++) {
+        positions.push_back(region.min() + vec2(1 * step_x, i * step_y));
+        positions.push_back(region.min() + vec2(region.max()[0] - region.min()[0] - step_x, i * step_y));
+        added+=2;
+    }
+    //Generate states from positions
+    for (i = 0; i < positions.size(); i++) {
+        //printf("%d: %lf %lf\n", i, positions[i][0], positions[i][1]);
+        std::vector<vec2> new_trajectory = {};
+        new_trajectory.push_back(positions[i]);
+        all_trajectories.push_back(new_trajectory);
+        LAVD_state new_state = {};
+        new_state.m_pos = positions[i];
+        new_state.m_time = time;
+        new_state.m_acc_time = time;
+        new_state.m_stopped = false;
+
+        value_t w = (*vorticityf)(vec3(positions[i][0], positions[i][1], time));
+        value_t aw = (*avg_vorticityf)(vec1(time));
+        //new_state.m_vd = fabs(w - aw);
+        new_state.m_vd = w - aw;
+
+        if (w == 0.0) {
+            added--;
+            continue;
+        }
+
+        new_state.m_acc_vd = new_state.m_vd;
+        all_states.push_back(new_state);
+    }
+    return added;
+}
+
 int main(int argc, const char* argv[])
 {
     using namespace spurt;
@@ -566,6 +657,7 @@ int main(int argc, const char* argv[])
     nb_threads = omp_get_max_threads();
     _log_.set_nthreads(nb_threads);
     _log_(1) << nb_threads << " threads available" << std::endl;
+    printf("Using %ld threads from OpenMP\n", nb_threads);
 #else
     _log_.set_nthreads(1);
 #endif
@@ -584,7 +676,9 @@ int main(int argc, const char* argv[])
         dt = (t_max - t_init)/(fabs(dt)-1);
     }
 
-    nb_samples = res[0]*res[1];
+    if (nb_samples == 0) {
+        nb_samples = res[0] * res[1];
+    }
 
     name_out=spurt::filename::remove_extension(name_out);
 
@@ -614,6 +708,7 @@ int main(int argc, const char* argv[])
     // compute bounds of entire domain
     get_spatial_info(domain, input_spc, velocity_filenames[t_init/HOUR/3], 1);
     border_mask = get_border_mask(border_mask_name, velocity_filenames[t_init/HOUR/3]);
+    //printf("Border mask: %s\n", border_mask_name.c_str());
 
     if ( !( bnds[0]==bnds[1]==bnds[2]==bnds[3] ) ) {
         region.min()=vec2( bnds[0], bnds[1] );
@@ -653,6 +748,8 @@ int main(int argc, const char* argv[])
     step_x = region.size()[0] / static_cast<value_t>(res[0]-1);
     step_y = region.size()[1] / static_cast<value_t>(res[1]-1);
 
+    printf("step_x: %lf; step_y: %lf\n", step_x, step_y);
+
     _log_(1) << "bounds=" << region << std::endl;
 
     if (export_region)
@@ -682,8 +779,13 @@ int main(int argc, const char* argv[])
     bool initial_loop = true;
     size_t niter = 0;
     current_start_time = t_init;
+    current_t_min = t_init;
     next_export_time = t_init + t_export_step + t_skip;
+    //std::vector< LAVD_state > memory;
+    int moving_index = -1;
+    double distance = 0.0;
     while ( true ) {
+        //printf("A!\n");
         _log_(0, "\n\n") << "next target time for this loop: "
             << sec2time(next_export_time)
             << " (" << next_export_time << " s.)" << std::endl;
@@ -697,8 +799,18 @@ int main(int argc, const char* argv[])
 
         std::clock_t loop_clock_begin=std::clock();
         auto loop_timer_start = std::chrono::high_resolution_clock::now();
+
+        printf("Integrating from %.0lf seconds to %.0lf seconds at intervals of %.0lf seconds\n", current_start_time, current_target_time, dt);
+        printf("current_t_min: %lf\n t_init: %lf\n", current_t_min, t_init);
+        #pragma omp barrier
+        //printf("State 0/%ld position: %lf %lf\n", all_states.size(), all_states[0].m_pos[0], all_states[0].m_pos[1]);
+        //for(int i = 0; i < nb_samples/100; i++)
+        //printf("State %d: %lf %lf %lf %lf %lf %lf %d\n", i*100, all_states[i*100].m_vd, all_states[i*100].m_acc_vd, all_states[i*100].m_time, all_states[i*100].m_acc_time, all_states[i*100].m_pos[0], all_states[i*100].m_pos[1], all_states[i*100].m_stopped);
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #pragma omp parallel
         {
+            //Iterate over every "pixel"
             #pragma omp for schedule(dynamic,1)
             for (size_t n = 0 ; n < nb_samples ; ++n) {
 
@@ -730,6 +842,16 @@ int main(int argc, const char* argv[])
 					}
                 }
 
+                /*if (n == 125) { //When res = 16
+                    printf("%ld, %lf %lf\n", n, x0[0], x0[1]);
+                    if (abs(x0[0] - (region.min()[0] + n % res[0] * step_x)) > distance) {
+                        distance = abs(x0[0] - (region.min()[0] + n % res[0] * step_x));
+                        moving_index = n;
+                    }
+                    printf("%d, %lf\n", moving_index, distance);
+                }*/
+                //_log_(1) << x0 << std::endl;
+
                 #pragma omp atomic
                 ++counter;
 
@@ -741,6 +863,15 @@ int main(int argc, const char* argv[])
 
                 NrrdScalarField<1> my_avg_vorticityf(current_average_vorticity_vector, std::string("average vorticity field for thread #") + std::to_string(thread));
                 NrrdScalarField<3> my_vorticityf(current_vorticity_volume, std::string("vorticity field for thread #" + std::to_string(thread)));
+                //Search the vorticity field
+                //NrrdScalarField<3>::pos_t position = { x0[0], x0[1], 0 };
+                //try {
+                //    value_t value = my_vorticityf(position);
+                //    printf("%lf\n", value);
+                //}
+                //catch (const std::exception& e) {
+                //
+                //}
                 observer an_observer(all_states[n], all_trajectories[n],
                                      my_vorticityf, my_avg_vorticityf);
 
@@ -762,7 +893,7 @@ int main(int argc, const char* argv[])
                         continue;
                     }
                 }
-
+                
                 try {
                     integrate_const(stepper, rhs, x0, current_start_time,
                         current_target_time, dt, an_observer);
@@ -776,6 +907,8 @@ int main(int argc, const char* argv[])
                     all_states[n].stop();
                     #pragma omp atomic
                     ++nb_lost;
+                    //A particle has left the area (presumably)
+                    //printf("%ld\n", n);
                 }
                 catch(...) {
                     _log_(0) << "unknown exception thrown!" << std::endl;
@@ -787,7 +920,284 @@ int main(int argc, const char* argv[])
             initial_loop = false;
         }
 	    progress.end();
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+        /*printf("Performing Delaunay triangulation...\n");
+        //Determine thresholds for interpolation based on expected image resolution
+        double edge_threshold = step_x * step_x + step_y * step_y;  //anticipated edge length *squared*
+        double area_threshold = edge_threshold / 2;
+        long int added_points = -1;
+        //Repeatedly add points as many times as is necessary to maintain the expected resolution
+        do {
+            //Add points to fill in gaps
+            std::vector<Point> points = {};
+            std::map<Point, size_t> point_map = {};
+            for (int i = 0; i < nb_samples; i++) {
+                points.push_back(Point(all_states[i].m_pos[0], all_states[i].m_pos[1]));
+                point_map.insert({ Point(all_states[i].m_pos[0], all_states[i].m_pos[1]), i });
+            }
+            added_points = 0;
+            //Delaunay triangulation to find empty areas
+            Delaunay dt;
+            dt.insert(points.begin(), points.end());
+            std::vector<LAVD_state> new_points = {};
+            for (auto f = dt.finite_faces_begin(); f != dt.finite_faces_end(); f++) {
+                Point a = f->vertex(0)->point();
+                Point b = f->vertex(1)->point();
+                Point c = f->vertex(2)->point();
+                double area = std::abs((a.x() * (b.y() - c.y()) +
+                    b.x() * (c.y() - a.y()) +
+                    c.x() * (a.y() - b.y())) / 2.0);
+                //Skip areas that are questionable
+                if ((all_states[point_map[a]].m_stopped == true || all_states[point_map[b]].m_stopped == true || all_states[point_map[c]].m_stopped == true) ||
+                    (0)) {
+                    continue;
+                }
+                if (area > area_threshold || CGAL::squared_distance(a, b) > edge_threshold || CGAL::squared_distance(a, c) > edge_threshold || CGAL::squared_distance(c, b) > edge_threshold) {
+                    //Empty area identified
+                    //Recover lavd states
+                    LAVD_state one = all_states[point_map[a]];
+                    LAVD_state two = all_states[point_map[b]];
+                    LAVD_state three = all_states[point_map[c]];
+                    //Lerp to create new lavd state
+                    new_points.push_back(lavd_state_lerp(one, two, three));
+                    std::vector<vec2> new_trajectory = {};
+                    vec2 new_vector = vec2((all_trajectories[point_map[a]].back()[0] + all_trajectories[point_map[b]].back()[0] + all_trajectories[point_map[c]].back()[0]) / 3,
+                        (all_trajectories[point_map[a]].back()[1] + all_trajectories[point_map[b]].back()[1] + all_trajectories[point_map[c]].back()[1]) / 3);
+                    new_trajectory.push_back(new_vector);
+                    all_trajectories.push_back(new_trajectory);
+                    added_points++;
+                }
+                else if (area < area_threshold / 4 || (CGAL::squared_distance(a, b) < edge_threshold / 4 && CGAL::squared_distance(a, c) < edge_threshold / 4 && CGAL::squared_distance(c, b) < edge_threshold / 4)) {
+                    //Suspend compressed points
+                    double centerx = (all_states[point_map[a]].m_pos[0] + all_states[point_map[b]].m_pos[0] + all_states[point_map[c]].m_pos[0]) / 3;
+                    double centery = (all_states[point_map[a]].m_pos[1] + all_states[point_map[b]].m_pos[1] + all_states[point_map[c]].m_pos[1]) / 3;
+
+                    double da = CGAL::squared_distance(a, Point(centerx, centery));
+                    double db = CGAL::squared_distance(b, Point(centerx, centery));
+                    double dc = CGAL::squared_distance(c, Point(centerx, centery));
+                    if (da < db && da < dc) {
+                        all_states[point_map[a]].m_stopped = true;
+                    }
+                    else if (db < dc) {
+                        all_states[point_map[b]].m_stopped = true;
+                    }
+                    else {
+                        all_states[point_map[c]].m_stopped = true;
+                    }
+                }
+            }
+            all_states.insert(all_states.end(), new_points.begin(), new_points.end());
+            printf("Added %ld samples.\n", new_points.size());
+            nb_samples += new_points.size();
+            //all_trajectories.resize(nb_samples);
+        } while (added_points > acceptable_misses);
+        printf("Total of %ld samples being tracked.\n", nb_samples);
+
+        printf("Removing stopped points...\n");
+        size_t suspended = 0;
+        //Remove suspended points
+        for (size_t i = 0; i < all_states.size(); i++) {
+            if (all_states[i].m_stopped == true) {
+                all_states.erase(all_states.begin() + i);
+                all_trajectories.erase(all_trajectories.begin() + i);
+                i--;
+                suspended++;
+            }
+        }
+        printf("There are %ld suspended points\n", suspended);
+        printf("Removed %ld/%ld samples.\n", nb_samples - all_trajectories.size(), nb_samples);
+        nb_samples = all_trajectories.size();
+        printf("Total of %ld samples being tracked.\n", nb_samples);*/
+        //printf("%ld %ld");
+
+        printf("Adding streamlines...\n");
+        value_t res_distance = step_x;
+        std::vector<Delaunay::Finite_faces_iterator> triangles;
+        std::vector<Point> points = {};
+        std::map<Point, size_t> point_map = {};
+        for (int i = 0; i < nb_samples; i++) {
+            if (all_states[i].m_stopped) continue;
+            //Check if the point already exists in the map
+            if (point_map.count(Point(all_states[i].m_pos[0], all_states[i].m_pos[1])) != 0) continue;          //Checking for duplicate points!!!
+            points.push_back(Point(all_states[i].m_pos[0], all_states[i].m_pos[1]));
+            point_map.insert({ Point(all_states[i].m_pos[0], all_states[i].m_pos[1]), i });
+        }
+        //Use Delaunay triangulation to find voids in the visualization
+        printf("Performing Delaunay triangulation...\n");
+        Delaunay dt;
+        dt.insert(points.begin(), points.end());
+        //printf("Sorting results...\n");
+        //FILL HOLES
+        for (auto f = dt.finite_faces_begin(); f != dt.finite_faces_end(); f++) {
+            Point a = f->vertex(0)->point();
+            Point b = f->vertex(1)->point();
+            Point c = f->vertex(2)->point();
+            Point circumcenter = CGAL::circumcenter(a, b, c);
+            double dist = sqrt(CGAL::squared_distance(a, circumcenter)) * 2;
+            if (dist > res_distance * 2) {
+                triangles.push_back(f);
+            }
+        }
+        printf("Found %ld candidate seeds\n", triangles.size());
+        //Use the voids to seed streamlines
+        std::vector<Point> added = {};
+        size_t old_sample_count = nb_samples;
+        printf("Filling voids...\n");
+        for(int i = 0; i < triangles.size(); i++) {
+            //printf("%ld\n", triangles.size());
+            Delaunay::Finite_faces_iterator face = triangles[i];
+            Point a = face->vertex(0)->point();
+            Point b = face->vertex(1)->point();
+            Point c = face->vertex(2)->point();
+            Point circumcenter = CGAL::circumcenter(a, b, c);
+            //Verify circumcenter is within bounds
+            if (circumcenter.x() < region.min()[0] || circumcenter.y() < region.min()[1] || 
+                circumcenter.x() > region.max()[0] || circumcenter.y() > region.max()[1]) {
+                //printf("INVALID COORDINATE: %lf %lf\n", circumcenter.x(), circumcenter.y());
+                continue;
+            }
+            //Add point
+            LAVD_state one = all_states[point_map[a]];
+            LAVD_state two = all_states[point_map[b]];
+            LAVD_state three = all_states[point_map[c]];
+            //Lerp to create new lavd state
+            LAVD_state new_point = lavd_state_lerp(one, two, three, circumcenter);
+            all_states.push_back(new_point);
+            std::vector<vec2> new_trajectory = {};
+            vec2 new_vector = new_point.m_pos;
+            new_trajectory.push_back(new_vector);
+            all_trajectories.push_back(new_trajectory);
+            nb_samples++;
+        }
+        printf("Added %ld streamlines in sparse areas\n", nb_samples - old_sample_count);
+        triangles.clear();
+
+        //Remove streamlines that are too dense
+        for (auto f = dt.finite_faces_begin(); f != dt.finite_faces_end(); f++) {
+            Point a = f->vertex(0)->point();
+            Point b = f->vertex(1)->point();
+            Point c = f->vertex(2)->point();
+            Point circumcenter = CGAL::circumcenter(a, b, c);
+            double dist = sqrt(CGAL::squared_distance(a, circumcenter)) * 2;
+            if (dist < res_distance / 2) {
+                if (dist > res_distance / 4) {
+                    triangles.push_back(f);
+                }
+                //Prevent vortex black holes
+                else {
+                    /*Point a = f->vertex(0)->point();
+                    Point b = f->vertex(1)->point();
+                    Point c = f->vertex(2)->point();
+                    all_states[point_map[a]].m_stopped = true;
+                    all_states[point_map[b]].m_stopped = true;
+                    all_states[point_map[c]].m_stopped = true;*/
+                    //Pick one vertex to keep and remove all neighbors
+                    if (all_states[point_map[f->vertex(0)->point()]].m_stopped == true) {
+                        continue;
+                    }
+                    Delaunay::Vertex_circulator vc = dt.incident_vertices(f->vertex(0));
+                    if (vc != nullptr) {
+                        Delaunay::Vertex_circulator start = vc;
+                        do {
+                            if (!dt.is_infinite(vc)) {
+                                if (sqrt(CGAL::squared_distance(vc->point(), f->vertex(0)->point()) < res_distance / 4)) {
+                                    all_states[point_map[vc->point()]].m_stopped = true;
+                                }
+                            }
+                        } while (++vc != start);
+                    }
+                }
+            }
+            //Remove points that are too close
+            /*double area = std::abs((a.x() * (b.y() - c.y()) +
+                b.x() * (c.y() - a.y()) +
+                c.x() * (a.y() - b.y())) / 2.0);
+            if (area < step_x * step_y / 4) {
+                //printf("Small triangle detected\n");
+                if (sqrt(CGAL::squared_distance(f->vertex(0)->point(), f->vertex(1)->point()) < res_distance / 4) &&
+                    all_states[point_map[f->vertex(0)->point()]].m_stopped == false &&
+                    all_states[point_map[f->vertex(1)->point()]].m_stopped == false) {
+                    all_states[point_map[f->vertex(0)->point()]].m_stopped = true;
+                }
+                if (sqrt(CGAL::squared_distance(f->vertex(0)->point(), f->vertex(2)->point()) < res_distance / 4) &&
+                    all_states[point_map[f->vertex(0)->point()]].m_stopped == false &&
+                    all_states[point_map[f->vertex(2)->point()]].m_stopped == false) {
+                    all_states[point_map[f->vertex(0)->point()]].m_stopped = true;
+                }
+                if (sqrt(CGAL::squared_distance(f->vertex(1)->point(), f->vertex(2)->point()) < res_distance / 4) &&
+                    all_states[point_map[f->vertex(1)->point()]].m_stopped == false &&
+                    all_states[point_map[f->vertex(2)->point()]].m_stopped == false) {
+                    all_states[point_map[f->vertex(1)->point()]].m_stopped = true;
+                }
+            }
+            */
+        }
+        old_sample_count = nb_samples;
+        for (int i = 0; i < triangles.size(); i++) {
+            Delaunay::Finite_faces_iterator face = triangles[i];
+            Point a = face->vertex(0)->point();
+            Point b = face->vertex(1)->point();
+            Point c = face->vertex(2)->point();
+            Point circumcenter = CGAL::circumcenter(a, b, c);
+            //Add point
+            LAVD_state one = all_states[point_map[a]];
+            LAVD_state two = all_states[point_map[b]];
+            LAVD_state three = all_states[point_map[c]];
+            //Lerp to create new lavd state
+            LAVD_state new_point = lavd_state_lerp(one, two, three, circumcenter);
+            all_states.push_back(new_point);
+            std::vector<vec2> new_trajectory = {};
+            vec2 new_vector = new_point.m_pos;
+            new_trajectory.push_back(new_vector);
+            all_trajectories.push_back(new_trajectory);
+            nb_samples++;
+            all_states[point_map[a]].m_stopped = true;
+            all_states[point_map[b]].m_stopped = true;
+            all_states[point_map[c]].m_stopped = true;
+        }
+        printf("Added %ld streamlines in dense areas\n", nb_samples - old_sample_count);
+
+        NrrdScalarField<1> my_avg_vorticityf(current_average_vorticity_vector, std::string("average vorticity field"));
+        NrrdScalarField<3> my_vorticityf(current_vorticity_volume, std::string("vorticity field"));
+        //printf("VV size: %ld %ld %ld\n", current_vorticity_volume->axis[0].size, current_vorticity_volume->axis[1].size, current_vorticity_volume->axis[2].size);
+        old_sample_count = nb_samples;
+        //runtime error when restarting
+        nb_samples += add_border_states(current_target_time, &my_avg_vorticityf, &my_vorticityf);
+        printf("Added %ld streamlines around the border\n", nb_samples - old_sample_count);
+
+        //Clean up dead points
+        if (current_target_time == next_export_time) {
+            std::vector< std::vector< vec2 > > real_trajectories;
+            std::vector< LAVD_state > real_states;
+            for (int i = 0; i < nb_samples; i++) {
+                if (all_states[i].m_stopped == false) {
+                    //Also remove duplicate points
+                    /*bool duplicate = false;
+                    for (int j = 0; j < real_states.size(); j++) {
+                        nvis::fixed_vector<bool, 2> comp = all_trajectories[i].back() == real_trajectories[j].back();
+                        if (comp[0] && comp[1]) {
+                            duplicate = true;
+                            break;
+                        }
+                    }
+                    if (duplicate) continue;
+                    */
+
+                    real_trajectories.push_back(all_trajectories[i]);
+                    real_states.push_back(all_states[i]);
+                }
+            }
+            all_trajectories = real_trajectories;
+            all_states = real_states;
+
+            old_sample_count = nb_samples;
+            nb_samples = all_states.size();
+            printf("Removed %ld invalid streamlines\n", old_sample_count - nb_samples);
+            printf("Total of %ld samples being tracked.\n", nb_samples);
+        }
+
+        //Export data periodically
         if (current_target_time == next_export_time) {
             ++niter;
             _log_(0)
@@ -830,7 +1240,9 @@ int main(int argc, const char* argv[])
         // advance starting time
         current_start_time = current_target_time;
         _log_(1) << "current start time=" << current_start_time << std::endl;
+        printf("End of iteration\n");
     }
+    //printf("Exiting\n");
     std::clock_t clock_end=std::clock();
     auto timer_end = std::chrono::high_resolution_clock::now();
     export_results(t_max, std::chrono::duration<double, std::milli>(timer_end-timer_start).count(),

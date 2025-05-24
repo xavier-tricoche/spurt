@@ -1,7 +1,7 @@
 #ifndef __XAVIER_LOCATOR_HPP__
 #define __XAVIER_LOCATOR_HPP__
 
-#include <kdtree++/kdtree.hpp>
+#include <data/kdtree.hpp>
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 #include <stdexcept>

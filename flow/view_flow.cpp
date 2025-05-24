@@ -220,6 +220,7 @@ vtkSmartPointer<vtkActor> create_points(std::vector<Nrrd*> datasets, const std::
 }
 
 int main(int argc, char* argv[]) {
+	vtkObject::GlobalWarningDisplayOn();
     initialize(argc, (const char**)argv);
 
 	if (!name_mask.empty()) {
@@ -380,13 +381,18 @@ int main(int argc, char* argv[]) {
     actor->SetMapper(mapper);
 */
 
+	printf("A\n");
     vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
     renderer->SetBackground(0, 0, 0);
     renderer->AddActor(actor);
+	renderer->SetActiveCamera(vtkSmartPointer<vtkCamera>::New());
+	renderer->SetViewport(0.0, 0.0, 1.0, 1.0);
     vtkSmartPointer<vtkRenderWindow> window = vtkSmartPointer<vtkRenderWindow>::New();
     window->AddRenderer(renderer);
 	window->SetSize(res[0], res[1]);
+	window->SetOffScreenRendering(1);
     vtk_utils::fill_window(renderer, gbounds);
+	printf("B\n");
 
 	if (follow_camera) {
 		vtk_utils::track_camera_setting(renderer);
@@ -394,6 +400,7 @@ int main(int argc, char* argv[]) {
 	if (!name_camera.empty()) {
 		vtk_utils::import_camera_settings(name_camera, renderer);
 	}
+	printf("C\n");
 
     double width=gbounds.size()[0];
     double height=gbounds.size()[1];
@@ -406,8 +413,10 @@ int main(int argc, char* argv[]) {
     else if (res[1]==-1) res[1]=res[0]/ratio;
     if (verbose) std::cout << "Setting resolution to " << res << '\n';
     window->SetSize(res[0], res[1]);
+	printf("D\n");
 
     if (name_out.empty()) {
+		printf("F\n");
         // enter interactive mode
         vtkSmartPointer<vtkRenderWindowInteractor> interactor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
         interactor->SetRenderWindow(window);
@@ -416,9 +425,13 @@ int main(int argc, char* argv[]) {
         interactor->Start();
     }
     else {
+		printf("G\n");
         window->Render();
+		printf("H\n");
+		printf("%s\n", name_out.c_str());
         vtk_utils::save_frame(window, name_out);
     }
 
+	printf("E\n");
     return 0;
 }
