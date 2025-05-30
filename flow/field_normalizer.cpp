@@ -1,6 +1,6 @@
 #include <flow/lavd.hpp>
 
-//#include <data/locator.hpp>
+#include <data/locator.hpp>
 //Refer to reconstruction/resample.hpp
 
 #include <sstream>
@@ -12,6 +12,8 @@
 #include <stdexcept>
 #include <locale>
 #include <iomanip>
+#include <misc/option_parse.hpp>
+#include <sys/stat.h>
 
 #include <teem/nrrd.h>
 
@@ -27,8 +29,14 @@ using namespace spurt::lavd;
 std::ofstream log_file;
 spurt::log::dual_ostream spurt::lavd::_log_(log_file, std::cout, 1, 0, 0, true);
 
-std::array<size_t, 2> res({ 512, 512 });
+std::array<size_t, 2> res({ 512, 512 });	//Resolution of the reconstructed dataset
 std::array<double, 4> bnds;
+
+std::string folderPath = "./";		//Folder where the data is stored
+std::string keyword = "reshaped";	//Unique name for data items
+std::string outputName = "reshaped";
+std::string outputPath = "./normalized/";	//Folder where the output data is stored
+char mode = 't';					//Reconstruction methodology. t for kd tree, i for iterative (brute force)
 
 double gaussian_kernel(vec2 point1, vec2 point2, double h) {
 	double squared_distance = (point1[0] - point2[0]) * (point1[0] - point2[0]) + (point1[1] - point2[1]) * (point1[1] - point2[1]);
@@ -161,7 +169,10 @@ double mls(std::vector<vec2> points, std::vector<double> values, vec2 new_point)
 	return quadratic_basis(new_point).dot(coeffs);
 }
 
-double rbf(const std::vector<vec2> all_points, const std::vector<double> all_values, const vec2 new_point) {
+double rbf(const std::vector<vec2>* all_points_ptr, const std::vector<double>* all_values_ptr, const vec2 new_point) {
+	const std::vector<vec2> all_points = *all_points_ptr;
+	const std::vector<double> all_values = *all_values_ptr;
+	
 	//Calculate number of relevant points
 	//auto t1 = std::chrono::high_resolution_clock::now();
 	std::vector<int> indices = knn(all_points, new_point, 3);
@@ -209,6 +220,144 @@ double rbf(const std::vector<vec2> all_points, const std::vector<double> all_val
 	return result;
 }
 
+double rbf_kd_tree(spurt::point_locator<double, double, 2> kd_tree, const vec2 new_point) {
+
+	//std::vector<int> indices = knn(all_points, new_point, 3);
+
+	//size_t n = indices.size();
+
+	using point = spurt::data_point<double, double, 2>;
+	std::list<point> neighbors;
+	kd_tree.find_k_nearest(neighbors, { new_point[0], new_point[1] }, 3);
+	//kd_tree.find_within_range(neighbors, { new_point[0], new_point[1] }, 0.05);
+
+	size_t n = neighbors.size();
+	//if (n < 3) {
+	//	printf("NOT ENOUGH POINTS!\n");
+	//	exit(1);
+	//}
+	
+	std::vector<vec2> points(n);
+	std::vector<double> values(n);
+
+	size_t i = 0;
+	for (const auto& neighbor : neighbors) {
+		points[i] = neighbor.coordinate();
+		values[i] = neighbor.data();
+		i++;
+	}
+
+	Eigen::MatrixXd A(n, n);
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			A(i, j) = gaussian_kernel(points[i], points[i], 1);
+		}
+	}
+
+	Eigen::VectorXd b(n);
+	for (int i = 0; i < n; i++) {
+		b(i) = values[i];
+	}
+
+	Eigen::VectorXd w = A.colPivHouseholderQr().solve(b);
+
+	double result = 0.0;
+
+	for (int i = 0; i < n; i++) {
+		result += w[i] * gaussian_kernel(new_point, points[i], 1);
+	}
+
+	return result;
+}
+
+double bucket_rbf(size_t grid_index, nvis::vec2 point, std::vector<std::vector<vec3>> buckets, int k) {
+
+	grid_index = 2048;
+
+	//Grab adjacent buckets
+	int x = grid_index / res[1];
+	int y = grid_index % res[1];
+	//printf("%ld: %d %d\n", grid_index, x, y);
+	size_t neighboring_buckets[4] = { x * res[1] + y - x, x * res[1] + y - 1 - x, x * res[1] + y - res[1] - x + 1, x * res[1] + y - res[1] - x + 1 - 1 };
+	if (y == 0) {
+		neighboring_buckets[1] = -1;
+		neighboring_buckets[3] = -1;
+	}
+	if (y == res[1] - 1) {
+		neighboring_buckets[0] = -1;
+		neighboring_buckets[2] = -1;
+	}
+	if (x == 0) {
+		neighboring_buckets[2] = -1;
+		neighboring_buckets[3] = -1;
+	}
+	if (x == res[0] - 1) {
+		neighboring_buckets[0] = -1;
+		neighboring_buckets[1] = -1;
+	}
+
+	//printf("%ld %ld %ld %ld\n", neighboring_buckets[0], neighboring_buckets[1], neighboring_buckets[2], neighboring_buckets[3]);
+
+	//Create lists of candidate nodes
+	std::vector<vec2> points;
+	std::vector<double> values;
+
+	for (int i = 0; i < 4; i++) {
+		if (neighboring_buckets[i] == -1) continue;
+		for (const auto& point : buckets[neighboring_buckets[i]]) {
+			points.push_back(nvis::vec2(point[0], point[1]));
+			values.push_back(point[2]);
+		}
+	}
+	//knn
+	std::vector<int> indices = knn(points, point, k);
+	//printf("%ld: %d %d %d\n", indices.size(), indices[0], indices[1], indices[2]);
+	while (points.size() < 3) {
+		points.push_back(nvis::vec2(0.0, 0.0));
+		values.push_back(0.0);
+	}
+
+	std::vector<vec2> points_inter(k);
+	std::vector<double> values_inter(k);
+
+	//printf("A\n");
+
+	for (int i = 0; i < k; i++) {
+		//printf("%d\n", i);
+		points_inter[i] = points[indices[i]];
+		//printf("%d\n", i);
+		values_inter[i] = values[indices[i]];
+		//printf("%d\n", i);
+	}
+	//printf("B\n");
+
+	points = points_inter;
+	values = values_inter;
+
+	Eigen::MatrixXd A(k, k);
+	for (int i = 0; i < k; i++) {
+		for (int j = 0; j < k; j++) {
+			A(i, j) = gaussian_kernel(points[i], points[i], 1);
+		}
+	}
+
+	Eigen::VectorXd b(k);
+	for (int i = 0; i < k; i++) {
+		b(i) = values[i];
+	}
+
+	Eigen::VectorXd w = A.colPivHouseholderQr().solve(b);
+
+	double result = 0.0;
+
+	for (int i = 0; i < k; i++) {
+		result += w[i] * gaussian_kernel(point, points[i], 1);
+	}
+
+	return result;
+}
+
+//Takes an input file, reconstructs it, and saves it
 void convert_file(const char* filename) {
 	printf("Normalizing file: %s\n", filename);
 
@@ -274,6 +423,7 @@ void convert_file(const char* filename) {
 	std::vector<vec2> normalized_pos;
 	for (int i = 0; i < res[0]; i++) {
 		for (int j = 0; j < res[1]; j++) {
+			//y increments, then x increments
 			normalized_pos.push_back(nvis::vec2(bnds[0] + stepx*i, bnds[1] + stepy*j));
 			//printf("%lf %lf\n", normalized_pos.back()[0], normalized_pos.back()[1]);
 		}
@@ -282,7 +432,41 @@ void convert_file(const char* filename) {
 	//Generate values for each point
 	std::vector<double> normalized_vals(normalized_pos.size());
 
-	spurt::ProgressDisplay progress(false), total_progress(false);
+	// ------------------------------------------------------------------------------
+
+	//Create KD Tree
+	using point = spurt::data_point<double, double, 2>;
+	using locator = spurt::point_locator<double, double, 2>;
+
+	std::vector<point> points;
+	printf("Generating vector of %ld points\n", val.size());
+	for (size_t i = 0; i < val.size(); i++) {
+		points.emplace_back(point({ pos[i][0], pos[i][1] }, val[i]));
+	}
+	printf("Generating kd-tree from vector\n");
+	locator kd_tree(points.begin(), points.end());
+	printf("kd-tree created. Beginning normalization\n");
+
+	// ----------------------------------------------------------------------------------
+
+	//Bucket approach
+	//printf("Generating buckets...\n");
+	//std::vector<std::vector<vec3>> buckets((res[0]-1) * (res[1]-1));
+	//for (size_t i = 0; i < val.size(); i++) {
+	//	int x = (int)((pos[i][0] - bnds[0]) / stepx);
+	//	int y = (int)((pos[1][1] - bnds[1]) / stepy);
+	//	if (x < 0 || x > res[0] - 1 || y < 0 || y > res[1] - 1) {
+	//		printf("Invalid bucket!\n");
+	//		exit(1);
+	//	}
+	//	buckets[x + (res[0] - 1) * y].push_back(nvis::vec3(pos[i][0], pos[i][1], val[i]));
+	//}
+	//printf("Buckets generated\n");
+
+	// ---------------------------------------------------------------------------------
+
+	//Generate normalization timer
+	spurt::ProgressDisplay progress(false);
 	progress.start(normalized_vals.size(), "normalization");
 	progress.set_active(true);
 
@@ -295,9 +479,17 @@ void convert_file(const char* filename) {
 			#else
 			const int thread = 0;
 			#endif
-			if (!thread) progress.update(i);
+			if (!thread) {
+				progress.update(i);
+			}
 
-			normalized_vals[i] = rbf(pos, val, normalized_pos[i]);
+			if (mode == 'i') {
+				normalized_vals[i] = rbf(&pos, &val, normalized_pos[i]);
+			}
+			else if (mode == 't') {
+				normalized_vals[i] = rbf_kd_tree(kd_tree, normalized_pos[i]);
+			}
+			//normalized_vals[i] = bucket_rbf(i, normalized_pos[i], buckets, 3);
 		}
 	}
 	progress.end();
@@ -315,7 +507,8 @@ void convert_file(const char* filename) {
 	if (nrrdWrap_nva(nrrd, out_data.data(), nrrdTypeDouble, 2, size)) {
 		std::cout << "Error wrapping NRRD: " << biffGetDone(NRRD) << std::endl;
 	}
-	std::string name = std::string("normalized/reshaped_") + (filename + strlen(filename) - 11);
+	//Save to file
+	std::string name = std::string(outputPath + outputName + "_") + (filename + strlen(filename) - 11);
 	if (nrrdSave(name.c_str(), nrrd, NULL)) {
 		std::cerr << "Error writing NRRD: " << biffGetDone(NRRD) << std::endl;
 	}
@@ -325,9 +518,42 @@ void convert_file(const char* filename) {
 }
 
 int main(int argc, const char* argv[]) {
+	namespace xcl = spurt::command_line;
 
-	std::string folderPath = "./";
-	std::string keyword = "neighbor_deletion";
+	xcl::option_traits
+		required(true, false, "Required Options"),
+		optional(false, false, "Optional Group");
+	xcl::option_parser parser(argv[0],
+		"Reconstruct lavd data");
+
+	try {
+		parser.use_short_symbols(true);
+		parser.use_brackets(true);
+		parser.add_value("input_directory", folderPath, "Input directory", optional);
+		parser.add_value("output_directory", outputPath, "Output directory", optional);
+		parser.add_value("input_keyword", keyword, "Keyword for input files", optional);
+		parser.add_value("mode", mode, "Reconstruction method", optional);	//t for kdtree, b for bucket, i for iterative
+		parser.parse(argc, argv);
+	}
+	catch (std::runtime_error& err) {
+		printf("An error has occurred while parsing input arguments.\n");
+		exit(1);
+	}
+
+	if (mode != 't' && mode != 'i') {
+		printf("Invalid mode input. Use 't' for kd tree or 'i' for iterative.\n");
+		exit(1);
+	}
+	struct stat sb;
+	if (stat(folderPath.c_str(), &sb) != 0) {
+		printf("Provided input directory does not exist.\n");
+		exit(1);
+	}
+	if (stat(outputPath.c_str(), &sb) != 0) {
+		printf("Provided output directory does not exist.\n");
+		exit(1);
+	}
+
 	for (const auto& entry : fs::directory_iterator(folderPath)) {
 		if (entry.is_regular_file()) {
 			std::string filename = entry.path().filename().string();
@@ -338,7 +564,6 @@ int main(int argc, const char* argv[]) {
 			for (int i = 0; i < 5; i++) {
 				hours[i] = filename.c_str()[strlen(filename.c_str()) - 11 + i];
 			}
-			std::string outputPath = "./normalized/";
 			for (const auto& entry : fs::directory_iterator(outputPath)) {
 				if (entry.is_regular_file()) {
 					std::string outfile = entry.path().filename().string();
@@ -349,7 +574,7 @@ int main(int argc, const char* argv[]) {
 					}
 				}
 			}
-			if (skip) {
+			if (skip && filename.find(".nrrd") != std::string::npos && filename.find(keyword) != std::string::npos) {
 				printf("Skipping file %s due to overlapping hour count\n", filename.c_str());
 				continue;
 			}

@@ -1,7 +1,7 @@
 #ifndef __XAVIER_LOCATOR_HPP__
 #define __XAVIER_LOCATOR_HPP__
 
-#include <data/kdtree.hpp>
+#include <third_party/kdtree++/kdtree.hpp>
 #include <math/fixed_vector.hpp>
 #include <math/bounding_box.hpp>
 #include <stdexcept>
@@ -101,6 +101,31 @@ public:
     
     const_iterator begin() const { return t.begin(); }
     const_iterator end() const { return t.end(); }
+
+    void find_k_nearest(std::list<point_type>& n, const coord_type& c, size_t k) {
+        if (t.empty() || k == 0) return;
+
+        std::list<point_type> all_neighbors;
+
+        // Start with a big range. You can refine this later if needed.
+        value_type search_range = std::numeric_limits<value_type>::max();
+
+        t.find_within_range(point_type(c), 0.1, std::back_inserter(all_neighbors));
+        //printf("Found %ld entries\n", all_neighbors.size());
+
+        // Sort the neighbors by distance
+        all_neighbors.sort([&c](const point_type& a, const point_type& b) {
+            return nvis::norm(a.coordinate() - c) < nvis::norm(b.coordinate() - c);
+            });
+
+        // Take up to k nearest
+        size_t count = 0;
+        for (const auto& p : all_neighbors) {
+            if (count >= k) break;
+            n.push_back(p);
+            ++count;
+        }
+    }
 
     mutable tree_type t;
 };
