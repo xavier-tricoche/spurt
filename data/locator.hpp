@@ -74,7 +74,7 @@ public:
         return t.size();
     }
 
-    point_type find_nearest_point(const coord_type& c) {
+    point_type find_nearest_point(const coord_type& c) const {
         if (t.empty()) throw std::runtime_error("invalid query on empty tree");
 
         std::pair<const_iterator, value_type> found = t.find_nearest(point_type(c), std::numeric_limits<value_type>::max());
@@ -102,7 +102,7 @@ public:
     const_iterator begin() const { return t.begin(); }
     const_iterator end() const { return t.end(); }
 
-    void find_k_nearest(std::list<point_type>& n, const coord_type& c, size_t k) {
+    void find_k_nearest(std::list<point_type>& n, const coord_type& c, size_t k) const {
         if (t.empty() || k == 0) return;
 
         std::list<point_type> all_neighbors;
