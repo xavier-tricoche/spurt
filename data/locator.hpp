@@ -91,11 +91,11 @@ public:
         }
     }
     
-    void find_within_range(std::list<point_type>& n, const coord_type& c, const value_type& dist) {
+    void find_within_range(std::list<point_type>& n, const coord_type& c, const value_type& dist) const {
         t.find_within_range(point_type(c), dist, std::back_inserter(n));
     }
 
-    void find_within_range(std::list<point_type>& n, const region_type& r) {
+    void find_within_range(std::list<point_type>& n, const region_type& r) const  {
         t.find_within_range(r, std::back_inserter(n));
     }
     
