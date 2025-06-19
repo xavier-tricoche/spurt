@@ -18,6 +18,10 @@
 #include <teem/nrrd.h>
 
 #ifdef _OPENMP
+#undef _OPENMP
+#endif
+
+#ifdef _OPENMP
 #include <omp.h>
 #endif
 
@@ -174,9 +178,9 @@ double rbf(const std::vector<vec2>* all_points_ptr, const std::vector<double>* a
 	const std::vector<double> all_values = *all_values_ptr;
 	
 	//Calculate number of relevant points
-	//auto t1 = std::chrono::high_resolution_clock::now();
+	auto t1 = std::chrono::high_resolution_clock::now();
 	std::vector<int> indices = knn(all_points, new_point, 3);
-	//auto t2 = std::chrono::high_resolution_clock::now();
+	auto t2 = std::chrono::high_resolution_clock::now();
 
 	size_t n = indices.size();
 
@@ -220,7 +224,7 @@ double rbf(const std::vector<vec2>* all_points_ptr, const std::vector<double>* a
 	return result;
 }
 
-double rbf_kd_tree(spurt::point_locator<double, double, 2> kd_tree, const vec2 new_point) {
+double rbf_kd_tree(const spurt::point_locator<double, double, 2>& kd_tree, const vec2 new_point) {
 
 	//std::vector<int> indices = knn(all_points, new_point, 3);
 
@@ -228,8 +232,8 @@ double rbf_kd_tree(spurt::point_locator<double, double, 2> kd_tree, const vec2 n
 
 	using point = spurt::data_point<double, double, 2>;
 	std::list<point> neighbors;
-	kd_tree.find_k_nearest(neighbors, { new_point[0], new_point[1] }, 3);
-	//kd_tree.find_within_range(neighbors, { new_point[0], new_point[1] }, 0.05);
+	// kd_tree.find_k_nearest(neighbors, { new_point[0], new_point[1] }, 3);
+	kd_tree.find_within_range(neighbors, { new_point[0], new_point[1] }, 0.05);
 
 	size_t n = neighbors.size();
 	//if (n < 3) {
@@ -247,27 +251,15 @@ double rbf_kd_tree(spurt::point_locator<double, double, 2> kd_tree, const vec2 n
 		i++;
 	}
 
-	Eigen::MatrixXd A(n, n);
+	// Eigen::MatrixXd A(n, n);
+	double value = 0;
+	double sum = 0;
 	for (int i = 0; i < n; i++) {
-		for (int j = 0; j < n; j++) {
-			A(i, j) = gaussian_kernel(points[i], points[i], 1);
-		}
+		double weight = gaussian_kernel(points[i], new_point, 1);
+		sum += weight;
+		value += weight * values[i];
 	}
-
-	Eigen::VectorXd b(n);
-	for (int i = 0; i < n; i++) {
-		b(i) = values[i];
-	}
-
-	Eigen::VectorXd w = A.colPivHouseholderQr().solve(b);
-
-	double result = 0.0;
-
-	for (int i = 0; i < n; i++) {
-		result += w[i] * gaussian_kernel(new_point, points[i], 1);
-	}
-
-	return result;
+	return value / sum;
 }
 
 double bucket_rbf(size_t grid_index, nvis::vec2 point, std::vector<std::vector<vec3>> buckets, int k) {
@@ -367,6 +359,8 @@ void convert_file(const char* filename) {
 	std::vector<double> data;
 	spurt::nrrd_utils::to_vector(data, nin);
 
+	// std::cout << "Stop 1\n";
+
 	//Sort data by meaning
 	std::vector<vec2> pos;
 	std::vector<double> val;
@@ -375,17 +369,28 @@ void convert_file(const char* filename) {
 		val.push_back(data[i + 2]);
 	}
 
+	// std::cout << "Stop 2\n";
+
 	//Create normalized field
 	const std::vector<std::string>& comments = traits.comments();
+	std::cout << "There are " << comments.size() << " comments\n";
+	std::cout << "Comments = ";
+	std::copy(comments.begin(), comments.end(), std::ostream_iterator<std::string>(std::cout, "\n"));
+
 	std::regex line_regex("[ ]*\\*[ ]*(.*)[ ]*=[ ]*(.*)$");
 	std::regex res_regex("(.*)[ ]*x[ ]*(.*)$");
 	std::regex bnd_regex("(.*)[ ]*->[ ]*(.*)$");
 	std::smatch line_match, res_match, bnd_match;
 	std::string param, val_as_str;
-	if (std::regex_search(comments[6], line_match, line_regex)) {
-		param = line_match[1].str();
-		val_as_str = line_match[2].str();
+	// std::cout << "Step 2.5\n";
+	if (!comments.empty() && comments.size() >= 7) {
+		if (std::regex_search(comments[6], line_match, line_regex)) {
+			param = line_match[1].str();
+			val_as_str = line_match[2].str();
+		}
 	}
+	// std::cout << "param = " << param << '\n';
+	// std::cout << "val_as_str = " << val_as_str << '\n';
 	if (param == "resolution") {
 		if (std::regex_search(val_as_str, res_match, res_regex)) {
 			res[0] = std::stoi(res_match[1].str());
@@ -394,6 +399,8 @@ void convert_file(const char* filename) {
 		else throw std::runtime_error("invalid resolution syntax in restart file");
 	}
 	//printf("%s %s\n", param.c_str(), val_as_str.c_str());
+
+	// std::cout << "Stop 3\n";
 
 	if (std::regex_search(comments[7], line_match, line_regex)) {
 		param = line_match[1].str();
@@ -413,9 +420,14 @@ void convert_file(const char* filename) {
 		}
 		else throw std::runtime_error("invalid bounds syntax in restart file");
 	}
-
 	double stepx = (bnds[2] - bnds[0]) / (res[0] - 1);
 	double stepy = (bnds[3] - bnds[1]) / (res[1] - 1);
+
+	// double stepx = 0.034638; // (bnds[2] - bnds[0]) / (res[0] - 1);
+	// double stepy = 0.024932; // (bnds[3] - bnds[1]) / (res[1] - 1);
+	// bnds[0] = 262.05;
+	// bnds[1] = 18.05;
+
 
 	//printf("%lf x %lf step size.\n", stepx, stepy);
 	//exit(0);
@@ -474,7 +486,7 @@ void convert_file(const char* filename) {
 	{
 		#pragma omp for schedule(dynamic,1)
 		for (size_t i = 0; i < normalized_vals.size(); i++) {
-			#if _OPENMP
+			#ifdef _OPENMP
 			const int thread = omp_get_thread_num();
 			#else
 			const int thread = 0;
@@ -567,6 +579,7 @@ int main(int argc, const char* argv[]) {
 			for (const auto& entry : fs::directory_iterator(outputPath)) {
 				if (entry.is_regular_file()) {
 					std::string outfile = entry.path().filename().string();
+					std::cout << "outfile is " << outfile << '\n';
 
 					if (outfile.find(hours) != std::string::npos) {
 						skip = true;
@@ -580,10 +593,12 @@ int main(int argc, const char* argv[]) {
 			}
 
 			if (filename.find(keyword) != std::string::npos && filename.find(".nrrd") != std::string::npos) {
+				std::cout << "filename is " << entry.path().string().c_str() << '\n';
 				printf("\n");
-				convert_file(filename.c_str());
+				convert_file(entry.path().string().c_str());
 				printf("\n");
 			}
+			break;
 		}
 	}
 }
