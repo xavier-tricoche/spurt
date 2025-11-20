@@ -302,6 +302,7 @@ struct observer
 
     value_t vorticity_deviation(const vec2& x, value_t t) {
         try {
+            return 1;
             value_t w = m_vort( vec3(x[0], x[1], t ) );
             value_t aw = m_avg_vort( vec1(t) );
             //return fabs(w-aw);
@@ -353,9 +354,10 @@ void import_data(const std::vector< std::string >& vel_filenames,
     //     std::cout << "filename[" << i << "]=" << vel_filenames[i] << '\n';
     // }
 
+    printf("%ld\n", vel_filenames.size());
     size_t n_available = std::min(nslices, vel_filenames.size()-start_id+support_radius);
     size_t n_used = std::min(n_available, static_cast<size_t>((t_max-t_init)/t_between_files+2*support_radius));
-    //printf("n_used: %ld\n", n_used);
+    printf("n_used: %ld\n", n_used);
     _log_(1)
         << "import_data: start_id=" << start_id
         << ", #filenames=" << vel_filenames.size()
@@ -371,6 +373,7 @@ void import_data(const std::vector< std::string >& vel_filenames,
     std::vector< Nrrd* > vel_tsteps(n_used);
     std::vector< Nrrd* > vor_tsteps(n_used);
     size_t first = ( start_id >= support_radius ? start_id-support_radius : static_cast<size_t>(0) );
+    printf("First: %ld\n", first);
     for (size_t i=first; i<first+n_used; ++i) {
         _log_(1) << "Reading " << vel_filenames[i] << "... " << std::flush;
         vel_tsteps[i-first]=spurt::nrrd_utils::readNrrd(vel_filenames[i]);
@@ -523,7 +526,7 @@ void import_data(const std::vector< std::string >& vel_filenames,
     for (size_t i=0; i<vor_tsteps.size(); ++i) {
         nrrdNuke(vor_tsteps[i]);
     }
-    nrrdNuke(av);
+nrrdNuke(av);
 }
 
 void export_results(double current_time, double wall_time, double cpu_time, bool final) {
@@ -531,40 +534,40 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
     std::ostringstream os;
     ios::fmtflags default_settings = os.flags();
     if (long_name) {
-        os << name_out << "_started_at_" << start_time_str << "_flowmap+lavd_" << std::setw(5) << std::setfill('0') << current_time/spurt::lavd::HOUR << "h_";
+        os << name_out << "_started_at_" << start_time_str << "_flowmap+lavd_" << std::setw(5) << std::setfill('0') << current_time / spurt::lavd::HOUR << "h_";
         os << res[0] << "x" << res[1] << "_" << std::setprecision(2)
-           << std::scientific << eps;
+            << std::scientific << eps;
         os.flags(default_settings);
     }
     else {
-        os << name_out << "_fmap+lavd_" << std::setw(5) << std::setfill('0') << current_time/spurt::lavd::HOUR << "h";
+        os << name_out << "_fmap+lavd_" << std::setw(5) << std::setfill('0') << current_time / spurt::lavd::HOUR << "h";
     }
     std::string basename = os.str();
 
-	std::vector<std::string> comments;
+    std::vector<std::string> comments;
     os.clear(); os.str("");
     os << "This file was produced by " << me
-       << ". 1st axis corresponds to (flowmap_x, flowmap_y, lavd), where "
-       << "lavd stands for Lagrangian averaged vorticity deviation.\n";
-	comments.push_back(os.str()); os.clear(); os.str("");
+        << ". 1st axis corresponds to (flowmap_x, flowmap_y, lavd), where "
+        << "lavd stands for Lagrangian averaged vorticity deviation.\n";
+    comments.push_back(os.str()); os.clear(); os.str("");
     os << "Computation parameters:\n";
-	comments.push_back(os.str()); os.clear(); os.str("");
+    comments.push_back(os.str()); os.clear(); os.str("");
     os << " * input file=" << name_in << '\n';
-	comments.push_back(os.str()); os.clear(); os.str("");
-	os << " * current time=" << current_time << "\n";
-	comments.push_back(os.str()); os.clear(); os.str("");
+    comments.push_back(os.str()); os.clear(); os.str("");
+    os << " * current time=" << current_time << "\n";
+    comments.push_back(os.str()); os.clear(); os.str("");
     os << " * tmax=" << current_time << '\n';
-	comments.push_back(os.str()); os.clear(); os.str("");
+    comments.push_back(os.str()); os.clear(); os.str("");
     os << " * epsilon=" << eps << '\n';
-	comments.push_back(os.str()); os.clear(); os.str("");
+    comments.push_back(os.str()); os.clear(); os.str("");
     os << " * resolution=" << res[0] << "x" << res[1] << '\n';
-	comments.push_back(os.str()); os.clear(); os.str("");
+    comments.push_back(os.str()); os.clear(); os.str("");
     os << " * bounds=" << region.min() << "->" << region.max() << '\n';
-	comments.push_back(os.str()); os.clear(); os.str("");
+    comments.push_back(os.str()); os.clear(); os.str("");
     os << " * dt=" << dt << '\n';
-	comments.push_back(os.str()); os.clear(); os.str("");
+    comments.push_back(os.str()); os.clear(); os.str("");
     os << " * kernel size=" << support_radius << '\n';
-	comments.push_back(os.str());
+    comments.push_back(os.str());
 
     spurt::lavd::export_results< float >(
         current_time,
@@ -579,23 +582,28 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
         comments,
         all_trajectories,
         all_states
-    );
+        );
 }
 
-//
+//fabs
 LAVD_state lavd_state_lerp(LAVD_state a, LAVD_state b, LAVD_state c, Point center) {
     LAVD_state new_state = {};
-    new_state.m_vd = (a.m_vd + b.m_vd + c.m_vd) / 3;
-    new_state.m_acc_vd = (a.m_acc_vd + b.m_acc_vd + c.m_acc_vd) / 3;
-    new_state.m_time = (a.m_time + b.m_time + c.m_time) / 3;
-    new_state.m_acc_time = (a.m_acc_time + b.m_acc_time + c.m_acc_time) / 3;
+    new_state.m_vd = 0;
+    new_state.m_acc_vd = 0;
+    new_state.m_time = 0;
+    new_state.m_acc_time = 0;
+    //new_state.m_vd = (a.m_vd + b.m_vd + c.m_vd) / 3;
+    //new_state.m_acc_vd = (a.m_acc_vd + b.m_acc_vd + c.m_acc_vd) / 3;
+    //new_state.m_time = (a.m_time + b.m_time + c.m_time) / 3;
+    //new_state.m_acc_time = (a.m_acc_time + b.m_acc_time + c.m_acc_time) / 3;
     new_state.m_pos[0] = center.x();
     new_state.m_pos[1] = center.y();
     new_state.m_stopped = false;
+    new_state.meta_lifetime = 0;
     return new_state;
 }
 
-int add_border_states(value_t time, NrrdScalarField<1>* avg_vorticityf, NrrdScalarField<3>* vorticityf) {
+int add_border_states(value_t time, NrrdScalarField<1>* avg_vorticityf, NrrdScalarField<3>* vorticityf, std::vector<LAVD_state>* current_states) {
     int added = 0;
     step_x = region.size()[0] / static_cast<value_t>(res[0] - 1);
     step_y = region.size()[1] / static_cast<value_t>(res[1] - 1);
@@ -606,16 +614,30 @@ int add_border_states(value_t time, NrrdScalarField<1>* avg_vorticityf, NrrdScal
     //Calculate border positions
     std::vector<vec2> positions = {};
     //printf("%lf, %lf\n", step_x, step_y);
-    for (i=1; i < res[0] - 1; i++) {
+    for (i = 1; i < res[0] - 1; i++) {
         positions.push_back(region.min() + vec2(i * step_x, 1 * step_y));
         positions.push_back(region.min() + vec2(i * step_x, region.max()[1] - region.min()[1] - step_y));
-        added+=2;
+        added += 2;
     }
     for (i = 1; i < res[1] - 1; i++) {
         positions.push_back(region.min() + vec2(1 * step_x, i * step_y));
         positions.push_back(region.min() + vec2(region.max()[0] - region.min()[0] - step_x, i * step_y));
-        added+=2;
+        added += 2;
     }
+
+    //Find relevant states
+    std::vector<LAVD_state> states;
+    for (LAVD_state state : *current_states) {
+        if ((abs(state.m_pos[0] - region.min()[0]) < step_x ||
+            abs(state.m_pos[1] - region.min()[1]) < step_y ||
+            abs(state.m_pos[0] - region.max()[0]) < step_x ||
+            abs(state.m_pos[1] - region.max()[1]) < step_y)){
+                states.push_back(state);
+            }
+    }
+    //printf("Number of border-relevant points: %ld\n", states.size());
+    //printf("%lf, %lf\n", (*current_states)[i].m_pos[0], region.min()[0]);
+
     //Generate states from positions
     for (i = 0; i < positions.size(); i++) {
         //printf("%d: %lf %lf\n", i, positions[i][0], positions[i][1]);
@@ -630,16 +652,29 @@ int add_border_states(value_t time, NrrdScalarField<1>* avg_vorticityf, NrrdScal
 
         value_t w = (*vorticityf)(vec3(positions[i][0], positions[i][1], time));
         value_t aw = (*avg_vorticityf)(vec1(time));
+        new_state.m_vd = 0;
         //new_state.m_vd = fabs(w - aw);
-        new_state.m_vd = w - aw;
+        //new_state.m_vd = w - aw;
 
         if (w == 0.0) {
             added--;
             continue;
         }
 
-        new_state.m_acc_vd = new_state.m_vd;
-        all_states.push_back(new_state);
+        bool keep = true;
+        for (LAVD_state state : states) {
+            if (((state.m_pos[0] - new_state.m_pos[0]) * (state.m_pos[0] - new_state.m_pos[0])) + ((state.m_pos[1] - new_state.m_pos[1]) * (state.m_pos[1] - new_state.m_pos[1])) < step_x) {
+                //Too close to another point
+                keep = false;
+                added--;
+                break;
+            }
+        }
+        if (keep) {
+
+            new_state.m_acc_vd = new_state.m_vd;
+            all_states.push_back(new_state);
+        }
     }
     return added;
 }
@@ -697,6 +732,7 @@ int main(int argc, const char* argv[])
         std::string velname, vortname;
         value_t avg;
         info_file >> velname >> vortname >> avg;
+        if (velname[0] == '\0') continue;
         velocity_filenames.push_back(parent_dir + '/' + velname);
         vorticity_filenames.push_back(parent_dir + '/' + vortname);
     }
@@ -732,7 +768,7 @@ int main(int argc, const char* argv[])
 		Nrrd* nin = spurt::nrrd_utils::readNrrd(restart_name);
 		spurt::nrrd_utils::to_vector(restart_values, nin);
 		for (size_t i=0; i<all_trajectories.size(); ++i) {
-			all_trajectories[i].push_back(nvis::vec2(restart_values[3*i], restart_values[3*i+1]));
+			all_trajectories[i].push_back(nvis::vec2(restart_values[4*i], restart_values[4*i+1]));
 		}
 	}
 
@@ -740,6 +776,7 @@ int main(int argc, const char* argv[])
     _log_(1) << "support radius = " << support_radius << std::endl;
 
     // initialize velocity and vorticity volumes
+    printf("Importing file(s) set: %ld\n", (long)(t_init / HOUR / 3));
     import_data(velocity_filenames, vorticity_filenames, t_init/HOUR/3);
 
     size_t counter = 0;
@@ -796,6 +833,7 @@ int main(int argc, const char* argv[])
         nb_lost = 0;
         size_t nb_early = 0;
         value_t current_target_time = std::min(current_t_max, next_export_time);
+        if (current_start_time == current_target_time) break;
 
         std::clock_t loop_clock_begin=std::clock();
         auto loop_timer_start = std::chrono::high_resolution_clock::now();
@@ -880,7 +918,8 @@ int main(int argc, const char* argv[])
                     try {
                         an_observer.initialize(x0, current_t_min);
 						if (!restart_name.empty()) {
-							all_states[n].m_acc_vd = restart_values[3*n+2];
+							all_states[n].m_acc_vd = restart_values[4*n+2];
+                            all_states[n].meta_lifetime = restart_values[4*n+3];
 						}
                     }
                     catch( std::exception& e ) {
@@ -922,95 +961,6 @@ int main(int argc, const char* argv[])
 	    progress.end();
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-        /*printf("Performing Delaunay triangulation...\n");
-        //Determine thresholds for interpolation based on expected image resolution
-        double edge_threshold = step_x * step_x + step_y * step_y;  //anticipated edge length *squared*
-        double area_threshold = edge_threshold / 2;
-        long int added_points = -1;
-        //Repeatedly add points as many times as is necessary to maintain the expected resolution
-        do {
-            //Add points to fill in gaps
-            std::vector<Point> points = {};
-            std::map<Point, size_t> point_map = {};
-            for (int i = 0; i < nb_samples; i++) {
-                points.push_back(Point(all_states[i].m_pos[0], all_states[i].m_pos[1]));
-                point_map.insert({ Point(all_states[i].m_pos[0], all_states[i].m_pos[1]), i });
-            }
-            added_points = 0;
-            //Delaunay triangulation to find empty areas
-            Delaunay dt;
-            dt.insert(points.begin(), points.end());
-            std::vector<LAVD_state> new_points = {};
-            for (auto f = dt.finite_faces_begin(); f != dt.finite_faces_end(); f++) {
-                Point a = f->vertex(0)->point();
-                Point b = f->vertex(1)->point();
-                Point c = f->vertex(2)->point();
-                double area = std::abs((a.x() * (b.y() - c.y()) +
-                    b.x() * (c.y() - a.y()) +
-                    c.x() * (a.y() - b.y())) / 2.0);
-                //Skip areas that are questionable
-                if ((all_states[point_map[a]].m_stopped == true || all_states[point_map[b]].m_stopped == true || all_states[point_map[c]].m_stopped == true) ||
-                    (0)) {
-                    continue;
-                }
-                if (area > area_threshold || CGAL::squared_distance(a, b) > edge_threshold || CGAL::squared_distance(a, c) > edge_threshold || CGAL::squared_distance(c, b) > edge_threshold) {
-                    //Empty area identified
-                    //Recover lavd states
-                    LAVD_state one = all_states[point_map[a]];
-                    LAVD_state two = all_states[point_map[b]];
-                    LAVD_state three = all_states[point_map[c]];
-                    //Lerp to create new lavd state
-                    new_points.push_back(lavd_state_lerp(one, two, three));
-                    std::vector<vec2> new_trajectory = {};
-                    vec2 new_vector = vec2((all_trajectories[point_map[a]].back()[0] + all_trajectories[point_map[b]].back()[0] + all_trajectories[point_map[c]].back()[0]) / 3,
-                        (all_trajectories[point_map[a]].back()[1] + all_trajectories[point_map[b]].back()[1] + all_trajectories[point_map[c]].back()[1]) / 3);
-                    new_trajectory.push_back(new_vector);
-                    all_trajectories.push_back(new_trajectory);
-                    added_points++;
-                }
-                else if (area < area_threshold / 4 || (CGAL::squared_distance(a, b) < edge_threshold / 4 && CGAL::squared_distance(a, c) < edge_threshold / 4 && CGAL::squared_distance(c, b) < edge_threshold / 4)) {
-                    //Suspend compressed points
-                    double centerx = (all_states[point_map[a]].m_pos[0] + all_states[point_map[b]].m_pos[0] + all_states[point_map[c]].m_pos[0]) / 3;
-                    double centery = (all_states[point_map[a]].m_pos[1] + all_states[point_map[b]].m_pos[1] + all_states[point_map[c]].m_pos[1]) / 3;
-
-                    double da = CGAL::squared_distance(a, Point(centerx, centery));
-                    double db = CGAL::squared_distance(b, Point(centerx, centery));
-                    double dc = CGAL::squared_distance(c, Point(centerx, centery));
-                    if (da < db && da < dc) {
-                        all_states[point_map[a]].m_stopped = true;
-                    }
-                    else if (db < dc) {
-                        all_states[point_map[b]].m_stopped = true;
-                    }
-                    else {
-                        all_states[point_map[c]].m_stopped = true;
-                    }
-                }
-            }
-            all_states.insert(all_states.end(), new_points.begin(), new_points.end());
-            printf("Added %ld samples.\n", new_points.size());
-            nb_samples += new_points.size();
-            //all_trajectories.resize(nb_samples);
-        } while (added_points > acceptable_misses);
-        printf("Total of %ld samples being tracked.\n", nb_samples);
-
-        printf("Removing stopped points...\n");
-        size_t suspended = 0;
-        //Remove suspended points
-        for (size_t i = 0; i < all_states.size(); i++) {
-            if (all_states[i].m_stopped == true) {
-                all_states.erase(all_states.begin() + i);
-                all_trajectories.erase(all_trajectories.begin() + i);
-                i--;
-                suspended++;
-            }
-        }
-        printf("There are %ld suspended points\n", suspended);
-        printf("Removed %ld/%ld samples.\n", nb_samples - all_trajectories.size(), nb_samples);
-        nb_samples = all_trajectories.size();
-        printf("Total of %ld samples being tracked.\n", nb_samples);*/
-        //printf("%ld %ld");
-
         printf("Adding streamlines...\n");
         value_t res_distance = step_x;
         std::vector<Delaunay::Finite_faces_iterator> triangles;
@@ -1022,7 +972,10 @@ int main(int argc, const char* argv[])
             if (point_map.count(Point(all_states[i].m_pos[0], all_states[i].m_pos[1])) != 0) continue;          //Checking for duplicate points!!!
             points.push_back(Point(all_states[i].m_pos[0], all_states[i].m_pos[1]));
             point_map.insert({ Point(all_states[i].m_pos[0], all_states[i].m_pos[1]), i });
+
+            all_states[i].m_stopped = true;
         }
+
         //Use Delaunay triangulation to find voids in the visualization
         printf("Performing Delaunay triangulation...\n");
         Delaunay dt;
@@ -1033,6 +986,10 @@ int main(int argc, const char* argv[])
             Point a = f->vertex(0)->point();
             Point b = f->vertex(1)->point();
             Point c = f->vertex(2)->point();
+            all_states[point_map[a]].m_stopped = false;
+            all_states[point_map[b]].m_stopped = false;
+            all_states[point_map[c]].m_stopped = false;
+
             Point circumcenter = CGAL::circumcenter(a, b, c);
             double dist = sqrt(CGAL::squared_distance(a, circumcenter)) * 2;
             if (dist > res_distance * 2) {
@@ -1081,58 +1038,51 @@ int main(int argc, const char* argv[])
             Point circumcenter = CGAL::circumcenter(a, b, c);
             double dist = sqrt(CGAL::squared_distance(a, circumcenter)) * 2;
             if (dist < res_distance / 2) {
-                if (dist > res_distance / 4) {
-                    triangles.push_back(f);
-                }
+                //if (dist > res_distance / 4) {
+                //    triangles.push_back(f);
+                //}
                 //Prevent vortex black holes
-                else {
-                    /*Point a = f->vertex(0)->point();
-                    Point b = f->vertex(1)->point();
-                    Point c = f->vertex(2)->point();
-                    all_states[point_map[a]].m_stopped = true;
-                    all_states[point_map[b]].m_stopped = true;
-                    all_states[point_map[c]].m_stopped = true;*/
+                //else {
+                    //Point a = f->vertex(0)->point();
+                    //Point b = f->vertex(1)->point();
+                    //Point c = f->vertex(2)->point();
+                    //all_states[point_map[a]].m_stopped = true;
+                    //all_states[point_map[b]].m_stopped = true;
+                    //all_states[point_map[c]].m_stopped = true;
                     //Pick one vertex to keep and remove all neighbors
-                    if (all_states[point_map[f->vertex(0)->point()]].m_stopped == true) {
+
+                    //Longest lifespan
+                    int l0 = all_states[point_map[f->vertex(0)->point()]].meta_lifetime;
+                    int l1 = all_states[point_map[f->vertex(1)->point()]].meta_lifetime;
+                    int l2 = all_states[point_map[f->vertex(2)->point()]].meta_lifetime;
+
+                    auto representative = f->vertex(0);
+                    if (l1 > l0) {
+                        representative = f->vertex(1);
+                    }
+                    if (l2 > l1 && l2 > l0) {
+                        representative = f->vertex(2);
+                    }
+
+                    //Kill neighbors
+                    if (all_states[point_map[representative->point()]].m_stopped == true) {
                         continue;
                     }
-                    Delaunay::Vertex_circulator vc = dt.incident_vertices(f->vertex(0));
+                    Delaunay::Vertex_circulator vc = dt.incident_vertices(representative);
                     if (vc != nullptr) {
                         Delaunay::Vertex_circulator start = vc;
                         do {
                             if (!dt.is_infinite(vc)) {
-                                if (sqrt(CGAL::squared_distance(vc->point(), f->vertex(0)->point()) < res_distance / 4)) {
+                                if (sqrt(CGAL::squared_distance(vc->point(), representative->point()) < res_distance / 2)) {
                                     all_states[point_map[vc->point()]].m_stopped = true;
                                 }
                             }
                         } while (++vc != start);
                     }
-                }
-            }
-            //Remove points that are too close
-            /*double area = std::abs((a.x() * (b.y() - c.y()) +
-                b.x() * (c.y() - a.y()) +
-                c.x() * (a.y() - b.y())) / 2.0);
-            if (area < step_x * step_y / 4) {
-                //printf("Small triangle detected\n");
-                if (sqrt(CGAL::squared_distance(f->vertex(0)->point(), f->vertex(1)->point()) < res_distance / 4) &&
-                    all_states[point_map[f->vertex(0)->point()]].m_stopped == false &&
-                    all_states[point_map[f->vertex(1)->point()]].m_stopped == false) {
-                    all_states[point_map[f->vertex(0)->point()]].m_stopped = true;
-                }
-                if (sqrt(CGAL::squared_distance(f->vertex(0)->point(), f->vertex(2)->point()) < res_distance / 4) &&
-                    all_states[point_map[f->vertex(0)->point()]].m_stopped == false &&
-                    all_states[point_map[f->vertex(2)->point()]].m_stopped == false) {
-                    all_states[point_map[f->vertex(0)->point()]].m_stopped = true;
-                }
-                if (sqrt(CGAL::squared_distance(f->vertex(1)->point(), f->vertex(2)->point()) < res_distance / 4) &&
-                    all_states[point_map[f->vertex(1)->point()]].m_stopped == false &&
-                    all_states[point_map[f->vertex(2)->point()]].m_stopped == false) {
-                    all_states[point_map[f->vertex(1)->point()]].m_stopped = true;
-                }
-            }
-            */
+                //}
+            }            
         }
+        /*
         old_sample_count = nb_samples;
         for (int i = 0; i < triangles.size(); i++) {
             Delaunay::Finite_faces_iterator face = triangles[i];
@@ -1156,14 +1106,15 @@ int main(int argc, const char* argv[])
             all_states[point_map[b]].m_stopped = true;
             all_states[point_map[c]].m_stopped = true;
         }
-        printf("Added %ld streamlines in dense areas\n", nb_samples - old_sample_count);
+        */
+        //printf("Added %ld streamlines in dense areas\n", nb_samples - old_sample_count);
 
         NrrdScalarField<1> my_avg_vorticityf(current_average_vorticity_vector, std::string("average vorticity field"));
         NrrdScalarField<3> my_vorticityf(current_vorticity_volume, std::string("vorticity field"));
         //printf("VV size: %ld %ld %ld\n", current_vorticity_volume->axis[0].size, current_vorticity_volume->axis[1].size, current_vorticity_volume->axis[2].size);
         old_sample_count = nb_samples;
         //runtime error when restarting
-        nb_samples += add_border_states(current_target_time, &my_avg_vorticityf, &my_vorticityf);
+        nb_samples += add_border_states(current_target_time, &my_avg_vorticityf, &my_vorticityf, &all_states);
         printf("Added %ld streamlines around the border\n", nb_samples - old_sample_count);
 
         //Clean up dead points
@@ -1173,16 +1124,15 @@ int main(int argc, const char* argv[])
             for (int i = 0; i < nb_samples; i++) {
                 if (all_states[i].m_stopped == false) {
                     //Also remove duplicate points
-                    /*bool duplicate = false;
-                    for (int j = 0; j < real_states.size(); j++) {
-                        nvis::fixed_vector<bool, 2> comp = all_trajectories[i].back() == real_trajectories[j].back();
-                        if (comp[0] && comp[1]) {
-                            duplicate = true;
-                            break;
-                        }
-                    }
-                    if (duplicate) continue;
-                    */
+                    //bool duplicate = false;
+                    //for (int j = 0; j < real_states.size(); j++) {
+                    //    nvis::fixed_vector<bool, 2> comp = all_trajectories[i].back() == real_trajectories[j].back();
+                    //    if (comp[0] && comp[1]) {
+                    //        duplicate = true;
+                    //        break;
+                    //    }
+                    //}
+                    //if (duplicate) continue;
 
                     real_trajectories.push_back(all_trajectories[i]);
                     real_states.push_back(all_states[i]);
@@ -1221,6 +1171,7 @@ int main(int argc, const char* argv[])
             // we have reached the end of the data currently available in
             // RAM. Import next time section.
             // [last_time_step-2*R, last_time_step-2*R+nslices-1]
+            printf("Importing file(s) set: %ld\n", last_time_step - 2 * support_radius);
             import_data(velocity_filenames, vorticity_filenames,
                         last_time_step-2*support_radius);
             for (int i=0; i<nb_threads; ++i) {
