@@ -48,7 +48,7 @@ std::string name_in, name_out;
 std::string me;
 size_t nsamples=1000000;
 size_t nb_threads;
-ivec3 up(2,2,2);
+spurt::ivec3 up(2,2,2);
 size_t n_used = 10;
 value_t t_between_files=3*spurt::lavd::HOUR;
 bbox_t domain, region;
@@ -91,8 +91,8 @@ void initialize(int argc, const char* argv[])
 Nrrd* current_velocity_volume=0;
 Nrrd* current_vorticity_volume=0;
 
-typedef spurt::image< vec3, 3, value_t, size_t > vector_image_t;
-typedef spurt::image< value_t, 3, value_t, size_t > scalar_image_t;
+typedef spurt::image< size_t, value_t, 3, vec3 > vector_image_t;
+typedef spurt::image< size_t, value_t, 3, value_t > scalar_image_t;
 
 std::shared_ptr< vector_image_t > vec_img;
 std::shared_ptr< scalar_image_t > scl_img;
@@ -143,9 +143,9 @@ void import_data(const std::vector< std::string >& vel_filenames,
 
 void check_nrrd_interpolation() {
     std::pair<double, double> minmax;
-    nvis::bbox3 bounds;
-    vec3 spacing;
-    nvis::fixed_vector<size_t, 3> size;
+    spurt::bbox3 bounds;
+    spurt::vec3 spacing;
+    spurt::small_vector<size_t, 3> size;
     for (int i=0; i<3; ++i) {
         minmax = axis_bounds(current_velocity_volume->axis[i+1]);
         bounds.min()[i] = minmax.first;
@@ -161,13 +161,13 @@ void check_nrrd_interpolation() {
     spurt::ProgressDisplay progress(false);
     progress.start(N, "nrrd interpolation check");
     for (size_t n=0; n<N; ++n) {
-        nvis::fixed_vector<size_t, 3> coord=spurt::index_to_coord(n, size);
-        vec3 x = bounds.min() + vec3(coord)*spacing;
-        vec3 v0, v1;
+        spurt::small_vector<size_t, 3> coord=spurt::index_to_coord(n, size);
+        spurt::vec3 x = bounds.min() + spurt::vec3(coord)*spacing;
+        spurt::vec3 v0, v1;
         progress.update(n);
         try {
             velocity(x, v0);
-            v1 = nrrd_value< vec3 >(current_velocity_volume, n);
+            v1 = nrrd_value< spurt::vec3 >(current_velocity_volume, n);
             err[n] = spurt::norm(v0-v1);
         }
         catch(...) {
@@ -219,7 +219,7 @@ int main(int argc, const char* argv[])
     assert(!velocity_filenames.empty());
 
     // compute bounds of entire domain
-    vec2 input_spc;
+    spurt::vec2 input_spc;
     get_spatial_info(domain, input_spc, velocity_filenames[0], 1);
     region.min() = domain.min();
     region.max() = domain.max();
@@ -276,7 +276,7 @@ int main(int argc, const char* argv[])
 
             if (!thread) progress.update(n);
 
-            vec3 p, v;
+            spurt::vec3 p, v;
             p[0] = region.min()[0] + std::generate_canonical<double, 64>(randgen)*region.size()[0];
             p[1] = region.min()[1] + std::generate_canonical<double, 64>(randgen)*region.size()[1];
             p[2] = std::generate_canonical<double, 64>(randgen)*current_t_max;
@@ -309,7 +309,7 @@ int main(int argc, const char* argv[])
 
             if (!thread) progress.update(n);
 
-            vec3 p, v;
+            spurt::vec3 p, v;
             p[0] = region.min()[0] + std::generate_canonical<double, 64>(randgen)*region.size()[0];
             p[1] = region.min()[1] + std::generate_canonical<double, 64>(randgen)*region.size()[1];
             p[2] = std::generate_canonical<double, 64>(randgen)*current_t_max;
@@ -332,7 +332,7 @@ int main(int argc, const char* argv[])
         for (size_t n=0; n<nsamples; ++n) {
             progress.update(n);
 
-            vec3 p, v0, v1;
+            spurt::vec3 p, v0, v1;
             p[0] = region.min()[0] + std::generate_canonical<double, 64>(randgen)*region.size()[0];
             p[1] = region.min()[1] + std::generate_canonical<double, 64>(randgen)*region.size()[1];
             p[2] = std::generate_canonical<double, 64>(randgen)*current_t_max;
@@ -372,18 +372,18 @@ int main(int argc, const char* argv[])
         size_t N = nsamples*nsamples*nsamples;
         double* nrrd_data = (double*)std::calloc(3*N, sizeof(double));
         double* tril_data = (double*)std::calloc(3*N, sizeof(double));
-        vec3* nrrd_vec = reinterpret_cast<vec3 *>(nrrd_data);
-        vec3* tril_vec = reinterpret_cast<vec3 *>(tril_data);
+        spurt::vec3* nrrd_vec = reinterpret_cast<vec3 *>(nrrd_data);
+        spurt::vec3* tril_vec = reinterpret_cast<vec3 *>(tril_data);
 
         std::vector<double> rel_err(N, 0);
 
 
-        vec2 orig = region.min();
-        vec3 orig3d(orig[0], orig[1], 0);
+        spurt::vec2 orig = region.min();
+        spurt::vec3 orig3d(orig[0], orig[1], 0);
         double dx = region.size()[0]/static_cast<double>(nsamples-1);
         double dy = region.size()[1]/static_cast<double>(nsamples-1);
         double dt = current_t_max/static_cast<double>(nsamples-1);
-        vec3 step(dx, dy, dt);
+        spurt::vec3 step(dx, dy, dt);
 
         std::cout << "dx=" << dx << "\ndy=" << dy << "\ndt=" << dt << '\n';
         std::cout << "Sampling bounds: "
@@ -391,8 +391,8 @@ int main(int argc, const char* argv[])
             << "(" << orig[1] << ", " << orig[1]+(nsamples-1)*dy << ") x "
             << "(0, " << (nsamples-1)*dt << ")\n";
 
-        nvis::fixed_vector<size_t, 3> res(nsamples);
-        std::vector<vec3> pos(N);
+        spurt::small_vector<size_t, 3> res(nsamples);
+        std::vector<spurt::vec3> pos(N);
 
         progress.start(N, "regular sampling nrrd");
         progress.set_active(true);
@@ -408,7 +408,7 @@ int main(int argc, const char* argv[])
 
             if (!thread) progress.update(n);
 
-            nvis::fixed_vector<size_t, 3> coord = spurt::index_to_coord(n, res);
+            spurt::small_vector<size_t, 3> coord = spurt::index_to_coord(n, res);
             pos[n] = orig3d + vec3(coord)*step;
             try {
                 (*vf_copies[thread])(pos[n], nrrd_vec[n]);

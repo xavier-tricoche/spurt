@@ -16,7 +16,6 @@
 #include <flow/ode_observer.hpp>
 
 #include <flow/time_dependent_field.hpp>
-#include <flow/vector_field.hpp>
 #include <format/dlr_reader.hpp>
 #include <format/filename.hpp>
 #include <misc/option_parse.hpp>
@@ -248,7 +247,7 @@ struct rhs_type<
             }
             throw invalid_position_exception("invalid position: " + to_str(x) + " at t=" + to_string(t));
         }
-        dxdt = (*base_type::m_field)(x, t, m_cell);
+        dxdt = base_type::m_field->interpolate(x, t, m_cell);
         ++base_type::m_counter;
         if (base_type::m_counter >= base_type::m_max_evals) {
             std::ostringstream os;

@@ -18,9 +18,9 @@ include_directories(
 )
 
 set( Spurt_CREASE_EXEC_SRC_WITH_VTK
-    peikert_sadlo
-    peikert
-    multires_peikert
+    # peikert_sadlo
+    # peikert
+    # multires_peikert
     schultz
     parallel_schultz
     schultz_Jan2025
@@ -32,6 +32,7 @@ set( Spurt_CREASE_EXEC_SRC_WITH_VTK
 set( Spurt_CREASE_EXEC_SRC_NO_VTK
     gH_sspace_selection
     gH_filtered_sspace_selection
+    select_scale_from_teem_stack
 )
 
 if ( VTK_FOUND )
@@ -54,5 +55,5 @@ foreach( exec ${Spurt_CREASE_EXEC_SRC_NO_VTK} )
                        ${Teem_LIBRARIES}
                        ${Boost_LIBRARIES}
                        TBB::tbb TBB::tbbmalloc TBB::tbbmalloc_proxy  )
-    install( TARGETS gH_sspace_selection RUNTIME DESTINATION bin )
+    install( TARGETS ${exec} RUNTIME DESTINATION bin )
 endforeach()

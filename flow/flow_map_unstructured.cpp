@@ -6,15 +6,13 @@
 #include <new>
 
 #include <flow/time_dependent_field.hpp>
-#include <flow/vector_field.hpp>
 #include <misc/progress.hpp>
 #include <misc/strings.hpp>
 #include <misc/option_parse.hpp>
 
 #include <math/types.hpp>
-#include <flow/vector_field.hpp>
-#include <data/vtk_field.hpp>
-#include <data/raster.hpp>
+#include <vtk/vtk_field.hpp>
+#include <data/raster_data.hpp>
 
 #include <boost/numeric/odeint.hpp>
 #include <boost/filesystem.hpp>
@@ -77,7 +75,7 @@ void initialize(int argc, const char* argv[])
 
 using namespace spurt;
 
-typedef vtk_field                 field_type;  // steady 3D vector field
+typedef vtk_field<double>         field_type;  // steady 3D vector field
 typedef field_type::point_type    point_type;  // position in 3D space
 typedef field_type::vector_type   vector_type; // 3D vector
 typedef field_type::scalar_type   scalar_type; // scalar (e.g., time)
@@ -88,7 +86,7 @@ struct RHS {
     }
 
     void operator()(const point_type& x, vector_type& dxdt, scalar_type t) const {
-        dxdt = m_field(x /*, t*/); // exception will be passed along if position is invalid
+        m_field(x, dxdt /*, t*/); // exception will be passed along if position is invalid
         ++m_counter;
     }
 
@@ -128,9 +126,14 @@ int main(int argc, const char* argv[])
 
     field_type field(name_in);
     RHS rhs(field);
+
+    typedef spurt::raster_grid<size_t, double, 3> raster_grid_type;
+    typedef raster_grid_type::coord_type coord_type;
+
+    coord_type _res(res[0], res[1], res[2]);
     
     std::cerr << "Resolution = " << res[0] << " x " << res[1] << " x " << res[2] << std::endl;
-    spurt::raster_grid<3> sampling_grid(res, field.bounds());
+    spurt::raster_grid<size_t, double, 3> sampling_grid(_res, field.bounds());
 
     std::cout << "sampling grid bounds are: " << sampling_grid.bounds().min()
     << " -> " << sampling_grid.bounds().max() << '\n';
@@ -209,9 +212,6 @@ int main(int argc, const char* argv[])
    }
 
    progress.end();
-   
-   std::cout << "number of successful cell searches: " << field.n_found << "\n"
-       << "number of failed searches: " << field.n_failed << '\n';
 
    std::vector<size_t> size(4);
    std::vector<double> step(4), mins(4);

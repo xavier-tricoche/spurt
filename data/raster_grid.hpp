@@ -15,6 +15,34 @@
 
 namespace spurt {
 
+template< typename CoordArray_, typename SizeArray_ >
+long coord_to_index(const CoordArray_& coord, const SizeArray_& size) {
+    size_t N = size.size();
+
+    // i + size0*(j + size1*(k + size2*(l + ....)))
+    long idx=coord[N-1];
+    for (long dim=N-2; dim>=0; --dim) {
+        idx = coord[dim] + idx*size[dim];
+    }
+    return idx;
+}
+
+template< typename SizeArray_, typename CoordArray_=SizeArray_ >
+CoordArray_ index_to_coord(long idx, const SizeArray_& size) {
+    CoordArray_ coord;
+    typedef typename CoordArray_::value_type value_t;
+
+    // i + size0*( j + size1*( k + size2*( l ) ) )
+    size_t N = size.size();
+    for (size_t i=0; i<N; ++i) {
+        std::ldiv_t qr = std::div(idx, size[i]);
+        coord[i] = static_cast<value_t>(qr.rem);
+        idx = qr.quot;
+    }
+    return coord;
+}
+
+
 template<typename Size_, typename Scalar_, size_t Dim, 
          typename Coord_=small_vector<Size_, Dim>, 
          typename Pos_=small_vector<Scalar_, Dim> >
@@ -52,9 +80,38 @@ public:
         std::cout << "grid constructor: npos = " << m_npos << ", bounds = " << m_bounds << ", cell res = " << m_cell_res << ", size = " << sz << ", spacing = " << m_spacing << '\n'; 
 #endif
     }
+
+    template<typename OtherArray>
+    raster_grid(const OtherArray& resolution, const bounds_type& bounds, 
+                bool cell_based=false) : m_res(&resolution[0]) {
+        auto sz = bounds.max() - bounds.min();
+        m_npos = product(m_res);
+        m_bounds.min() = bounds.min();
+        m_bounds.max() = bounds.max();
+        m_cell_res = m_res - 1;
+        if (cell_based) m_cell_res += 1;
+        m_spacing = sz / m_cell_res;
+
+#ifdef SPURT_DEBUG
+        std::cout << "grid constructor: npos = " << m_npos << ", bounds = " << m_bounds << ", cell res = " << m_cell_res << ", size = " << sz << ", spacing = " << m_spacing << '\n'; 
+#endif
+    }
+
     raster_grid(const coord_type& resolution, const pos_type& origin,
                 const pos_type& spacing, bool cell_based=false)
         : m_res(resolution) {
+        m_npos = product(m_res);
+        m_bounds.min() = origin;
+        m_spacing = spacing;
+        m_cell_res = m_res-1;
+        if (cell_based) m_cell_res += 1;
+        m_bounds.max() = m_bounds.min() + m_spacing*m_cell_res;
+    }
+    
+    template<typename OtherArray>
+    raster_grid(const OtherArray& resolution, const pos_type& origin,
+                const pos_type& spacing, bool cell_based=false)
+        : m_res(&resolution[0]) {
         m_npos = product(m_res);
         m_bounds.min() = origin;
         m_spacing = spacing;

@@ -1,5 +1,4 @@
-#ifndef __CS530_CAMERA_HPP__
-#define __CS530_CAMERA_HPP__
+#pragma once
 
 // STL
 #include <iostream>
@@ -13,7 +12,7 @@
 #include "vtkCamera.h"
 #include "vtkRenderer.h"
 // nvis
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 
 namespace vtk_utils {
 
@@ -39,5 +38,3 @@ void import_camera_settings(QWidget* parent, vtkRenderer* renderer,
     import_camera_settings(filename, renderer);
 
 } // vtk_utils
-
-#endif

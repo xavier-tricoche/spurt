@@ -1,5 +1,4 @@
-#ifndef __VTK_FIELD_HPP__
-#define __VTK_FIELD_HPP__
+#pragma once
 
 #include "vtk_utils.hpp"
 
@@ -11,7 +10,7 @@
 #include "vtkUnstructuredGrid.h"
 
 #include <Eigen/Core>
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 
 #include <string>
 
@@ -25,10 +24,10 @@ template<typename T, typename NotUsed_> struct data_traits;
 
 public:    
     typedef Scalar_ scalar_type;
-    typedef fixed_vector<scalar_type, 3>     point_type;
-    typedef fixed_vector<scalar_type, 3>     vector_type;
+    typedef small_vector<scalar_type, 3>     point_type;
+    typedef small_vector<scalar_type, 3>     vector_type;
     typedef Eigen::Matrix<scalar_type, 3, 3> tensor_type;
-    typedef nvis::bounding_box<point_type>   bounds_type;
+    typedef spurt::bounding_box<point_type>   bounds_type;
     typedef vtk_field<scalar_type>           self_type;
 
     vtk_field(const std::string& filename, bool use_vectors=true, 
@@ -187,6 +186,3 @@ private:
 };
 
 } // namespace spurt
-
-
-#endif

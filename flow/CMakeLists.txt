@@ -22,7 +22,6 @@ set(FLOW_EXEC_SRC
     doublegyre
     abc
     flowmap_in_3D_nrrd
-	flow_map
     lavd
     trace_particles
     view_flowmap
@@ -43,8 +42,8 @@ if( ${VTK_FOUND} )
     # include( ${VTK_USE_FILE} )
     foreach( name ${FLOW_EXEC_SRC} )
         add_executable( ${name} ${EXECUTABLE_FLAG} ${name}.cpp )
-		target_link_libraries( ${name} ${VTK_LIBRARIES} ${Teem_LIBRARIES} BARG
-			spurt_image spurt_flow ${Boost_LIBRARIES} 
+		target_link_libraries( ${name} ${VTK_LIBRARIES} ${Teem_LIBRARIES} spurt_barg
+			spurt_image ${Boost_LIBRARIES} 
             TBB::tbb TBB::tbbmalloc TBB::tbbmalloc_proxy
             ${NetCDF_LIBRARIES} )
         install( TARGETS ${name} RUNTIME DESTINATION bin )

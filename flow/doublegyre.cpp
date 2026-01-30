@@ -6,10 +6,10 @@
 #include <image/nrrd_wrapper.hpp>
 #include <data/field_wrapper.hpp>
 
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 #include <math/bounding_box.hpp>
 
-#include <data/raster.hpp>
+#include <data/raster_data.hpp>
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
 
@@ -28,9 +28,9 @@ typedef double value_t;
 constexpr value_t PI=3.14159265358979323844;
 constexpr value_t TWO_PI=6.28318530717958647688;
 
-typedef nvis::fixed_vector< value_t, 2> state_t;
-typedef nvis::fixed_vector< value_t, 2> pos_t;
-typedef nvis::bounding_box< pos_t > bbox_t;
+typedef spurt::small_vector< value_t, 2> state_t;
+typedef spurt::small_vector< value_t, 2> pos_t;
+typedef spurt::bounding_box< pos_t > bbox_t;
 
 std::string name_out;
 value_t t_max=25., eps=1.0e-8;
@@ -46,8 +46,8 @@ bbox_t to_bbox(const std::array<value_t, 4>& array) {
 }
 
 template<typename T, size_t N>
-nvis::fixed_vector<T, N> to_vec(const std::array<T, N>& array) {
-    nvis::fixed_vector<T, N> v;
+spurt::small_vector<T, N> to_vec(const std::array<T, N>& array) {
+    spurt::small_vector<T, N> v;
     for (size_t i=0; i<N; ++i) v[i]=array[i];
     return v;
 }
@@ -88,7 +88,7 @@ int main(int argc, const char* argv[])
     using namespace spurt;
     using namespace odeint;
     
-    typedef spurt::raster_grid<2> grid_t;
+    typedef spurt::raster_grid<size_t, double, 2> grid_t;
     typedef grid_t::coord_type coord_t;
     
     initialize(argc, argv);
@@ -136,7 +136,7 @@ int main(int argc, const char* argv[])
             state_t x = sampling_grid(c);
             
             // create a stepper
-            auto stepper = make_controlled(eps, eps, runge_kutta_dopri5<nvis::vec2>());
+            auto stepper = make_controlled(eps, eps, runge_kutta_dopri5<spurt::vec2>());
             
             integrate_adaptive(stepper, rhs, x,
                                static_cast<value_t>(0), t_max, dt);

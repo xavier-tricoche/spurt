@@ -1,5 +1,4 @@
-#ifndef __VTK_UTILS_HPP__
-#define __VTK_UTILS_HPP__
+#pragma once
 
 #include <math/types.hpp>
 #include <math/bounding_box.hpp>
@@ -10,5 +9,3 @@
 #include <vtk/vtk_colorbar_helper.hpp>
 #include <vtk/vtk_image_helper.hpp>
 #include <vtk/vtk_io_helper.hpp>
-
-#endif

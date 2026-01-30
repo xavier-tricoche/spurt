@@ -7,7 +7,7 @@
 #include <vtk/vtk_utils.hpp>
 #include <vtk/vtk_camera_helper.hpp>
 #include <misc/option_parse.hpp>
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 #include <math/bounding_box.hpp>
 #include <format/filename.hpp>
 #include <math/stat.hpp>
@@ -35,8 +35,8 @@
 #include <vtkBox.h>
 #include <vtkClipPolyData.h>
 
-typedef nvis::fixed_vector<double, 3> color_type;
-typedef nvis::fixed_vector<double, 3> alpha_region;
+typedef spurt::small_vector<double, 3> color_type;
+typedef spurt::small_vector<double, 3> alpha_region;
 
 std::string input_name, alpha_name, color_name, img_name, cam_in, cam_out;
 std::string log_name="log.txt";
@@ -46,7 +46,7 @@ bool clip=false;
 bool use_parallel=false;
 bool save_and_quit=false;
 color_type bg_col(0, 0, 0);
-nvis::ivec2 res(1280, 800);
+spurt::ivec2 res(1280, 800);
 double dist=0.1;
 double stddev=0;
 double threshold_min = 5;
@@ -55,13 +55,13 @@ double specular = 0;
 std::vector<double> alpha_tf;
 std::vector<double> color_tf;
 std::string input_alpha, input_color;
-nvis::bbox3 bounds, global_bounds;
+spurt::bbox3 bounds, global_bounds;
 vtkSmartPointer<vtkImageData> image, filtered;
 std::fstream log_file;
 vtkSmartPointer<vtkRenderer> renderer;
 vtkSmartPointer<vtkRenderWindow> window;
 vtkSmartPointer<vtkColorTransferFunction> colors;
-nvis::ivec3 minc, maxc;
+spurt::ivec3 minc, maxc;
 std::vector< std::pair<double, double> > alpha_cps;
 std::vector< std::pair<double, color_type > > color_cps;
 std::string bounds_as_string;
@@ -69,23 +69,23 @@ std::string bounds_as_string;
 // global domain / image contents information
 double* domain;
 vtkDoubleArray* scalars;
-nvis::vec3 dmin, dmax;
-nvis::ivec3 dims;
+spurt::vec3 dmin, dmax;
+spurt::ivec3 dims;
 double volume;
-nvis::vec3 center, up(-1, 0, 0);
+spurt::vec3 center, up(-1, 0, 0);
 double dfront, dside, dtop, dbottom;
 double* valrange;
 
-inline nvis::vec3 vec3(double* v) {
-	return nvis::vec3(v[0], v[1], v[2]);
+inline spurt::vec3 vec3(double* v) {
+	return spurt::vec3(v[0], v[1], v[2]);
 }
 
-inline nvis::ivec3 ivec3(int* v) {
-    return nvis::ivec3(v[0], v[1], v[2]);
+inline spurt::ivec3 ivec3(int* v) {
+    return spurt::ivec3(v[0], v[1], v[2]);
 }
 
-inline nvis::ivec3 id2c(int id, const nvis::ivec3& dims) {
-    nvis::ivec3 coord;
+inline spurt::ivec3 id2c(int id, const spurt::ivec3& dims) {
+    spurt::ivec3 coord;
     coord[0] = id % dims[0];
     id /= dims[0];
     coord[1] = id % dims[1];
@@ -93,7 +93,7 @@ inline nvis::ivec3 id2c(int id, const nvis::ivec3& dims) {
     return coord;
 }
 
-inline std::string bounds_to_str(const nvis::bbox3& b) {
+inline std::string bounds_to_str(const spurt::bbox3& b) {
 	std::ostringstream os;
 	os << b.min() << " -> " << b.max();
 	return os.str();
@@ -119,16 +119,19 @@ double isovalue;
 //     return 1 + static_cast<int>(v*dims[dim]);
 // }
 
-bool selected_region(nvis::ivec3& min, nvis::ivec3& max) {
+bool selected_region(spurt::ivec3& min, spurt::ivec3& max) {
 	// make sampling region fit within dataset bounds
-	nvis::vec3 _min = nvis::max(bounds.min(), global_bounds.min());
-	nvis::vec3 _max = nvis::min(bounds.max(), global_bounds.max());
-	if (nvis::any(_min > _max)) {
+	spurt::vec3 _min, _max;
+	for (int i=0; i<3; ++i) {
+		_min[i] = std::min(bounds.min()[i], global_bounds.min()[i]);
+		_max[i] = std::max(bounds.max()[i], global_bounds.max()[i]);
+	}
+	if (spurt::any(_min > _max)) {
 		std::cerr << "invalid sampling region: " << bounds_to_str(bounds) << '\n';
 		return false;
 	}
-    int minid = image->FindPoint(_min[0], _min[1], _min[2]);
-    int maxid = image->FindPoint(_max[0], _max[1], _max[2]);
+    int minid = image->vtkDataSet::FindPoint(_min[0], _min[1], _min[2]);
+    int maxid = image->vtkDataSet::FindPoint(_max[0], _max[1], _max[2]);
 	int tmp = minid;
 	minid = std::min(minid, maxid);
 	maxid = std::max(tmp, maxid);
@@ -220,7 +223,7 @@ void initialize_slices() {
 		slice_cutters[i]->SetInputData(image);
 		VTK_CREATE(vtkPlane, plane);
 		plane->SetOrigin(&bounds.center()[0]);
-		nvis::vec3 normal(0);
+		spurt::vec3 normal(0);
 		normal[i] = 1.;
 		plane->SetNormal(&normal[0]);
 		slice_cutters[i]->SetCutFunction(plane);
@@ -261,16 +264,16 @@ void initialize_slices() {
     slice_renderers[2]->GetActiveCamera()->SetViewUp(-1, 0, 0);
     slice_renderers[0]->GetActiveCamera()->SetViewUp(0, 0, -1);
     slice_renderers[1]->GetActiveCamera()->SetViewUp(-1, 0, 0);
-    slice_renderers[0]->GetActiveCamera()->SetPosition(&(bounds.center()+100.*nvis::vec3(1, 0, 0))[0]);
-    slice_renderers[1]->GetActiveCamera()->SetPosition(&(bounds.center()+100.*nvis::vec3(0, 1, 0))[0]);
-    slice_renderers[2]->GetActiveCamera()->SetPosition(&(bounds.center()+100.*nvis::vec3(0, 0, 1))[0]);
+    slice_renderers[0]->GetActiveCamera()->SetPosition(&(bounds.center()+100.*spurt::vec3(1, 0, 0))[0]);
+    slice_renderers[1]->GetActiveCamera()->SetPosition(&(bounds.center()+100.*spurt::vec3(0, 1, 0))[0]);
+    slice_renderers[2]->GetActiveCamera()->SetPosition(&(bounds.center()+100.*spurt::vec3(0, 0, 1))[0]);
     slice_windows[0]->Render();
     slice_windows[1]->Render();
     slice_windows[2]->Render();
 }
 
 void update_slices() {
-	nvis::vec3 c = bounds.center();
+	spurt::vec3 c = bounds.center();
 	for (int i=0; i<3; ++i) {
         vtkPlane::SafeDownCast(slice_cutters[i]->GetCutFunction())->SetOrigin(&c[0]);
 		slice_cutters[i]->Update();
@@ -301,7 +304,7 @@ void update_isosurface() {
 	}
 }
 
-void reset_camera_and_render(const nvis::vec3& focal, const nvis::vec3& dist, const nvis::vec3& up) {
+void reset_camera_and_render(const spurt::vec3& focal, const spurt::vec3& dist, const spurt::vec3& up) {
 	renderer->GetActiveCamera()->SetViewUp(&up[0]);
 	renderer->GetActiveCamera()->SetFocalPoint(&focal[0]);
 	renderer->GetActiveCamera()->SetPosition(&(focal+dist)[0]);
@@ -383,19 +386,19 @@ void handle_event(const std::string& what, bool quiet=false) {
         }
     }
 	else if (what == "f") {
-		reset_camera_and_render(center, dfront*nvis::vec3(0, 0, 1), up);
+		reset_camera_and_render(center, dfront*spurt::vec3(0, 0, 1), up);
 	}
 	else if (what == "r") {
-		reset_camera_and_render(center, dside*nvis::vec3(0, 1, 0), nvis::vec3(-1, 0, 0));
+		reset_camera_and_render(center, dside*spurt::vec3(0, 1, 0), spurt::vec3(-1, 0, 0));
 	}
 	else if (what == "u") {
-		reset_camera_and_render(center, dtop*nvis::vec3(1, 0, 0), nvis::vec3(0, 0, 1));
+		reset_camera_and_render(center, dtop*spurt::vec3(1, 0, 0), spurt::vec3(0, 0, 1));
 	}
 	else if (what == "t") {
-		reset_camera_and_render(center, dtop*nvis::vec3(-1, 0, 0), nvis::vec3(0, 0, -1));
+		reset_camera_and_render(center, dtop*spurt::vec3(-1, 0, 0), spurt::vec3(0, 0, -1));
 	}
 	else if (what == "l") {
-		reset_camera_and_render(center, dside*nvis::vec3(0, -1, 0), nvis::vec3(-1, 0, 0));
+		reset_camera_and_render(center, dside*spurt::vec3(0, -1, 0), spurt::vec3(-1, 0, 0));
 	}
 	else if (what == "z") {
 		box_widget->PlaceWidget(); // restore axis aligned orientation
@@ -518,10 +521,10 @@ void update_bounds(vtkBoxWidget *widget) {
 
     for (int i=0; i<planes->GetNumberOfPlanes(); ++i) {
         box[i] = planes->GetPlane(i)->GetOrigin()[i/2];
-			// nvis::vec3 normal = vec3(a_plane->GetNormal());
+			// spurt::vec3 normal = vec3(a_plane->GetNormal());
     }
-    bounds.min() = nvis::vec3(box[0], box[2], box[4]);
-    bounds.max() = nvis::vec3(box[1], box[3], box[5]);
+    bounds.min() = spurt::vec3(box[0], box[2], box[4]);
+    bounds.max() = spurt::vec3(box[1], box[3], box[5]);
 }
 
 void update_box(vtkBoxWidget *widget) {
@@ -566,7 +569,7 @@ void MouseRightClickCB ( vtkObject* caller,
 	handle_event(iren->GetKeySym());
 }
 
-nvis::bbox3 str_to_bbox(const std::string& str) {
+spurt::bbox3 str_to_bbox(const std::string& str) {
     std::string copy(str);
     for (int i=0; i<str.size(); ++i) {
         if (str[i] == '[' || str[i] == ']' || str[i] == ',') {
@@ -577,7 +580,7 @@ nvis::bbox3 str_to_bbox(const std::string& str) {
             copy[i] = ' ';
         }
     }
-    nvis::bbox3 box;
+    spurt::bbox3 box;
     std::istringstream iss(copy);
     for (int i=0; i<6; ++i) {
         if (i<3) iss >> box.min()[i];
@@ -775,8 +778,8 @@ void set_parameters() {
 
 	image->ComputeBounds();
 	domain = image->GetBounds();
-	dmin = nvis::vec3(domain[0], domain[2], domain[4]);
-	dmax = nvis::vec3(domain[1], domain[3], domain[5]);
+	dmin = spurt::vec3(domain[0], domain[2], domain[4]);
+	dmax = spurt::vec3(domain[1], domain[3], domain[5]);
 	global_bounds.min() = dmin;
 	global_bounds.max() = dmax;
 	if (verbose) {
@@ -818,11 +821,11 @@ void raycast() {
         bounds = str_to_bbox(bounds_as_string);
     }
     else {
-        bounds.min() = nvis::vec3(b[0], b[2], b[4]);
-        bounds.max() = nvis::vec3(b[1], b[3], b[5]);
+        bounds.min() = spurt::vec3(b[0], b[2], b[4]);
+        bounds.max() = spurt::vec3(b[1], b[3], b[5]);
         std::cout << "global bounds: " << bounds_to_str(bounds) << '\n';
-	    nvis::vec3 save_min = bounds.min();
-	    nvis::vec3 save_max = bounds.max();
+	    spurt::vec3 save_min = bounds.min();
+	    spurt::vec3 save_max = bounds.max();
 	    bounds.min() += 0.01 * (save_max - save_min);
 	    bounds.max() -= 0.01 * (save_max - save_min);
     }

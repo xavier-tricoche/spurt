@@ -8,14 +8,15 @@
 #include <math/stat.hpp>
 #include <graphics/colors.hpp>
 
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 #include <math/bounding_box.hpp>
 
-typedef nvis::fixed_vector< double, 2 > vec2d;
-typedef nvis::fixed_vector< double, 3 > vec3d;
-typedef nvis::fixed_vector< int, 2 >    vec2i;
-typedef nvis::fixed_vector< int, 3 >    vec3i;
-typedef nvis::bounding_box< vec2d >    bbox2d;
+typedef spurt::small_vector< double, 2 > vec2d;
+typedef spurt::small_vector< double, 3 > vec3d;
+typedef spurt::small_vector< int, 2 >    vec2i;
+typedef spurt::small_vector< int, 3 >    vec3i;
+typedef spurt::bounding_box< vec2d >    bbox2d;
+typedef spurt::fvec3 fvec3;
 
 std::string name_in, name_out, name_mask, name_cmap;
 bool verbose;
@@ -182,10 +183,10 @@ vtkSmartPointer<vtkActor> create_points(std::vector<Nrrd*> datasets, const std::
 	vtkSmartPointer<vtkColorTransferFunction> ctf = vtkSmartPointer<vtkColorTransferFunction>::New();
 
 	if (name_cmap.empty()) {
-		std::vector<nvis::fvec3> scale;
+		std::vector<fvec3> scale;
 
 		// heat map:
-		std::vector<nvis::fvec3> heat_scale;
+		std::vector<fvec3> heat_scale;
 		heat_scale.push_back(spurt::black);
 		heat_scale.push_back(spurt::red);
 		// heat_scale.push_back(spurt::orange);
@@ -323,7 +324,7 @@ int main(int argc, char* argv[]) {
 	colors->SetNumberOfTuples(npts);
 	colors->SetName("Colors");
 	nvis::vec3 black(0), red(255,0,0), white(255,255,255), blue(0,0,255), cf;
-	nvis::fixed_vector<unsigned char, 3> c;
+	spurt::small_vector<unsigned char, 3> c;
 	for (size_t i=0; i<npts; ++i) {
 		float x = raster[3*i];
 		float y = raster[3*i+1];

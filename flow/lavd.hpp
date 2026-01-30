@@ -1,5 +1,4 @@
-#ifndef __XAVIER_LAVD_HPP__
-#define __XAVIER_LAVD_HPP__
+#pragma once
 
 #include <string>
 #include <vector>
@@ -15,8 +14,8 @@
 // #include <boost/date_time/posix_time/posix_time.hpp>
 // #include <boost/date_time/gregorian/gregorian.hpp>
 
-#include <nvis-math/fixed_vector.hpp>
-#include <nvis-math/bounding_box.hpp>
+#include <math/small_vector.hpp>
+#include <math/bounding_box.hpp>
 #include <image/probe.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <misc/log_helper.hpp>
@@ -42,21 +41,34 @@ constexpr double MONTH =  2592000;
 // log ostream used
 extern spurt::log::dual_ostream _log_;
 
-typedef nvis::fixed_vector< value_t, 1 > vec1;
-typedef nvis::fixed_vector< value_t, 2 > vec2;
-typedef nvis::fixed_vector< value_t, 3 > vec3;
-typedef nvis::fixed_vector< value_t, 4 > vec4;
-typedef nvis::fixed_vector< size_t, 1 > lvec1;
-typedef nvis::fixed_vector< size_t, 2 > lvec2;
-typedef nvis::fixed_vector< size_t, 3 > lvec3;
-typedef nvis::bounding_box< vec2 >     bbox_t;
+typedef spurt::small_vector< value_t, 1 > vec1;
+typedef spurt::small_vector< value_t, 2 > vec2;
+typedef spurt::small_vector< value_t, 3 > vec3;
+typedef spurt::small_vector< value_t, 4 > vec4;
+typedef spurt::small_vector< size_t, 1 > lvec1;
+typedef spurt::small_vector< size_t, 2 > lvec2;
+typedef spurt::small_vector< size_t, 3 > lvec3;
+typedef spurt::bounding_box< vec2 >     bbox_t;
 
-typedef nvis::fixed_vector< long, 2 > coord_t;
-typedef nvis::bounding_box< lvec2 >  coord_range_t;
+typedef spurt::small_vector< long, 2 > coord_t;
+typedef spurt::bounding_box< lvec2 >  coord_range_t;
 
 typedef spurt::image< long, value_t, 3, vec3> vector_field_t;
 typedef spurt::image< long, value_t, 3, value_t> scalar_field_t;
 typedef spurt::image< long, value_t, 1, value_t> scalar_line_t;
+
+template<typename T, size_t N>
+T coord_to_index(const spurt::small_vector<T, N>& coord, const spurt::small_vector<T, N>& res) {
+    T index=0;
+    T stride = 1;
+    for (size_t i=0; i<N; ++i) {
+        index += coord[i]*stride;
+        stride *= res[i];
+    }
+    return index;
+}
+
+// (i,j,k) -> n = i + j*W + k*W*H = i + W*(j + H*k)
 
 #define __VERBOSE_LAVD__
 
@@ -87,7 +99,7 @@ inline std::pair<double, double> axis_bounds(const NrrdAxisInfo& axis) {
     }
 }
 
-inline void get_spatial_info(bbox_t& bounds, nvis::vec2& spc, const std::string& filename, int offset=0) {
+inline void get_spatial_info(bbox_t& bounds, vec2& spc, const std::string& filename, int offset=0) {
     // compute bounds of Nrrd file
     Nrrd* nin=spurt::nrrd_utils::readNrrd(filename);
     std::pair<value_t, value_t > minmax;
@@ -122,7 +134,7 @@ void print(const Nrrd* nin) {
 template<size_t N>
 struct NrrdScalarField {
     constexpr static size_t dim = N;
-    typedef nvis::fixed_vector< value_t, N > pos_t;
+    typedef spurt::small_vector< value_t, N > pos_t;
     typedef const void* address_t;
     typedef spurt::gage_interface::scalar_wrapper wrapper_t;
 
@@ -288,24 +300,23 @@ struct NrrdVectorField {
 };
 
 template< typename Val_, typename Field_, size_t N=3>
-spurt::image< Val_, N, value_t, size_t >*
-upsample(Nrrd* nin, const nvis::fixed_vector<size_t, N>& up,
+spurt::image<size_t, value_t, N, Val_>*
+upsample(Nrrd* nin, const spurt::small_vector<size_t, N>& up,
         const std::string& what)
 {
     typedef Val_ data_t;
     typedef Field_ field_t;
-    typedef spurt::image< Val_, N, value_t, size_t > image_t;
+    typedef spurt::image< size_t, value_t, N, Val_> image_t;
     typedef typename image_t::grid_type grid_t;
     typedef typename image_t::coord_type coord_t;
-    typedef typename image_t::vec_type vec_t;
-    typedef typename image_t::point_type point_t;
+    typedef typename image_t::pos_type vec_t;
 
     bool is_vector = ( nin->dim == N+1 );
 
     coord_t res, up_res;
     size_t size, up_size;
     vec_t spc, up_spc;
-    point_t origin;
+    vec_t origin;
     size_t nb_threads = 1;
 
 #if _OPENMP
@@ -346,7 +357,7 @@ upsample(Nrrd* nin, const nvis::fixed_vector<size_t, N>& up,
     {
         #pragma omp for schedule(static,1)
         for (size_t n=0; n<up_size ; ++n) {
-            coord_t up_coord = spurt::index_to_coord(n, up_res);
+            coord_t up_coord = grid->coordinates(n);
 
             #if _OPENMP
             const int thread=omp_get_thread_num();
@@ -378,15 +389,15 @@ upsample(Nrrd* nin, const nvis::fixed_vector<size_t, N>& up,
 }
 
 template< size_t N=3>
-spurt::image< value_t, N, value_t, size_t >*
-upsample_scalar(Nrrd* nin, const nvis::fixed_vector<size_t, N>& up,
+spurt::image< size_t, value_t, N, value_t>*
+upsample_scalar(Nrrd* nin, const spurt::small_vector<size_t, N>& up,
                 const std::string& what="")
 {
     return upsample< value_t, NrrdScalarField<N> >(nin, up, what);
 }
 
-spurt::image< vec3, 3, value_t, size_t >*
-upsample_vector(Nrrd* nin, const nvis::fixed_vector<size_t, 3>& up,
+spurt::image< size_t, value_t, 3, vec3 >*
+upsample_vector(Nrrd* nin, const spurt::small_vector<size_t, 3>& up,
                 const std::string& what="")
 {
     return upsample< vec3, NrrdVectorField >(nin, up, what);
@@ -1001,6 +1012,3 @@ void export_mask(const std::string& filename, const bbox_t& region,
 
 } // lavd
 } // spurt
-
-
-#endif

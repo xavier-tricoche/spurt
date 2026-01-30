@@ -1,7 +1,5 @@
 set( SPURT_VTK_SRCS
 	vectors_from_scalars
-    streamlines
-    view_colormap
 	color_scalar_image
 	volume_render
     volume_renderer

@@ -5,17 +5,17 @@
 #include <fstream>
 #include <new>
 #include <iterator>
+#include <thread>
 
 // #include <flow/time_dependent_field.hpp>
-#include <flow/vector_field.hpp>
+#include <vtk/vtk_field.hpp>
 #include <misc/progress.hpp>
 #include <misc/strings.hpp>
 #include <misc/option_parse.hpp>
 
 #include <math/types.hpp>
 #include <math/bounding_box.hpp>
-#include <flow/vector_field.hpp>
-#include <data/raster.hpp>
+#include <data/raster_data.hpp>
 #include <vtk/vtk_interpolator.hpp>
 
 #include <boost/numeric/odeint.hpp>
@@ -27,8 +27,11 @@
 
 #include <tbb/parallel_for.h>
 #include <tbb/tbb.h>
-tbb::atomic<size_t> tbb_progress_counter;
 
+std::atomic<size_t> tbb_progress_counter;
+
+typedef spurt::raster_grid<size_t, double, 3> grid_type;
+typedef grid_type::coord_type coord_type;
 
 std::string name_in, name_out, path, cmdline;
 double length, eps, T;
@@ -42,7 +45,7 @@ size_t nb_threads = 1;
 bool save_lines = false;
 bool monitor = false;
 bool confine = false;
-nvis::bbox3 the_bounds;
+spurt::bbox3 the_bounds;
 bool in_parallel=false;
 
 namespace odeint = boost::numeric::odeint;
@@ -164,7 +167,7 @@ struct rhs_type<
         if (m_verbose) {
             os << "rhs called at " << to_str(x) << "at t=" << t << '\n';
         }
-        if ((confine && !the_bounds.inside(x.as_nvis_vec3())) ||
+        if ((confine && !the_bounds.inside(x)) ||
             !m_intp.interpolate(dxdt, x, m_verbose)) {
             throw point_out_of_bounds_exception("invalid position: " + to_str(x) + " at t=" + to_string(t));
         }
@@ -209,7 +212,7 @@ struct rhs_type<
           m_orient(other.m_orient), m_verbose(other.m_verbose) {}
 
     void operator()(const vec3& x, vec3& dxdt, scalar_type t) const {
-        if ((confine && !the_bounds.inside(x.as_nvis_vec3())) ||
+        if ((confine && !the_bounds.inside(x)) ||
             !m_intp.interpolate(dxdt, x)) {
             throw point_out_of_bounds_exception("invalid position: " + to_str(x) + " at t=" + to_string(t));
         }
@@ -335,25 +338,26 @@ int run(VTK_SMART(DataSet) dataset) {
 
     double global_bounds[6];
     dataset->GetBounds(global_bounds);
-    nvis::bbox3 bnds;
+    spurt::bbox3 bnds;
 
     if (::bounds[0]<::bounds[1] && ::bounds[2]<::bounds[3] && ::bounds[4]<::bounds[5] &&
         ::bounds[0] >= global_bounds[0] && ::bounds[1] <= global_bounds[1] &&
         ::bounds[2] >= global_bounds[2] && ::bounds[3] <= global_bounds[3] &&
         ::bounds[4] >= global_bounds[4] && ::bounds[5] <= global_bounds[5]) {
         // valid bounds supplied by user
-        bnds.min() = nvis::vec3(::bounds[0], ::bounds[2], ::bounds[4]);
-        bnds.max() = nvis::vec3(::bounds[1], ::bounds[3], ::bounds[5]);
+        bnds.min() = spurt::vec3(::bounds[0], ::bounds[2], ::bounds[4]);
+        bnds.max() = spurt::vec3(::bounds[1], ::bounds[3], ::bounds[5]);
     }
     else {
-        bnds.min() = nvis::vec3(global_bounds[0], global_bounds[2], global_bounds[4]);
-        bnds.max() = nvis::vec3(global_bounds[1], global_bounds[3], global_bounds[5]);
+        bnds.min() = spurt::vec3(global_bounds[0], global_bounds[2], global_bounds[4]);
+        bnds.max() = spurt::vec3(global_bounds[1], global_bounds[3], global_bounds[5]);
     }
 
     the_bounds = bnds;
 
     std::cout << "Resolution = " << res[0] << " x " << res[1] << " x " << res[2] << std::endl;
-    spurt::raster_grid<3> sampling_grid(res, bnds);
+    coord_type _res(res[0], res[1], res[2]);
+    grid_type sampling_grid(_res, bnds);
 
     std::cout << "sampling grid bounds are: " << sampling_grid.bounds().min()
         << " -> " << sampling_grid.bounds().max() << '\n';
@@ -371,8 +375,8 @@ int run(VTK_SMART(DataSet) dataset) {
     // initialize coordinates
 #pragma openmp parallel
     for (int n=0 ; n<npoints ; ++n) {
-        nvis::ivec3 c = sampling_grid.coordinates(n);
-        nvis::vec3 x = sampling_grid(c);
+        spurt::ivec3 c = sampling_grid.coordinates(n);
+        spurt::vec3 x = sampling_grid(c);
         flowmap[3*n  ] = x[0];
         flowmap[3*n+1] = x[1];
         flowmap[3*n+2] = x[2];
@@ -458,7 +462,7 @@ int run(VTK_SMART(DataSet) dataset) {
     progress.end();
 
     if (save_lines) {
-        std::vector<nvis::ivec2> dummy;
+        std::vector<spurt::ivec2> dummy;
         VTK_SMART(vtkPolyData) pdata = vtk_utils::make_polylines(lines,dummy, 0);
         std::vector<double> all_times;
         std::for_each(times.begin(), times.end(),
@@ -516,7 +520,7 @@ int runTBB(VTK_SMART(DataSet) dataset) {
 
     double global_bounds[6];
     dataset->GetBounds(global_bounds);
-    nvis::bbox3 bnds;
+    spurt::bbox3 bnds;
 
     vec3 target(0.548387, 0.0266667, 0.114714);
 
@@ -525,18 +529,19 @@ int runTBB(VTK_SMART(DataSet) dataset) {
         ::bounds[2] >= global_bounds[2] && ::bounds[3] <= global_bounds[3] &&
         ::bounds[4] >= global_bounds[4] && ::bounds[5] <= global_bounds[5]) {
         // valid bounds supplied by user
-        bnds.min() = nvis::vec3(::bounds[0], ::bounds[2], ::bounds[4]);
-        bnds.max() = nvis::vec3(::bounds[1], ::bounds[3], ::bounds[5]);
+        bnds.min() = spurt::vec3(::bounds[0], ::bounds[2], ::bounds[4]);
+        bnds.max() = spurt::vec3(::bounds[1], ::bounds[3], ::bounds[5]);
     }
     else {
-        bnds.min() = nvis::vec3(global_bounds[0], global_bounds[2], global_bounds[4]);
-        bnds.max() = nvis::vec3(global_bounds[1], global_bounds[3], global_bounds[5]);
+        bnds.min() = spurt::vec3(global_bounds[0], global_bounds[2], global_bounds[4]);
+        bnds.max() = spurt::vec3(global_bounds[1], global_bounds[3], global_bounds[5]);
     }
 
     the_bounds = bnds;
 
     std::cout << "Resolution = " << res[0] << " x " << res[1] << " x " << res[2] << std::endl;
-    spurt::raster_grid<3> sampling_grid(res, bnds);
+    coord_type _res(res[0], res[1], res[2]);
+    grid_type sampling_grid(_res, bnds);
 
     std::cout << "sampling grid bounds are: " << sampling_grid.bounds().min()
         << " -> " << sampling_grid.bounds().max() << '\n';
@@ -560,8 +565,8 @@ int runTBB(VTK_SMART(DataSet) dataset) {
 
         for (int n=r.begin(); n!=r.end(); ++n) {
         // for (int n=0 ; n<npoints ; ++n) {
-            nvis::ivec3 c = sampling_grid.coordinates(n);
-            nvis::vec3 x = sampling_grid(c);
+            spurt::ivec3 c = sampling_grid.coordinates(n);
+            spurt::vec3 x = sampling_grid(c);
             flowmap[3*n  ] = x[0];
             flowmap[3*n+1] = x[1];
             flowmap[3*n+2] = x[2];
@@ -665,7 +670,7 @@ int runTBB(VTK_SMART(DataSet) dataset) {
             lines.swap(newlines);
             times.swap(newtimes);
         }
-        std::vector<nvis::ivec2> dummy;
+        std::vector<spurt::ivec2> dummy;
         VTK_SMART(vtkPolyData) pdata = vtk_utils::make_polylines(lines,dummy, 0);
         std::vector<double> all_times;
         std::for_each(times.begin(), times.end(),

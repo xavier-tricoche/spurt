@@ -16,7 +16,7 @@ set( MATH_EXEC
 
 foreach( name ${MATH_EXEC} )
     add_executable( ${name} ${name}.cpp )
-    target_link_libraries( ${name} spurt_image ${Teem_LIBRARIES} )
+    target_link_libraries( ${name} spurt_image ${Teem_LIBRARIES} TBB::tbb TBB::tbbmalloc TBB::tbbmalloc_proxy )
 endforeach()
 install( TARGETS ${MATH_EXEC} RUNTIME DESTINATION bin )
 

@@ -3,20 +3,20 @@
 #include <fstream>
 #include <memory>
 
-#include <VTK/vtk_utils.hpp>
-#include <VTK/vtk_camera_helper.hpp>
+#include <vtk/vtk_utils.hpp>
+#include <vtk/vtk_camera_helper.hpp>
 #include <misc/option_parse.hpp>
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 
 #include <vtkColorTransferFunction.h>
 #include <vtkDataSet.h>
 
-typedef nvis::fixed_vector<double, 3> color_type;
+typedef spurt::vec3 color_type;
 
 std::string lines_name, scalars_name, img_name, cam_in, cam_out;
 bool verbose=false;
 color_type bg_col(0, 0, 0);
-nvis::ivec2 res(800, 800);
+spurt::ivec2 res(800, 800);
 float radius=0.01;
 
 void initialize(int argc, char* argv[]) {

@@ -1,13 +1,12 @@
-#ifndef __XAVIER_COLORMAP_HPP__
-#define __XAVIER_COLORMAP_HPP__
+#pragma once
 
 #include <map>
 #include <vector>
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 
 namespace spurt {
 struct color_map_bwr {
-    typedef nvis::fvec3             color_type;
+    typedef spurt::fvec3 color_type;
     
     color_map_bwr(const std::vector<float>& values, float gamma = 1) : __gamma(gamma) {
         std::vector<float> __vals(values);
@@ -44,9 +43,6 @@ struct color_map_bwr {
 };
 
 }
-
-
-#endif
 
 
 

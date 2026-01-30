@@ -1,4 +1,4 @@
-#include <VTK/vtk_utils.hpp>
+#include <vtk/vtk_utils.hpp>
 #include <misc/option_parse.hpp>
 #include <Eigen/Core>
 #include <limits>
@@ -54,7 +54,7 @@ int main(int argc, const char* argv[]) {
         exit(1);
     }
 
-    nvis::bbox3 domain;
+    spurt::bbox3 domain;
     if (*std::min_element(bounds.begin(), bounds.end()) ==
         *std::max_element(bounds.begin(), bounds.end())) {
         domain.min() = vector_t(-1, -1, -1);

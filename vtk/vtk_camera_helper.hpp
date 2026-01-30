@@ -1,5 +1,4 @@
-#ifndef __VTK_CAMERA_HELPER_HPP__
-#define __VTK_CAMERA_HELPER_HPP__
+#pragma once
 
 #include <exception>
 #include <fstream>
@@ -128,5 +127,3 @@ void import_camera_settings(const std::string& filename,
 }
 
 } // vtk_utils
-
-#endif

@@ -16,6 +16,7 @@
 #include "point.h"
 
 #include <stdexcept>
+#include <iostream>
 
 vtkStandardNewMacro(boundaryAwareRectGrid);
 
@@ -83,33 +84,33 @@ void boundaryAwareRectGrid::SetArray()
 	// cutcell code
 	vtkSmartPointer<vtkDataArray> cutcell_code_array_untyped = this->GetCellData()->GetArray("cutcell_code");
 	if (cutcell_code_array_untyped == nullptr) {
-		cerr << "cut-cell code array not found" << endl;
+		std::cerr << "cut-cell code array not found" << std::endl;
 		has_error = true;
 	}
 	else if (!(cutcell_code_array = vtkUnsignedCharArray::SafeDownCast(cutcell_code_array_untyped))) {
-		cerr << "cut-cell code type mismatch" << endl;
+		std::cerr << "cut-cell code type mismatch" << std::endl;
 		has_error = true;
 	}
 
 	// u-val (edge intersection) array
 	vtkSmartPointer<vtkDataArray> u_val_array_untyped = this->GetPointData()->GetArray("u_values_vector");
 	if (u_val_array_untyped == nullptr) {
-		cerr << "u-val (edge intersection) array not found" << endl;
+		std::cerr << "u-val (edge intersection) array not found" << std::endl;
 		has_error = true;
 	}
 	else if (!(u_val_float_array = vtkFloatArray::SafeDownCast(u_val_array_untyped))) {
-		cerr << "u-val (edge intersection) array type mismatch" << endl;
+		std::cerr << "u-val (edge intersection) array type mismatch" << std::endl;
 		has_error = true;
 	}
 
 	// control points
 	vtkSmartPointer<vtkDataArray> CP_aray_untyped = this->GetPointData()->GetArray("CP");
 	if (CP_aray_untyped == nullptr) {
-		cerr << "Control Point array not found " << endl;
+		std::cerr << "Control Point array not found " << std::endl;
 		has_error = true;
 	}
 	else if (!(CP_array = vtkDoubleArray::SafeDownCast(CP_aray_untyped))) {
-		cerr << "Control Point array type mismatch" << endl;
+		std::cerr << "Control Point array type mismatch" << std::endl;
 		has_error = true;
 	}
 
@@ -125,7 +126,7 @@ void boundaryAwareRectGrid::SetArray()
 		this->bspline_degree = bspline_degree_array->GetComponent(0, 0);
 
 		if (!prepare_knot_array()) {
-			cerr << "Prepare knot array failed" << endl;
+			std::cerr << "Prepare knot array failed" << std::endl;
 			has_error = true;
 		}
 	}
@@ -211,14 +212,14 @@ void get_marching_lines(int code, vtkSmartPointer<vtkIdList> grid_vid,
 	}
 }
 
-boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_3d(double x[3], vtkIdType ci, double* pcoords, double* N_ret)
+boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_3d(const double x[3], vtkIdType ci, double* pcoords, double* N_ret)
 {
 	//cell_id and pcoords can be passed in from another FindCell call to save computation
 	// but if not, find the cell and the parametric coord
 	double pcoords_backup[3];
 	if (ci == -2) {
 		int loc[3];
-		if (this->ComputeStructuredCoordinates(x, loc, pcoords_backup) == 0) {
+		if (this->ComputeStructuredCoordinates(const_cast<double*>(x), loc, pcoords_backup) == 0) {
 			return INOUT::OUT;
 		}
 		ci = this->ComputeCellId(loc); //get the cell id
@@ -281,14 +282,14 @@ boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_3d(double x[3
 		return boundaryAwareRectGrid::INOUT::OUT;
 }
 
-boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_2d(double x[3], vtkIdType ci, double* pcoords)
+boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_2d(const double x[3], vtkIdType ci, double* pcoords)
 {
 	//cell_id and pcoords can be passed in from another FindCell call to save computation
 	// but if not, run the findcell call
 	double pcoords_backup[3];
 	if (ci == -2) {
 		int loc[3];
-		if (this->ComputeStructuredCoordinates(x, loc, pcoords_backup) == 0) {
+		if (this->ComputeStructuredCoordinates(const_cast<double*>(x), loc, pcoords_backup) == 0) {
 			return INOUT::OUT;
 		}
 		ci = this->ComputeCellId(loc); //get the cell id
@@ -369,7 +370,7 @@ vtkIdType boundaryAwareRectGrid::FindCell(double x[3], vtkCell* cell, vtkIdType 
 
 // 2D implementation for bspline interpolating
 template<int DEG>
-vtkIdType boundaryAwareRectGrid::bspline_interp_impl_2d(double query_coord[3], double* return_val)
+vtkIdType boundaryAwareRectGrid::bspline_interp_impl_2d(const double query_coord[3], double* return_val)
 {
 	const int NDIM = 2;
 	using Spline1D = Eigen::Spline<double, 1, DEG>;
@@ -408,7 +409,7 @@ vtkIdType boundaryAwareRectGrid::bspline_interp_impl_2d(double query_coord[3], d
 
 // 2D implementation for bspline derivatives
 template<int DEG>
-vtkIdType boundaryAwareRectGrid::bspline_deriv_impl_2d(double query_coord[3], std::vector<double>& return_val, int deriv_order)
+vtkIdType boundaryAwareRectGrid::bspline_deriv_impl_2d(const double query_coord[3], std::vector<double>& return_val, int deriv_order)
 {
 	const int NDIM = 2;
 	using Spline1D = Eigen::Spline<double, 1, DEG>;
@@ -467,7 +468,7 @@ vtkIdType boundaryAwareRectGrid::bspline_deriv_impl_2d(double query_coord[3], st
 
 // 3D implementation
 template<int DEG>
-vtkIdType boundaryAwareRectGrid::bspline_interp_impl_3d(double query_coord[3], double * return_val) {
+vtkIdType boundaryAwareRectGrid::bspline_interp_impl_3d(const double query_coord[3], double * return_val) {
 	const int NDIM = 3;
 	using Spline1D = Eigen::Spline<double, 1, DEG>;
 	using VectorDegP1Type = typename Eigen::Matrix<double, DEG + 1, 1>;
@@ -510,7 +511,7 @@ vtkIdType boundaryAwareRectGrid::bspline_interp_impl_3d(double query_coord[3], d
 }
 
 template<int DEG>
-vtkIdType boundaryAwareRectGrid::bspline_deriv_impl_3d(double query_coord[3], std::vector<double>& return_val, int deriv_order) {
+vtkIdType boundaryAwareRectGrid::bspline_deriv_impl_3d(const double query_coord[3], std::vector<double>& return_val, int deriv_order) {
     // std::cout << "Entering bspline_deriv_impl_3d with p=[" << query_coord[0] << ", " << query_coord[1] << ", " << query_coord[2] << "], deriv order=" << deriv_order << "\n";
 
 	const int NDIM = 3;
@@ -594,7 +595,7 @@ vtkIdType boundaryAwareRectGrid::bspline_deriv_impl_3d(double query_coord[3], st
 	return 0;
 }
 
-vtkIdType boundaryAwareRectGrid::BsplineInterpolate(double query_coord[3], double* return_val, bool use_bdry_aware,
+vtkIdType boundaryAwareRectGrid::BsplineInterpolate(const double query_coord[3], double* return_val, bool use_bdry_aware,
 	bool project_onto_closest_bdry_surface)
 {
 	vtkIdType ret_id;
@@ -649,7 +650,7 @@ vtkIdType boundaryAwareRectGrid::BsplineInterpolate(double query_coord[3], doubl
         case 6:
 			ret_id = bspline_interp_impl_2d<6>(query_coord, return_val); break;
         default:
-            cerr << "Unsupported b-spline degree" << endl;
+            std::cerr << "Unsupported b-spline degree" << endl;
 			exit(-1);
         }
     }
@@ -668,7 +669,7 @@ vtkIdType boundaryAwareRectGrid::BsplineInterpolate(double query_coord[3], doubl
         case 6:
 			ret_id = bspline_interp_impl_3d<6>(query_coord, return_val); break;
         default:
-            cerr << "Unsupported b-spline degree" << endl;
+            std::cerr << "	Unsupported b-spline degree" << std::endl;
 			exit(-1);
         }
     }
@@ -687,7 +688,7 @@ vtkIdType boundaryAwareRectGrid::BsplineInterpolate(double query_coord[3], doubl
 
 }
 
-vtkIdType boundaryAwareRectGrid::BsplineAllDerivatives(double query_coord[3], std::vector<double>& return_val, int order, bool use_bdry_aware)
+vtkIdType boundaryAwareRectGrid::BsplineAllDerivatives(const double query_coord[3], std::vector<double>& return_val, int order, bool use_bdry_aware)
 {
 	vtkIdType ret_id;
     assert(this->bspline_degree != -1);
@@ -733,7 +734,7 @@ vtkIdType boundaryAwareRectGrid::BsplineAllDerivatives(double query_coord[3], st
         case 6:
 			ret_id = bspline_deriv_impl_2d<6>(query_coord, return_val, order); break;
         default:
-            cerr << "Unsupported b-spline degree" << endl;
+            std::cerr << "Unsupported b-spline degree" << endl;
 			exit(-1);
         }
     }
@@ -752,7 +753,7 @@ vtkIdType boundaryAwareRectGrid::BsplineAllDerivatives(double query_coord[3], st
         case 6:
 			ret_id = bspline_deriv_impl_3d<6>(query_coord, return_val, order); break;
         default:
-            cerr << "Unsupported b-spline degree" << endl;
+            std::cerr << "Unsupported b-spline degree" << endl;
 			exit(-1);
         }
     }

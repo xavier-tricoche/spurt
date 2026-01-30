@@ -1,5 +1,4 @@
-#ifndef __VTK_IMAGE_HELPER_HPP__
-#define __VTK_IMAGE_HELPER_HPP__
+#pragma once
 
 #include "vtk_macros.hpp"
 #include "vtk_data_helper.hpp"
@@ -17,6 +16,7 @@
 #include <vtkDataArray.h>
 #include <vtkDataSetWriter.h>
 #include <vtkImageData.h>
+#include <vtkImageDataLIC2D.h>
 #include <vtkImageShiftScale.h>
 #include <vtkJPEGReader.h>
 #include <vtkJPEGWriter.h>
@@ -33,10 +33,6 @@
 #include <vtkTIFFReader.h>
 #include <vtkTIFFWriter.h>
 #include <vtkWindowToImageFilter.h>
-
-#if __VTK_HAS_LIC__
-// #include <vtkLineIntegralConvolution2D.h>
-#endif
 
 namespace vtk_utils {
 
@@ -148,7 +144,7 @@ inline vtkImageData* expr_to_image(const std::vector<std::string>& expr_str,
             v[1]=static_cast<value_t>(expr[1].value());
             v[2]=static_cast<value_t>(expr[2].value());
             // std::cout << "v=" << v << '\n';
-            values->InsertNextTypedTuple(v.begin());
+            values->InsertNextTypedTuple(v.data());
         }
     }
 
@@ -336,33 +332,27 @@ inline void save_frame(vtkRenderWindow* window,
     save_image(capture->GetOutput(), filename, quality);
 }
 
-#if 0 /*__VTK_HAS_LIC__*/
-// inline vtkImageData* do_lic(const vtkImageData* rhs, int nsteps, float eps,
-//                             bool enhanced=false, int factor=1)
-// {
-//     // temporary render window provides local context to GPU computation
-//     VTK_PTR(vtkRenderWindow, context);
-//
-//     // compute LIC texture
-//     vtkImageData* img;
-//     VTK_PTR(vtkLineIntegralConvolution2D, lic);
-//     VTK_CONNECT(lic, const_cast<vtkImageData*>(rhs));
-//     lic->SetContext(context);
-//     lic->SetNumberOfSteps(nsteps);
-//     lic->SetStepSize(eps);
-//     lic->SetMagnification(factor);
-// 	lic->EnhancedLICOn();
-// 	lic->AntiAliasOn();
-//     // if (enhanced) lic->EnhanceOn();
-//     lic->UpdateInformation();
-//     lic->Update();
-//     context->Delete();
-//     img=lic->GetOutput();
-//     img->Register(img);
-//     lic->Delete();
-//     return img;
-// }
-#endif
+inline vtkImageData* do_lic(const vtkImageData* rhs, int nsteps, float eps,
+                            bool enhanced=false, int factor=1)
+{
+    // temporary render window provides local context to GPU computation
+    VTK_CREATE(vtkRenderWindow, context);
+    context->OffScreenRenderingOn();
+
+    // compute LIC texture
+    VTK_CREATE(vtkImageDataLIC2D, lic);
+    VTK_CONNECT(lic, const_cast<vtkImageData*>(rhs));
+    lic->SetContext(context);
+    lic->SetSteps(nsteps);
+    lic->SetStepSize(eps);
+    lic->SetMagnification(factor);
+	// lic->EnhancedLICOn();
+	// lic->AntiAliasOn();
+    // lic->UpdateInformation();
+    lic->Update();
+    context->Delete();
+    return lic->GetOutput();
+}
 
 inline vtkRenderer* fill_window(vtkRenderer* inout, const spurt::bbox2& bounds) {
     inout->GetActiveCamera()->SetParallelProjection(1);
@@ -375,5 +365,3 @@ inline vtkRenderer* fill_window(vtkRenderer* inout, const spurt::bbox2& bounds) 
 }
 
 } // vtk_utils
-
-#endif

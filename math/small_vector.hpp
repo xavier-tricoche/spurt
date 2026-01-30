@@ -157,6 +157,21 @@ namespace spurt
             m_storage[2] = v2;
             m_storage[3] = v3;
         }
+
+        template <typename T1, typename T2, typename T3, typename T4, 
+                  typename T5,
+                typename = typename internal::must_all_be_scalar<T1, T2, T3, T4, T5>::type>
+        small_vector_interface(T1 v0, T2 v1, T3 v2, T4 v3)
+            : m_storage() 
+        {
+            std::fill(begin(), end(), 0);
+            static_assert(_size_ >= 4,
+                          "Invalid initializer for array of size < 4");
+            m_storage[0] = v0;
+            m_storage[1] = v1;
+            m_storage[2] = v2;
+            m_storage[3] = v3;
+        }
         
         const storage_type& storage() const { return m_storage; }
         

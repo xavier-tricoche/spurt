@@ -35,7 +35,8 @@ using namespace spurt;
 
 using namespace spurt::lavd;
 
-typedef fixed_vector<value_t, 6> vec6;
+typedef small_vector<value_t, 6> vec6;
+typedef bounding_box< small_vector<value_t, 2> > bbox_t;
 
 std::string name_in, name_mask, name_out;
 std::vector<std::string> t_init_str(1, "0");
@@ -248,10 +249,10 @@ void filter_trajectory(trajectory_t& out, const trajectory_t& in) {
     }
     double mean_dist=0;
     out.push_back(in[0]);
-    vec2 last = subv<0, 2, value_t, 4>(in[0]);
+    vec2 last(in[0][0], in[0][1]);
     for (size_t i=1; i<in.size()-1; ++i) {
         const vec4& p = in[i];
-        vec2 cur = subv<0, 2, value_t, 4>(p);
+        vec2 cur(p[0], p[1]);
         // mean_dist += norm(cur - subv<0, 2, value_t, 4>(in[i-1]));
         if (norm(cur-last) > min_dist) {
             out.push_back(p);
@@ -533,7 +534,7 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
     os << "kernel size=" << support_radius << '\n';
     comments.push_back(os.str());
 
-    typedef fixed_vector<float, 5> fvec5;
+    typedef small_vector<float, 5> fvec5;
     std::vector< fvec5 > out_array;
 
     for (size_t i=0; i<all_trajectories.size(); ++i) {
@@ -542,7 +543,9 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
         filter_trajectory(t, orig);
         for (size_t n=0; n<t.size(); ++n) {
             const auto& pt = t[n];
-            out_array.push_back(fvec5(pt[0], pt[1], pt[2], pt[3], i));
+            fvec5 out(pt[0], pt[1], pt[2], pt[3]);
+            out[4] = i;
+            out_array.push_back(out);
         }
         auto pt = orig.back();
         orig.clear();
@@ -570,7 +573,9 @@ void export_results(double current_time, double wall_time, double cpu_time, bool
         const auto& t = failed_paths[i];
         for (size_t n=0; n<t.size(); ++n) {
             const auto& pt = t[n];
-            out_array.push_back(fvec5(pt[0], pt[1], pt[2], pt[3], i));
+            fvec5 out(pt[0], pt[1], pt[2], pt[3]);
+            out[4] = i;
+            out_array.push_back(out);
         }
     }
     dims[1] = out_array.size();
@@ -773,7 +778,7 @@ int main(int argc, const char* argv[])
                 // since this is all we need to proceed
                 if (!initial_loop && !_traj.empty()) {
                     vec4 last_p = _traj.back();
-                    _traj.empty();
+                    _traj.clear();
                     _traj.push_back(last_p);
                 }
                 observer an_observer(_state, _traj, my_vorticityf, my_avg_vorticityf);

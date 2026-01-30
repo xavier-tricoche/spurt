@@ -1,5 +1,4 @@
-#ifndef __VTK_DATA_HELPER_HPP__
-#define __VTK_DATA_HELPER_HPP__
+#pragma once
 
 #include "vtk_macros.hpp"
 
@@ -1705,6 +1704,3 @@ inline vtkDataArray* merge(const vtkDataArray* _in1,
 
 
 } // namespace vtk_utils
-
-
-#endif

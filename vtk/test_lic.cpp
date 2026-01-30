@@ -11,9 +11,9 @@ int main(int argc, const char* argv[]) {
 
     std::string ofname, ifname;
     std::string expr;
-    nvis::bbox3 bounds(nvis::vec3(0), nvis::vec3(1,1,0));
-    nvis::ivec3 res(10, 10, 1);
-    nvis::vec4 bounds_as_vec(0,0,1,1);
+    spurt::bbox3 bounds(spurt::vec3(0), spurt::vec3(1,1,0));
+    spurt::ivec3 res(10, 10, 1);
+    spurt::vec4 bounds_as_vec(0,0,1,1);
     bool verbose=false;
     double length=100;
     double eps=0.001;
@@ -62,7 +62,7 @@ int main(int argc, const char* argv[]) {
 
     res[2]=1;
 
-    if (nvis::norm(bounds_as_vec)!=0) {
+    if (spurt::norm(bounds_as_vec)!=0) {
         bounds.min()[0]=bounds_as_vec[0];
         bounds.min()[1]=bounds_as_vec[1];
         bounds.max()[0]=bounds_as_vec[2];
@@ -115,9 +115,9 @@ int main(int argc, const char* argv[]) {
             vtk_utils::
             load_image_of_given_format<vtkStructuredPointsReader>(ifname);
         if (verbose) {
-            nvis::ivec3 dims;
+            spurt::ivec3 dims;
             if (rhs_img.GetPointer()) {
-                rhs_img->GetDimensions(static_cast<int*>(dims.begin()));
+                rhs_img->GetDimensions(static_cast<int*>(&dims[0]));
                 std::cout << "image dimensions: " << dims << '\n';
             }
         }

@@ -5,14 +5,14 @@
 #include <math/stat.hpp>
 #include <graphics/colors.hpp>
 
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 #include <math/bounding_box.hpp>
 
-typedef nvis::fixed_vector< double, 2 > vec2d;
-typedef nvis::fixed_vector< double, 3 > vec3d;
-typedef nvis::fixed_vector< int, 2 >    vec2i;
-typedef nvis::fixed_vector< int, 3 >    vec3i;
-typedef nvis::bounding_box< vec2d >    bbox2d;
+typedef spurt::small_vector< double, 2 > vec2d;
+typedef spurt::small_vector< double, 3 > vec3d;
+typedef spurt::small_vector< int, 2 >    vec2i;
+typedef spurt::small_vector< int, 3 >    vec3i;
+typedef spurt::bounding_box< vec2d >    bbox2d;
 
 std::string name_in, name_out, name_cmap_in;
 bool verbose;

@@ -6,10 +6,10 @@
 #include <image/nrrd_wrapper.hpp>
 #include <data/field_wrapper.hpp>
 
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 #include <math/bounding_box.hpp>
 
-#include <data/raster.hpp>
+#include <data/raster_data.hpp>
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
 
@@ -28,9 +28,9 @@ typedef double value_t;
 constexpr value_t PI=3.14159265358979323844;
 constexpr value_t TWO_PI=6.28318530717958647688;
 
-typedef nvis::fixed_vector< value_t, 3> state_t;
-typedef nvis::fixed_vector< value_t, 3 > pos_t;
-typedef nvis::bounding_box< pos_t > bbox_t;
+typedef spurt::small_vector< value_t, 3> state_t;
+typedef spurt::small_vector< value_t, 3 > pos_t;
+typedef spurt::bounding_box< pos_t > bbox_t;
 
 std::string name_out;
 value_t t_max=100., eps=1.0e-8;
@@ -58,8 +58,8 @@ bbox_t to_bbox(const std::array<value_t, 6>& array) {
 }
 
 template<typename T, size_t N>
-nvis::fixed_vector<T, N> to_vec(const std::array<T, N>& array) {
-    nvis::fixed_vector<T, N> v;
+spurt::small_vector<T, N> to_vec(const std::array<T, N>& array) {
+    spurt::small_vector<T, N> v;
     for (size_t i=0; i<N; ++i) v[i]=array[i];
     return v;
 }
@@ -123,7 +123,7 @@ int main(int argc, const char* argv[])
     spurt::Catseye<value_t, state_t> rhs(2);
     
     if (verbose) std::cout << "Resolution = " << res[0] << "x" << res[1] << "x" << res[2] << std::endl;
-    spurt::raster_grid<3> sampling_grid(to_vec(res), to_bbox(bnds));
+    spurt::raster_grid<size_t, value_t, 3> sampling_grid(to_vec(res), to_bbox(bnds));
           
     size_t npoints = sampling_grid.size();
         
@@ -160,7 +160,7 @@ int main(int argc, const char* argv[])
 #endif
             if (!thread) progress.update(counter);
             
-            nvis::ivec3 c = sampling_grid.coordinates(n);
+            spurt::ivec3 c = sampling_grid.coordinates(n);
             state_t x = sampling_grid(c);
             
             integrate_adaptive(make_controlled(eps, eps, stepper), rhs, x,
@@ -175,7 +175,7 @@ int main(int argc, const char* argv[])
         
     std::vector<size_t> size(4);
     std::vector<double> step(4);
-    const nvis::vec3& s = sampling_grid.spacing();
+    const spurt::vec3& s = sampling_grid.spacing();
     step[0] = AIR_NAN;
     for (int i = 0 ; i < 3 ; ++i) {
         size[i+1] = res[i];

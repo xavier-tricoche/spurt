@@ -1,5 +1,4 @@
-#ifndef __VTK_INTERPOLATOR_HPP__
-#define __VTK_INTERPOLATOR_HPP__
+#pragma once
 
 #include <vtk/vtk_utils.hpp>
 
@@ -705,5 +704,3 @@ namespace vtk_utils {
         bool m_fast;
     };
 }
-
-#endif

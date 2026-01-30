@@ -1,5 +1,4 @@
-#ifndef __VTK_IO_HELPER_HPP__
-#define __VTK_IO_HELPER_HPP__
+#pragma once
 
 #include <fstream>
 #include <string>
@@ -302,6 +301,3 @@ make_slider_representation(const std::string& text, const spurt::vec2& range,
 }
 
 } // vtk_utils
-
-
-#endif

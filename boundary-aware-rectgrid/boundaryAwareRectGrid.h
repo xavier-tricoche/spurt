@@ -36,18 +36,18 @@ private:
 	bool prepare_knot_array();
 
 	template<int DEG>
-	vtkIdType bspline_interp_impl_2d(double query_coord[3], double* return_val);
+	vtkIdType bspline_interp_impl_2d(const double query_coord[3], double* return_val);
 	template<int DEG>
-	vtkIdType bspline_interp_impl_3d(double query_coord[3], double* return_val);
+	vtkIdType bspline_interp_impl_3d(const double query_coord[3], double* return_val);
 	template<int DEG>
-	vtkIdType bspline_deriv_impl_2d(double query_coord[3], std::vector<double>& return_val, int order);
+	vtkIdType bspline_deriv_impl_2d(const double query_coord[3], std::vector<double>& return_val, int order);
 	template<int DEG>
-	vtkIdType bspline_deriv_impl_3d(double query_coord[3], std::vector<double>& return_val, int order);
+	vtkIdType bspline_deriv_impl_3d(const double query_coord[3], std::vector<double>& return_val, int order);
 
 	//double* N_ret variable is added specific for flow attachment fix. (for 3D only)
 	//The avg normalized normal vector of the boudnary triangles is returned in N_ret if it's not null
-	INOUT query_pt_inout_3d(double x[3], vtkIdType ci = -2, double* pcoords = nullptr, double* N_ret = nullptr);
-	INOUT query_pt_inout_2d(double x[3], vtkIdType ci = -2, double* pcoords = nullptr);
+	INOUT query_pt_inout_3d(const double x[3], vtkIdType ci = -2, double* pcoords = nullptr, double* N_ret = nullptr);
+	INOUT query_pt_inout_2d(const double x[3], vtkIdType ci = -2, double* pcoords = nullptr);
 
 public:
 
@@ -62,9 +62,9 @@ public:
 	// If use_bdry_aware==true and project_on_bdry==true, the interp_val (of 3 components) is assumed to be a vector,
 	// and any point that is considered "out" will have its vector value projected onto the boundary surface.
 	// If use_bdry_aware==true and project_on_bdry==false, points that are "out" are set to zero.
-	vtkIdType BsplineInterpolate(double x[3], double * ret_val, bool use_bdry_aware= true, bool project_on_bdry = false);
+	vtkIdType BsplineInterpolate(const double x[3], double * ret_val, bool use_bdry_aware= true, bool project_on_bdry = false);
 
-	vtkIdType BsplineAllDerivatives(double x[3], std::vector<double>& ret_val, int order, bool use_bdry_aware= true);
+	vtkIdType BsplineAllDerivatives(const double x[3], std::vector<double>& ret_val, int order, bool use_bdry_aware= true);
 
 	int get_degree() const;
 

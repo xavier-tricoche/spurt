@@ -1,5 +1,4 @@
-#ifndef __VTK_COLORBAR_HELPER_HPP__
-#define __VTK_COLORBAR_HELPER_HPP__
+#pragma once
 
 #include <string>
 #include <fstream>
@@ -92,5 +91,3 @@ colorbar(vtkSmartPointer<vtkColorTransferFunction> ctf,
 }
 
 } // vtk_utils
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef __FLOW_TIME_DEPENDENT_FIELD_HPP__
-#define __FLOW_TIME_DEPENDENT_FIELD_HPP__
+#pragma once
 
 #include <algorithm>
 #include <exception>
@@ -114,7 +113,7 @@ namespace spurt {
             return std::make_pair(m_min_time, m_max_time);
         }
 
-        value_type operator()(const point_type& p, scalar_type& t) const {
+        value_type interpolate(const point_type& p, scalar_type t) const {
             int idx = find_time(t, m_times);
             if (idx == -1) throw std::runtime_error("invalid time coordinate: " + std::to_string(t));
             value_type vlo = (*m_steps[idx])(p);      // spatial interpolation
@@ -130,6 +129,15 @@ namespace spurt {
             std::ostringstream os;
             m_samples += 2;
             return (1.-u)*vlo + u*vhi;
+        }
+
+        value_type operator()(const point_type& p, scalar_type t) const {
+            return interpolate(p, t);
+        }
+
+        void operator()(const point_type& p, value_type& v, scalar_type t) 
+        const {
+            v = interpolate(p, t);
         }
 
         size_t nb_samples() const { return m_samples; }
@@ -217,12 +225,21 @@ namespace spurt {
             return std::pair<scalar_type, scalar_type>(m_times.front(), m_times.back());
         }
 
-        value_type operator()(const point_type& p, scalar_type& t) const {
+        value_type interpolate(const point_type& p, scalar_type t) const {
             VTK_CREATE(vtkGenericCell, a_cell);
-            return this->operator()(p, t, a_cell);
+            return this->interpolate(p, t, a_cell);
         }
 
-        value_type operator()(const point_type& p, scalar_type& t,
+        value_type operator()(const point_type& p, scalar_type t) const {
+            return interpolate(p, t);
+        }
+
+        void operator()(const point_type& p, value_type& v, scalar_type t) 
+        const {
+            v = interpolate(p, t);
+        }
+
+        value_type interpolate(const point_type& p, scalar_type t,
                               VTK_SMART(vtkGenericCell) a_cell) const {
             std::vector<scalar_type> weights(8);
             std::vector<index_type> ptids(8);
@@ -345,7 +362,7 @@ namespace spurt {
             return std::pair<scalar_type, scalar_type>(m_times.front(), m_times.back());
         }
 
-        value_type operator()(const point_type& p, scalar_type& t) const {
+        value_type interpolate(const point_type& p, scalar_type t) const {
             std::vector<scalar_type> weights(8);
             std::vector<int> ptids(8);
             int cellid;
@@ -380,6 +397,15 @@ namespace spurt {
                 vhi *= u;
                 return value_type(vlo + vhi);
             }
+        }
+
+        value_type operator()(const point_type& p, scalar_type t) const {
+            return interpolate(p, t);
+        }
+
+        void operator()(const point_type& p, value_type& v, scalar_type t) 
+        const {
+            v = interpolate(p, t);
         }
 
         std::shared_ptr<interpolator_type> get_interpolator() {
@@ -476,7 +502,7 @@ namespace spurt {
             return std::pair<scalar_type, scalar_type>(m_times.front(), m_times.back());
         }
 
-        value_type operator()(const point_type& p, scalar_type& t) const {
+        value_type interpolate(const point_type& p, scalar_type t) const {
             // This is where the magic happens
             // this->m_dataset contains the boundaryAwareRectilinearGrid, and should be used for interpolation
 
@@ -503,6 +529,15 @@ namespace spurt {
             }
         }
 
+        value_type operator()(const point_type& p, scalar_type t) const {
+            return interpolate(p, t);
+        }
+
+        void operator()(const point_type& p, value_type& v, scalar_type t) 
+        const {
+            v = interpolate(p, t);
+        }
+
         std::shared_ptr<interpolator_type> get_interpolator() {
             return m_interpolator;
         }
@@ -517,5 +552,3 @@ namespace spurt {
     };
 
 } // spurt
-
-#endif

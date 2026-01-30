@@ -4,10 +4,10 @@
 
 #include <image/nrrd_wrapper.hpp>
 #include <image/probe.hpp>
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 // #include <vis/streamline.hpp>
 #include <misc/progress.hpp>
-#include <data/raster.hpp>
+#include <data/raster_data.hpp>
 #include <format/filename.hpp>
 #include <misc/option_parse.hpp>
 
@@ -19,22 +19,21 @@
 #include <omp.h>
 #endif
 
-using namespace nvis;
 
 using namespace boost::numeric::odeint;
 
-typedef spurt::raster_grid<2, double, size_t> grid_t;
-typedef spurt::raster_data<vec3, 2, double, size_t> raster_t;
-typedef vec3 state_t; // (x, y, inside)
+typedef spurt::raster_grid<size_t, double, 2> grid_t;
+typedef spurt::raster_data<size_t, double, 2, spurt::vec3> raster_t;
+typedef spurt::vec3 state_t; // (x, y, inside)
 
 
 std::string in_name, out_name;
 double t0=0, t;
 double eps=1.0e-6;
-ivec2 res(256, 256);
+spurt::ivec2 res(256, 256);
 bool verbose=false;
-vec4 bounds_as_array(0);
-bbox2 bounds;
+spurt::vec4 bounds_as_array(0);
+spurt::bbox2 bounds;
 
 struct nrrd_vector_field {
     typedef spurt::gage_interface::vector_wrapper wrapper_t;
@@ -44,7 +43,7 @@ struct nrrd_vector_field {
             m_wrapper.use_world();
         }
             
-    bool operator()(const vec3& x, vec3& f) const {
+    bool operator()(const spurt::vec3& x, spurt::vec3& f) const {
         return m_wrapper.value(x, f);
     }
     
@@ -59,8 +58,8 @@ struct odeint_rhs {
         : m_field( other.m_field ) {}
     
     void operator()( const state_t& x, state_t& dxdt, double t) const {
-        vec3 v;
-        bool ok = m_field( vec3(x[0], x[1], t), v );
+        spurt::vec3 v;
+        bool ok = m_field( spurt::vec3(x[0], x[1], t), v );
         if (!ok) {
             dxdt = state_t(0, 0, 1);
         }
@@ -174,8 +173,8 @@ int main(int argc, char* argv[]) {
     
     if (bounds_as_array[2]>bounds_as_array[0] &&
         bounds_as_array[3]>bounds_as_array[1]) {
-        bounds.min()=vec2(bounds_as_array[0], bounds_as_array[1]);
-        bounds.max()=vec2(bounds_as_array[2], bounds_as_array[3]);    
+        bounds.min()=spurt::vec2(bounds_as_array[0], bounds_as_array[1]);
+        bounds.max()=spurt::vec2(bounds_as_array[2], bounds_as_array[3]);    
     }
     else {
         bounds.min()[0] = nin->axis[1].min;
@@ -214,18 +213,18 @@ int main(int argc, char* argv[]) {
 
         odeint_rhs rhs(*nrrd_vfs[thread]);
         
-        nvis::vec2 x0 = sampling_grid[i];
+        spurt::vec2 x0 = sampling_grid[i];
         state_t x(x0[0], x0[1], 0);
         state_t x_cond;
         double t_cond;
         std::tie(t_cond, x_cond) = find_condition(x, rhs, left_c, t0, t0+t, dt, 1.0e-6);
           
         if ((dt > 0 && t_cond > t0+t) || (dt < 0 && t_cond < t0+t)) {
-            fmap[i] = vec3(x[0], x[1], t0+t);
+            fmap[i] = spurt::vec3(x[0], x[1], t0+t);
         }
         else {
             ++nfailed;
-            fmap[i] = vec3(x_cond[0], x_cond[1], t_cond);
+            fmap[i] = spurt::vec3(x_cond[0], x_cond[1], t_cond);
         }
 
 #if 0        
@@ -279,7 +278,7 @@ int main(int argc, char* argv[]) {
     if (out_name.empty()) {
         out_name = spurt::filename::remove_extension(in_name) + "-fmap.nrrd";
     }
-    fmap.save_as_nrrd(out_name);
+    spurt::save_as_nrrd(out_name, fmap);
     
     return 0;
 }

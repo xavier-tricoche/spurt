@@ -17,7 +17,7 @@
 #include <boost/filesystem.hpp>
 
 #include <data/field_wrapper.hpp>
-#include <data/raster.hpp>
+#include <data/raster_data.hpp>
 #include <format/filename.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <image/probe.hpp>
@@ -152,11 +152,11 @@ void parse_restart_file() {
 			if (std::regex_search(val_as_str, bnd_match, bnd_regex)) {
 				std::istringstream iss1(bnd_match[1].str());
 				spurt::vec2 x;
-				iss1 >> x;
+				iss1 >> x[0] >> x[1];
 				bnds[0] = x[0];
 				bnds[1] = x[1];
 				std::istringstream iss2(bnd_match[2].str());
-				iss2 >> x;
+				iss2 >> x[0] >> x[1];
 				bnds[2] = x[0];
 				bnds[3] = x[1];
 			}

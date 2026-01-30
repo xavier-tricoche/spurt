@@ -1,5 +1,4 @@
-#ifndef __XAVIER_INTEGRATION_HPP__
-#define __XAVIER_INTEGRATION_HPP__
+#pragma once
 
 #include <list>
 

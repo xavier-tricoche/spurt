@@ -1,5 +1,4 @@
-#ifndef __FTLE_HPP__
-#define __FTLE_HPP__
+#pragma once
 
 #include <math/types.hpp>
 #include <misc/progress.hpp>
@@ -235,5 +234,3 @@ spurt::vec2 eigenftle(int n, const Data& data, const FlowMap flowmaps[2], double
     return ans;
 }
 }
-
-#endif

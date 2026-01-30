@@ -40,7 +40,7 @@
 #include "vtkSmartVolumeMapper.h"
 
 #include <format/filename.hpp>
-#include <math/fixed_vector.hpp>
+#include <math/small_vector.hpp>
 
 #include <sstream>
 #include <iterator>
@@ -101,11 +101,11 @@ void printUsage(const std::string& msg = "") {
     exit(0);
 }
 
-typedef nvis::fvec2 opacity_control_point;
-typedef nvis::fvec4 color_control_point;
+typedef spurt::fvec2 opacity_control_point;
+typedef spurt::fvec4 color_control_point;
 
-nvis::fvec3 bg_color(0,0,0);
-nvis::ivec2 res(800, 800);
+spurt::fvec3 bg_color(0,0,0);
+spurt::ivec2 res(800, 800);
 double distance=0;
 bool verbose = false;
 bool gpu = true;

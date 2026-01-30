@@ -11,20 +11,27 @@
 #include <boost/numeric/odeint.hpp>
 
 #include <math/types.hpp>
+#include <math/small_vector.hpp>
+#include <math/bounding_box.hpp>
+
 #include <flow/ode_observer.hpp>
-#include <data/raster.hpp>
 #include <flow/time_dependent_field.hpp>
-#include <flow/vector_field.hpp>
-#include <format/DLRreader.hpp>
+#include <format/dlr_reader.hpp>
+
 #include <misc/option_parse.hpp>
 #include <misc/progress.hpp>
 #include <misc/strings.hpp>
-#include <vtk/vtk_interpolator.hpp>
 #include <misc/meta_utils.hpp>
+
+#include <vtk/vtk_interpolator.hpp>
 
 #include <tbb/parallel_for.h>
 #include <tbb/tbb.h>
-tbb::atomic<size_t> progress_counter;
+std::atomic<size_t> progress_counter;
+
+#include <boost/numeric/odeint.hpp>
+#include <boost/filesystem.hpp>
+namespace odeint = boost::numeric::odeint;
 
 
 std::string name_in, name_out, seed_name, path, cmdline;
@@ -99,164 +106,47 @@ void initialize(int argc, const char* argv[]) {
 using namespace spurt;
 using namespace vtk_utils;
 
-typedef vec3 point_type;
-typedef vec3 vector_type;
-typedef double scalar_type;
+typedef double scalar_type; 
+typedef size_t size_type;
+typedef spurt::small_vector<scalar_type, 3> point_type;
+typedef spurt::small_vector<scalar_type, 3> vector_type;
+typedef spurt::small_vector<size_type, 3> coord_type;
+typedef spurt::bounding_box<point_type> bounds_type;
 
-typedef interpolator<vtkImageData, double, 3, vector_type>  img_intp_t;
-typedef interpolator<vtkRectilinearGrid, double, 3, vector_type> rect_intp_t;
-typedef interpolator<vtkUnstructuredGrid, double, 3, vector_type> unst_intp_t;
-typedef interpolator<vtkStructuredGrid, double, 3, vector_type> curv_intp_t;
+typedef interpolator<vtkImageData, scalar_type, 3, vector_type>  img_intp_t;
+typedef interpolator<vtkRectilinearGrid, scalar_type, 3, vector_type> rect_intp_t;
+typedef interpolator<vtkUnstructuredGrid, scalar_type, 3, vector_type> unst_intp_t;
+typedef interpolator<vtkStructuredGrid, scalar_type, 3, vector_type> curv_intp_t;
 
-typedef vtk_utils::point_locator<vtkUnstructuredGrid, double, 3, vec3> locator_type;
-typedef spurt::fixed_mesh_time_dependent_field<locator_type, std::vector<vec3> > field_type;
+typedef vtk_utils::point_locator<vtkUnstructuredGrid, scalar_type, 3, point_type> locator_type;
+typedef spurt::fixed_mesh_time_dependent_field<locator_type, std::vector<vector_type> > field_type;
 
-struct RKDOPRI5 {
-    typedef vec3 vec_t; // vector type required by dopri5
-    typedef dopri5<vec_t> ode_solver_type;
-    typedef ode_solver_type::step step_type;
-
-    template<typename RHS>
-    struct dopri_rhs {
-        dopri_rhs(const RHS& rhs) : m_rhs(rhs) {}
-
-        vec_t operator()(double t, const vec_t& y) const {
-            vector_type dydt;
-            try {
-                m_rhs(as_vec3(y), dydt, t);
-            }
-            catch(...) {
-                throw invalid_position_exception("Unable to interpolate");
-            }
-            return dydt.as_nvis_vec3();
-        }
-        const RHS& m_rhs;
-    };
-
-    template<typename RHS, typename Obs>
-    static void integrate(const RHS& rhs, point_type& y, double t0,
-                          double T, double hinit, double hmax, double eps,
-                          Obs& obs) {
-        ode_solver_type solver;
-        dopri_rhs<RHS> my_rhs(rhs);
-        if (eps > 0) {
-            solver.reltol = solver.abstol = eps;
-        }
-        if (hmax > 0) {
-            solver.h_max = hmax;
-        }
-        solver.t = t0;
-        solver.t_max = t0+T;
-        solver.y = y.as_nvis_vec3();
-        step_type step;
-        try {
-            while (true) {
-                auto result = solver.do_step(my_rhs, step);
-                if (result == ode_solver_type::OK || result ==
-                    ode_solver_type::T_MAX_REACHED) {
-                    obs(as_vec3(step.y1()), step.t1());
-                    if (result == ode_solver_type::T_MAX_REACHED) break;
-                }
-                else {
-                    std::ostringstream os;
-                    os << "unable to complete integration: ";
-                    if (result == ode_solver_type::STIFFNESS_DETECTED) {
-                        os << "stiffness detected";
-                    }
-                    else if (result == ode_solver_type::STEPSIZE_UNDERFLOW) {
-                        os << "step size underflow";
-                    }
-                    os << " at (" << to_str(as_vec3(solver.y)) << ", "
-                       << solver.t << ")\n";
-                    break;
-                }
-            }
-        }
-        catch(std::runtime_error& e) {
-            std::ostringstream os;
-            os << "RKDOPRI5::integrate: exception caught: " << e.what() << '\n';
-            if (verbose) std::cerr << os.str() << std::flush;
-            throw invalid_position_exception(os.str());
-        }
-    }
-};
-
-template<typename Field, typename Enable=void>
-struct rhs_type {};
-
-template<typename Field>
-struct rhs_type<
-    Field,
-    typename std::enable_if<
-        std::is_same<typename Field::dataset_type, vtkStructuredGrid >::value ||
-        std::is_same<typename Field::dataset_type, vtkUnstructuredGrid>::value
-    >::type > {
-    typedef Field field_type;
-
-    rhs_type(std::shared_ptr<const field_type> field, size_t max_evals=1000,
-             bool _verbose=false)
-    : m_field(field), m_counter(0), m_max_evals(max_evals), m_verbose(_verbose),
-      m_cell(VTK_SMART(vtkGenericCell)::New()) {}
-
-    rhs_type(std::shared_ptr<const field_type> field, vtkGenericCell* acell, size_t max_evals=1000, bool forward=true, bool _verbose=false)
-        : m_field(field), m_cell(acell), m_counter(0), m_max_evals(max_evals),
-          m_verbose(_verbose) {}
-
-    rhs_type(const rhs_type& other)
-        : m_field(other.m_field), m_counter(other.m_counter),
-          m_cell(other.m_cell), m_max_evals(other.m_max_evals),
-          m_verbose(other.m_verbose) {}
-
-    void operator()(const vec3& x, vec3& dxdt, scalar_type t) const {
-        if (confine && !the_bounds.inside(x.as_nvis_vec3())) {
-            throw invalid_position_exception("invalid position: " + to_str(x) + " at t=" + to_string(t));
-        }
-        std::ostringstream os;
-        if (false) {
-            std::cout << "About to run interpolator\n";
-            os << "rhs(" << to_str(x) << ", " << t << ")=";
-        }
-        dxdt = (*m_field)(x, t); // may throw
-        if (false) {
-            os << to_str(dxdt) << '\n';
-            std::cout << os.str() << std::flush;
-        }
-        ++m_counter;
-    }
-
-    std::shared_ptr<const field_type> m_field;
-    mutable size_t m_counter;
-    const size_t m_max_evals;
-    VTK_SMART(vtkGenericCell) m_cell;
-    bool m_verbose;
-};
-
-typedef Observer<vec3> observer_t;
+typedef Observer<point_type> observer_t;
 
 
 int runTBB(shared_ptr<field_type> field) {
-    double global_bounds[6];
+    scalar_type global_bounds[6];
     field->get_locator()->get_dataset()->GetBounds(global_bounds);
     bbox3 bnds;
 
-    std::vector<vec3> seeds;
+    std::vector<point_type> seeds;
 
     if (::bounds[0]<::bounds[1] && ::bounds[2]<::bounds[3] && ::bounds[4]<::bounds[5] &&
         ::bounds[0] >= global_bounds[0] && ::bounds[1] <= global_bounds[1] &&
         ::bounds[2] >= global_bounds[2] && ::bounds[3] <= global_bounds[3] &&
         ::bounds[4] >= global_bounds[4] && ::bounds[5] <= global_bounds[5]) {
         // valid bounds supplied by user
-        bnds.min() = vec3(::bounds[0], ::bounds[2], ::bounds[4]);
-        bnds.max() = vec3(::bounds[1], ::bounds[3], ::bounds[5]);
+        bnds.min() = point_type(::bounds[0], ::bounds[2], ::bounds[4]);
+        bnds.max() = point_type(::bounds[1], ::bounds[3], ::bounds[5]);
     }
     else {
-        bnds.min() = vec3(global_bounds[0], global_bounds[2], global_bounds[4]);
-        bnds.max() = vec3(global_bounds[1], global_bounds[3], global_bounds[5]);
+        bnds.min() = point_type(global_bounds[0], global_bounds[2], global_bounds[4]);
+        bnds.max() = point_type(global_bounds[1], global_bounds[3], global_bounds[5]);
     }
 
     the_bounds = bnds;
     int npoints;
-    spurt::raster_grid<3> sampling_grid(res, bnds);
+    spurt::raster_grid<size_t, scalar_type, 3> sampling_grid(res, bnds);
 
     if (seed_name.empty()) {
         std::cout << "Resolution = " << res[0] << " x " << res[1] << " x " << res[2] << std::endl;
@@ -266,7 +156,7 @@ int runTBB(shared_ptr<field_type> field) {
         npoints = sampling_grid.size();
         seeds.resize(npoints);
         for (int i=0; i<npoints; i++) {
-            seeds[i] = as_vec3(sampling_grid(sampling_grid.coordinates(i)));
+            seeds[i] = sampling_grid(sampling_grid.coordinates(i));
         }
     }
     else {
@@ -308,8 +198,8 @@ int runTBB(shared_ptr<field_type> field) {
     progress.start(npoints);
 
     std::vector<bool> stopped(npoints, false);
-    std::vector< std::vector<vec3> > lines(npoints);
-    std::vector< std::vector<double> > times(npoints);
+    std::vector< std::vector<point_type> > lines(npoints);
+    std::vector< std::vector<scalar_type> > times(npoints);
 
     progress_counter = 0;
     tbb::parallel_for(tbb::blocked_range<int>(0,npoints),
@@ -324,18 +214,20 @@ int runTBB(shared_ptr<field_type> field) {
                 continue;
             }
             point_type x = {flowmap[3*n], flowmap[3*n+1], flowmap[3*n+2]};
-            double t=t0, d=0;
+            scalar_type t=t0, d=0;
             point_type p(x);
-            std::vector<vec3>& sline = lines[n];
-            std::vector<double>& slinetimes = times[n];
+            std::vector<point_type>& sline = lines[n];
+            std::vector<scalar_type>& slinetimes = times[n];
 
             bool do_verbose = false;
 
-            rhs_type<field_type> rhs(field, 1000, do_verbose);
+            // create a stepper
+            auto stepper = odeint::make_controlled(eps, eps, odeint::runge_kutta_dopri5<point_type>());
             observer_t obs(p, t, d, sline, slinetimes, do_verbose);
+
             try {
                 point_type y(x);
-                RKDOPRI5::integrate(rhs, y, t0, T, 0, 0, eps, obs);
+                integrate_adaptive(stepper, *field, y, t0, T, 1.0e-4, obs);
                 flowmap[3*n  ] = obs.last_p[0];
                 flowmap[3*n+1] = obs.last_p[1];
                 flowmap[3*n+2] = obs.last_p[2];
@@ -381,8 +273,8 @@ int runTBB(shared_ptr<field_type> field) {
 
     if (save_lines || monitor) {
         if (monitor) {
-            std::vector< std::vector<vec3> > newlines;
-            std::vector< std::vector<double> > newtimes;
+            std::vector< std::vector<point_type> > newlines;
+            std::vector< std::vector<scalar_type> > newtimes;
             for (size_t i=0; i<lines.size(); i++) {
                 if (lines[i].size() > 2) {
                     newlines.push_back(lines[i]);
@@ -392,9 +284,9 @@ int runTBB(shared_ptr<field_type> field) {
             lines.swap(newlines);
             times.swap(newtimes);
         }
-        std::vector<ivec2> dummy;
-        VTK_SMART(vtkPolyData) pdata = vtk_utils::make_polylines(lines,dummy, 0);
-        std::vector<double> all_times;
+        std::vector<spurt::ivec2> dummy;
+        VTK_SMART(vtkPolyData) pdata = vtk_utils::make_polylines(lines, dummy, 0);
+        std::vector<scalar_type> all_times;
         std::for_each(times.begin(), times.end(),
             [&](const std::vector<double>& ts) {
                 all_times.insert(all_times.end(), ts.begin(), ts.end());
@@ -423,10 +315,10 @@ int runTBB(shared_ptr<field_type> field) {
     }
 
     if (seed_name.empty()) {
-        std::vector<size_t> size(4);
-        std::vector<double> step(4), mins(4);
-        step[0] = std::numeric_limits<double>::quiet_NaN();
-        mins[0] = std::numeric_limits<double>::quiet_NaN();
+        std::vector<size_type> size(4);
+        std::vector<scalar_type> step(4), mins(4);
+        step[0] = std::numeric_limits<scalar_type>::quiet_NaN();
+        mins[0] = std::numeric_limits<scalar_type>::quiet_NaN();
         std::vector<int> ctrs(4);
         std::fill(ctrs.begin(), ctrs.end(), nrrdCenterNode);
         size[0] = 3;
@@ -463,7 +355,7 @@ shared_ptr<field_type> load_DLR_time_steps() {
 
     std::string mesh_name;
     std::vector<std::string> steps;
-    std::vector<double> times;
+    std::vector<scalar_type> times;
     std::string buffer;
     while (!info_file.eof() && info_file.good()) {
         std::getline(info_file, buffer);
@@ -474,7 +366,7 @@ shared_ptr<field_type> load_DLR_time_steps() {
             iss >> mesh_name;
         else {
             std::string name;
-            double t;
+            scalar_type t;
             iss >> name >> t;
             steps.push_back(name);
             times.push_back(t);
@@ -482,10 +374,10 @@ shared_ptr<field_type> load_DLR_time_steps() {
     }
     info_file.close();
 
-    spurt::DLRreader reader(mesh_name, "");
+    spurt::dlr_reader reader(mesh_name, "");
     std::vector<fvec3> vertices;
     std::vector<long> cell_indices;
-    std::vector<std::pair<DLRreader::cell_type, long> > cell_types;
+    std::vector<std::pair<spurt::dlr_reader::cell_type, long> > cell_types;
     reader.read_mesh(false, vertices, cell_indices, cell_types);
     size_t ncells = cell_types.size()-1; // last entry is not an actual cell
     VTK_CREATE(vtkUnstructuredGrid, grid);
@@ -511,22 +403,22 @@ shared_ptr<field_type> load_DLR_time_steps() {
     for (long cell_id=0 ; cell_id<ncells ; ++cell_id) {
         unsigned char type_name;
         switch(cell_types[cell_id].first) {
-            case DLRreader::TRIANGLE:
+            case spurt::dlr_reader::TRIANGLE:
                 type_name = VTK_TRIANGLE;
                 break;
-            case DLRreader::QUADRILATERAL:
+            case spurt::dlr_reader::QUADRILATERAL:
                 type_name = VTK_QUAD;
                 break;
-            case DLRreader::TETRAHEDRON:
+            case spurt::dlr_reader::TETRAHEDRON:
                 type_name = VTK_TETRA;
                 break;
-            case DLRreader::HEXAHEDRON:
+            case spurt::dlr_reader::HEXAHEDRON:
                 type_name = VTK_HEXAHEDRON;
                 break;
-            case DLRreader::PRISM:
+            case spurt::dlr_reader::PRISM:
                 type_name = VTK_WEDGE;
                 break;
-            case DLRreader::PYRAMID:
+            case spurt::dlr_reader::PYRAMID:
                 type_name = VTK_PYRAMID;
                 break;
             default:
@@ -568,9 +460,6 @@ shared_ptr<field_type> load_DLR_time_steps() {
 
 int main(int argc, const char* argv[])
 {
-    using namespace spurt;
-    using namespace odeint;
-
     initialize(argc, argv);
 
 #if _OPENMP

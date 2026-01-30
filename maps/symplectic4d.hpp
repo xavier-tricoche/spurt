@@ -18,6 +18,19 @@ public:
     double k1, k2, eps;
 
 private:
+    void forward_angles(double& p1, double& p2, double& q1, double& q2) const {
+        q1 += p1;
+        q2 += p2;
+        p1 += k1*sin(q1) + eps*sin(q1+q2);
+        p2 += k2*sin(q2) + eps*sin(q1+q2);
+    }
+    void backward_angles(double& p1, double& p2, double& q1, double& q2) const {
+        p1 -= k1*sin(q1) + eps*sin(q1+q2);
+        p2 -= k2*sin(q2) + eps*sin(q1+q2);
+        q1 -= p1;
+        q2 -= p2;
+    }
+
     void forward(double& p1, double& p2, double& q1, double& q2) const {
         q1 += p1;
         q2 += p2;
@@ -103,6 +116,24 @@ public:
         return y;
     }
 
+    state_type map_angle(const state_type& x, int n = 1) const {
+        state_type y(x);
+
+        if (n>0) {
+            for (int i=0; i<n; ++i) {
+                forward_angles(y[0], y[1], y[2], y[3]);
+                // to_domain(y);
+            }
+        }
+        else if (n<0) {
+            for (int i=n; i<0; ++i) {
+                backward_angles(y[0], y[1], y[2], y[3]);
+                // to_domain(y);
+            }
+        }
+        return y;
+    }
+
     void map(const state_type& x, std::vector< state_type >& hits, int n = 1) const {
         hits.resize(std::abs<int>(n));
         state_type y(x);
@@ -145,6 +176,25 @@ public:
                 backward(y[0], y[1], y[2], y[3]);
                 to_domain(y);
                 out[i].first = y;
+            }
+        }
+    }
+
+    void map_angle(const state_type& x, std::vector< state_type >& hits, int n = 1) const {
+        hits.resize(std::abs<int>(n));
+        state_type y(x);
+        if (n>0) {
+            for (int i=0; i<n; ++i) {
+                forward_angles(y[0], y[1], y[2], y[3]);
+                // to_domain(y);
+                hits[i] = y;
+            }
+        }
+        else if (n<0) {
+            for (int i=n; i<0; ++i) {
+                backward_angles(y[0], y[1], y[2], y[3]);
+                // to_domain(y);
+                hits[i] = y;
             }
         }
     }

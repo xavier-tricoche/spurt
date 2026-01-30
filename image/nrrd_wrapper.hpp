@@ -296,37 +296,102 @@ inline std::string error_msg(const std::string& fun_name="", const char* what=NR
 }
 
 template<int N>
+inline 
+std::vector<int> get_spatial_dimensions(const Nrrd* nrrd, bool is_scalar=true) {
+    std::vector<int> sizes;
+    for (int i=0; i<nrrd->dim; ++i) {
+        sizes.push_back(nrrd->axis[i].size);
+    }
+
+    std::cout << "NRRD dimensions: ";
+    for (int i=0; i<sizes.size(); ++i) std::cout << sizes[i] << ' ';
+    std::cout << '\n';
+    assert((is_scalar && sizes.size() == N) || 
+         (!is_scalar && (sizes.size() == N+1 || sizes.size() == N+2)));
+
+    std::vector<int> spatial_axes(N);
+    if (is_scalar) {
+        std::cout << "scalar case\n";
+        std::iota(spatial_axes.begin(), spatial_axes.end(), 0);
+    }
+    else if (sizes.size() == N+1) {
+        std::cout << "vector case\n";
+        // vector values 
+        if ((sizes[N] == N && sizes[0]>N) ||
+            (sizes[N] == N*N && sizes[0]>N*N) ||
+            (sizes[N] == N*(N+1)/2 && sizes[0]>N*(N+1)/2)) {
+            std::cout << "outer loop\n";
+            std::iota(spatial_axes.begin(), spatial_axes.end(), 0);
+        }
+        else if ((sizes[0] == N && sizes[1] == N && sizes[N]>N) ||
+                 (sizes[0] == N*N && sizes[N]>N*N) ||
+                 (sizes[0] == N*(N+1)/2 && sizes[N]>N*(N+1)/2)) {
+            std::cout << "inner loop\n";
+            std::iota(spatial_axes.begin(), spatial_axes.end(), 1);
+        }
+        else {
+            throw std::runtime_error("Invalid NRRD dimensions");
+        }
+    }
+    else if (sizes.size() == N+2) {
+        std::cout << "matrix case\n";
+        // matrix/tensor case
+        if ((sizes[N] == N && sizes[N+1] == N && sizes[0]>N && sizes[1]>N)) {
+            std::cout << "outer loop\n";
+            std::iota(spatial_axes.begin(), spatial_axes.end(), 0);
+        }
+        else if (sizes[0] == N && sizes[1] == N && sizes[N]>N && sizes[N+1]>N) {
+            std::cout << "inner loop\n";
+            std::iota(spatial_axes.begin(), spatial_axes.end(), 2);
+        }
+        else {
+            throw std::runtime_error("Invalid NRRD dimensions");
+        }
+    }
+    return spatial_axes;
+}
+
+template<int N>
 inline void
 compute_raster_bounds(spurt::bounding_box<small_vector<double, N>>& bounds,
+                      const std::vector<int>& spc_dims,
                       const Nrrd* nrrd, bool is_scalar=true)
 {
-    int skip = (is_scalar ? 0 : 1);
     bounds.min() = 0;
     bounds.max() = 0;
-    assert(nrrd->dim - skip == N);
-    for (int i = skip ; i < nrrd->dim ; ++i) {
-        int j = i-skip;
+
+    for (int d=0; d<spc_dims.size(); ++d) {
+        int i = spc_dims[d];
         const NrrdAxisInfo& axis = nrrd->axis[i];
         double step = axis.spacing;
         if (invalid(step)) step = 1;
         double width = (axis.size - 1) * step;
         if (!invalid(axis.min)) {
-            bounds.min()[j] = axis.min;
-            bounds.max()[j] = axis.min + width;
+            bounds.min()[d] = axis.min;
+            bounds.max()[d] = axis.min + width;
         }
         else if (!invalid(axis.max)) {
-            bounds.max()[j] = axis.max;
-            bounds.min()[j] = axis.max - width;
+            bounds.max()[d] = axis.max;
+            bounds.min()[d] = axis.max - width;
         }
         else {
-            bounds.min()[j] = 0;
-            bounds.max()[j] = width;
+            bounds.min()[d] = 0;
+            bounds.max()[d] = width;
         }
         if (axis.center == nrrdCenterCell) {
-            bounds.min()[j] -= 0.5 * step;
-            bounds.max()[j] += 0.5 * step;
+            bounds.min()[d] -= 0.5 * step;
+            bounds.max()[d] += 0.5 * step;
         }
     }
+}
+
+template<int N>
+inline void
+compute_raster_bounds(spurt::bounding_box<small_vector<double, N>>& bounds,
+                      const Nrrd* nrrd, bool is_scalar=true)
+{
+    std::vector<int> spc_dims = get_spatial_dimensions<N>(nrrd, is_scalar);
+    compute_raster_bounds<N>(bounds, spc_dims, nrrd, is_scalar);
 }
 
 template<int N> inline
@@ -432,6 +497,18 @@ inline void to_allocated_block(T1* out_data, const void* in_data, size_t size) {
     }
 }
 
+template<typename T1, typename T2>
+inline void to_allocated_block_with_strides(T1* out_data, const void* in_data, 
+    size_t npoints, size_t ncomps, size_t inner_stride, size_t outer_stride) {
+    T1* out_ptr = out_data;
+    const T2* in_ptr = static_cast<const T2*>(in_data);
+    for (size_t n=0; n<npoints; ++n) {
+        for (size_t i=0; i<ncomps; ++i) {
+            (*out_ptr++) = in_ptr[i*inner_stride + n*outer_stride];
+        }
+    }
+}
+
 template<typename T>
 bool matching_types(const Nrrd* nin) 
 {
@@ -503,35 +580,48 @@ inline void to_vector(std::vector<T>& vals, const Nrrd* nin)
 }
 
 template<typename T>
-inline void to_allocated_block(T* out_data, const Nrrd* nin)
+inline void to_allocated_block(T* out_data, const Nrrd* nin, bool inner_loop, size_t ncomps=0)
 {
     size_t size = 1;
     for (size_t i = 0 ; i < nin->dim ; ++i) {
         size *= nin->axis[i].size;
     }
     // std::cerr << "size = " << size << std::endl;
+    if (!inner_loop && ncomps != 0) {
+        size /= ncomps;
+    }
 
     switch (nin->type) {
     case nrrdTypeChar:
-        return to_allocated_block<T, char>(out_data, nin->data, size);
+        if (inner_loop) return to_allocated_block<T, char>(out_data, nin->data, size);
+        else return to_allocated_block_with_strides<T, char>(out_data, nin->data, size, ncomps, size, 1);
     case nrrdTypeUChar:
-        return to_allocated_block<T, unsigned char>(out_data, nin->data, size);
+        if (inner_loop) return to_allocated_block<T, unsigned char>(out_data, nin->data, size);
+        else return to_allocated_block_with_strides<T, unsigned char>(out_data, nin->data, size, ncomps, size, 1);
     case nrrdTypeShort:
-        return to_allocated_block<T, short>(out_data, nin->data, size);
+        if (inner_loop) return to_allocated_block<T, short>(out_data, nin->data, size);
+        else return to_allocated_block_with_strides<T, short>(out_data, nin->data, size, ncomps, size, 1);
     case nrrdTypeUShort:
-        return to_allocated_block<T, unsigned short>(out_data, nin->data, size);
+        if (inner_loop) return to_allocated_block<T, unsigned short>(out_data, nin->data, size);
+        else return to_allocated_block_with_strides<T, unsigned short>(out_data, nin->data, size, ncomps, size, 1);
     case nrrdTypeInt:
-        return to_allocated_block<T, int>(out_data, nin->data, size);
+        if (inner_loop) return to_allocated_block<T, int>(out_data, nin->data, size);
+        else return to_allocated_block_with_strides<T, int>(out_data, nin->data, size, ncomps, size, 1);
     case nrrdTypeUInt:
-        return to_allocated_block<T, unsigned int>(out_data, nin->data, size);
+        if (inner_loop) return to_allocated_block<T, unsigned int>(out_data, nin->data, size);
+        else return to_allocated_block_with_strides<T, unsigned int>(out_data, nin->data, size, ncomps, size, 1);
     case nrrdTypeLLong:
-        return to_allocated_block<T, long int>(out_data, nin->data, size);
+        if (inner_loop) return to_allocated_block<T, long int>(out_data, nin->data, size);
+        else return to_allocated_block_with_strides<T, long int>(out_data, nin->data, size, ncomps, size, 1);
     case nrrdTypeULLong:
-        return to_allocated_block<T, unsigned long int>(out_data, nin->data, size);
+        if (inner_loop) return to_allocated_block<T, unsigned long int>(out_data, nin->data, size);
+        else return to_allocated_block_with_strides<T, unsigned long int>(out_data, nin->data, size, ncomps, size, 1);
     case nrrdTypeFloat:
-        return to_allocated_block<T, float>(out_data, nin->data, size);
+        if (inner_loop) return to_allocated_block<T, float>(out_data, nin->data, size);
+        else return to_allocated_block_with_strides<T, float>(out_data, nin->data, size, ncomps, size, 1);
     case nrrdTypeDouble:
-        return to_allocated_block<T, double>(out_data, nin->data, size);
+        if (inner_loop) return to_allocated_block<T, double>(out_data, nin->data, size);
+        else return to_allocated_block_with_strides<T, double>(out_data, nin->data, size, ncomps, size, 1);
     default:
         throw std::runtime_error("unrecognized data type\n");
     }
@@ -551,31 +641,33 @@ to_raster(const Nrrd* nin, bool is_scalar=true)
     typedef typename raster_type::grid_type grid_type;
     typedef typename raster_type::coord_type coord_type;
     typedef typename raster_type::value_type value_type;
+    typedef typename raster_type::scalar_type scalar_type;
     
 #ifdef SPURT_DEBUG
     std::cout << "to_raster: value is " << (is_scalar ? "scalar" : "not scalar") << '\n';
 #endif
-    auto bounds = get_bounds<Dim>(nin, is_scalar);
-    nrrd_traits traits(nin);
-    int offset = is_scalar ? 0 : 1;
-    assert(nin->dim == Dim+offset);
-    assert( (!is_scalar && matching_sizes<Value_>(nin)) || 
-            (is_scalar && std::is_scalar<value_type>::value) );
-    coord_type res = 0;
-    auto _res = traits.sizes();
-    for (int i=0; i<Dim; ++i) res[i] = _res[i+offset];
-#ifdef SPURT_DEBUG
-    std::cout << "Resolution is " << res << '\n';
-#endif
+
+    std::vector<int> spc_dims = get_spatial_dimensions<Dim>(nin, is_scalar);
+    std::cout << "spatial dimensions for " << Dim << "D: ";
+    for (int i=0; i<spc_dims.size(); ++i) std::cout << spc_dims[i] << ' ';
+    std::cout << '\n';
+    spurt::bounding_box<small_vector<double, Dim>> bounds;
+    compute_raster_bounds<Dim>(bounds, spc_dims, nin);
+
+    coord_type res;
+    for (int i=0; i<Dim; ++i) res[i] = nin->axis[spc_dims[i]].size;
     grid_type agrid(res, bounds);
     raster_type r(agrid, false);
-    if (matching_types<Scalar_>(nin)) {
+    // must ensure type and memory layout compatibility to map Nrrd contents
+    if (matching_types<scalar_type>(nin) && (is_scalar || spc_dims[0]>0)) {
         r.set_data((value_type*)nin->data);
     }
     else {
         std::shared_ptr<value_type> data(new value_type[agrid.size()]);
-        Scalar_* ptr = reinterpret_cast<Scalar_*>(data.get());
-        to_allocated_block(ptr, nin);
+        spurt::data_traits<value_type> traits;
+        scalar_type* ptr = reinterpret_cast<scalar_type*>(data.get());
+        bool inner_loop = (spc_dims[0]>0);
+        to_allocated_block(ptr, nin, inner_loop, traits.size());
         r.set_data(data);
     }
     return r;

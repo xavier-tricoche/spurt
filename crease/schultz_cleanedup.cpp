@@ -397,14 +397,32 @@ scalar_type edge_linearity_value(const matrix_type &T1, const matrix_type &T2)
 
 scalar_type theta_threshold(const matrix_image_type &hessian, double eps = 0.005)
 {
-    vector_type evals;
-    matrix_type evecs;
-    std::vector<scalar_type> _l23;
-    for (const matrix_type &H : hessian)
-    {
-        sym_eigensystem(evals, evecs, H);
-        _l23.push_back(evals[1] - evals[2]);
-    }
+    std::vector<scalar_type> _l23(hessian.size());
+
+    spurt::ProgressDisplay progress;
+    progress.begin(hessian.size(), "Compute hessian eigenvalues delta");
+    std::atomic<int> matrix_counter=0;
+    std::mutex progress_mtx;
+    tbb::parallel_for(tbb::blocked_range<int>(0, hessian.size()),
+                      [&](tbb::blocked_range<int> r)
+        {
+            for (int i = r.begin(); i < r.end(); ++i)
+            {
+                vector_type evals;
+                matrix_type evecs;
+                const matrix_type &H = hessian[i];
+                sym_eigensystem(evals, evecs, H);
+                _l23[i] = evals[1] - evals[2];
+                ++matrix_counter;
+                std::unique_lock<std::mutex> lock(progress_mtx, std::defer_lock);
+                if (lock.try_lock())
+                {   
+                    progress.update(matrix_counter);
+                }
+
+            }
+        });
+    progress.end();
     auto iters = std::minmax_element(_l23.begin(), _l23.end());
     return eps * (*iters.second - *iters.first);
 }
@@ -669,6 +687,9 @@ void unique_edge_indices(std::vector<edge_index_t> &edge_indices,
     coord_type basis[] = {ex, ey, ez};
 
     std::set<coord_type, spurt::lexicographical_order> unique_edge_start_indices;
+    spurt::ProgressDisplay progress;
+    progress.begin(voxel_indices.size()*3, "Computing unique edge indices");
+    size_type counter=0;
     for (int dim = 0; dim < 3; ++dim)
     {
         const coord_type &b0 = basis[dim];
@@ -677,6 +698,8 @@ void unique_edge_indices(std::vector<edge_index_t> &edge_indices,
         unique_edge_start_indices.clear();
         for (const coord_type &vc : voxel_indices)
         {
+            ++counter;
+            progress.update(counter);
             unique_edge_start_indices.insert(vc);
             unique_edge_start_indices.insert(vc + b1);
             unique_edge_start_indices.insert(vc + b2);
@@ -687,6 +710,7 @@ void unique_edge_indices(std::vector<edge_index_t> &edge_indices,
             edge_indices.push_back(edge_index_t(pc, pc + b0));
         }
     }
+    progress.end();
 }
 
 // edge to varying dimension
@@ -730,8 +754,14 @@ void unique_faces(std::vector<face_info_t> &faces,
     valid_voxels.insert(valid_voxel_indices.begin(), valid_voxel_indices.end());
 
     std::set<face_index_t> _unique_face_indices;
+    
+    spurt::ProgressDisplay progress;
+    progress.begin(edge_index_to_crease_point_index.size(), "Computing unique faces");
+    size_type counter=0;
     for (auto v : edge_index_to_crease_point_index)
     {
+        ++counter;
+        progress.update(counter);
         const edge_index_t &e = v.first;
         // std::cout << "currently processing edge " << e << '\n';
         int dim = edge_to_dim(e);
@@ -743,14 +773,10 @@ void unique_faces(std::vector<face_info_t> &faces,
                 continue;
             face_index_t face_id0(a, b, b + basis[d], a + basis[d]);
             face_index_t face_id1(a, b, b - basis[d], a - basis[d]);
-            // std::cout << "Two candidate face indices are:\n"
-            //     << face_id0 << '\n'
-            //     << face_id1 << '\n';
             std::vector<coord_type> voxels0 = faceid_to_voxelids(face_id0, dummy_res);
             std::vector<coord_type> voxels1 = faceid_to_voxelids(face_id1, dummy_res);
             for (auto v0 : voxels0)
             {
-                // std::cout << "Voxel for face " << face_id0 << " is " << v0 << '\n';
                 if (valid_voxels.find(v0) != valid_voxels.end())
                 {
                     _unique_face_indices.insert(face_id0);
@@ -758,7 +784,6 @@ void unique_faces(std::vector<face_info_t> &faces,
             }
             for (auto v1 : voxels1)
             {
-                // std::cout << "Voxel for face " << face_id1 << " is " << v1 << '\n';
                 if (valid_voxels.find(v1) != valid_voxels.end())
                 {
                     _unique_face_indices.insert(face_id1);
@@ -766,6 +791,7 @@ void unique_faces(std::vector<face_info_t> &faces,
             }
         }
     }
+    progress.end();
 
     faces.clear();
     faces.reserve(_unique_face_indices.size());
@@ -785,8 +811,13 @@ void unique_voxels(std::vector<voxel_info_t> &voxels,
     std::map<coord_type, voxel_info_t, spurt::lexicographical_order> _unique_voxels;
 
     coord_type dummy_res(10000000, 10000000, 10000000);
+    spurt::ProgressDisplay progress;
+    progress.begin(faces.size(), "Compute unique voxels");
+    size_type counter=0;
     for (auto f : faces)
     {
+        ++counter;
+        progress.update(counter);
         std::vector<coord_type> voxels = faceid_to_voxelids(f.face_id, dummy_res);
         for (auto v : voxels)
         {
@@ -804,6 +835,7 @@ void unique_voxels(std::vector<voxel_info_t> &voxels,
             }
         }
     }
+    progress.end();
     voxels.clear();
     voxels.reserve(_unique_voxels.size());
     for (auto v2i : _unique_voxels)
@@ -1074,7 +1106,7 @@ void visualize(const container_wrapper<crease_point_t> &cpoints,
                const std::vector<triangle_index_t> &all_triangles,
                const std::vector<std::vector<size_type>> &all_open_cycles,
                const std::string &fname,
-               bool vis)
+               bool vis=false, bool include_lines=false)
 {
     std::cout << "There are " << cpoints.size() << " points in input\n";
     std::cout << "There are " << all_triangles.size() << " triangles in input\n";
@@ -1101,21 +1133,26 @@ void visualize(const container_wrapper<crease_point_t> &cpoints,
     }
     pd->SetPolys(triangles);
 
-    VTK_CREATE(vtkCellArray, lines);
-    for (size_type i = 0; i < all_open_cycles.size(); ++i)
+    if (include_lines) 
     {
-        const std::vector<size_type> &aline = all_open_cycles[i];
-        lines->InsertNextCell(aline.size());
-        for (size_type j : aline)
-            lines->InsertCellPoint(j);
+        VTK_CREATE(vtkCellArray, lines);
+        for (size_type i = 0; i < all_open_cycles.size(); ++i)
+        {
+            const std::vector<size_type> &aline = all_open_cycles[i];
+            lines->InsertNextCell(aline.size());
+            for (size_type j : aline)
+                lines->InsertCellPoint(j);
+        }
+        pd->SetLines(lines);
     }
-    pd->SetLines(lines);
 
     pd = vtk_utils::add_scalars(pd, values, true, "values", false);
     pd = vtk_utils::add_scalars(pd, strengths, true, "ridge_strength", true);
 
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
     writer->SetInputData(pd);
+    writer->SetCompressorTypeToLZ4();
+    writer->SetCompressionLevel(5);
     auto name = filename::replace_extension(fname, "vtp");
     writer->SetFileName(name.c_str());
     writer->Write();
@@ -1290,7 +1327,7 @@ int main(int argc, const char *argv[])
     size_type minsize;
     int res, niter;
     int verbose;
-    bool vis, export_data;
+    bool vis, export_data, do_lines;
     coord_type voxel_id = invalid_coord;
     bounds_type bounds(pos_type(0.), pos_type(-1.));
     spurt::vec4 dv(0.1, 0.2, 0.3, 0.4);
@@ -1320,6 +1357,7 @@ int main(int argc, const char *argv[])
         parser.add_tuple<3>("blower", bounds.min(), bounds.min(), "Lower bounds of domain to consider");
         parser.add_tuple<3>("bupper", bounds.max(), bounds.max(), "Upper bounds of domain to consider");
         parser.add_flag("export", export_data, "Export all intermeidate data", optional_group);
+        parser.add_flag("lines", do_lines, "Export open cycles as lines", optional_group);
         parser.parse(argc, argv);
     }
     catch (std::runtime_error &e)
@@ -1377,6 +1415,7 @@ int main(int argc, const char *argv[])
 
     auto shape = values.grid().resolution();
     std::vector<coord_type> all_voxel_indices;
+    std::cout << "Computing voxel indices\n";
     if (spurt::any(voxel_id != invalid_coord))
     {
         all_voxel_indices.clear();
@@ -1387,6 +1426,7 @@ int main(int argc, const char *argv[])
     {
         select_voxel_indices(all_voxel_indices, bounds, shape);
     }
+    std::cout << "Computing unique edge indices\n";
     std::vector<edge_index_t> all_edge_indices;
     unique_edge_indices(all_edge_indices, all_voxel_indices);
     /*
@@ -1506,6 +1546,7 @@ int main(int argc, const char *argv[])
 
     // now processing active faces
     std::vector<face_info_t> all_faces;
+    std::cout << "Computing unique active faces\n";
     unique_faces(all_faces, edge_to_crease_point_index, all_voxel_indices);
 
     std::atomic<size_type> n_pathological = 0;
@@ -1516,7 +1557,7 @@ int main(int argc, const char *argv[])
     std::mutex debug_mtx;
     std::mutex lpoint_add_mtx;
     std::cout << "\nProcessing all " << all_faces.size() << " unique faces\n";
-    progress.begin(all_faces.size(), "Extract ridge points", 10000, "done: 0, found: 0, pathological: 0, singular: 0");
+    progress.begin(all_faces.size(), "Extract ridge edges", 10000, "done: 0, found: 0, pathological: 0, singular: 0");
     std::atomic<size_type> n_faces_found = 0;
 
     tbb::parallel_for(tbb::blocked_range<int>(0, all_faces.size()),
@@ -1567,8 +1608,10 @@ int main(int argc, const char *argv[])
                                       crease_point_indices.push_back(the_face.Lpoint_index);
                                       ++n_singular;
                                   }
-                                  else
+                                  else {
                                       ++n_pathological;
+                                    //   if (active_edges.size() == 1) continue; // skip this face
+                                  }
                               }
 
                               connect_crease_points(the_face, crease_point_indices, unique_crease_points, gradient, hessian, theta0);
@@ -1753,7 +1796,7 @@ int main(int argc, const char *argv[])
         export_voxels(active_voxels, stem + "_voxels.json");
     }
 
-    visualize(unique_crease_points, all_triangles, all_open_cycles, output_name, vis);
+    visualize(unique_crease_points, all_triangles, all_open_cycles, output_name, vis, do_lines);
 
     return 0;
 }

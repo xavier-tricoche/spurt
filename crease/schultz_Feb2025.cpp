@@ -2010,7 +2010,7 @@ int main(int argc, const char *argv[])
     size_type minsize;
     int res, niter;
     int verbose;
-    bool vis, export_data;
+    bool vis, export_data, do_restrict;
     coord_type voxel_id = invalid_coord;
     bounds_type bounds(pos_type(0.), pos_type(-1.));
     spurt::vec4 dv(0.1, 0.2, 0.3, 0.4);
@@ -2037,7 +2037,8 @@ int main(int argc, const char *argv[])
         parser.add_value("minstr", minstr_str, "0", "Min ridge strength (<=0)", optional_group);
         parser.add_value("verbose", verbose, 0, "Verbose output", optional_group);
         parser.add_flag("vis", vis, "Visualize resulting surfaces", optional_group);
-        parser.add_tuple<3>("voxel", voxel_id, voxel_id, "Coordinates of single voxel to process");
+        parser.add_tuple<3>("voxel", voxel_id, voxel_id, "Coordinates of voxel to scrutinize");
+        parser.add_flag("restrict", do_restrict, "Restrict extract to provided voxel id", optional_group);
         parser.add_tuple<3>("blower", bounds.min(), bounds.min(), "Lower bounds of domain to consider");
         parser.add_tuple<3>("bupper", bounds.max(), bounds.max(), "Upper bounds of domain to consider");
         parser.add_flag("export", export_data, "Export all intermeidate data", optional_group);
@@ -2098,7 +2099,7 @@ int main(int argc, const char *argv[])
 
     auto shape = values.grid().resolution();
     std::vector<coord_type> all_voxel_indices;
-    if (spurt::any(voxel_id != invalid_coord))
+    if (spurt::all(voxel_id != invalid_coord) && do_restrict)
     {
         all_voxel_indices.clear();
         all_voxel_indices.push_back(voxel_id);
@@ -2106,6 +2107,10 @@ int main(int argc, const char *argv[])
     }
     else
     {
+        if (spurt::none(voxel_id != invalid_coord) && do_restrict) 
+        {
+            do_restrict = false;
+        }
 #ifdef SPURT_DEBUG
         std::cout << "selected voxels..." << std::flush;
 #endif
@@ -2403,6 +2408,10 @@ int main(int argc, const char *argv[])
 #endif
                               voxel_info_t &the_voxel = active_voxels[n];
                               const coord_type &the_voxel_index = the_voxel.voxel_id;
+                              bool scrutinize = false;
+                              if (spurt::all(the_voxel_index == voxel_id))
+                                scrutinize = true;
+
                               ++voxel_counter;
 
                               std::unique_lock<std::mutex> lock(update_mtx, std::defer_lock);
@@ -2447,7 +2456,7 @@ int main(int argc, const char *argv[])
                                   compute_cycles(cycles, voxel_face_segments, true);
                               }
 
-                              if (verbose > 1)
+                              if (verbose > 1 || scrutinize)
                               {
                                   std::scoped_lock<std::mutex> alock(debug_mtx);
                                   std::cout << "Processing voxel " << the_voxel_index << '\n';
@@ -2458,7 +2467,7 @@ int main(int argc, const char *argv[])
                                       std::cout << voxel_face_segments[k] << '\n';
                                   }
                               }
-                              if (verbose > 0)
+                              if (verbose > 0 || scrutinize)
                               {
                                   std::scoped_lock<std::mutex> alock(debug_mtx);
                                   std::cout << "\ncycles are:\n";
@@ -2568,6 +2577,9 @@ int main(int argc, const char *argv[])
 #ifdef SPURT_DEBUG
                                   std::cout << "There were " << the_voxel.ridge_triangles.size() << " triangles for this voxel\n";
 #endif
+                                  if (scrutinize) {
+                                    std::cout << "there were " << the_voxel.ridge_triangles.size() << " triangles for  voxel " << the_voxel_index << "\n";
+                                  }
 
                                   all_triangles.insert(all_triangles.end(), the_voxel.ridge_triangles.begin(), the_voxel.ridge_triangles.end());
                                   ++n_triangulated;

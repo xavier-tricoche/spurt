@@ -1,5 +1,4 @@
-#ifndef __VTK_MACROS_HPP__
-#define __VTK_MACROS_HPP__
+#pragma once
 
 #include <vtkCharArray.h>
 #include <vtkDataSet.h>
@@ -163,5 +162,3 @@ inline void vtk_connect(vtkAlgorithm* receiver, vtkDataObject* provider) {
 #define VTK_MAKE_ACTOR(actor, object) \
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New(); \
     actor->SetMapper(right_mapper(get_ptr(object)));
-
-#endif

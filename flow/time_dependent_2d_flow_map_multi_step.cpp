@@ -12,7 +12,6 @@
 
 #include <math/types.hpp>
 #include <flow/time_dependent_field.hpp>
-#include <flow/vector_field.hpp>  //BARG
 #include <flow/ode_observer.hpp>
 #include <data/image.hpp>
 

@@ -2,7 +2,7 @@
 #include <fstream>
 #include <vector>
 #include <flow/ftle.hpp>
-#include <math/types.hp>
+#include <math/types.hpp>
 #include <misc/option_parse.hpp>
 
 std::string cmdline;
@@ -56,8 +56,8 @@ int main(int argc, const char* argv[]) {
 
     spurt::nrrd_utils::nrrd_data_wrapper<double> wrapper(nin);
 
-    typedef mat3 mat_t;
-    typedef vec3 vec_t;
+    typedef spurt::mat3 mat_t;
+    typedef spurt::vec3 vec_t;
 
     double* ftle = (double*)calloc(res[0]*res[1]*res[2], sizeof(double));
 
@@ -66,7 +66,6 @@ int main(int argc, const char* argv[]) {
 
         mat_t J, C;
         vec_t f1, f2, f;
-        solver_t solver;
 
         for (int dim=0; dim<3; ++dim) {
             size_t s = shift[dim];
@@ -106,8 +105,8 @@ int main(int argc, const char* argv[]) {
             J(dim, 2) = f[2];
 
             C = J.transpose() * J;
-            vec3 evals;
-            mat3 evecs;
+            spurt::vec3 evals;
+            spurt::mat3 evecs;
             sym_eigensystem(evals, evecs, C);
             double lambda = evals[0];
             if (lambda > 0) {

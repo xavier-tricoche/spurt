@@ -82,8 +82,8 @@ if ( MatIO_FOUND )
     install( TARGETS matlab2nrrd RUNTIME DESTINATION bin )
 endif()
 
-add_executable( read_sparse read_sparse.cpp )
-target_link_libraries( read_sparse ${Teem_LIBRARIES} ${Boost_LIBRARIES} )
+# add_executable( read_sparse read_sparse.cpp )
+# target_link_libraries( read_sparse ${Teem_LIBRARIES} ${Boost_LIBRARIES} )
 
 add_executable( test_filesystem test_filesystem.cpp )
 target_link_libraries( test_filesystem ${Boost_LIBRARIES} )
