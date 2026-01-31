@@ -134,7 +134,6 @@ struct Connectivity : public std::array<T, N>
     typedef std::array<T, N> base_type;
     typedef Order less_type;
     typedef Connectivity<T, N, Order> self_type;
-    //
     Connectivity(const T &c0 = T(invalid_scalar), const T &c1 = T(invalid_scalar), const T &c2 = T(invalid_scalar), const T c3 = T(invalid_scalar))
         : base_type()
     {
@@ -708,6 +707,95 @@ void unique_edge_indices(std::vector<edge_index_t> &edge_indices,
         for (const coord_type &pc : unique_edge_start_indices)
         {
             edge_indices.push_back(edge_index_t(pc, pc + b0));
+        }
+    }
+    progress.end();
+}
+
+// all the unique edges of a regular mesh
+void unique_edge_indices(std::vector<edge_index_t> &edge_indices,
+                         const grid_type &agrid)
+{
+    const coord_type& res = agrid.resolution();
+    edge_indices.resize(3*res[0]*res[1]*res[2] - res[1]*res[2] - res[0]*res[2] - res[0]*res[1]);
+
+    size_t nedges = edge_indices.size();
+    spurt::ProgressDisplay progress;
+    progress.begin(nedges, "Computing unique edge indices");
+    size_t counter=0;
+    for (size_t i=0; i<res[0]-1; ++i) {
+        for (size_t j=0; j<res[1]; ++j) {
+            for (size_t k=0; k<res[2]; ++k, ++counter) {
+                edge_indices[counter] = edge_index_t({coord_type(i, j, k), coord_type(i+1, j, k)});
+                progress.update(counter);
+            }
+        }
+    }
+    for (size_t j=0; j<res[1]-1; ++j) {
+        for (size_t i=0; i<res[0]; ++i) {
+            for (size_t k=0; k<res[2]; ++k, ++counter) {
+                edge_indices[counter] = edge_index_t({coord_type(i, j, k), coord_type(i, j+1, k)});
+                progress.update(counter);
+            }
+        }
+    }
+    for (size_t k=0; k<res[2]-1; ++k) {
+        for (size_t i=0; i<res[0]; ++i) {
+            for (size_t j=0; j<res[1]; ++j, ++counter) {
+                edge_indices[counter] = edge_index_t({coord_type(i, j, k), coord_type(i, j, k+1)});
+                progress.update(counter);
+            }
+        }
+    }
+    progress.end();
+}
+
+// all the unique edges of a portion of a regular mesh
+void unique_edge_indices(std::vector<edge_index_t> &edge_indices,
+                         const grid_type &agrid,
+                         const bounds_type& bounds)
+{
+    const coord_type& res = agrid.resolution();
+    const bounds_type& grid_bounds = agrid.bounds();
+    const pos_type& spacing = agrid.spacing();
+
+    size_t idrange[3][2];
+    for (int dim=0; dim<3; ++dim) {
+        auto deltamin = bounds.min()[dim] - grid_bounds.min()[dim];
+        idrange[dim][0] = deltamin > 0 ? size_t(deltamin/spacing[dim]) : 0;
+        auto deltamax = grid_bounds.max()[dim] - bounds.max()[dim];
+        idrange[dim][1] = deltamax > 0 ? res[dim] - size_t(deltamax/spacing[dim]) - 1 : res[dim]-1;
+    }
+
+    size_t _res[3] = { idrange[0][1]-idrange[0][0]+1, idrange[1][1]-idrange[1][0]+1, idrange[2][1]-idrange[2][0]+1};
+    edge_indices.resize(3*_res[0]*_res[1]*_res[2] - _res[1]*_res[2] - _res[0]*_res[2] - _res[0]*_res[1]);
+
+    size_t nedges = edge_indices.size();
+    spurt::ProgressDisplay progress;
+    progress.begin(nedges, "Computing unique edge indices");
+    size_t counter=0;
+    for (size_t i=idrange[0][0]; i<=idrange[0][1]-1; ++i) {
+        for (size_t j=idrange[1][0]; j<=idrange[1][1]; ++j) {
+            for (size_t k=idrange[2][0]; k<=idrange[2][1]; ++k, ++counter) {
+                edge_indices[counter] = edge_index_t({coord_type(i, j, k), coord_type(i+1, j, k)});
+                progress.update(counter);
+            }
+        }
+    }
+    for (size_t j=idrange[1][0]; j<=idrange[1][1]-1; ++j) {
+        for (size_t i=idrange[0][0]; i<=idrange[0][1]; ++i) {
+            for (size_t k=idrange[2][0]; k<=idrange[2][1]; ++k, ++counter) {
+                edge_indices[counter] = edge_index_t({coord_type(i, j, k), coord_type(i, j+1, k)});
+                progress.update(counter);
+            }
+        }
+    }
+    for (size_t k=idrange[2][0]; k<=idrange[2][1]-1; ++k) {
+        for (size_t i=idrange[0][0]; i<=idrange[0][1]; ++i) {
+            for (size_t j=idrange[1][0]; j<=idrange[1][1]; ++j, ++counter) {
+                edge_indices[counter] = edge_index_t({coord_type(i, j, k), coord_type(i, j, k+1)});
+                progress.update(counter);
+            }
         }
     }
     progress.end();
@@ -1415,20 +1503,27 @@ int main(int argc, const char *argv[])
 
     auto shape = values.grid().resolution();
     std::vector<coord_type> all_voxel_indices;
+    std::vector<edge_index_t> all_edge_indices;
     std::cout << "Computing voxel indices\n";
     if (spurt::any(voxel_id != invalid_coord))
     {
         all_voxel_indices.clear();
         all_voxel_indices.push_back(voxel_id);
+        unique_edge_indices(all_edge_indices, all_voxel_indices);
         verbose = 2;
     }
-    else
+    else if (spurt::any(bounds.min() > bounds.max()))
     {
+        std::cout << "Computing unique edge indices\n";
         select_voxel_indices(all_voxel_indices, bounds, shape);
+        unique_edge_indices(all_edge_indices, values.grid());
     }
-    std::cout << "Computing unique edge indices\n";
-    std::vector<edge_index_t> all_edge_indices;
-    unique_edge_indices(all_edge_indices, all_voxel_indices);
+    else {
+        std::cout << "Computing unique edge indices\n";
+        select_voxel_indices(all_voxel_indices, bounds, shape);
+        unique_edge_indices(all_edge_indices, values.grid(), bounds);
+    }
+    // unique_edge_indices(all_edge_indices, all_voxel_indices);
     /*
 
         Algorithm:
