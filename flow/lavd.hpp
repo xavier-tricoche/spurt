@@ -494,7 +494,7 @@ struct LAVD_state {
     LAVD_state() : m_stopped(false) {}
     LAVD_state(const vec2& p0, value_t vd0, value_t t0=0)
         : m_vd(vd0), m_acc_vd(0), m_time(t0), m_acc_time(0), m_pos(p0),
-          m_stopped(false) {}
+          m_stopped(false), meta_lifetime(t0) {}
 
     void update(const vec2& p, value_t vd, value_t t) {
         // update integral
@@ -504,6 +504,7 @@ struct LAVD_state {
         m_acc_vd += 0.5*( m_vd + vd )*dt;
         m_vd = vd;
         m_pos = p;
+        meta_lifetime++;
     }
 
     value_t evaluate() const {
@@ -521,6 +522,7 @@ struct LAVD_state {
     value_t m_acc_time;
     vec2 m_pos;
     bool m_stopped;
+    value_t meta_lifetime;
 };
 
 std::ostream& operator<<(std::ostream& os, const LAVD_state& state) {
@@ -846,16 +848,17 @@ void export_results(value_t current_time, value_t wall_time, value_t cpu_time,
         << static_cast<value_t>(nb_lost)/static_cast<value_t>(nb_samples)*100.
         << "\%)\n";
 
-    export_value_t* lavd = (export_value_t *)calloc(3*nb_samples, sizeof(export_value_t));
+    export_value_t* lavd = (export_value_t *)calloc(4*nb_samples, sizeof(export_value_t));
     _log_(1) << "Filling lavd array in export_results... " << std::flush;
     for (size_t n=0; n<nb_samples; ++n) {
-        lavd[3*n  ] = static_cast<export_value_t>(all_trajectories[n].back()[0]);
-        lavd[3*n+1] = static_cast<export_value_t>(all_trajectories[n].back()[1]);
+        lavd[4*n  ] = static_cast<export_value_t>(all_trajectories[n].back()[0]);
+        lavd[4*n+1] = static_cast<export_value_t>(all_trajectories[n].back()[1]);
         export_value_t val=static_cast<export_value_t>(all_states[n].evaluate());
         if (std::isnan(val) || std::isinf(val)) {
             val = 0;
         }
-        lavd[3*n+2] = val;
+        lavd[4*n+2] = val;
+        lavd[4*n+3] = static_cast<export_value_t>(all_states[n].meta_lifetime);
     }
     _log_(1) << "done\n";
 
@@ -864,7 +867,7 @@ void export_results(value_t current_time, value_t wall_time, value_t cpu_time,
     _log_(1) << "Setting Nrrd header values... " << std::flush;
     std::vector<size_t> __res(3);
     
-    __res[0] = 3;
+    __res[0] = 4;
     //__res[1] = resx;
     //__res[2] = resy;
     __res[1] = 1;
@@ -910,7 +913,8 @@ void export_results(value_t current_time, value_t wall_time, value_t cpu_time,
 
         for (size_t i=0; i<all_trajectories.size(); ++i) {
             for (size_t n=0; n<all_trajectories[i].size(); ++n) {
-                values.push_back(lavd[3*i+2]);
+                values.push_back(lavd[4*i+2]);
+                values.push_back(lavd[4*i+3]);
             }
         }
 
