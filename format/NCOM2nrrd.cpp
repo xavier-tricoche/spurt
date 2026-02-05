@@ -1,18 +1,22 @@
 #include <numeric>
+#include <array>
 
 #include <format/NCOMreader.hpp>
 #include <format/filename.hpp>
 #include <image/nrrd_wrapper.hpp>
 #include <misc/option_parse.hpp>
 #include <misc/strings.hpp>
+#include <misc/progress.hpp>
 
 #include <vtk/vtk_data_helper.hpp>
+#include <third_party/spline/spline.h>
 
 std::string name_in, name_out, var_names;
 bool verbose=false;
 bool save_mesh=false;
 bool save_uv=true;
 double ref_lat=24.42, ref_lon=270.9;
+std::string kernel_name = "Scharr";
 
 constexpr double D2R = M_PI/180.;
 constexpr double R2D = 180./M_PI;
@@ -26,6 +30,51 @@ inline double deg2rad(double d) {
 inline double rad2deg(double r) {
     return r*R2D;
 }
+
+/*
+    polar model of an ellipse:
+        x, y = a*cos(t), b*sin(t)
+    
+    t *is not* the latitude in this case. Instead, it satisfies the following
+    equation:
+        lat(t) = atan(y/x) = atan(asin(t)/bcos(t)) = atan(a/b*tan(t))
+
+    The radius of parallel at t is a*cos(t). It is the radius of parallel at
+    latitude atan(a/b*tan(t))
+    The radius of the ellipse at t is sqrt((a*cos(t))**2 + (b*sin(t))**2)
+
+    We create a table of t <-> lat pairs that we interpolate to find the t value 
+    for a given latitude such that we can plug it in the expressions above.
+*/
+
+struct oblate {
+    static constexpr double a=6378137;
+    static constexpr double b=6356752;
+
+    tk::spline m_spline;
+
+    oblate(int res=100) : m_spline() {
+        std::vector<double> ts(res);
+        std::iota(ts.begin(), ts.end(), 0);
+        double step = M_PI/2./(res-1.);
+        std::for_each(ts.begin(), ts.end(), [&](double& t){ t*=step; });
+        std::vector<double> thetas(ts.begin(), ts.end());
+        std::for_each(thetas.begin(), thetas.end(), [&](double& t){ t=std::atan(a/b*std::tan(t)); });
+        m_spline.set_points(thetas, ts); // interpolates theta -> t mappings
+    }
+
+    double radius(double lat) {
+        double t = m_spline(lat); // interpolate to get t for given lat
+        return std::sqrt(a*a*std::cos(t)*std::cos(t) + b*b*std::sin(t)*std::sin(t));
+    }
+
+    double parallel_radius(double lat) {
+        double t = m_spline(lat); // interpolate to get t for given lat
+        return a*std::cos(t);
+    }
+};
+
+using namespace spurt;
 
 void initialize(int argc, const char* argv[])
 {
@@ -45,8 +94,8 @@ void initialize(int argc, const char* argv[])
         parser.add_flag("mesh", save_mesh, "Export mesh information", optional_group);
         parser.add_flag("uv", save_uv, "Export velocity in m/s", optional_group);
         parser.add_value("vars", var_names, "Variable names", optional_group);
+        parser.add_value("kernel", kernel_name, "Kernel name", optional_group);
         parser.add_value("verbose", verbose, verbose, "Verbose output", optional_group);
-        
         
         parser.parse(argc, argv);
     }
@@ -77,7 +126,7 @@ int main(int argc, char* argv[]) {
     initialize(argc, (const char**)argv);
     
     std::vector<double> lat_deg, lon_deg, lat_rad, lon_rad;
-    std::vector<nvis::vec2> vel_spatial, vel_angular;
+    std::vector<vec2> vel_spatial, vel_angular;
     size_t nlat, nlon;
     double t;
     if (name_out.empty()) {
@@ -107,11 +156,11 @@ int main(int argc, char* argv[]) {
     size_t nvalid = 0;
     for (size_t i=0; i<vel_spatial.size(); ++i) {
         if (vel_spatial[i][0] == _invalid_ || vel_spatial[i][1] == _invalid_) {
-            vel_spatial[i] = nvis::vec2(0,0);
+            vel_spatial[i] = vec2(0,0);
         }
         else {
             vel_spatial[i] *= 0.001;
-            vel_norm.push_back(nvis::norm(vel_spatial[i]));
+            vel_norm.push_back(norm(vel_spatial[i]));
         }
     }
     
@@ -144,7 +193,7 @@ int main(int argc, char* argv[]) {
     double mid_lat_deg = 0.5*(lat_deg[0] + lat_deg.back());
     
     if (save_mesh) {
-        std::vector<nvis::vec2> vertices(nlat*nlon);
+        std::vector<vec2> vertices(nlat*nlon);
         for (int i=0; i<nlat*nlon; ++i) {
             double _lon_deg = lon_deg[i%nlon]-mid_lon_deg;
             double _lat_deg = lat_deg[i/nlon];
@@ -184,6 +233,7 @@ int main(int argc, char* argv[]) {
         writer->Delete();
     }
     
+    // convert latitude and longitude from degrees to radians
     lat_rad.resize(lat_deg.size());
     lon_rad.resize(lon_deg.size());
     std::copy(lat_deg.begin(), lat_deg.end(), lat_rad.begin());
@@ -203,30 +253,128 @@ int main(int argc, char* argv[]) {
         check_delta(lon_deg);
     }
     
-    /* formulae to convert spatial velocity to lat/lon degree / s
-       simplified expression for 
-            (\delta_x, \delta_y) = f(\delta_{lon}, \delta_{lat}):
-       dy = R*d\phi // latitude
-       dx = R*d\theta*\cos(\phi) (R\cos(\phi) is radius of parallel at latitude \phi)
-       with R\approx 6371 km.
-       Hence: d\phi = dy/R and d\theta = dx/(R*\cos(\phi))
+    // NEW: oblate Earth model
+    oblate ob;
+    /* formulae to convert spatial velocity (eastward and northward) in m/s to 
+       angular velocity (latitude and longitude) in °/s
+        * vy = R(lat_rad)*vlat_rad : vlat_rad: velocity in radians/s.
+        * vx = r(lat_rad)*vlon_rad : vlon_rad: velocity in radians/s.
+       with R: radius of oblate Earth model in meters, r: radius at given latitude
+       Hence: vlat_deg = rad2deg(vy/R(lat_rad)) and vlon_deg = rad2deg(vx/(r(lat_rad)*cos(lat_rad)))
     */
     vel_angular.resize(vel_spatial.size()); 
+    spurt::ProgressDisplay progress;
+    progress.begin(nlat*nlon, "Computing angular velocity");
     for (int j=0; j<nlat; ++j) {
         for (int i=0; i<nlon; ++i) {
-            const nvis::vec2& vs = vel_spatial[i+j*nlon];
-            nvis::vec2& va = vel_angular[i+j*nlon];
+            progress.update(i+j*nlon);
+            const vec2& vs = vel_spatial[i+j*nlon];
+            vec2& va = vel_angular[i+j*nlon];
             if (vs[0] == _invalid_) {
                 va[0] = va[1] = 0.; // zero velocity on land
             }
             else {
-                double dtheta = vs[0]/(Earth_radius*cos(lat_rad[j]));
-                double dphi = vs[1]/Earth_radius;
-                va[0] = rad2deg(dtheta);
-                va[1] = rad2deg(dphi);
+                double vlon_rad = vs[0]/ob.parallel_radius(lat_rad[j]);
+                double vlat_rad = vs[1]/ob.radius(lat_rad[j]);
+                va[0] = rad2deg(vlon_rad);
+                va[1] = rad2deg(vlat_rad);
             }
         }
     }
+    progress.end();
+
+    // compute vorticity in angular domain (the "spatial" units cancel out)
+    std::vector<double> vorticity(vel_spatial.size(), 0); // dvlat/dlon - dvlon/dlat
+    double lon_d = lon_rad[1]-lon_rad[0];
+    double lat_d = lat_deg[1]-lat_deg[0];
+    size_t di = 1;
+    size_t dj = nlon;
+    progress.begin(nlat*nlon, "Computing vorticity");
+    for (int j=0; j<nlat; ++j) {
+        for (int i=0; i<nlon; ++i) {
+            size_t id = i + j*nlon;
+            progress.update(id);
+            if (vel_spatial[id][0] == _invalid_) continue;
+            double dvlat_dlon = 0;
+            double dvlon_dlat = 0;
+            bool blocked_left   = i==0      || vel_spatial[id-di][0] == _invalid_;
+            bool blocked_right  = i==nlon-1 || vel_spatial[id+di][0] == _invalid_;
+            bool blocked_bottom = j==0      || vel_spatial[id-dj][0] == _invalid_;
+            bool blocked_top    = j==nlat-1 || vel_spatial[id+dj][0] == _invalid_;
+            if ((blocked_left && blocked_right) || (blocked_bottom && blocked_top)) {
+                continue;
+            }
+            if (blocked_left && blocked_bottom) {
+                dvlat_dlon = vel_angular[id+di][1] - vel_angular[id][1];
+                dvlon_dlat = vel_angular[id+dj][0] - vel_angular[id][0];
+            }
+            else if (blocked_left && blocked_top) {
+                dvlat_dlon = vel_angular[id+di][1] - vel_angular[id][1];
+                dvlon_dlat = vel_angular[id][0] - vel_angular[id-dj][0];
+            }
+            else if (blocked_right && blocked_bottom) {
+                dvlat_dlon = vel_angular[id][1] - vel_angular[id-di][1];
+                dvlon_dlat = vel_angular[id+dj][0] - vel_angular[id][0];
+            }
+            else if (blocked_right && blocked_top) {
+                dvlat_dlon = vel_angular[id][1] - vel_angular[id-di][1];
+                dvlon_dlat = vel_angular[id][0] - vel_angular[id-dj][0];
+            }
+            else if (blocked_left) {
+                dvlat_dlon = vel_angular[id+di][1] - vel_angular[id][1];
+                dvlon_dlat = 0.5*(vel_angular[id+dj][0] - vel_angular[id-dj][0]);
+            }
+            else if (blocked_right) {
+                dvlat_dlon = vel_angular[id][1] - vel_angular[id-di][1];
+                dvlon_dlat = 0.5*(vel_angular[id+dj][0] - vel_angular[id-dj][0]);
+            }
+            else if (blocked_bottom) {
+                dvlat_dlon = 0.5*(vel_angular[id+di][1] - vel_angular[id-di][1]);
+                dvlon_dlat = vel_angular[id+dj][0] - vel_angular[id][0];
+            }
+            else if (blocked_top) {
+                dvlat_dlon = 0.5*(vel_angular[id+di][1] - vel_angular[id-di][1]);
+                dvlon_dlat = vel_angular[id][0] - vel_angular[id-dj][0];
+            }
+            else if (kernel_name == "Scharr" || kernel_name == "scharr") {
+                // Scharr operators (see https://en.wikipedia.org/wiki/Sobel_operator#Alternative_operators)
+                dvlat_dlon = 
+                     -3.*vel_angular[id-di-dj][1] +  3.*vel_angular[id+di+dj][1] 
+                    -10.*vel_angular[id-di   ][1] + 10.*vel_angular[id+di   ][1]
+                     -3.*vel_angular[id-di+dj][1] +  3.*vel_angular[id+di+dj][1];
+                dvlon_dlat = 
+                    -3.*vel_angular[id-di-dj][0] - 10.*vel_angular[id-dj   ][0] - 3.*vel_angular[id+di-dj][0]
+                    +3.*vel_angular[id-di+dj][0] + 10.*vel_angular[id+dj   ][0] + 3.*vel_angular[id+di+dj][0];
+                dvlat_dlon /= 32.;
+                dvlon_dlat /= 32.;
+            }
+            else if (kernel_name == "Sobel" || kernel_name == "sobel") {
+                // Sobel operators (see https://en.wikipedia.org/wiki/Sobel_operator)
+                dvlat_dlon = 
+                     -1.*vel_angular[id-di-dj][1] + 1.*vel_angular[id+di+dj][1] 
+                     -2.*vel_angular[id-di   ][1] + 2.*vel_angular[id+di   ][1]
+                     -1.*vel_angular[id-di+dj][1] + 1.*vel_angular[id+di+dj][1];
+                dvlon_dlat = 
+                     -1.*vel_angular[id-di-dj][0] - 2.*vel_angular[id-dj   ][0] - 1.*vel_angular[id+di-dj][0]
+                     +1.*vel_angular[id-di+dj][0] + 2.*vel_angular[id+dj   ][0] + 1.*vel_angular[id+di+dj][0];
+                dvlat_dlon /= 8.;
+                dvlon_dlat /= 8.;
+            }
+            else if (kernel_name == "finite") {
+                dvlat_dlon = vel_angular[id+di][1] - vel_angular[id-di][1];
+                dvlon_dlat = vel_angular[id+dj][0] - vel_angular[id-dj][0];
+                dvlat_dlon /= 2.;
+                dvlon_dlat /= 2.;
+            }
+            else {
+                throw std::runtime_error("Invalid kernel name: " + kernel_name);
+            }
+            dvlat_dlon /= lon_d;
+            dvlon_dlat /= lat_d;
+            vorticity[id] = dvlat_dlon-dvlon_dlat;
+        }
+    }
+    progress.end();
     
     std::vector<size_t> sz(3);
     std::vector<double> spc(3);
@@ -251,7 +399,12 @@ int main(int argc, char* argv[]) {
     }
     spurt::nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&vel_angular[0]),
             name_out+"-angular_velocity.nrrd", /*nrrdTypeDouble,*/ sz, spc, min, center, empty);
-    std::cout << "t=" << t << '\n';
+    spurt::nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&vorticity[0]),
+            name_out+"-angular_vorticity.nrrd", /*nrrdTypeDouble,*/ 
+            std::vector<size_t>(sz.begin()+1, sz.end()), 
+            std::vector<double>(spc.begin()+1, spc.end()), 
+            std::vector<double>(min.begin()+1, min.end()), 
+            std::vector<int>(center.begin()+1, center.end()), empty);
     
     for (size_t i=0; i<names.size(); ++i) {
         spurt::nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&variables[i][0]),
@@ -261,6 +414,7 @@ int main(int argc, char* argv[]) {
             std::vector<double>(min.begin()+1, min.end()), 
             std::vector<int>(center.begin()+1, center.end()), empty);
     }
+    std::cout << "t=" << t << '\n';
             
     return 0;
 }
