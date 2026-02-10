@@ -72,6 +72,12 @@ struct oblate {
         double t = m_spline(lat); // interpolate to get t for given lat
         return a*std::cos(t);
     }
+
+    double dparallel_radius(double lat) {
+        double t = m_spline(lat); // interpolate to get t for given lat
+        double dt = m_spline.deriv(1, lat);
+        return a*(dt*std::cos(t) - std::sin(t));
+    }
 };
 
 using namespace spurt;
@@ -283,10 +289,10 @@ int main(int argc, char* argv[]) {
     }
     progress.end();
 
-    // compute vorticity in angular domain (the "spatial" units cancel out)
-    std::vector<double> vorticity(vel_spatial.size(), 0); // dvlat/dlon - dvlon/dlat
-    double lon_d = lon_rad[1]-lon_rad[0];
-    double lat_d = lat_deg[1]-lat_deg[0];
+    // compute vorticity in spatial domain
+    std::vector<double> vorticity(vel_spatial.size(), 0);
+    double delta_phi = lon_rad[1]-lon_rad[0];
+    double delta_theta = lat_rad[1]-lat_rad[0];
     size_t di = 1;
     size_t dj = nlon;
     progress.begin(nlat*nlon, "Computing vorticity");
@@ -295,8 +301,8 @@ int main(int argc, char* argv[]) {
             size_t id = i + j*nlon;
             progress.update(id);
             if (vel_spatial[id][0] == _invalid_) continue;
-            double dvlat_dlon = 0;
-            double dvlon_dlat = 0;
+            double dvy_dx = 0;
+            double dvx_dy = 0;
             bool blocked_left   = i==0      || vel_spatial[id-di][0] == _invalid_;
             bool blocked_right  = i==nlon-1 || vel_spatial[id+di][0] == _invalid_;
             bool blocked_bottom = j==0      || vel_spatial[id-dj][0] == _invalid_;
@@ -305,73 +311,75 @@ int main(int argc, char* argv[]) {
                 continue;
             }
             if (blocked_left && blocked_bottom) {
-                dvlat_dlon = vel_angular[id+di][1] - vel_angular[id][1];
-                dvlon_dlat = vel_angular[id+dj][0] - vel_angular[id][0];
+                dvy_dx = vel_spatial[id+di][1] - vel_spatial[id][1];
+                dvx_dy = vel_spatial[id+dj][0] - vel_spatial[id][0];
             }
             else if (blocked_left && blocked_top) {
-                dvlat_dlon = vel_angular[id+di][1] - vel_angular[id][1];
-                dvlon_dlat = vel_angular[id][0] - vel_angular[id-dj][0];
+                dvy_dx = vel_spatial[id+di][1] - vel_spatial[id][1];
+                dvx_dy = vel_spatial[id][0] - vel_spatial[id-dj][0];
             }
             else if (blocked_right && blocked_bottom) {
-                dvlat_dlon = vel_angular[id][1] - vel_angular[id-di][1];
-                dvlon_dlat = vel_angular[id+dj][0] - vel_angular[id][0];
+                dvy_dx = vel_spatial[id][1] - vel_spatial[id-di][1];
+                dvx_dy = vel_spatial[id+dj][0] - vel_spatial[id][0];
             }
             else if (blocked_right && blocked_top) {
-                dvlat_dlon = vel_angular[id][1] - vel_angular[id-di][1];
-                dvlon_dlat = vel_angular[id][0] - vel_angular[id-dj][0];
+                dvy_dx = vel_spatial[id][1] - vel_spatial[id-di][1];
+                dvx_dy = vel_spatial[id][0] - vel_spatial[id-dj][0];
             }
             else if (blocked_left) {
-                dvlat_dlon = vel_angular[id+di][1] - vel_angular[id][1];
-                dvlon_dlat = 0.5*(vel_angular[id+dj][0] - vel_angular[id-dj][0]);
+                dvy_dx = vel_spatial[id+di][1] - vel_spatial[id][1];
+                dvx_dy = 0.5*(vel_spatial[id+dj][0] - vel_spatial[id-dj][0]);
             }
             else if (blocked_right) {
-                dvlat_dlon = vel_angular[id][1] - vel_angular[id-di][1];
-                dvlon_dlat = 0.5*(vel_angular[id+dj][0] - vel_angular[id-dj][0]);
+                dvy_dx = vel_spatial[id][1] - vel_spatial[id-di][1];
+                dvx_dy = 0.5*(vel_spatial[id+dj][0] - vel_spatial[id-dj][0]);
             }
             else if (blocked_bottom) {
-                dvlat_dlon = 0.5*(vel_angular[id+di][1] - vel_angular[id-di][1]);
-                dvlon_dlat = vel_angular[id+dj][0] - vel_angular[id][0];
+                dvy_dx = 0.5*(vel_spatial[id+di][1] - vel_spatial[id-di][1]);
+                dvx_dy = vel_spatial[id+dj][0] - vel_spatial[id][0];
             }
             else if (blocked_top) {
-                dvlat_dlon = 0.5*(vel_angular[id+di][1] - vel_angular[id-di][1]);
-                dvlon_dlat = vel_angular[id][0] - vel_angular[id-dj][0];
+                dvy_dx = 0.5*(vel_spatial[id+di][1] - vel_spatial[id-di][1]);
+                dvx_dy = vel_spatial[id][0] - vel_spatial[id-dj][0];
             }
             else if (kernel_name == "Scharr" || kernel_name == "scharr") {
                 // Scharr operators (see https://en.wikipedia.org/wiki/Sobel_operator#Alternative_operators)
-                dvlat_dlon = 
-                     -3.*vel_angular[id-di-dj][1] +  3.*vel_angular[id+di+dj][1] 
-                    -10.*vel_angular[id-di   ][1] + 10.*vel_angular[id+di   ][1]
-                     -3.*vel_angular[id-di+dj][1] +  3.*vel_angular[id+di+dj][1];
-                dvlon_dlat = 
-                    -3.*vel_angular[id-di-dj][0] - 10.*vel_angular[id-dj   ][0] - 3.*vel_angular[id+di-dj][0]
-                    +3.*vel_angular[id-di+dj][0] + 10.*vel_angular[id+dj   ][0] + 3.*vel_angular[id+di+dj][0];
-                dvlat_dlon /= 32.;
-                dvlon_dlat /= 32.;
+                dvy_dx = 
+                     -3.*vel_spatial[id-di-dj][1] +  3.*vel_spatial[id+di+dj][1] 
+                    -10.*vel_spatial[id-di   ][1] + 10.*vel_spatial[id+di   ][1]
+                     -3.*vel_spatial[id-di+dj][1] +  3.*vel_spatial[id+di+dj][1];
+                dvx_dy = 
+                    -3.*vel_spatial[id-di-dj][0] - 10.*vel_spatial[id-dj   ][0] - 3.*vel_spatial[id+di-dj][0]
+                    +3.*vel_spatial[id-di+dj][0] + 10.*vel_spatial[id+dj   ][0] + 3.*vel_spatial[id+di+dj][0];
+                dvy_dx /= 32.;
+                dvx_dy /= 32.;
             }
             else if (kernel_name == "Sobel" || kernel_name == "sobel") {
                 // Sobel operators (see https://en.wikipedia.org/wiki/Sobel_operator)
-                dvlat_dlon = 
-                     -1.*vel_angular[id-di-dj][1] + 1.*vel_angular[id+di+dj][1] 
-                     -2.*vel_angular[id-di   ][1] + 2.*vel_angular[id+di   ][1]
-                     -1.*vel_angular[id-di+dj][1] + 1.*vel_angular[id+di+dj][1];
-                dvlon_dlat = 
-                     -1.*vel_angular[id-di-dj][0] - 2.*vel_angular[id-dj   ][0] - 1.*vel_angular[id+di-dj][0]
-                     +1.*vel_angular[id-di+dj][0] + 2.*vel_angular[id+dj   ][0] + 1.*vel_angular[id+di+dj][0];
-                dvlat_dlon /= 8.;
-                dvlon_dlat /= 8.;
+                dvy_dx = 
+                     -1.*vel_spatial[id-di-dj][1] + 1.*vel_spatial[id+di+dj][1] 
+                     -2.*vel_spatial[id-di   ][1] + 2.*vel_spatial[id+di   ][1]
+                     -1.*vel_spatial[id-di+dj][1] + 1.*vel_spatial[id+di+dj][1];
+                dvx_dy = 
+                     -1.*vel_spatial[id-di-dj][0] - 2.*vel_spatial[id-dj   ][0] - 1.*vel_spatial[id+di-dj][0]
+                     +1.*vel_spatial[id-di+dj][0] + 2.*vel_spatial[id+dj   ][0] + 1.*vel_spatial[id+di+dj][0];
+                dvx_dy /= 8.;
+                dvy_dx /= 8.;
             }
             else if (kernel_name == "finite") {
-                dvlat_dlon = vel_angular[id+di][1] - vel_angular[id-di][1];
-                dvlon_dlat = vel_angular[id+dj][0] - vel_angular[id-dj][0];
-                dvlat_dlon /= 2.;
-                dvlon_dlat /= 2.;
+                dvx_dy = vel_spatial[id+di][1] - vel_spatial[id-di][1];
+                dvy_dx = vel_spatial[id+dj][0] - vel_spatial[id-dj][0];
+                dvx_dy /= 2.;
+                dvy_dx /= 2.;
             }
             else {
                 throw std::runtime_error("Invalid kernel name: " + kernel_name);
             }
-            dvlat_dlon /= lon_d;
-            dvlon_dlat /= lat_d;
-            vorticity[id] = dvlat_dlon-dvlon_dlat;
+            double delta_x = ob.parallel_radius(lat_rad[j])*delta_phi;
+            double delta_y = ob.radius(lat_rad[j])*delta_theta;
+            dvy_dx /= delta_x;
+            dvx_dy /= delta_y;
+            vorticity[id] = dvy_dx - dvx_dy;
         }
     }
     progress.end();
@@ -400,7 +408,7 @@ int main(int argc, char* argv[]) {
     spurt::nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&vel_angular[0]),
             name_out+"-angular_velocity.nrrd", /*nrrdTypeDouble,*/ sz, spc, min, center, empty);
     spurt::nrrd_utils::writeNrrdFromContainers(reinterpret_cast<double *>(&vorticity[0]),
-            name_out+"-angular_vorticity.nrrd", /*nrrdTypeDouble,*/ 
+            name_out+"-vorticity.nrrd", /*nrrdTypeDouble,*/ 
             std::vector<size_t>(sz.begin()+1, sz.end()), 
             std::vector<double>(spc.begin()+1, spc.end()), 
             std::vector<double>(min.begin()+1, min.end()), 
