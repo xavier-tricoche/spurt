@@ -180,7 +180,7 @@ struct NrrdScalarField {
     }
 
     NrrdScalarField(Nrrd* nin, const std::string& name="unknown")
-        : m_wrapper(make3d(nin), spurt::gage_interface::BC_INTERP,
+        : m_wrapper(make3d(nin), spurt::gage_interface::BC_INTERP,      //BC_BLUR vs BC_INTERP
                     false, false, false, false), m_name(name) {
         m_wrapper.use_world();
 	#ifdef __VERBOSE_LAVD__
@@ -234,7 +234,7 @@ struct NrrdVectorField {
 
     NrrdVectorField(Nrrd* nin, const std::string name="unknown",
                     bool have_jac=true)
-        : m_wrapper(nin, spurt::gage_interface::BC_INTERP, have_jac),
+        : m_wrapper(nin, spurt::gage_interface::BC_INTERP, have_jac),       //BC_BLUR vs BC_INTERP
           m_name(name), m_have_jac(have_jac) {
         m_wrapper.use_world();
 	#ifdef __VERBOSE_LAVD__
@@ -402,7 +402,7 @@ struct NrrdODERHS {
         : m_field( other.m_field ), m_counter(other.m_counter), m_region(other.m_region),
          m_max_rhs_evals(other.m_max_rhs_evals) {}
 
-    void operator()( const vec2& x, vec2& dxdt, value_t t) const {
+    void operator()(const vec2& x, vec2& dxdt, value_t t) const {
         if (!m_region.inside(vec2(x[0], x[1]))) {
             std::ostringstream os;
             os << "Interrupting integration because " << x << " is outside selected region: "
@@ -419,20 +419,32 @@ struct NrrdODERHS {
             os << "\ntoo many RHS queries at " << x;
             throw std::runtime_error(os.str());
         }
-        bool ok = m_field( vec3(x[0], x[1], t), v );
+        bool ok = m_field(vec3(x[0], x[1], t), v);
+        //ok = m_field(vec3(274.37, 18.115, 7430400), v);
+        //ok = m_field(vec3(274.37, 18.115, 7473600), v);
+        //ok = m_field(vec3(274.37, 18.115, 7516800), v);
+        //exit(1);
         if (!ok) {
             std::ostringstream os;
             os << "\nleft domain at " << x;
             _log_(1) << "WARNING: " << os.str() << std::endl;
             throw std::runtime_error(os.str());
         }
-        else if (v[0]==-30000) {
+        else if (v[0] == -30000) {
             std::ostringstream os;
             os << "WARNING: reached land mass at " << x;
             throw std::runtime_error(os.str());
         }
         dxdt[0] = v[0];
         dxdt[1] = v[1];
+
+        /*
+        if (v[0] != 0 || v[1] != 0) {
+            std::cout << "[RHS] sample at ("
+                << x[0] << ", " << x[1] << ", " << t << ")";
+            std::cout << std::fixed << std::setprecision(12) << " -> v=(" << v[0] << ", " << v[1] << ")\n";
+        }
+        */
 	#ifdef __VERBOSE_LAVD__
         _log_(4) <<  std::setprecision(12) << "v(" <<  x << ", " << t << ")=" << v << std::endl;
 	#endif
@@ -523,6 +535,10 @@ struct LAVD_state {
     vec2 m_pos;
     bool m_stopped;
     value_t meta_lifetime;
+
+    value_t birth_time;     //The timestep when the particle was created
+    value_t birth_value;    //The value the particle was initialized with (only relevant for time > 0?)
+    int unique_id;          //Globally unique identifier. Never overlaps even with temporally distinct particles
 };
 
 std::ostream& operator<<(std::ostream& os, const LAVD_state& state) {
@@ -832,6 +848,7 @@ void export_results(value_t current_time, value_t wall_time, value_t cpu_time,
 {
     typedef T export_value_t;
 
+    //printf("A\n");
     //size_t nb_samples = resx * resy;
     size_t nb_samples = all_trajectories.size();
     //printf("Writing %ld samples\n", nb_samples);
@@ -848,17 +865,20 @@ void export_results(value_t current_time, value_t wall_time, value_t cpu_time,
         << static_cast<value_t>(nb_lost)/static_cast<value_t>(nb_samples)*100.
         << "\%)\n";
 
-    export_value_t* lavd = (export_value_t *)calloc(4*nb_samples, sizeof(export_value_t));
+    //printf("B\n");
+    export_value_t* lavd = (export_value_t *)calloc(3*nb_samples, sizeof(export_value_t));
     _log_(1) << "Filling lavd array in export_results... " << std::flush;
     for (size_t n=0; n<nb_samples; ++n) {
-        lavd[4*n  ] = static_cast<export_value_t>(all_trajectories[n].back()[0]);
-        lavd[4*n+1] = static_cast<export_value_t>(all_trajectories[n].back()[1]);
+        lavd[3*n  ] = static_cast<export_value_t>(all_trajectories[n].back()[0]);
+        lavd[3*n+1] = static_cast<export_value_t>(all_trajectories[n].back()[1]);
         export_value_t val=static_cast<export_value_t>(all_states[n].evaluate());
         if (std::isnan(val) || std::isinf(val)) {
             val = 0;
         }
-        lavd[4*n+2] = val;
-        lavd[4*n+3] = static_cast<export_value_t>(all_states[n].meta_lifetime);
+        lavd[3*n+2] = val;
+        //lavd[6*n+3] = static_cast<int>(all_states[n].meta_lifetime);
+        //lavd[6*n+4] = static_cast<int>(all_states[n].unique_id);
+        //lavd[6*n+5] = static_cast<int>(all_states[n].birth_time);
     }
     _log_(1) << "done\n";
 
@@ -867,7 +887,7 @@ void export_results(value_t current_time, value_t wall_time, value_t cpu_time,
     _log_(1) << "Setting Nrrd header values... " << std::flush;
     std::vector<size_t> __res(3);
     
-    __res[0] = 4;
+    __res[0] = 3;
     //__res[1] = resx;
     //__res[2] = resy;
     __res[1] = 1;
@@ -893,11 +913,13 @@ void export_results(value_t current_time, value_t wall_time, value_t cpu_time,
     __ctr[2] = nrrdCenterNode;
 
     _log_(1) << "done\n";
+    //printf("C\n");
 
     _log_(1) << "Writing NRRD file under " << filename << "... " << std::flush;
     spurt::nrrd_utils::writeNrrdFromContainers(lavd, filename,
                       __res, __spc, __mins, __ctr, comments);
     _log_(1) << "done\n";
+    //printf("D\n");
 
     if (export_trajectories) {
         _log_(1) << "Storing trajectories in polydata object... " << std::flush;
@@ -913,8 +935,10 @@ void export_results(value_t current_time, value_t wall_time, value_t cpu_time,
 
         for (size_t i=0; i<all_trajectories.size(); ++i) {
             for (size_t n=0; n<all_trajectories[i].size(); ++n) {
-                values.push_back(lavd[4*i+2]);
-                values.push_back(lavd[4*i+3]);
+                values.push_back(lavd[6*i+2]);
+                //values.push_back(lavd[6*i+3]);
+                //values.push_back(lavd[6*i+4]);
+                //values.push_back(lavd[6*i+5]);
             }
         }
 
@@ -931,6 +955,47 @@ void export_results(value_t current_time, value_t wall_time, value_t cpu_time,
         writer->Write();
         _log_(1) << "done\n";
     }
+    //printf("E\n");
+
+    //Do it again for ints
+    filename = file_basename + "2.nrrd";
+    int* whole = (int*)calloc(3 * nb_samples, sizeof(int));
+    for (size_t n = 0; n < nb_samples; ++n) {
+        whole[3*n  ] = static_cast<int>(all_states[n].meta_lifetime);
+        whole[3*n+1] = static_cast<int>(all_states[n].unique_id);
+        whole[3*n+2] = static_cast<int>(all_states[n].birth_time);
+    }
+
+    
+    if (export_trajectories) {
+        vtkSmartPointer<vtkPolyData> pd(vtk_utils::make_polylines(all_trajectories, 0.05));
+
+        std::vector<int> values_whole;
+        for (size_t i = 0; i < all_trajectories.size(); ++i) {
+            for (size_t n = 0; n < all_trajectories[i].size(); ++n) {
+                values_whole.push_back(whole[6 * i]);
+                values_whole.push_back(whole[6 * i + 1]);
+                values_whole.push_back(whole[6 * i + 2]);
+            }
+        }
+
+        _log_(1) << "Adding lavd values to polydata object... " << std::flush;
+        vtk_utils::add_scalars(pd, values_whole);
+        _log_(1) << "done\n";
+
+        vtkSmartPointer<vtkDataSetWriter> writer = vtkSmartPointer<vtkDataSetWriter>::New();
+        writer->SetInputData(pd);
+        filename = file_basename + "_trajectories.vtk";
+        _log_(1) << "Writing VTK dataset to file under " << filename << "... " << std::flush;
+        writer->SetFileName(filename.c_str());
+        writer->SetFileTypeToBinary();
+        writer->Write();
+        _log_(1) << "done\n";
+    }
+    spurt::nrrd_utils::writeNrrdFromContainers(whole, filename,
+        __res, __spc, __mins, __ctr, comments);
+    delete[] whole;
+    ///////////////
 
     delete[] lavd;
 

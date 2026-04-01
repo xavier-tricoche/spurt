@@ -231,9 +231,17 @@ if __name__ == '__main__':
         control_points.append(tuple(node))
     
     print(len(verts))
+    pattern = re.compile(r'_(\d+)h\.nrrd$')
+
     for p, f, name in zip(pos, vals, names):
         #print(f'p={p},\n {p.shape}')
         if args.verbose: print(name)
+        reg_test = pattern.search(name)
+        number_str = reg_test.group(1)
+        number_int = int(number_str)
+        if number_int < 877: continue
+        if args.verbose: print(number_int)
+
         shortname = os.path.splitext(os.path.split(name)[1])[0]
         poly = []
         ps = []

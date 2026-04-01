@@ -520,9 +520,9 @@ void convert_file(const char* filename) {
 	//Sort data by meaning
 	std::vector<vec2> pos;
 	std::vector<double> val;
-	for (int i = 0; i < data.size(); i += 4) {
+	for (int i = 0; i < data.size(); i += 3) {
 		pos.push_back(nvis::vec2(data[i], data[i + 1]));
-		val.push_back(data[i + 2]);
+		val.push_back(data[i + 2]);													///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	}
 
 	//Create normalized field

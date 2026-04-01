@@ -57,12 +57,11 @@ namespace odeint = boost::numeric::odeint;
 
 using namespace spurt::lavd;
 
-const int TIME = 24;
 
 std::string name_in, name_out;
 std::vector<std::string> t_init_str(1, "0");
 std::string t_max_str = "2d";
-std::string t_expstp_str = std::to_string(TIME) + "h";
+std::string t_expstp_str = "3h";
 std::string dt_str="30";
 std::string t_skip_str="0";
 std::string me;
@@ -77,8 +76,8 @@ spurt::log::dual_ostream spurt::lavd::_log_(log_file, std::cout, 1, 0, 0, true);
 value_t t_max=2*spurt::lavd::DAY;
 value_t t_init=0;
 value_t t_skip=0;
-value_t t_export_step=TIME*spurt::lavd::HOUR;
-value_t t_between_files=TIME*spurt::lavd::HOUR;
+value_t t_export_step=3*spurt::lavd::HOUR;
+value_t t_between_files=3*spurt::lavd::HOUR;
 value_t eps=1.0e-8;                                     //Lower to 10^-6
 value_t dt=30;
 std::array<size_t, 2> res( { 512, 512 } );
@@ -348,7 +347,6 @@ struct observer
         // save latest position: if trajectories are not exported
         // we only retain the latest position for flow map
         // computation purposes
-        //printf("%lf %lf -> %lf %lf\n", m_pos.back()[0], m_pos.back()[1], x[0], x[1]);
         if (export_trajectories) m_pos.push_back(x);
         else m_pos.back() = x;
 
@@ -398,7 +396,6 @@ void import_data(const std::vector< std::string >& vel_filenames,
     current_t_min = start_id * t_export_step;
     for (size_t i=first; i<first+n_used; ++i) {
         _log_(1) << "Reading " << vel_filenames[i] << "... " << std::flush;
-        //printf("Reading %s\n", vel_filenames[i].c_str());
         vel_tsteps[i-first]=spurt::nrrd_utils::readNrrd(vel_filenames[i]);
         _log_(1) << "done" << std::endl;
         print(vel_tsteps[i-first]);
@@ -947,7 +944,7 @@ void calculate_ground_truth(int count, value_t t0, size_t last_time_step, std::v
             last_time_step = current_t_min / 10800;
             last_time_step -= nslices - 4;
             local_import(velocity_filenames, vorticity_filenames,
-                last_time_step/* - 2 * support_radius*/, (t0 / HOUR / TIME) + 2 * support_radius,
+                last_time_step/* - 2 * support_radius*/, (t0 / HOUR / 3) + 2 * support_radius,
                 backwards_velocity_volume,
                 backwards_vorticity_volume,
                 current_t_min,
@@ -1275,7 +1272,6 @@ int main(int argc, const char* argv[])
         if (velname[0] == '\0') continue;
         velocity_filenames.push_back(parent_dir + '/' + velname);
         vorticity_filenames.push_back(parent_dir + '/' + vortname);
-        //cout << velname << " " << vortname << "\n";
     }
     info_file.close();
     assert(!velocity_filenames.empty());
@@ -1283,8 +1279,8 @@ int main(int argc, const char* argv[])
     _log_(1) << velocity_filenames.size() << " time steps in input" << std::endl;
 
     // compute bounds of entire domain
-    get_spatial_info(domain, input_spc, velocity_filenames[t_init/HOUR/TIME], 1);
-    border_mask = get_border_mask(border_mask_name, velocity_filenames[t_init/HOUR/TIME]);
+    get_spatial_info(domain, input_spc, velocity_filenames[t_init/HOUR/3], 1);
+    border_mask = get_border_mask(border_mask_name, velocity_filenames[t_init/HOUR/3]);
     //printf("Border mask: %s\n", border_mask_name.c_str());
 
     if ( !( bnds[0]==bnds[1]==bnds[2]==bnds[3] ) ) {
@@ -1332,7 +1328,7 @@ int main(int argc, const char* argv[])
 
     // initialize velocity and vorticity volumes
     //printf("Importing file(s) set: %ld\n", (long)(t_init / HOUR / 3));
-    import_data(velocity_filenames, vorticity_filenames, t_init/HOUR/TIME < 0 ? 0 : t_init / HOUR / TIME);
+    import_data(velocity_filenames, vorticity_filenames, t_init/HOUR/3 < 0 ? 0 : t_init / HOUR / 3);
 
     size_t counter = 0;
     size_t nb_early = 0;
@@ -1345,7 +1341,7 @@ int main(int argc, const char* argv[])
     _log_(1) << "bounds=" << region << std::endl;
 
     if (export_region)
-        spurt::lavd::export_mask(vorticity_filenames[t_init/HOUR/TIME], region, true);
+        spurt::lavd::export_mask(vorticity_filenames[t_init/HOUR/3], region, true);
 
     std::vector<size_t> sample_counter(nb_threads);
     std::vector< shared_ptr< NrrdODERHS > > rhs_copies(nb_threads);
@@ -1373,8 +1369,6 @@ int main(int argc, const char* argv[])
     current_start_time = t_init;
     current_t_min = t_init;
     next_export_time = t_init + t_export_step + t_skip;
-    printf("%f\n", t_export_step);
-    printf("%lf %lf\n", t_export_step, t_skip);
     //std::vector< LAVD_state > memory;
     int moving_index = -1;
     double distance = 0.0;
@@ -1548,12 +1542,10 @@ int main(int argc, const char* argv[])
         }
         #pragma omp barrier
 	    progress.end();
-        printf("%f\n", all_states[0].m_time);
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------
         //printf("Global ID set at: %d\n", global_identifier);
         //printf("Global array len: %ld\n", all_states.size());
 
-        /*
         printf("Adding streamlines...\n");
         value_t res_distance = step_x;
         std::vector<Delaunay::Finite_faces_iterator> triangles;
@@ -1589,13 +1581,10 @@ int main(int argc, const char* argv[])
                 triangles.push_back(f);
             }
         }
-        */
-
-        //printf("Found %ld candidate seeds\n", triangles.size());
+        printf("Found %ld candidate seeds\n", triangles.size());
         //Use the voids to seed streamlines
         std::vector<Point> added = {};
         size_t old_sample_count = nb_samples;
-        /*
         printf("Filling voids...\n");
         for(int i = 0; i < triangles.size(); i++) {
             //printf("%ld\n", triangles.size());
@@ -1625,7 +1614,6 @@ int main(int argc, const char* argv[])
         }
         printf("Added %ld streamlines in sparse areas\n", nb_samples - old_sample_count);
         triangles.clear();
-        */
 
         //Ground truth
         //printf("Before ground truth: %lf (%lf %lf)\n", all_states.back().m_acc_vd, all_trajectories.back().back()[0], all_trajectories.back().back()[1]);
@@ -1644,7 +1632,7 @@ int main(int argc, const char* argv[])
         //print_lavd_state(all_states[500000]);
         //print_lavd_state(all_states[468991]);
 
-	    /*        
+        /*
         //Remove streamlines that are too dense
         for (auto f = dt.finite_faces_begin(); f != dt.finite_faces_end(); f++) {
             Point a = f->vertex(0)->point();
@@ -1718,7 +1706,7 @@ int main(int argc, const char* argv[])
         //printf("VV size: %ld %ld %ld\n", current_vorticity_volume->axis[0].size, current_vorticity_volume->axis[1].size, current_vorticity_volume->axis[2].size);
         old_sample_count = nb_samples;
         //runtime error when restarting
-        //nb_samples += add_border_states(current_target_time, &my_avg_vorticityf, &my_vorticityf, &all_states);
+        nb_samples += add_border_states(current_target_time, &my_avg_vorticityf, &my_vorticityf, &all_states);
         printf("Added %ld streamlines around the border\n", nb_samples - old_sample_count);
 
         //Clean up dead points
@@ -1879,7 +1867,7 @@ int main(int argc, const char* argv[])
         printf("Restarting from %s\n", restart_name.c_str());
         nrrdNuke(nin);
         //Update current volumes
-        current_t_min = i * t_export_step / TIME;
+        current_t_min = i * t_export_step / 3;
         current_t_min -= (nslices - 7) * t_export_step;                                                     //(nslices - 2) * t_export_step ???
         printf("Current_t_min: %lf\n", current_t_min);
         t_init = 0;
@@ -1919,7 +1907,7 @@ int main(int argc, const char* argv[])
                 nrrdNuke(nin2);
             }
             catch (...) {
-                exported_hour -= TIME;
+                exported_hour -= 3;
                 continue;
             }
             if (final_timestep == 0) {
@@ -1959,7 +1947,7 @@ int main(int argc, const char* argv[])
             }
             //printf("Imported %d new particles from %s\n", count, restart_name.c_str());
             total_imported += count;
-            exported_hour -= TIME;
+            exported_hour -= 3;
             nrrdNuke(nin);
         }
         printf("Imported %d particles in total\n", total_imported);
