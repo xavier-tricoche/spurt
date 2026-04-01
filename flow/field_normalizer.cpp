@@ -18,6 +18,10 @@
 #include <teem/nrrd.h>
 
 #ifdef _OPENMP
+#undef _OPENMP
+#endif
+
+#ifdef _OPENMP
 #include <omp.h>
 #endif
 
@@ -191,9 +195,9 @@ double rbf(const std::vector<vec2>* all_points_ptr, const std::vector<double>* a
 	const std::vector<double> all_values = *all_values_ptr;
 	
 	//Calculate number of relevant points
-	//auto t1 = std::chrono::high_resolution_clock::now();
+	auto t1 = std::chrono::high_resolution_clock::now();
 	std::vector<int> indices = knn(all_points, new_point, 3);
-	//auto t2 = std::chrono::high_resolution_clock::now();
+	auto t2 = std::chrono::high_resolution_clock::now();
 
 	size_t n = indices.size();
 
@@ -517,6 +521,8 @@ void convert_file(const char* filename) {
 	std::vector<double> data;
 	spurt::nrrd_utils::to_vector(data, nin);
 
+	// std::cout << "Stop 1\n";
+
 	//Sort data by meaning
 	std::vector<vec2> pos;
 	std::vector<double> val;
@@ -524,6 +530,8 @@ void convert_file(const char* filename) {
 		pos.push_back(nvis::vec2(data[i], data[i + 1]));
 		val.push_back(data[i + 2]);													///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	}
+
+	// std::cout << "Stop 2\n";
 
 	//Create normalized field
 	const std::vector<std::string>& comments = traits.comments();
@@ -574,7 +582,6 @@ void convert_file(const char* filename) {
 			else throw std::runtime_error("invalid bounds syntax in restart file");
 		}
 	}
-
 	double stepx = (bnds[2] - bnds[0]) / (res[0] - 1);
 	double stepy = (bnds[3] - bnds[1]) / (res[1] - 1);
 
@@ -641,7 +648,7 @@ void convert_file(const char* filename) {
 	{
 		#pragma omp for schedule(dynamic,1)
 		for (size_t i = 0; i < normalized_vals.size(); i++) {
-			#if _OPENMP
+			#ifdef _OPENMP
 			const int thread = omp_get_thread_num();
 			#else
 			const int thread = 0;
@@ -741,6 +748,7 @@ int main(int argc, const char* argv[]) {
 			for (const auto& entry : fs::directory_iterator(outputPath)) {
 				if (entry.is_regular_file()) {
 					std::string outfile = entry.path().filename().string();
+					std::cout << "outfile is " << outfile << '\n';
 
 					if (outfile.find(hours) != std::string::npos) {
 						skip = true;
@@ -754,10 +762,12 @@ int main(int argc, const char* argv[]) {
 			}
 
 			if (filename.find(keyword) != std::string::npos && filename.find(".nrrd") != std::string::npos) {
+				std::cout << "filename is " << entry.path().string().c_str() << '\n';
 				printf("\n");
-				convert_file(filename.c_str());
+				convert_file(entry.path().string().c_str());
 				printf("\n");
 			}
+			break;
 		}
 	}
 	printf("Longest file: %d\n Shortest file: %d\n", max_points, min_points);
