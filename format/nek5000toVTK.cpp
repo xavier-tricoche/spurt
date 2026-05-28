@@ -35,9 +35,8 @@ void initialize(int argc, char* argv[])
 	hestOptAdd(&hopt, "o", "output",    airTypeString, 1, 1, &outfile,  NULL, "output file name");
 	hestOptAdd(&hopt, "t", "time step", airTypeInt,    1, 1, &timestep, NULL, "time step");
 
-	hestParseOrDie(hopt, argc - 1, const_cast<const char**>(argv + 1), hparm,
-	               me, "Convert Nek5000 data file to VTK binary format",
-	               AIR_TRUE, AIR_TRUE, AIR_TRUE);
+	hestParseOrExit(hopt, argc - 1, const_cast<const char**>(argv + 1), hparm,
+	               me, "Convert Nek5000 data file to VTK binary format");
 }
 
 struct vec_equal {

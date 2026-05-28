@@ -79,7 +79,7 @@
     X(vtkStructuredPoints, VTK_STRUCTURED_POINTS, vtkDataSetMapper); \
     X(vtkStructuredGrid, VTK_STRUCTURED_GRID, vtkDataSetMapper); \
     X(vtkRectilinearGrid, VTK_RECTILINEAR_GRID, vtkDataSetMapper); \
-	X(boundaryAwareRectGrid, BDRY_AWARE_RECTILINEAR_GRID, vtkDataSetMapper); \
+	X(BARG::boundaryAwareRectGrid, BDRY_AWARE_RECTILINEAR_GRID, vtkDataSetMapper); \
     X(vtkUnstructuredGrid, VTK_UNSTRUCTURED_GRID, vtkDataSetMapper); \
     X(vtkDataSet, VTK_DATA_SET, vtkDataSetMapper); \
     X(vtkPointSet, VTK_POINT_SET, vtkDataSetMapper); \

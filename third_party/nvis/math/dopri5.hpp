@@ -15,7 +15,7 @@ const double safe = 0.9;
 const double epsilon = std::numeric_limits<double>::epsilon();
 const double facl = 0.2;
 const double facr = 10.0;
-const double beta = 0.04;
+const double beta_ = 0.04;
 const unsigned int nstiff = 100;
 
 const double
@@ -327,10 +327,10 @@ public:
             err = sqrt(err / (double)V::size());
 
             // compute next (potential) stepsize
-            fac11 = pow(err, 0.2 - beta * 0.75);
+            fac11 = pow(err, 0.2 - beta_ * 0.75);
 
             // Lund-stabilization
-            double fac = fac11 / pow(facold, beta);
+            double fac = fac11 / pow(facold, beta_);
 
             // we require facl <= h_new/h <= facr
             fac = std::max(1.0 / facr, std::min(1.0 / facl, fac / safe));

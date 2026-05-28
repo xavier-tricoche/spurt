@@ -28,9 +28,8 @@ void initialize(int argc, const char* argv[])
     hestOptAdd(&hopt, "pre",    "prefix",   airTypeString,  1,  1,  &prefix,    NULL,   "prefix");
     hestOptAdd(&hopt, "suf",    "suffix",   airTypeString,  1,  1,  &suffix,    NULL,   "sufffix");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Convert file names",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Convert file names");
 }
 
 int main(int argc, const char* argv[])

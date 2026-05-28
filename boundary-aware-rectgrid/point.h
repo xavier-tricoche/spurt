@@ -1,7 +1,9 @@
 #pragma once
 
 #include <vector>
-using namespace std;
+
+namespace BARG {
+
 struct Point {
 	double x; double y; double z;
 	Point() { x = 0; y = 0; z = 0; } //default constructor
@@ -56,3 +58,5 @@ static Point interpolate_linear(const Point& p1, const Point& p2, double u)
 	inter_pt.z = (1.0 - u) * p1.z + u * p2.z;
 	return inter_pt;
 }
+
+} // BARG

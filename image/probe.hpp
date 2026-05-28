@@ -134,7 +134,7 @@ protected:
     gageContext *ctx;
     gagePerVolume *pv;
     const gage_t *_v, *_g, *_h, *_heval, *_hevec;
-    double kparm[NRRD_KERNEL_PARMS_NUM];
+    double kparm[NRRD_KERNEL_PARM_MAXNUM];
     bool _use_wc;
     bool _use_grad, _use_hess, _use_heval, _use_hevec; 
     spurt::coord_mapping wcidx;
@@ -175,7 +175,7 @@ protected:
     gageContext *ctx;
     gagePerVolume *pv;
     const gage_t *_v, *_j;
-    double kparm[NRRD_KERNEL_PARMS_NUM];
+    double kparm[NRRD_KERNEL_PARM_MAXNUM];
     bool _use_wc;
     bool _use_jac;
     spurt::coord_mapping wcidx;
@@ -237,7 +237,7 @@ protected:
     const gage_t *_fa, *_fa_grad, *_fa_hess, *_fa_hess_eval, *_fa_hess_evec,
     *_fa_ridge_surf_strength, *_fa_valley_surf_strength;
     const gage_t *_mode, *_mode_grad, *_mode_hess, *_mode_hess_eval, *_mode_hess_evec;
-    double kparm[NRRD_KERNEL_PARMS_NUM];
+    double kparm[NRRD_KERNEL_PARM_MAXNUM];
     bool _use_wc;
     spurt::coord_mapping wcidx;
 };
@@ -291,7 +291,7 @@ protected:
     const gage_t *_mode, *_mode_grad, *_mode_hess, *_mode_hess_eval, *_mode_hess_evec;
     const gage_t *_v, *_j;
     
-    double kparm[NRRD_KERNEL_PARMS_NUM];
+    double kparm[NRRD_KERNEL_PARM_MAXNUM];
     bool _use_wc;
     bool _use_grad, _use_hess, _use_heval, _use_hevec; 
     spurt::coord_mapping wcidx;

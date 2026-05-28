@@ -1,5 +1,4 @@
-#ifndef __BOUNDARY_AWARE_RECT_GRID_H__
-#define __BOUNDARY_AWARE_RECT_GRID_H__
+#pragma once
 
 
 #include <vtkRectilinearGrid.h>
@@ -12,6 +11,8 @@
 #include <unsupported/Eigen/AutoDiff>
 #include <unsupported/Eigen/Splines>
 #include <vector>
+
+namespace BARG {
 
 class boundaryAwareRectGrid : public vtkRectilinearGrid
 {
@@ -72,5 +73,4 @@ public:
     void ShallowCopy(vtkDataObject * src) override;
 };
 
-
-#endif
+} // BARG

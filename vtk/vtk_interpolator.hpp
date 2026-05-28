@@ -42,7 +42,7 @@ namespace {
     template<>
     struct is_structured<vtkStructuredGrid> : public std::true_type {};
     template<>
-    struct is_structured<boundaryAwareRectGrid> : public std::true_type {}; //BARG edit
+    struct is_structured<BARG::boundaryAwareRectGrid> : public std::true_type {}; //BARG edit
 
     template<typename DataSet>
     struct needs_cell_locator : public std::false_type {};

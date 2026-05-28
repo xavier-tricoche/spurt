@@ -884,7 +884,8 @@ struct cell_links {
         _dataset = dataset;
         std::cout << "Building cell links\n";
         _links->Initialize();
-        _links->BuildLinks(_dataset);
+        _links->SetDataSet(dataset);
+        _links->BuildLinks();
         std::cout << "Cell links built\n";
         _links->PrintSelf(std::cout, vtkIndent(0));
         // _links = vtkCellLinks::SafeDownCast(dataset->GetCellLinks());

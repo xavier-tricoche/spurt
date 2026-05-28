@@ -239,7 +239,7 @@ typedef spurt::fixed_mesh_time_dependent_field<curvilinear_locator_type, std::ve
 typedef spurt::structured_mesh_time_dependent_field< vtkRectilinearGrid, double, 3, std::vector<vec3> > rectilinear_field_type;
 typedef spurt::structured_mesh_time_dependent_field< vtkImageData, double, 3, std::vector<vec3> > image_field_type;
 //typedef spurt::structured_mesh_time_dependent_field< boundaryAwareRectGrid, double, 3, std::vector<vec3> > BARG_field_type;  //BARG edit #2
-typedef spurt::tp_bspline_time_dependent_field< boundaryAwareRectGrid, double, 3, std::vector<vec3> > BARG_field_type;  //BARG edit
+typedef spurt::tp_bspline_time_dependent_field< BARG::boundaryAwareRectGrid, double, 3, std::vector<vec3> > BARG_field_type;  //BARG edit
 
 
 struct RKDOPRI5 {
@@ -356,7 +356,7 @@ struct rhs_type<
         std::is_same<typename Field::dataset_type, vtkStructuredGrid >::value ||
         std::is_same<typename Field::dataset_type, vtkRectilinearGrid>::value ||
         std::is_same<typename Field::dataset_type, vtkImageData>::value ||
-		std::is_same<typename Field::dataset_type, boundaryAwareRectGrid>::value   //BARG edit #3
+		std::is_same<typename Field::dataset_type, BARG::boundaryAwareRectGrid>::value   //BARG edit #3
     >::type > : public rhs_base<Field> {
     typedef Field field_type;
     typedef rhs_base<Field> base_type;
@@ -1120,7 +1120,7 @@ load_BARG_time_steps(const std::vector<std::string>& steps,
 	VTK_SMART(vtkRectilinearGrid) rgrid =
 		import_data<vtkRectilinearGrid>(data, out_of_bounds, steps);
 
-	VTK_CREATE(boundaryAwareRectGrid, grid) ;
+	VTK_CREATE(BARG::boundaryAwareRectGrid, grid) ;
 	grid->ShallowCopy(rgrid);
 
     return shared_ptr<BARG_field_type>(

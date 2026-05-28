@@ -232,7 +232,7 @@ typedef interpolator<vtkImageData, double, 2, vector_type>  img_intp_t;
 typedef interpolator<vtkRectilinearGrid, double, 2, vector_type> rect_intp_t;
 typedef interpolator<vtkUnstructuredGrid, double, 2, vector_type> unst_intp_t;
 typedef interpolator<vtkStructuredGrid, double, 2, vector_type> curv_intp_t;
-typedef interpolator<boundaryAwareRectGrid, double, 2, vector_type> BARG_intp_t; //BARG edit #1
+typedef interpolator<BARG::boundaryAwareRectGrid, double, 2, vector_type> BARG_intp_t; //BARG edit #1
 
 
 typedef vtk_utils::point_locator<vtkUnstructuredGrid, double, 2> unstr_locator_type;
@@ -241,7 +241,7 @@ typedef vtk_utils::point_locator<vtkStructuredGrid, double, 2> curv_locator_type
 typedef spurt::fixed_mesh_time_dependent_field<curv_locator_type, std::vector<vector_type> > curv_field_type;
 typedef spurt::structured_mesh_time_dependent_field< vtkRectilinearGrid, double, 2, std::vector<vector_type> > rect_field_type;
 typedef spurt::structured_mesh_time_dependent_field< vtkImageData, double, 2, std::vector<vector_type> > img_field_type;
-typedef spurt::tp_bspline_time_dependent_field< boundaryAwareRectGrid, double, 2, std::vector<vector_type> > BARG_field_type;  //BARG edit
+typedef spurt::tp_bspline_time_dependent_field< BARG::boundaryAwareRectGrid, double, 2, std::vector<vector_type> > BARG_field_type;  //BARG edit
 
 
 struct RKDOPRI5 {
@@ -333,7 +333,7 @@ struct RKDOPRI5 {
 		std::is_same<typename Field::dataset_type, vtkUnstructuredGrid>::value ||
 		std::is_same<typename Field::dataset_type, vtkRectilinearGrid>::value ||
 		std::is_same<typename Field::dataset_type, vtkImageData>::value ||
-		std::is_same<typename Field::dataset_type, boundaryAwareRectGrid>::value
+		std::is_same<typename Field::dataset_type, BARG::boundaryAwareRectGrid>::value
 		>::type > {
 		typedef Field field_type;
 
@@ -1041,7 +1041,7 @@ return 0;
 		VTK_SMART(vtkRectilinearGrid) rgrid =
 			import_data<vtkRectilinearGrid>(data, out_of_bounds, steps);
 
-		VTK_CREATE(boundaryAwareRectGrid, grid);
+		VTK_CREATE(BARG::boundaryAwareRectGrid, grid);
 		grid->ShallowCopy(rgrid);
 
 		return shared_ptr<BARG_field_type>(

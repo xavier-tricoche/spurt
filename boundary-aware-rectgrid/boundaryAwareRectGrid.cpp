@@ -8,6 +8,7 @@
 #include <string>
 #include <cmath>
 #include <math.h>
+#include <iostream>
 
 #ifndef STANDALONE_TEST
     #include "math/fixed_vector.hpp"
@@ -16,9 +17,9 @@
 
 #include <stdexcept>
 
-vtkStandardNewMacro(boundaryAwareRectGrid);
+vtkStandardNewMacro(BARG::boundaryAwareRectGrid);
 
-bool boundaryAwareRectGrid::prepare_knot_array() {
+bool BARG::boundaryAwareRectGrid::prepare_knot_array() {
 
 	const int degree = this->bspline_degree;
 	const int * rgrid_dim = this->GetDimensions();
@@ -51,8 +52,8 @@ bool boundaryAwareRectGrid::prepare_knot_array() {
 		z_knot = Knots_with_multiplicity(z_knot_no_mul, degree);
 	}
 
-	//perpare ctrl points
-	// construct control points matrix
+	//perpare ctrl BARG::Points
+	// construct control BARG::Points matrix
 	vtkSmartPointer<vtkDataArray> array;
 	array = this->GetPointData()->GetArray("CP");
 	int ncomp = array->GetNumberOfComponents();
@@ -75,40 +76,40 @@ bool boundaryAwareRectGrid::prepare_knot_array() {
     return true;
 }
 
-void boundaryAwareRectGrid::SetArray()
+void BARG::boundaryAwareRectGrid::SetArray()
 {
 	bool has_error = false;
 
 	// cutcell code
 	vtkSmartPointer<vtkDataArray> cutcell_code_array_untyped = this->GetCellData()->GetArray("cutcell_code");
 	if (cutcell_code_array_untyped == nullptr) {
-		cerr << "cut-cell code array not found" << endl;
+		std::cerr << "cut-cell code array not found" << endl;
 		has_error = true;
 	}
 	else if (!(cutcell_code_array = vtkUnsignedCharArray::SafeDownCast(cutcell_code_array_untyped))) {
-		cerr << "cut-cell code type mismatch" << endl;
+		std::cerr << "cut-cell code type mismatch" << endl;
 		has_error = true;
 	}
 
 	// u-val (edge intersection) array
 	vtkSmartPointer<vtkDataArray> u_val_array_untyped = this->GetPointData()->GetArray("u_values_vector");
 	if (u_val_array_untyped == nullptr) {
-		cerr << "u-val (edge intersection) array not found" << endl;
+		std::cerr << "u-val (edge intersection) array not found" << endl;
 		has_error = true;
 	}
 	else if (!(u_val_float_array = vtkFloatArray::SafeDownCast(u_val_array_untyped))) {
-		cerr << "u-val (edge intersection) array type mismatch" << endl;
+		std::cerr << "u-val (edge intersection) array type mismatch" << endl;
 		has_error = true;
 	}
 
-	// control points
+	// control BARG::Points
 	vtkSmartPointer<vtkDataArray> CP_aray_untyped = this->GetPointData()->GetArray("CP");
 	if (CP_aray_untyped == nullptr) {
-		cerr << "Control Point array not found " << endl;
+		std::cerr << "Control BARG::Point array not found " << endl;
 		has_error = true;
 	}
 	else if (!(CP_array = vtkDoubleArray::SafeDownCast(CP_aray_untyped))) {
-		cerr << "Control Point array type mismatch" << endl;
+		std::cerr << "Control BARG::Point array type mismatch" << endl;
 		has_error = true;
 	}
 
@@ -124,7 +125,7 @@ void boundaryAwareRectGrid::SetArray()
 		this->bspline_degree = bspline_degree_array->GetComponent(0, 0);
 
 		if (!prepare_knot_array()) {
-			cerr << "Prepare knot array failed" << endl;
+			std::cerr << "Prepare knot array failed" << endl;
 			has_error = true;
 		}
 	}
@@ -133,7 +134,7 @@ void boundaryAwareRectGrid::SetArray()
 		exit(1);
 }
 
-int boundaryAwareRectGrid::get_degree() const
+int BARG::boundaryAwareRectGrid::get_degree() const
 {
 	return this->bspline_degree;
 }
@@ -143,9 +144,9 @@ int boundaryAwareRectGrid::get_degree() const
   /******************************************************************************************************************************/
 
 void get_marching_triangles(int code, vtkSmartPointer<vtkIdList> grid_vid,
-	vtkSmartPointer<vtkFloatArray> u_valFloatArray, std::vector<Point>& tricoords_ls)
+	vtkSmartPointer<vtkFloatArray> u_valFloatArray, std::vector<BARG::Point>& tricoords_ls)
 {
-	const int* T_list = triTable[code]; //list of the edges the marching triangles lie on
+	const int* T_list = BARG::triTable[code]; //list of the edges the marching triangles lie on
 
 	int edge_count;
 	for (edge_count = 0; edge_count < 16; edge_count++) {
@@ -158,24 +159,24 @@ void get_marching_triangles(int code, vtkSmartPointer<vtkIdList> grid_vid,
 	{
 		int edge_i = T_list[i];
 		//find edge corresponding u
-		int vi = cube_edge_to_grid_edge_idx[edge_i][0];
-		int edge_dir = cube_edge_to_grid_edge_idx[edge_i][1];
+		int vi = BARG::cube_edge_to_grid_edge_idx[edge_i][0];
+		int edge_dir = BARG::cube_edge_to_grid_edge_idx[edge_i][1];
 		int rect_pt_index = grid_vid->GetId(vi);
 		double u = u_valFloatArray->GetComponent(rect_pt_index, edge_dir);
 
         //find correspoinging vertices of the edge
-		Point& pt1 = unit_cube_coords.at(cube_edge2vertex[edge_i][0]);
-		Point& pt2 = unit_cube_coords.at(cube_edge2vertex[edge_i][1]);
-		Point interp_pt = interpolate_linear(pt1, pt2, u);
+		BARG::Point& pt1 = BARG::unit_cube_coords.at(BARG::cube_edge2vertex[edge_i][0]);
+		BARG::Point& pt2 = BARG::unit_cube_coords.at(BARG::cube_edge2vertex[edge_i][1]);
+		BARG::Point interp_pt = interpolate_linear(pt1, pt2, u);
 
 		tricoords_ls[i] = interp_pt;
 	}
 }
 
 void get_marching_lines(int code, vtkSmartPointer<vtkIdList> grid_vid,
-	vtkSmartPointer<vtkFloatArray> u_valFloatArray, std::vector<Point>& tricoords_ls)
+	vtkSmartPointer<vtkFloatArray> u_valFloatArray, std::vector<BARG::Point>& tricoords_ls)
 {
-	const int* T_list = marching_square_table[code]; //list of the edges the marching triangles lie on
+	const int* T_list = BARG::marching_square_table[code]; //list of the edges the marching triangles lie on
 	vtkIdType grid_vid_ordered[4];
 	int order[4] = { 0,1,3,2 };
 	for (int i = 0; i < 4; i++) {
@@ -194,23 +195,23 @@ void get_marching_lines(int code, vtkSmartPointer<vtkIdList> grid_vid,
 	{
 		int edge_i = T_list[i];
 		//find edge corresponding u
-		int vi = square_edge_to_grid_edge_idx[edge_i][0];
-		int edge_dir = square_edge_to_grid_edge_idx[edge_i][1];
+		int vi = BARG::square_edge_to_grid_edge_idx[edge_i][0];
+		int edge_dir = BARG::square_edge_to_grid_edge_idx[edge_i][1];
 		int rect_pt_index = grid_vid_ordered[vi];
 		double u = u_valFloatArray->GetComponent(rect_pt_index, edge_dir);
 
 		assert(u != -1);
 
 		//find correspoinging vertices of the edge
-		Point& pt1 = unit_square_coords.at(square_edge2vert[edge_i][0]);
-		Point& pt2 = unit_square_coords.at(square_edge2vert[edge_i][1]);
-		Point interp_pt = interpolate_linear(pt1, pt2, u);
+		BARG::Point& pt1 = BARG::unit_square_coords.at(BARG::square_edge2vert[edge_i][0]);
+		BARG::Point& pt2 = BARG::unit_square_coords.at(BARG::square_edge2vert[edge_i][1]);
+		BARG::Point interp_pt = interpolate_linear(pt1, pt2, u);
 
 		tricoords_ls[i] = interp_pt;
 	}
 }
 
-boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_3d(double x[3], vtkIdType ci, double* pcoords, double* N_ret)
+BARG::boundaryAwareRectGrid::INOUT BARG::boundaryAwareRectGrid::query_pt_inout_3d(double x[3], vtkIdType ci, double* pcoords, double* N_ret)
 {
 	//cell_id and pcoords can be passed in from another FindCell call to save computation
 	// but if not, find the cell and the parametric coord
@@ -240,11 +241,11 @@ boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_3d(double x[3
 	this->GetCellPoints(ci, rcell_vids);
 
 	//determine inside/outside through marching triangles
-	std::vector<Point> triangle_list;
+	std::vector<BARG::Point> triangle_list;
 	get_marching_triangles(code, rcell_vids, u_val_float_array, triangle_list);
 	assert(triangle_list.size() > 0);
 
-	Point pcoords_pt(pcoords);
+	BARG::Point pcoords_pt(pcoords);
 
 	int num_tri = triangle_list.size() / 3;
 	std::vector<double> dir_list(num_tri);
@@ -254,15 +255,15 @@ boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_3d(double x[3
 	for (int i = 0; i < triangle_list.size(); i += 3)
 	{
 		//dot product the normal of the triangle
-		Point& p1 = triangle_list[i];
-		Point& p2 = triangle_list[i + 1];
-		Point& p3 = triangle_list[i + 2];
-		Point v1 = p2 - p1;
-		Point v2 = p3 - p1;
-		Point N = crossProduct(v1, v2);
+		BARG::Point& p1 = triangle_list[i];
+		BARG::Point& p2 = triangle_list[i + 1];
+		BARG::Point& p3 = triangle_list[i + 2];
+		BARG::Point v1 = p2 - p1;
+		BARG::Point v2 = p3 - p1;
+		BARG::Point N = crossProduct(v1, v2);
 		N = N / sqrt(dotproduct(N, N));  //normalize the normal vector
 		N_avg[0] += N.x; N_avg[1] += N.y; N_avg[2] += N.z;
-		Point v_query = pcoords_pt - p1;
+		BARG::Point v_query = pcoords_pt - p1;
 		double  v_query_norm = sqrt(dotproduct(v_query, v_query));
 		v_query = v_query / v_query_norm;
 		dir = -1 * dotproduct(N, v_query);
@@ -280,7 +281,7 @@ boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_3d(double x[3
 		return boundaryAwareRectGrid::INOUT::OUT;
 }
 
-boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_2d(double x[3], vtkIdType ci, double* pcoords)
+BARG::boundaryAwareRectGrid::INOUT BARG::boundaryAwareRectGrid::query_pt_inout_2d(double x[3], vtkIdType ci, double* pcoords)
 {
 	//cell_id and pcoords can be passed in from another FindCell call to save computation
 	// but if not, run the findcell call
@@ -309,11 +310,11 @@ boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_2d(double x[3
 	this->GetCellPoints(ci, rcell_vids);
 
 	//determine inside/outside through marching triangles
-	std::vector<Point> triangle_list;
+	std::vector<BARG::Point> triangle_list;
 	triangle_list.reserve(4);
 	get_marching_lines(code, rcell_vids, u_val_float_array, triangle_list);
 
-	Point pcoords_pt(pcoords[0], pcoords[1], pcoords[2]);
+	BARG::Point pcoords_pt(pcoords[0], pcoords[1], pcoords[2]);
 
 	int num_tri = triangle_list.size() / 2;
 	std::vector<double> dir_list(num_tri);
@@ -322,8 +323,8 @@ boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_2d(double x[3
 	for (int i = 0; i < triangle_list.size(); i += 2)
 	{
 		//dot product the normal of the triangle
-		Point p1 = triangle_list[i];
-		Point p2 = triangle_list[i + 1];
+		BARG::Point p1 = triangle_list[i];
+		BARG::Point p2 = triangle_list[i + 1];
 
 		mat[0][0] = pcoords_pt.x; mat[1][0] = p1.x; mat[2][0] = p2.x;
 		mat[0][1] = pcoords_pt.y; mat[1][1] = p1.y; mat[2][1] = p2.y;
@@ -341,7 +342,7 @@ boundaryAwareRectGrid::INOUT boundaryAwareRectGrid::query_pt_inout_2d(double x[3
 
 
 //**********************************************************************
-vtkIdType boundaryAwareRectGrid::FindCell(double x[3], vtkCell* cell, vtkIdType cellId, double tol2, int& subId, double pcoords[3], double* weights)
+vtkIdType BARG::boundaryAwareRectGrid::FindCell(double x[3], vtkCell* cell, vtkIdType cellId, double tol2, int& subId, double pcoords[3], double* weights)
 {
 	assert(false);
 	vtkIdType ci = vtkRectilinearGrid::FindCell(x, cell, cellId, tol2, subId, pcoords, weights);
@@ -368,7 +369,7 @@ vtkIdType boundaryAwareRectGrid::FindCell(double x[3], vtkCell* cell, vtkIdType 
 
 // 2D implementation for bspline interpolating
 template<int DEG>
-vtkIdType boundaryAwareRectGrid::bspline_interp_impl_2d(double query_coord[3], double* return_val)
+vtkIdType BARG::boundaryAwareRectGrid::bspline_interp_impl_2d(double query_coord[3], double* return_val)
 {
 	const int NDIM = 2;
 	using Spline1D = Eigen::Spline<double, 1, DEG>;
@@ -407,7 +408,7 @@ vtkIdType boundaryAwareRectGrid::bspline_interp_impl_2d(double query_coord[3], d
 
 // 2D implementation for bspline derivatives
 template<int DEG>
-vtkIdType boundaryAwareRectGrid::bspline_deriv_impl_2d(double query_coord[3], std::vector<double>& return_val, int deriv_order)
+vtkIdType BARG::boundaryAwareRectGrid::bspline_deriv_impl_2d(double query_coord[3], std::vector<double>& return_val, int deriv_order)
 {
 	const int NDIM = 2;
 	using Spline1D = Eigen::Spline<double, 1, DEG>;
@@ -466,7 +467,7 @@ vtkIdType boundaryAwareRectGrid::bspline_deriv_impl_2d(double query_coord[3], st
 
 // 3D implementation
 template<int DEG>
-vtkIdType boundaryAwareRectGrid::bspline_interp_impl_3d(double query_coord[3], double * return_val) {
+vtkIdType BARG::boundaryAwareRectGrid::bspline_interp_impl_3d(double query_coord[3], double * return_val) {
 	const int NDIM = 3;
 	using Spline1D = Eigen::Spline<double, 1, DEG>;
 	using VectorDegP1Type = typename Eigen::Matrix<double, DEG + 1, 1>;
@@ -509,8 +510,8 @@ vtkIdType boundaryAwareRectGrid::bspline_interp_impl_3d(double query_coord[3], d
 }
 
 template<int DEG>
-vtkIdType boundaryAwareRectGrid::bspline_deriv_impl_3d(double query_coord[3], std::vector<double>& return_val, int deriv_order) {
-    // std::cout << "Entering bspline_deriv_impl_3d with p=[" << query_coord[0] << ", " << query_coord[1] << ", " << query_coord[2] << "], deriv order=" << deriv_order << "\n";
+vtkIdType BARG::boundaryAwareRectGrid::bspline_deriv_impl_3d(double query_coord[3], std::vector<double>& return_val, int deriv_order) {
+    // std::std::cout << "Entering bspline_deriv_impl_3d with p=[" << query_coord[0] << ", " << query_coord[1] << ", " << query_coord[2] << "], deriv order=" << deriv_order << "\n";
 
 	const int NDIM = 3;
 	using Spline1D = Eigen::Spline<double, 1, DEG>;
@@ -521,33 +522,33 @@ vtkIdType boundaryAwareRectGrid::bspline_deriv_impl_3d(double query_coord[3], st
 	const int * rgrid_dim = this->GetDimensions();
 	const int CP_count_x = rgrid_dim[0];
 	const int CP_count_y = rgrid_dim[1];
-    // std::cout << "CP_count_x = " << CP_count_x << ", CP_count_y = " << CP_count_y << '\n';
+    // std::std::cout << "CP_count_x = " << CP_count_x << ", CP_count_y = " << CP_count_y << '\n';
 
     // count number of derivatives to be computed
     int nderiv = 0;
     for (int order=0; order<=deriv_order+1; ++order) {
         nderiv += order*(order+1)/2;
     }
-    // std::cout << "nderiv=" << nderiv << '\n';
+    // std::std::cout << "nderiv=" << nderiv << '\n';
     int ncomp = this->CP_array->GetNumberOfComponents();
     int nvalues = ncomp * nderiv;
     return_val.resize(nvalues);
-    // std::cout << "nvalues=" << nvalues << '\n';
+    // std::std::cout << "nvalues=" << nvalues << '\n';
 
     // basis function and their derivatives
 	const MatrixDerivType nonzero_deriv_basis_x = Spline1D::BasisFunctionDerivatives(query_coord[0], deriv_order, DEG, x_knot);
 	const MatrixDerivType nonzero_deriv_basis_y = Spline1D::BasisFunctionDerivatives(query_coord[1], deriv_order, DEG, y_knot);
 	const MatrixDerivType nonzero_deriv_basis_z = Spline1D::BasisFunctionDerivatives(query_coord[2], deriv_order, DEG, z_knot);
-    // std::cout << "nonzero_deriv_basis_x=\n" << nonzero_deriv_basis_x << '\n';
-    // std::cout << "nonzero_deriv_basis_y=\n" << nonzero_deriv_basis_y << '\n';
-    // std::cout << "nonzero_deriv_basis_z=\n" << nonzero_deriv_basis_z << '\n';
+    // std::std::cout << "nonzero_deriv_basis_x=\n" << nonzero_deriv_basis_x << '\n';
+    // std::std::cout << "nonzero_deriv_basis_y=\n" << nonzero_deriv_basis_y << '\n';
+    // std::std::cout << "nonzero_deriv_basis_z=\n" << nonzero_deriv_basis_z << '\n';
 
 
 	int span_start_idx[3];
 	span_start_idx[0] = Spline1D::Span(query_coord[0], DEG, x_knot) - DEG;
 	span_start_idx[1] = Spline1D::Span(query_coord[1], DEG, y_knot) - DEG;
 	span_start_idx[2] = Spline1D::Span(query_coord[2], DEG, z_knot) - DEG;
-    // std::cout << "span_start_idx=" << span_start_idx[0] << " " << span_start_idx[1] << " " << span_start_idx[2] << '\n';
+    // std::std::cout << "span_start_idx=" << span_start_idx[0] << " " << span_start_idx[1] << " " << span_start_idx[2] << '\n';
 
     std::vector<MatrixDegP1Type> CP_Y_mat(nderiv);
 
@@ -593,7 +594,7 @@ vtkIdType boundaryAwareRectGrid::bspline_deriv_impl_3d(double query_coord[3], st
 	return 0;
 }
 
-vtkIdType boundaryAwareRectGrid::BsplineInterpolate(double query_coord[3], double* return_val, bool use_bdry_aware,
+vtkIdType BARG::boundaryAwareRectGrid::BsplineInterpolate(double query_coord[3], double* return_val, bool use_bdry_aware,
 	bool project_onto_closest_bdry_surface)
 {
 	vtkIdType ret_id;
@@ -648,7 +649,7 @@ vtkIdType boundaryAwareRectGrid::BsplineInterpolate(double query_coord[3], doubl
         case 6:
 			ret_id = bspline_interp_impl_2d<6>(query_coord, return_val); break;
         default:
-            cerr << "Unsupported b-spline degree" << endl;
+            std::cerr << "Unsupported b-spline degree" << endl;
 			exit(-1);
         }
     }
@@ -667,7 +668,7 @@ vtkIdType boundaryAwareRectGrid::BsplineInterpolate(double query_coord[3], doubl
         case 6:
 			ret_id = bspline_interp_impl_3d<6>(query_coord, return_val); break;
         default:
-            cerr << "Unsupported b-spline degree" << endl;
+            std::cerr << "Unsupported b-spline degree" << endl;
 			exit(-1);
         }
     }
@@ -686,7 +687,7 @@ vtkIdType boundaryAwareRectGrid::BsplineInterpolate(double query_coord[3], doubl
 
 }
 
-vtkIdType boundaryAwareRectGrid::BsplineAllDerivatives(double query_coord[3], std::vector<double>& return_val, int order, bool use_bdry_aware)
+vtkIdType BARG::boundaryAwareRectGrid::BsplineAllDerivatives(double query_coord[3], std::vector<double>& return_val, int order, bool use_bdry_aware)
 {
 	vtkIdType ret_id;
     assert(this->bspline_degree != -1);
@@ -732,7 +733,7 @@ vtkIdType boundaryAwareRectGrid::BsplineAllDerivatives(double query_coord[3], st
         case 6:
 			ret_id = bspline_deriv_impl_2d<6>(query_coord, return_val, order); break;
         default:
-            cerr << "Unsupported b-spline degree" << endl;
+            std::cerr << "Unsupported b-spline degree" << endl;
 			exit(-1);
         }
     }
@@ -751,7 +752,7 @@ vtkIdType boundaryAwareRectGrid::BsplineAllDerivatives(double query_coord[3], st
         case 6:
 			ret_id = bspline_deriv_impl_3d<6>(query_coord, return_val, order); break;
         default:
-            cerr << "Unsupported b-spline degree" << endl;
+            std::cerr << "Unsupported b-spline degree" << endl;
 			exit(-1);
         }
     }
@@ -759,13 +760,13 @@ vtkIdType boundaryAwareRectGrid::BsplineAllDerivatives(double query_coord[3], st
 	return ret_id;
 }
 
-void boundaryAwareRectGrid::DeepCopy( vtkDataObject * src )
+void BARG::boundaryAwareRectGrid::DeepCopy( vtkDataObject * src )
 {
 	 vtkRectilinearGrid::DeepCopy(src);
      this->SetArray();
 }
 
-void boundaryAwareRectGrid::ShallowCopy( vtkDataObject * src)
+void BARG::boundaryAwareRectGrid::ShallowCopy( vtkDataObject * src)
 {
 	 vtkRectilinearGrid::ShallowCopy(src);
      this->SetArray();

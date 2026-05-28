@@ -1,4 +1,7 @@
 #include "point.h"
+#include <iostream>
+
+namespace BARG {
 
 /*
 There are 2 indices here.
@@ -519,7 +522,7 @@ Eigen::RowVectorXd Knots_with_multiplicity(Eigen::RowVectorXd initial_knot, int 
 		else if (i > initial_knot.size() + degree - 1)
 			knots_mul(i) = initial_knot(initial_knot.size() - 1);
 		else
-			cout << "something is wrong";
+			std::cout << "something is wrong";
 	return knots_mul;
 }
 
@@ -530,10 +533,12 @@ Eigen::RowVectorXd retrive_row(Eigen::RowVectorXd& CP_matrix, int CP_count_x, in
 	for (int j = 0; j < CP_count_x; j++)
 		ret_row(j) = CP_matrix(i*CP_count_x + j);
 	Eigen::RowVectorXd test = CP_matrix.segment(i* CP_count_x, CP_count_x);
-	cout << "ret_row" << ret_row << endl;
-	cout << "test " << test<<endl;
-	//cout << "ret_row=" << ret_row << "\n\n";
+	std::cout << "ret_row" << ret_row << endl;
+	std::cout << "test " << test<<endl;
+	//std::cout << "ret_row=" << ret_row << "\n\n";
 	return ret_row;
 
 }
 */
+
+} // BARG

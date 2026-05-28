@@ -466,6 +466,7 @@ struct C3_vector_interpolator {
 
     bool value(vector_type& v, size_t index) const {
         m_dataset->GetPointData()->GetVectors()->GetTuple(index, &v[0]);
+        return true;
     }
 
     bool jacobian(matrix_type& J, const position_type& x) const {
@@ -485,8 +486,8 @@ struct C3_vector_interpolator {
 };
 
 template<>
-struct C3_vector_interpolator<boundaryAwareRectGrid> {
-    typedef boundaryAwareRectGrid dataset_type;
+struct C3_vector_interpolator<BARG::boundaryAwareRectGrid> {
+    typedef BARG::boundaryAwareRectGrid dataset_type;
     typedef std::array<matrix_type, 3> tensor_type;
     typedef C3_vector_interpolator<dataset_type> self_type;
 
@@ -658,8 +659,8 @@ struct C3_interpolator {
 };
 
 template<>
-struct C3_interpolator<boundaryAwareRectGrid> {
-    typedef boundaryAwareRectGrid dataset_type;
+struct C3_interpolator<BARG::boundaryAwareRectGrid> {
+    typedef BARG::boundaryAwareRectGrid dataset_type;
     typedef std::array<matrix_type, 3> tensor_type;
     typedef C3_interpolator<dataset_type> self_type;
 
@@ -1388,11 +1389,11 @@ int main(int argc, char* argv[]) {
 
     // two cases: BARG dataset or other
     bool is_BARG = false;
-    VTK_SMART(boundaryAwareRectGrid) BARG_dataset;
+    VTK_SMART(BARG::boundaryAwareRectGrid) BARG_dataset;
     if (vtkRectilinearGrid::SafeDownCast(dataset) != nullptr) {
         VTK_SMART(vtkRectilinearGrid) rgrid = vtkRectilinearGrid::SafeDownCast(dataset);
         // check if this is in fact a BARG dataset
-        BARG_dataset = boundaryAwareRectGrid::New();
+        BARG_dataset = BARG::boundaryAwareRectGrid::New();
         BARG_dataset->ShallowCopy(rgrid);
         if (BARG_dataset->get_degree() >= 0) {
             is_BARG = true;
@@ -1495,7 +1496,7 @@ int main(int argc, char* argv[]) {
         }
     }
     else {
-        extract_ridges<boundaryAwareRectGrid>(BARG_dataset, scalar_name);
+        extract_ridges<BARG::boundaryAwareRectGrid>(BARG_dataset, scalar_name);
     }
 #else
     std::cout << "Vector case selected at compile time\n"; 
@@ -1584,7 +1585,7 @@ int main(int argc, char* argv[]) {
         }
     }
     else {
-        C3_vector_interpolator<boundaryAwareRectGrid> intp(
+        C3_vector_interpolator<BARG::boundaryAwareRectGrid> intp(
             BARG_dataset, "velocity");
         compute_differential_quantities(intp, surface, do_l2, do_omega, do_l, do_h);
     }

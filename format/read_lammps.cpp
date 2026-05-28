@@ -23,9 +23,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "i",      "input",    airTypeString,  1,  1,  &name_in,   NULL,   "input file name");
     hestOptAdd(&hopt, "o",      "output",   airTypeString,  1,  1,  &base_out,  NULL,   "output base name");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Convert LAMMPS dump file to individual NRRD files",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Convert LAMMPS dump file to individual NRRD files");
 }
 
 template<typename T, int N>

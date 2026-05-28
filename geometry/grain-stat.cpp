@@ -32,9 +32,8 @@ void initialize(int argc, const char* argv[])
     hestOptAdd(&hopt, "v",      "verbose",          airTypeBool,    0, 0, &verbose, "0",        "verbose mode (debugging)");
     
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute statistical properties of a granular microstructure",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute statistical properties of a granular microstructure");
 }
 
 inline nvis::ivec3 int_to_ivec(int i, const nvis::ivec3& s)

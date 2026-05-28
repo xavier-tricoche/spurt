@@ -36,7 +36,7 @@ int gage_interface::set_kernel(gageContext* ctx, kernel_idx_t kidx) {
         throw std::runtime_error("Unrecognized kernel type" + std::to_string(kidx));
     }
 
-    double kparm[NRRD_KERNEL_PARMS_NUM];
+    double kparm[NRRD_KERNEL_PARM_MAXNUM];
 
     if (kidx == TENT) {
         kparm[0] = 1; // scale
