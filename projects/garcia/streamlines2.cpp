@@ -80,9 +80,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "min",    "min step",         airTypeFloat,   0, 1, &min_step,            "1.0e-8",   "step size underflow threshold");
     hestOptAdd(&hopt, "d",      "discretization",   airTypeInt,     0, 1, &discretization,      "20",       "number of lines");
 
-    __hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                     me, "Compute and visualize streamlines in 3D vector field",
-                     AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                     me, "Compute and visualize streamlines in 3D vector field");
 }
 
 

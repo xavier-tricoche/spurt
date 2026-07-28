@@ -96,9 +96,8 @@ void initialize(int argc, const char* argv[])
     hestOptAdd(&hopt, "r",      "support radius",       airTypeFloat,   0, 1, &radius,              "0.2",      "radius of weighting function support");
     hestOptAdd(&hopt, "h",      "sampling step",        airTypeFloat,   0, 1, &h,                   "0",        "sampling step on raster grid");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute smooth MLS interpolation of principal stress tensor over cylindrical domain",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute smooth MLS interpolation of principal stress tensor over cylindrical domain");
 }
 
 int main(int argc, const char* argv[])

@@ -40,9 +40,8 @@ void initialize(int argc, const char* argv[])
     hestOptAdd(&hopt, "e",  "eps",      airTypeDouble,  0,  1,  &eps,       "1.0e-16",  "targeted accuracy");
     hestOptAdd(&hopt, "m",  "max iter", airTypeInt,     0,  1,  &maxiter,   "50",       "max number of solver iterations");
     hestOptAdd(&hopt, "s",  "solver id", airTypeInt,    0,  1,  &solverid,  "0",        "type of solver (0: CG, 1: singular CG, 2: LS CG, 3: GMRES, 4: QMR)");
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Apply divergence cleaning to a 3D vector field defined over a uniform grid",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Apply divergence cleaning to a 3D vector field defined over a uniform grid");
 }
 
 int main(int argc,  const char* argv[])

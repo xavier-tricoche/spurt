@@ -38,9 +38,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "i",      "input",            airTypeString,  1, 1, &param_in,            NULL,       "input size file (NRRD)");
     hestOptAdd(&hopt, "d",      "delta value",      airTypeDouble,  0, 1, &param_d,             "0.1",      "value increment (in %)");
 
-    hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                   me, "Visualize cyrstallographic orientation of granular microstructure",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                   me, "Visualize cyrstallographic orientation of granular microstructure");
 }
 
 int main(int argc, char* argv[])

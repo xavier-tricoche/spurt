@@ -54,9 +54,8 @@ void initialize(int argc, char* argv[], hestOpt* hopt)
     hestOptAdd(&hopt, "e",      "eigenvector",      airTypeInt,     0,  1,  &eigenid,             "0",        "eigenvector field along which integration takes place");
     hestOptAdd(&hopt, "c",      "color",            airTypeFloat,   3,  3,  col,                "-1 -1 -1", "lines' color");
 
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute tensor lines in eigenvector field of 3D symmetric second-order tensor field",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute tensor lines in eigenvector field of 3D symmetric second-order tensor field");
 }
 
 struct field_wrapper {
@@ -202,7 +201,7 @@ int main(int argc, char* argv[])
 
     if (eigenid < 0 || eigenid > 2) {
         std::cerr << "ERROR: invalid eigenvector field selected" << std::endl;
-        hestUsage(stderr, hopt, argv[0], 0);
+        hestUsage(stderr, hopt, argv[0], NULL, 0);
         return -1;
     }
 

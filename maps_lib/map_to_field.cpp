@@ -79,9 +79,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "e",  "eps",                  airTypeDouble,  0,  1,  &eps,       "1.0e-8",       "integration precision");
     hestOptAdd(&hopt, "ps", "point size",           airTypeFloat,   0,  1,  &pt_sz,     "2",            "point size for display");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Safety factor probe",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Safety factor probe");
 }
 // --------------------------------------------------------------------------------
 

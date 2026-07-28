@@ -36,9 +36,8 @@ void initialize(int argc, const char* argv[])
     hestOptAdd(&hopt, "a",      "alpha",            airTypeFloat,   0, 1, &alpha,   "0.5",      "weight coefficient of Laplacian smoothing");
     hestOptAdd(&hopt, "v",      "verbose",          airTypeBool,    0, 0, &verbose, "0",        "verbose mode (debugging)");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Extract multi-material boundaries from raster volume and export smooth geometry",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Extract multi-material boundaries from raster volume and export smooth geometry");
 }
 
 inline ivec3 int_to_ivec(int i, const ivec3& s)

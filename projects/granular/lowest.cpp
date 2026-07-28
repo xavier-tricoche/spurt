@@ -31,9 +31,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "i",      "input",                airTypeString,  1, 1, &name_in,         NULL,       "input TXT file");
     hestOptAdd(&hopt, "o",      "output",               airTypeString,  1, 1, &name_out,            NULL,       "output NRRD file");
     hestOptAdd(&hopt, "n",      "npart",                airTypeInt,         1, 1, &n,           NULL,       "number of particles");
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute bounding box of particle assembly over time",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute bounding box of particle assembly over time");
 }
 
 int main(int argc, char* argv[])

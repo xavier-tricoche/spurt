@@ -66,9 +66,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "miny",   "min y coord",      airTypeDouble,  0, 1, &miny,    "-10000",   "min y in bounding box");
     hestOptAdd(&hopt, "maxy",   "max y coord",      airTypeDouble,  0, 1, &maxy,    "10000",    "max y in bounding box");
     
-    __hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                     me, "Compute FTLE value of discrete map after a given number of iterations. Intermediate steps are not saved to disk.",
-                     AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                     me, "Compute FTLE value of discrete map after a given number of iterations. Intermediate steps are not saved to disk.");
 }
 
 namespace {

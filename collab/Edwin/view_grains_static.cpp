@@ -81,9 +81,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "shot",   "screenshot",       airTypeBool,    0, 0, &param_shot,          "0",        "screenshot mode");
     hestOptAdd(&hopt, "v",      "verbose",          airTypeBool,    0, 0, &param_v,             "0",        "verbose mode (debugging)");
 
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Visualize stress field in granular microstructure",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Visualize stress field in granular microstructure");
 }
 
 typedef std::set<int>   tag_type;

@@ -81,9 +81,8 @@ void init(int argc, char* argv[])
     hestOptAdd(&hopt, "mp",     "max period",           airTypeInt,     0, 1, &max_per,     "15",       "max considered period in fixed point search");
     hestOptAdd(&hopt, "err",    "max tolerance",        airTypeDouble,  0, 1, &max_err,     "0.1",      "max tolerance of approximation quality criterion");
     
-    __hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                     me, "Adaptively sample phase portrait along orbits to achieve accurate piecewise linear interpolation on a per-period basis",
-                     AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                     me, "Adaptively sample phase portrait along orbits to achieve accurate piecewise linear interpolation on a per-period basis");
 }
 
 template<typename T>

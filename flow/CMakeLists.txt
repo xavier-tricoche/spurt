@@ -11,7 +11,7 @@ set(BROKEN_FLOW_EXEC
     lavd-vel_only
     lavd_intp
     lavd_multi
-    vector_field
+    vector_field_gage
     vector_ftle
     tensor_ftle
 )

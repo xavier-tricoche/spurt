@@ -14,7 +14,6 @@ if( NOT Teem_FOUND )
     find_package( Teem QUIET NO_MODULE PATHS ${USER_LIKELY_LIBRARY_DIR} )
 endif()
 if( Teem_FOUND )
-    include( ${Teem_USE_FILE} )
     set( Teem_INCLUDE_DIR ${Teem_INCLUDE_DIRS} )
     # we are doing a search for the library although we know its name and
     # location just to recover its complete path with extension

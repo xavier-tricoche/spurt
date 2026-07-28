@@ -20,9 +20,8 @@ void init(int argc, char* argv[])
     hestOptAdd(&hopt, "t",  "time",     airTypeString,  1, 1, &ts,      NULL,   "time step");
     hestOptAdd(&hopt, "o",  "output",   airTypeString,  1, 1, &fout,    NULL,   "output nrrd file BASE name");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Convert the parametric representation of a HDF5 file to NRRD format",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Convert the parametric representation of a HDF5 file to NRRD format");
 }
 
 int main(int argc, char* argv[])

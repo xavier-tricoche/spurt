@@ -105,9 +105,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "vec",    "show vectors",         airTypeInt,     0,  0,  &show_vec,  NULL,           "show vertex vectors");
     hestOptAdd(&hopt, "nogfx",  "no display",           airTypeInt,     0,  0,  &nogfx,     NULL,           "turn off display");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Standard map to vector field conversion",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Standard map to vector field conversion");
 }
 
 // -------------------------

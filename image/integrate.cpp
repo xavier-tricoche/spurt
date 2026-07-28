@@ -188,7 +188,7 @@ integrate(const TrackingParam& param, std::vector< Fiber >& fibers,
     if (!E) E |= tenFiberTypeSet(tfx, param.eigen);  // considered eigenvector
 
     // hard-coded kernel for now: smoothing BC kernel
-    double kparms[NRRD_KERNEL_PARMS_NUM];
+    double kparms[NRRD_KERNEL_PARM_MAXNUM];
     kparms[0] = 1.0;
     kparms[1] = 1.0;
     kparms[2] = 0.0;
@@ -323,7 +323,7 @@ context(const TrackingParam& param)
     if (!E) E |= tenFiberTypeSet(ptr, param.eigen);  // considered eigenvector
 
     // hard-coded kernel for now: smoothing BC kernel
-    double kparms[NRRD_KERNEL_PARMS_NUM];
+    double kparms[NRRD_KERNEL_PARM_MAXNUM];
     kparms[0] = 1.0;
     kparms[1] = 1.0;
     kparms[2] = 0.0;
@@ -392,7 +392,7 @@ setup(const TrackingParam& param)
     if (!E) E |= tenFiberTypeSet(ptr, param.eigen);  // considered eigenvector
 
     // hard-coded kernel for now: smoothing BC kernel
-    double kparms[NRRD_KERNEL_PARMS_NUM];
+    double kparms[NRRD_KERNEL_PARM_MAXNUM];
     kparms[0] = 1.0;
     kparms[1] = 1.0;
     kparms[2] = 0.0;

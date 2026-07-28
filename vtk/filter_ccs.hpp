@@ -344,8 +344,8 @@ inline VTK_SMART(vtkPolyData) compute_smooth_ccs(VTK_SMART(vtkPolyData) input, d
     auto coordinates = input->GetPoints();
     VTK_CREATE(vtkIdList, neighbor_cell_ids);
     VTK_CREATE(vtkIdList, cell_point_ids);
-    neighbor_cell_ids->Allocate(20);
-    cell_point_ids->Allocate(20);
+    neighbor_cell_ids->Reserve(20);
+    cell_point_ids->Reserve(20);
 
     // first, compute cell normals
     std::vector<vec3_t> normals(polygons->GetNumberOfCells(), {0., 0., 0.});
@@ -393,7 +393,7 @@ inline VTK_SMART(vtkPolyData) compute_smooth_ccs(VTK_SMART(vtkPolyData) input, d
             polygons->GetCellAtId(cell_id, cell_point_ids);
             auto cell_normal = normals[cell_id];
             VTK_CREATE(idxlist_t, new_cell_point_ids);
-            new_cell_point_ids->Allocate(20);
+            new_cell_point_ids->Reserve(20);
             // we discard hanging lines and points
             if (cell_point_ids->GetNumberOfIds() < 3) continue;
             // add current cell to our new mesh
@@ -426,7 +426,7 @@ inline VTK_SMART(vtkPolyData) compute_smooth_ccs(VTK_SMART(vtkPolyData) input, d
                     idx_t neighbor_cell_id = neighbor_cell_ids->GetId(0);
                     if (poly_to_cc[neighbor_cell_id] != -1) continue; // cell has been processed already
                     VTK_CREATE(vtkIdList, neighbor_cell_point_ids);
-                    neighbor_cell_point_ids->Allocate(20);
+                    neighbor_cell_point_ids->Reserve(20);
                     polygons->GetCellAtId(neighbor_cell_id, neighbor_cell_point_ids);
                     vec3_t neighbor_normal = normals[neighbor_cell_id];
                     if (!_check_orientation(edge, neighbor_cell_point_ids)) {
@@ -449,7 +449,7 @@ inline VTK_SMART(vtkPolyData) compute_smooth_ccs(VTK_SMART(vtkPolyData) input, d
                         if (poly_to_cc[neighbor_cell_id] != -1) continue; // cell has been processed already
                         // TODO: process neighbor
                         VTK_CREATE(vtkIdList, neighbor_cell_point_ids);
-                        neighbor_cell_point_ids->Allocate(20);
+                        neighbor_cell_point_ids->Reserve(20);
                         polygons->GetCellAtId(neighbor_cell_id, neighbor_cell_point_ids);
                         vec3_t neighbor_normal = normals[neighbor_cell_id];
                         if (!_check_orientation(edge, neighbor_cell_point_ids)) {

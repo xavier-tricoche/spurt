@@ -56,9 +56,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "x",  "x axis",       airTypeInt,     0,  1,  &xaxis,     "0",            "column for x axis");
     hestOptAdd(&hopt, "y",  "y axis",       airTypeInt,     0,  1,  &yaxis,     "1",            "column for y axis");
     
-    _hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                    me, "Plot 2D points",
-                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                    me, "Plot 2D points");
 }
 void guiCallBack(int control);
 

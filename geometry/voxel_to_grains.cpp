@@ -31,9 +31,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "o",      "output",       airTypeString,  1, 1, &outs,    NULL,       "output file name");
     
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Turn voxel-based into grain-based values",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Turn voxel-based into grain-based values");
 }
 
 inline nvis::ivec3 int_to_ivec(int i, const nvis::ivec3& s)

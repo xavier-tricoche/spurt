@@ -83,9 +83,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "ps", "point size",           airTypeFloat,   0,  1,  &pt_sz,     "2",            "point size for display");
     hestOptAdd(&hopt, "lw", "line width",           airTypeFloat,   0,  1,  &ln_w,      "1",            "line width for display");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Poincare map visualization",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Poincare map visualization");
 }
 // --------------------------------------------------------------------------------
 

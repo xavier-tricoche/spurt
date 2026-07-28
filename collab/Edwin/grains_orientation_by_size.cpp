@@ -77,9 +77,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "g",      "gamma",            airTypeFloat,   0, 1, &param_g,             "1",        "color scale gamma factor");
     hestOptAdd(&hopt, "v",      "verbose",          airTypeBool,    0, 0, &param_v,             "0",        "verbose mode (debugging)");
     
-    __hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                     me, "Visualize cyrstallographic orientation of granular microstructure",
-                     AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                     me, "Visualize cyrstallographic orientation of granular microstructure");
 }
 
 typedef std::set<int>   tag_type;

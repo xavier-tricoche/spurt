@@ -68,9 +68,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "i",      "input",            airTypeString,  1, 1, &name_in,             NULL,       "input file (NRRD)");
     hestOptAdd(&hopt, "l",      "length",           airTypeFloat,   0, 1, &length,              "0.1",      "vector length");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Visualize location and direction of gaussian wave packets",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Visualize location and direction of gaussian wave packets");
 }
 
 int main(int argc, char* argv[])

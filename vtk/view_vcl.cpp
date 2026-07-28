@@ -60,9 +60,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "r",      "radius",           airTypeFloat,   0, 1, &r,                   "0.001",    "tube radius");
     hestOptAdd(&hopt, "sp",     "min spc",          airTypeFloat,   0, 1, &sp,                  "0",        "min distance between points");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Visualize VCL curves in DPL dataset",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Visualize VCL curves in DPL dataset");
 }
 
 typedef std::vector<nvis::vec3> curve_type;

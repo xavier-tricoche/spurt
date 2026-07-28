@@ -33,9 +33,8 @@ void initialize(int argc, const char* argv[], hestOpt* hopt)
     hestOptAdd(&hopt, "e0",     "e0",               airTypeDouble,  3,  3,  e0,             NULL,   "x-edge vector");
     hestOptAdd(&hopt, "e1",     "e1",               airTypeDouble,  3,  3,  e1,             NULL,   "y-edge vector");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute seed points from binary image",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute seed points from binary image");
 }
 
 int main(int argc, const char* argv[])

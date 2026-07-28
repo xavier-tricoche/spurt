@@ -107,9 +107,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "e",  "eps",                  airTypeDouble,  0,  1,  &eps,       "1.0e-8",       "integration precision");
     hestOptAdd(&hopt, "df", "div free",             airTypeBool,    0,  1,  &div_free,  "0",            "divergence free interpolation?");
     hestOptAdd(&hopt, "rx", "resolution factor",    airTypeInt,     0,  1,  &rx,        "10",           "output resolution upsample");
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Poincare map visualization",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Poincare map visualization");
 }
 
 typedef std::list<nvis::vec2>                           orbit_type;

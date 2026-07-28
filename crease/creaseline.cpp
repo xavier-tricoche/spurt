@@ -51,9 +51,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "sv",     "strength threshold",   airTypeFloat,   0, 1, &s_thresh,            "0",        "Strength threshold for search");
     hestOptAdd(&hopt, "svs",    "strength solution",    airTypeFloat,   0, 1, &s_thresh_select,     "0",        "Strength threshold for solution");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Visualize VCL curves in DPL dataset",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Visualize VCL curves in DPL dataset");
 }
 
 int main(int argc, char* argv[])

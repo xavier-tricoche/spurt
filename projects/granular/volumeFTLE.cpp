@@ -108,9 +108,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "dx",     "sampling distance",    airTypeFloat,   1, 1, &dx,                  NULL,       "distance between samples (isotropic)");
     hestOptAdd(&hopt, "r",      "support radius",       airTypeFloat,   1, 1, &radius,              "5",        "radius of weighting function support");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute per particle FTLE in granular flow",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute per particle FTLE in granular flow");
 }
 
 inline std::string zeros(int n)

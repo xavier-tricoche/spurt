@@ -31,9 +31,8 @@ void initialize(int argc, const char* argv[])
     hestOptAdd(&hopt, "n",      "# valid points",       airTypeInt,     1, 1, &N,                   NULL,       "number of valid particles");
     hestOptAdd(&hopt, "a",      "max angle",            airTypeFloat,   0, 1, &a,                   "60",       "max angular tolerance");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Extract force chains in granular particle assembly and export principal stress tensors",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Extract force chains in granular particle assembly and export principal stress tensors");
 }
 
 void get_neighbors(std::vector<unsigned int>& neighbors, unsigned int i)

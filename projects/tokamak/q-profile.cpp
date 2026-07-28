@@ -139,9 +139,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "Ma",     "max triangle area",    airTypeDouble,  1, 1, &max_area,            NULL,       "max triangle area in adaptive sampling");
     hestOptAdd(&hopt, "mp",     "max period",           airTypeInt,     0, 1, &max_period,          "25",       "max considered period in adaptive refinement");
     
-    hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                   me, "Compute approximative q-profile using magnetic field integration",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                   me, "Compute approximative q-profile using magnetic field integration");
 }
 
 struct Chain {

@@ -1072,7 +1072,7 @@ shared_ptr<unstructured_field_type> load_DLR_time_steps() {
     VTK_SMART(vtkPoints) points = vtk_utils::make_vtkpoints(vertices);
     grid->SetPoints(points);
     VTK_CREATE(vtkCellArray, cells);
-    cells->SetNumberOfCells(ncells);
+    cells->AllocateEstimate(ncells, 8*ncells);
     for (long cell_id=0 ; cell_id<ncells ; ++cell_id) {
         size_t start = cell_types[cell_id].second;
         size_t end = cell_types[cell_id+1].second;
@@ -1127,7 +1127,7 @@ shared_ptr<unstructured_field_type> load_DLR_time_steps() {
         types->SetValue(cell_id, type_name);
         locations->SetValue(cell_id, cell_types[cell_id].second);
     }
-    grid->SetCells(types, locations, cells);
+    grid->SetCells(types, cells);
     std::shared_ptr<unstructured_locator_type>
         locator(new unstructured_locator_type(grid, false, true));
 

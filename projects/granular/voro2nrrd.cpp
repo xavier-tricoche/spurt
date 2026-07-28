@@ -21,9 +21,8 @@ void init(int argc, char* argv[])
     hestOptAdd(&hopt, "i",      "input file",       airTypeString,  1, 1, &in_name,     NULL,   "input file name (TXT)");
     hestOptAdd(&hopt, "o",      "output name",      airTypeString,  1, 1, &out_name,    NULL,   "output file name (NRRD)");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Convert Voro++ output format to NRRD",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Convert Voro++ output format to NRRD");
 }
 
 int main(int argc, char* argv[])

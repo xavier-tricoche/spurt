@@ -60,9 +60,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "ymax",   "max height",           airTypeDouble,  0, 1, &ymax,            "0.65",     "max height in particle column");
     hestOptAdd(&hopt, "n",      "# indices",            airTypeInt,     0, 1, &n_indices,       "3456",     "total number of particle indices");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute solid fraction of particle assembly and project onto X=const plane",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute solid fraction of particle assembly and project onto X=const plane");
 }
 
 double read(kdtree_type& tree, const std::string& name, std::vector<double>& density)

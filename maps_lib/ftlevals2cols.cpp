@@ -22,9 +22,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "o",      "output",           airTypeString,  1, 1, &out,     NULL,       "output file name (TIFF)");
     hestOptAdd(&hopt, "p",      "precision",        airTypeInt,     0, 1, &prec,    "4",        "encoding precision (in bytes)");
     
-    __hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                     me, "Convert 3-channel FTLE NRRD file to color map in TIFF format",
-                     AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                     me, "Convert 3-channel FTLE NRRD file to color map in TIFF format");
 }
 
 int main(int argc, char* argv[])

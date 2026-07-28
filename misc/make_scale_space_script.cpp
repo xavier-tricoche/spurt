@@ -25,9 +25,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "min",    "min scale",            airTypeFloat,   0, 1, &minscale,    "0",        "finest scale");
     hestOptAdd(&hopt, "max",    "max scale",            airTypeFloat,   0, 1, &maxscale,    "5",        "coarsest scale");
     
-    __hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                     me, "Generate script for scale space interpolation using teem",
-                     AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                     me, "Generate script for scale space interpolation using teem");
 }
 
 int main(int argc, char* argv[])

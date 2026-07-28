@@ -32,8 +32,8 @@ template<typename Type1, typename Type2, typename Type3>
 void svdcmp(const MatrixBase<Type1>& A, MatrixBase<Type2>& U,
             MatrixBase<Type1>& w, MatrixBase<Type3>& V)
 {
-    JacobiSVD<Type1> _jsvd(A);
-    _jsvd.compute(A, ComputeFullU | ComputeFullV);
+    JacobiSVD<Type1, ComputeFullU | ComputeFullV > _jsvd(A);
+    _jsvd.compute(A);
     U = _jsvd.matrixU();
     V = _jsvd.matrixV();
     for (int i=0 ; i<std::min(A.rows(), A.cols()) ; ++i) {

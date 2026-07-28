@@ -63,9 +63,8 @@ void initialize(int argc, const char* argv[], hestOpt* hopt)
     hestOptAdd(&hopt, "e",      "eigenvector",      airTypeInt,     0,  1,  &eigen,         "0",    "eigenvector field along which integration takes place");
     hestOptAdd(&hopt, "w",      "eval weight",      airTypeBool,    0,  1,  &eval_weight,   "0",    "use associated eigenvalue as norm for the integration");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute FTLE in eigenvector field of 3D symmetric second-order tensor field",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute FTLE in eigenvector field of 3D symmetric second-order tensor field");
 }
 
 struct field_wrapper {

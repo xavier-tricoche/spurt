@@ -25,9 +25,8 @@ void init(int argc, char* argv[])
     hestOptAdd(&hopt, "n",      "# layers",         airTypeInt,     1, 1, &nlayers,     NULL,   "number of layers");
     hestOptAdd(&hopt, "t",      "thickness",        airTypeFloat,   1, 1, &thickness,   NULL,   "layer thickness");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Extract layers in particle column and assign colors to them",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Extract layers in particle column and assign colors to them");
 }
 
 int main(int argc, char* argv[])

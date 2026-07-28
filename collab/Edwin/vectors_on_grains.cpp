@@ -83,9 +83,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "signed", "signed values",    airTypeBool,    0, 1, &param_signed,        "1",        "are values signed?");
     hestOptAdd(&hopt, "v",      "verbose",          airTypeBool,    0, 0, &param_v,             "0",        "verbose mode (debugging)");
 
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Visualize value distribution over granular microstructure",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Visualize value distribution over granular microstructure");
 }
 
 int main(int argc, char* argv[])

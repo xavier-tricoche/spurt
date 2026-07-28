@@ -27,9 +27,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "e",      "epsilon",          airTypeDouble,  1,  1,  &eps,           NULL,   "step size");
     hestOptAdd(&hopt, "s",      "size",             airTypeSize_t,  2,  2,  res,            NULL,   "image resolution");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "LIC computation over 2D NRRD vector field",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "LIC computation over 2D NRRD vector field");               
 }
 
 template<typename T>

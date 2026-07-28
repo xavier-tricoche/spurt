@@ -29,9 +29,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "f",      "ftle values",          airTypeString,  1, 1, &ftle_in,             NULL,       "FTLE file");
     hestOptAdd(&hopt, "r",      "threshold ratio",      airTypeFloat,   1, 1, &ratio,               NULL,       "FTLE cutoff ratio");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Visualize particle systems filtered by FTLE value",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Visualize particle systems filtered by FTLE value");
 }
 
 int main(int argc, char* argv[])

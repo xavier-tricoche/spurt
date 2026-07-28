@@ -81,9 +81,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "b",      "brightness",       airTypeFloat,   0, 1, &param_b,             "1",        "color scale brightness factor");
     hestOptAdd(&hopt, "v",      "verbose",          airTypeBool,    0, 0, &param_v,             "0",        "verbose mode (debugging)");
 
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Visualize cyrstallographic orientation of granular microstructure",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Visualize cyrstallographic orientation of granular microstructure");
 }
 
 int main(int argc, char* argv[])

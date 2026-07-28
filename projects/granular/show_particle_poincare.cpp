@@ -52,9 +52,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "i",  "input",                airTypeString,  1,  1,  &in,        NULL,           "input file name");
     hestOptAdd(&hopt, "n",  "number displayed",     airTypeInt,     0,  1,  &n,         "100",          "number of displayed particle paths");
     hestOptAdd(&hopt, "l",  "link strategy",        airTypeInt,     0,  1,  &_link,     "0",            "0: none, 1: MST, 2: best period");
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Poincare map visualization of particle trajectories",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Poincare map visualization of particle trajectories");
 }
 
 typedef std::vector<nvis::vec2>         orbit_type;

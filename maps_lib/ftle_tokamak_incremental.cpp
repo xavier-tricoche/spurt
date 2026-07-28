@@ -68,9 +68,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "maxy",   "max y coord",      airTypeDouble,  0, 1, &maxy,    "10000",    "max y in bounding box");
     hestOptAdd(&hopt, "type",   "data type",        airTypeInt,     0, 1, &square,  "1",        "dataset type: 0: physical tokamak, 1: parametric tokamak, 2: raster");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute FTLE value of discrete map after a given number of iterations. Intermediate steps are not saved to disk.",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute FTLE value of discrete map after a given number of iterations. Intermediate steps are not saved to disk.");
 }
 
 inline int pos(const nvis::vec2& x, unsigned int res)

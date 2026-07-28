@@ -34,9 +34,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "f",  "frequency",    airTypeDouble,  0, 1, &frequency,       "7.5",      "tap frequency (Hz)");
     hestOptAdd(&hopt, "g",  "gamma",        airTypeDouble,  0, 1, &_gamma,          "0",        "tap gamma coefficient");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute bump height in tapping simulation",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute bump height in tapping simulation");
 }
 
 int main(int argc, char* argv[])

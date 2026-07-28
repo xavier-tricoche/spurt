@@ -214,9 +214,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "orb",    "show orbits",          airTypeInt,     0,  0,  &show_orb,  NULL,           "show automatically generated orbits");
     hestOptAdd(&hopt, "vec",    "show vectors",         airTypeInt,     0,  0,  &show_vec,  NULL,           "show vertex vectors");
     
-    __hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                     me, "approximated map analysis",
-                     AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                     me, "approximated map analysis");
 }
 
 // -------------------------

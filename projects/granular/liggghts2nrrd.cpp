@@ -21,9 +21,8 @@ void init(int argc, char* argv[])
     hestOptAdd(&hopt, "i",      "input file",       airTypeString,  1, 1, &in_name,     NULL,   "input file name (LIGGGHTS dump file)");
     hestOptAdd(&hopt, "o",      "output base",      airTypeString,  1, 1, &out_base,    NULL,   "output base name");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Convert LIGGGHTS dump file to NRRD format",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Convert LIGGGHTS dump file to NRRD format");
 }
 
 bool read_timestep(std::fstream& f, size_t& ti, size_t& np, std::vector<std::string>& attributes, float** data)

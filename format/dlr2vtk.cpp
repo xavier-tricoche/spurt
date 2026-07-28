@@ -78,6 +78,10 @@ struct cell_array_helper {
         return __types.size()-1;
     }
 
+    long nb_ids() const {
+        return __ids.size();
+    }
+
     const std::vector<long>&       __ids;
     const std::vector<cell_entry>& __types;
 };
@@ -182,7 +186,7 @@ vtk_cellarray(const cell_array_helper& helper)
     std::cout << "in vtk_cellarray...\n";
     using namespace spurt;
     VTK_CREATE(vtkCellArray, __cells);
-    __cells->SetNumberOfCells(helper.nb_cells());
+    __cells->AllocateEstimate(helper.nb_cells(), helper.nb_ids());
     for (long cell_id=0 ; cell_id<helper.nb_cells() ; ++cell_id) {
         __cells->InsertNextCell(helper.size(cell_id));
         for (long loc_id=0 ; loc_id<helper.size(cell_id) ; ++loc_id) {
@@ -231,7 +235,8 @@ vtk_cellarray(const cell_array_helper& helper)
     std::cout << "cell types defined\n";
 
     VTK_CREATE(vtkUnstructuredGrid, grid);
-    grid->SetCells(__types, __locations, __cells);
+    __cells->SetData(__types, __locations); //, __cells);
+    grid->SetCells(__types, __cells);
     std::cout << "grid cells set\n";
     // std::cout << "grid is now:\n";
     // grid->PrintSelf(std::cout, vtkIndent(0));

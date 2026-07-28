@@ -41,9 +41,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "g", "convert grid",   airTypeInt,    0, 0, &do_grid,  NULL, "convert grid");
     hestOptAdd(&hopt, "v", "convert values", airTypeInt,    0, 0, &do_vals,  NULL, "convert values");
 
-    hestParseOrDie(hopt, argc - 1, const_cast<const char**>(argv) + 1, hparm,
-                   me, "Convert Nek5000 data file to NRRD format",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, const_cast<const char**>(argv) + 1, hparm,
+                   me, "Convert Nek5000 data file to NRRD format");
 }
 
 struct vec_equal {

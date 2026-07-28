@@ -31,9 +31,8 @@ void initialize(int argc, const char* argv[])
     hestOptAdd(&hopt, "iv",     "input value",      airTypeString,  1,  1,  &name_in_val,       NULL,   "input value file name");
     hestOptAdd(&hopt, "o",      "output",           airTypeString,  1,  1,  &name_out,          NULL,   "output name");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Select value at best scale",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Select value at best scale");
 }
 
 typedef spurt::nrrd_data_traits<Nrrd*>  field_type;

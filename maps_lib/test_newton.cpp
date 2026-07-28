@@ -103,9 +103,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "e",      "eps",                  airTypeDouble,  0,  1,  &eps,       "1.0e-8",       "integration precision");
     hestOptAdd(&hopt, "id",     "cell index",           airTypeInt,     2,  2,  &cellid,    NULL,           "cell index");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const  char*)me, "Test Newton solver",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const  char*)me, "Test Newton solver");
 }
 
 inline bool equal(bool a, bool b)

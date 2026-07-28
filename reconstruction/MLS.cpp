@@ -38,9 +38,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "r",    "radius",        airTypeDouble,     0,     1,    &radius,        "0.05",            "radius of MLS fit");
     hestOptAdd(&hopt, "o",    "output",        airTypeString,     1,     1,    &basename,        NULL,            "output base name");
 
-    hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                   me, "Reconstruct Franke test function using MLS",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                   me, "Reconstruct Franke test function using MLS");
 }
 
 template<typename T, int N>

@@ -115,9 +115,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "zb",   "z bounds",           airTypeDouble, 0, 2, &zb,        "-0.5 0.5",        "bounds in z coordinate", &nparsed_z);
     hestOptAdd(&hopt, "wb",   "w bounds",           airTypeDouble, 0, 2, &wb,        "-0.5 0.5",        "bounds in w coordinate", &nparsed_w);
 
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute FTLE value of 4D standard map after a given number of iterations. Intermediate steps can be saved to disk.",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute FTLE value of 4D standard map after a given number of iterations. Intermediate steps can be saved to disk.");
 }
 
 inline double lmax(size_t n, const std::vector< state_type >& pos, const metric4D_type& metric)

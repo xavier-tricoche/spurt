@@ -43,9 +43,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "t",      "time",             airTypeString,  1, 1, &ts,      NULL,       "time step string");
     hestOptAdd(&hopt, "o",      "output",           airTypeString,  1, 1, &outs,    NULL,       "output base name");
     
-    __hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                     me, "Convert HDF5 NIMROD Tokamak time step to NRRD format",
-                     AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                     me, "Convert HDF5 NIMROD Tokamak time step to NRRD format");
 }
 
 int main(int argc, char* argv[])

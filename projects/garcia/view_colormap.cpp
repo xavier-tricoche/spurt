@@ -83,9 +83,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "v",      "verbose",          airTypeBool,    0, 0, &param_v,     "0",    "verbose mode (debugging)");
     hestOptAdd(&hopt, "f",      "image file",       airTypeString,  1, 1, &param_f,     NULL,   "output screenshot");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Visualize color map",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Visualize color map");
 }
 
 int main(int argc, char* argv[])

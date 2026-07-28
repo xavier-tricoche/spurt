@@ -48,9 +48,8 @@ void initialize(int argc, const char* argv[], hestOpt* hopt)
     hestOptAdd(&hopt, "r",      "dpl rel distance", airTypeDouble,  0,  1,  &rel,           "0.5",  "relative distance between single point loads in procedural double point load model. Ignored if an input file is selected");
     hestOptAdd(&hopt, "e",      "eigenvector",      airTypeInt,     0,  1,  &eigen,         "0",    "eigenvector field along which integration takes place");
     
-    __hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                     me, "Compute FTLE in major eigenvector field of 3D symmetric second-order tensor field",
-                     AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                     me, "Compute FTLE in major eigenvector field of 3D symmetric second-order tensor field");
 }
 
 struct field_wrapper {

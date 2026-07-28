@@ -108,9 +108,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "fast",   "fast angle",           airTypeInt,     0,  0,  &fast_angle,NULL,           "skip most tricky cases in angle computation");
     hestOptAdd(&hopt, "nogfx",  "no graphics",          airTypeInt,     0,  0,  &nogfx,     NULL,           "no display");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Safety factor probe",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Safety factor probe");
 }
 
 inline bool equal(bool a, bool b)

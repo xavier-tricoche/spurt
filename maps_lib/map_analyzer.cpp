@@ -154,9 +154,8 @@ void init(int argc, char* argv[])
     hestOptAdd(&hopt, "cd",     "close dist",           airTypeDouble,  0, 1, &cl,          "1.0",      "min allowable distance between chains of same type");
     
     
-    __hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                     me, "Adaptively sample phase portrait along orbits to achieve accurate piecewise linear interpolation on a per-period basis",
-                     AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                     me, "Adaptively sample phase portrait along orbits to achieve accurate piecewise linear interpolation on a per-period basis");
 }
 
 template<typename T>

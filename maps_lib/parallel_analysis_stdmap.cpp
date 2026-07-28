@@ -129,9 +129,8 @@ void initialize(int argc, char* argv[])
     
     // hestOptAdd(&hopt, "sv",      "show_vectors",                 airTypeBool,    0,  0,  &show_vectors,      NULL,       "show problematic edges");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Topological analysis of Standard Map",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Topological analysis of Standard Map");
 }
 
 inline bool equal(bool a, bool b)

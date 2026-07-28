@@ -75,9 +75,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "grain",  "show grains",      airTypeBool,    0, 0, &param_grains,        "0",        "show intersected grains");
     hestOptAdd(&hopt, "v",      "verbose",          airTypeBool,    0, 0, &param_v,             "0",        "verbose mode (debugging)");
 
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Visualize stress field in granular microstructure",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Visualize stress field in granular microstructure");
 }
 
 int main(int argc, char* argv[])

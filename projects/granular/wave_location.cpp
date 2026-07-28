@@ -36,9 +36,8 @@ void initialize(int argc, char* argv[])
     //  hestOptAdd(&hopt, "g",      "gamma",        airTypeDouble,  0, 1, &_gamma,          "0",        "tap gamma coefficient");
     hestOptAdd(&hopt, "r",  "valid range",  airTypeInt,     2, 2, &range,           "0 1",      "valid Y range (index space)");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute wave location in 1D density plot",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute wave location in 1D density plot");
 }
 
 int main(int argc, char* argv[])

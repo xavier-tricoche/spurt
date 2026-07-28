@@ -41,9 +41,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "rel",    "relaxation",           airTypeFloat,   0, 1, &relaxation,      "0",        "relaxation time");
     hestOptAdd(&hopt, "g",      "gamma",                airTypeFloat,   0, 1, &_gamma,          "0",        "tap\'s gamma coefficient");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute number of contacts in particle column with periodic lateral boundaries",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute number of contacts in particle column with periodic lateral boundaries");
 }
 
 typedef sfcnn<nvis::fvec3, 3, float> tree_type;

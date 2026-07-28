@@ -41,9 +41,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "max",    "max",              airTypeDouble,  3, 3, bmax,         NULL,       "bounding box maximum");
     hestOptAdd(&hopt, "h",      "step",             airTypeDouble,  1, 1, &h,           NULL,       "depth discontinuity threshold");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Convert image-based point cloud to triangulated surface",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Convert image-based point cloud to triangulated surface");
 }
 
 

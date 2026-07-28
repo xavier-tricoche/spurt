@@ -40,9 +40,8 @@ void initialize(int argc, const char* argv[])
     hestOptAdd(&hopt, "s",      "sz0 sz1 sz2",      airTypeSize_t,  3,  3,  nsamples,       NULL,   "number of samples per axis");
     hestOptAdd(&hopt, "abc",    "A B C",            airTypeDouble,  3,  3,  abc,            "1.73205080756888 1.41421356237310 1",  "ABC constants");
     
-    __hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                     me, "Compute flow map and FTLE field in ABC vector field",
-                     AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                     me, "Compute flow map and FTLE field in ABC vector field");
 }
 
 struct ABC_field {

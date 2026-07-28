@@ -32,9 +32,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "s",      "saturation",       airTypeFloat,   0, 1, &sat,         "1",        "color saturation");
     hestOptAdd(&hopt, "c",      "fixed color",      airTypeFloat,   3, 3, col,          "-1 -1 -1", "fixed color to be assigned to all curves");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Assign colors to points lying on line objects based on their orientation",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Assign colors to points lying on line objects based on their orientation");
 }
 
 spurt::fvec3 color(unsigned int lid, unsigned int pid)

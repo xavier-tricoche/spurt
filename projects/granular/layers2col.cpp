@@ -23,9 +23,8 @@ void init(int argc, char* argv[])
     hestOptAdd(&hopt, "o",      "output base",      airTypeString,  1, 1, &out_name,    NULL,   "output file name (nrrd)");
     hestOptAdd(&hopt, "n",      "# layers",         airTypeInt,     0, 1, &nlayers,     "5",    "number of layers");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute color associated with layers",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute color associated with layers");
 }
 
 int main(int argc, char* argv[])

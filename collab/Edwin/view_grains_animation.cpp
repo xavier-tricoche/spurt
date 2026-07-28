@@ -59,9 +59,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "ssf",    "screen shot file", airTypeString,  1, 1, &img,             NULL,       "screenshot base name (batch mode)");
     hestOptAdd(&hopt, "v",      "verbose",          airTypeBool,    0, 0, &verbose,         "0",        "verbose mode (debugging)");
 
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Visualize granular microstructure",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Visualize granular microstructure");
 }
 
 typedef std::set<int>   tag_type;

@@ -410,9 +410,8 @@ void init(int argc, char* argv[])
     hestOptAdd(&hopt, "err",    "max approx error",     airTypeDouble,  0, 1, &approx_error,        "0.1",      "max relative error of linear approximation");
     // hestOptAdd(&hopt, "p",       "period",               airTypeInt,     1, 1, &period,              NULL,       "targeted period");
     
-    hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                   me, "Adaptively sample phase portrait along orbits to achieve accurate\npiecewise linear interpolation on a per-period basis",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                   me, "Adaptively sample phase portrait along orbits to achieve accurate\npiecewise linear interpolation on a per-period basis");
 }
 
 std::vector<rational_type> ref_values;

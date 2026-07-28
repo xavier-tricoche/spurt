@@ -28,9 +28,8 @@ void initialize(int argc, const char* argv[])
     hestOptAdd(&hopt, "e",  "eps",      airTypeDouble,  0,  1,  &eps,       "1.0e-16",  "integration length for flow map computation");
     hestOptAdd(&hopt, "m",  "max iter", airTypeInt,     0,  1,  &maxiter,   "50",       "max number of solver iterations");
     hestOptAdd(&hopt, "s",  "solver id", airTypeInt,    0,  1,  &solverid,  "0",        "type of solver (0: CG, 1: singular CG, 2: LS CG, 3: GMRES, 4: QMR)");
-    hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                   me, "Apply divergence cleaning to a 3D vector field defined over a uniform grid",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                   me, "Apply divergence cleaning to a 3D vector field defined over a uniform grid");
 }
 
 typedef spurt::raster_grid<long, double, 3, lvec3, vec3> grid_type;

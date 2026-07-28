@@ -39,9 +39,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "max","maximum",        airTypeFloat,     3,     3,    &_max,            "1 1 1",        "maximum of bounding volume");
     hestOptAdd(&hopt, "o",    "output",        airTypeString,     1,     1,    &name,            NULL,            "output name");
 
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   me, "Generate procedurally defined 2D/3D scalar dataset",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   me, "Generate procedurally defined 2D/3D scalar dataset");
 }
 
 int main(int argc, char* argv[]) {

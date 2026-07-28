@@ -384,7 +384,7 @@ shared_ptr<field_type> load_DLR_time_steps() {
     VTK_SMART(vtkPoints) points = vtk_utils::make_vtkpoints(vertices);
     grid->SetPoints(points);
     VTK_CREATE(vtkCellArray, cells);
-    cells->SetNumberOfCells(ncells);
+    cells->AllocateEstimate(ncells, 8*ncells);
     for (long cell_id=0 ; cell_id<ncells ; ++cell_id) {
         size_t start = cell_types[cell_id].second;
         size_t end = cell_types[cell_id+1].second;
@@ -428,7 +428,7 @@ shared_ptr<field_type> load_DLR_time_steps() {
         types->SetValue(cell_id, type_name);
         locations->SetValue(cell_id, cell_types[cell_id].second);
     }
-    grid->SetCells(types, locations, cells);
+    grid->SetCells(types, cells);
     std::shared_ptr<locator_type> locator(new locator_type(grid, false, true));
 
     std::vector< std::shared_ptr<std::vector<vector_type> > > data(steps.size());

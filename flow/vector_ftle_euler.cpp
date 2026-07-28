@@ -40,9 +40,8 @@ void initialize(int argc, const char* argv[])
     hestOptAdd(&hopt, "h",      "step",             airTypeDouble,  1,  1,  &h,             NULL,       "step size");
     hestOptAdd(&hopt, "s",      "sz0 sz1 sz2",      airTypeSize_t,  3,  3,  nsamples,       NULL,       "number of samples per axis");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute FTLE in NRRD vector field",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute FTLE in NRRD vector field");
 }
 
 template<typename T>

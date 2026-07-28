@@ -29,9 +29,8 @@ void initialize(int argc, char* argv[])
     hparm->elideSingleOtherType = AIR_TRUE;
     hestOptAdd(&hopt, "i",      "input",            airTypeString,  1,  1,  &name_in,       NULL,   "input file name");
     hestOptAdd(&hopt, "o",      "output",           airTypeString,  1,  1,  &name_out,      NULL,   "output name");
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Export a RGB color map of a FTLE NRRD",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Export a RGB color map of a FTLE NRRD");
 }
 
 typedef spurt::nrrd_data_traits<Nrrd*>  field_type;

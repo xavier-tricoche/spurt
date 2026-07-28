@@ -28,9 +28,8 @@ void initialize(int argc, const char* argv[])
     hestOptAdd(&hopt, "s",  "solver id", airTypeInt,    0,  1,  &solverid,  "0",        "type of solver (0: CG, 1: singular CG, 2: LS CG, 3: GMRES, 4: QMR)");
     
     std::string comment = "Apply divergence cleaning to a 3D vector field defined over a uniform grid";
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, comment.c_str(),
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, comment.c_str());
 }
 
 struct index_converter {

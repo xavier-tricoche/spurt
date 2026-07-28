@@ -24,9 +24,8 @@ void init(int argc, char* argv[])
     hestOptAdd(&hopt, "f",      "first time step",  airTypeInt,     0, 1, &first,       "0",    "first time step to consider");
     hestOptAdd(&hopt, "p",      "step period",      airTypeInt,     0, 1, &period,      "1",    "interval between exported steps");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Convert NJIT simulation data to NRRD format",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Convert NJIT simulation data to NRRD format");
 }
 
 bool read_line_coord(float& t, float& x, float& y, float& z, std::fstream& file)

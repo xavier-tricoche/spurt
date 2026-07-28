@@ -54,9 +54,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "i",      "input",                airTypeString,  1, 1, &name_in,         NULL,       "input NRRD file (3D)");
     hestOptAdd(&hopt, "n",      "# samples",            airTypeInt,     1, 1, &nsamples,        NULL,       "number of samples");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "compare NN results between STANN and Christoph's Kdtree",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "compare NN results between STANN and Christoph's Kdtree");
 }
 
 int main(int argc, char* argv[])

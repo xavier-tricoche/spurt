@@ -19,9 +19,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "d",      "dimension",        airTypeInt,     0, 1, &dim,         "2",        "space dimension");
     hestOptAdd(&hopt, "n",      "# points",         airTypeInt,     0, 1, &npts,        "100",      "number of randomly selected points");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Generate a random point set in arbitrary dimensions (bounding box is [-1, 1]^N)",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Generate a random point set in arbitrary dimensions (bounding box is [-1, 1]^N)");
 }
 
 int main(int argc, char* argv[])

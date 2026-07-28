@@ -4,7 +4,7 @@
 #include <misc/cxxopts.hpp>
 #include <string>
 #include <math/types.hpp>
-#include <vtkTransformPolyDataFilter.h>
+#include <vtkTransformFilter.h>
 #include <vtkPolyDataNormals.h>
 #include <vtkAOSDataArrayTemplate.h>
 #include <vtkCleanPolyData.h>
@@ -79,11 +79,11 @@ VTK_SMART(vtkPolyData) translate(VTK_SMART(vtkPolyData) input, const vec3& t)
     VTK_CREATE(vtkTransform, translate);
     translate->Identity();
     translate->Translate(t[0], t[1], t[2]);
-    VTK_CREATE(vtkTransformPolyDataFilter, filter);
+    VTK_CREATE(vtkTransformFilter, filter);
     filter->SetTransform(translate);
     filter->SetInputData(input);
     filter->Update();
-    return filter->GetOutput();
+    return vtkPolyData::SafeDownCast(filter->GetOutput());
 }
 
 std::vector<double> array2vector(VTK_SMART(vtkAbstractArray) _array) {
@@ -419,7 +419,7 @@ std::array<VTK_SMART(vtkPolyData), 4> feature_aware_ccs(VTK_SMART(vtkPolyData) i
 
     std::vector<vec3_t> normals(polygons->GetNumberOfCells(), {0., 0., 0.});
     VTK_CREATE(idxlist_t, acell_point_ids);
-    acell_point_ids->Allocate(20);
+    acell_point_ids->Reserve(20);
 
     progress.begin(polygons->GetNumberOfCells(), "Computing cell normals");
     size_t nzeros = 0;
@@ -508,11 +508,11 @@ std::array<VTK_SMART(vtkPolyData), 4> feature_aware_ccs(VTK_SMART(vtkPolyData) i
         VTK_CREATE(idxlist_t, neighbor_cell_point_ids);
         VTK_CREATE(idxlist_t, neighbor_cell_ids);
         VTK_CREATE(idxlist_t, cell_point_ids);
-        neighbor_cell_ids->Allocate(20);
-        cell_point_ids->Allocate(20);
-        new_cell_point_ids->Allocate(20);
-        neighbor_cell_point_ids->Allocate(20);
-        neighbor_cell_ids->Allocate(20);
+        neighbor_cell_ids->Reserve(20);
+        cell_point_ids->Reserve(20);
+        new_cell_point_ids->Reserve(20);
+        neighbor_cell_point_ids->Reserve(20);
+        neighbor_cell_ids->Reserve(20);
         // Clunky
         while (!queue.empty()) {
             idx_t cell_id = queue.front();

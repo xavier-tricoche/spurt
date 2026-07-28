@@ -22,9 +22,8 @@ void init(int argc, char* argv[])
     hestOptAdd(&hopt, "i",      "input file",       airTypeString,  1, 1, &in_name,     NULL,   "input file name (nrrd)");
     hestOptAdd(&hopt, "o",      "output base",      airTypeString,  1, 1, &out_name,    NULL,   "output file name (nrrd)");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute color associated with each particle based on its y-coordinate",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute color associated with each particle based on its y-coordinate");
 }
 
 int main(int argc, char* argv[])

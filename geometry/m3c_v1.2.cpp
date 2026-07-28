@@ -33,9 +33,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "a",      "alpha",            airTypeFloat,   0, 1, &alpha,   "0.5",      "weight coefficient of Laplacian smoothing");
     hestOptAdd(&hopt, "v",      "verbose",          airTypeBool,    0, 0, &verbose, "0",        "verbose mode (debugging)");
     
-    _hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                    me, "Extract multi-material boundaries from raster volume and export smooth geometry",
-                    AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                    me, "Extract multi-material boundaries from raster volume and export smooth geometry");
 }
 
 inline nvis::ivec3 int_to_ivec(int i, const nvis::ivec3& s)

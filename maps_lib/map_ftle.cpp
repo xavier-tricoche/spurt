@@ -66,9 +66,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "miny",   "min y coord",      airTypeDouble,  0, 1, &miny,    "-10000",   "min y in bounding box");
     hestOptAdd(&hopt, "maxy",   "max y coord",      airTypeDouble,  0, 1, &maxy,    "10000",    "max y in bounding box");
 
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute FTLE value of discrete map after a given number of iterations. Intermediate steps are saved to disk if requested.",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute FTLE value of discrete map after a given number of iterations. Intermediate steps are saved to disk if requested.");
 }
 
 inline double lmax(int n, const std::vector< nvis::vec2 >& pos, const spurt::default_metric_type& metric)

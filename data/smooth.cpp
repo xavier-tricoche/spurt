@@ -53,9 +53,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "k",      "order",                airTypeInt,     0, 1, &fit_order,           "0",        "resampling order");
     hestOptAdd(&hopt, "n",      "# neighbors",          airTypeInt,     0, 1, &n_order,             "4",        "number of neighbors involved in fit");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Resample input unstructured mesh over regular grid using smooth reconstruction kernels",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Resample input unstructured mesh over regular grid using smooth reconstruction kernels");
 }
 
 vtkDataSet* read(const std::string& filename)

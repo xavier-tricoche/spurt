@@ -36,9 +36,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "v",      "verbose",              airTypeBool,    0, 1, &v,                   "0",        "display camera setting");
     hestOptAdd(&hopt, "s",      "snapshot",             airTypeString,  0, 1, &out,                 "none",     "output image");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Visualize particle systems filtered by FTLE value",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Visualize particle systems filtered by FTLE value");
 }
 
 int main(int argc, char* argv[])

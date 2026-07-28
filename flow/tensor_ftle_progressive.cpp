@@ -50,9 +50,8 @@ void initialize(int argc, const char* argv[], hestOpt* hopt)
     hestOptAdd(&hopt, "h",      "step size",        airTypeDouble,  1,  1,  &dx,            NULL,   "integration step size");
     hestOptAdd(&hopt, "s",      "sz0 sz1 sz2",      airTypeSize_t,  3,  3,  nsamples,       NULL,   "number of samples per axis",  &scaleLen);
     
-    __hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                     me, "Compute FTLE in major eigenvector field of 3D symmetric second-order tensor field",
-                     AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                     me, "Compute FTLE in major eigenvector field of 3D symmetric second-order tensor field");
 }
 
 struct field_wrapper {

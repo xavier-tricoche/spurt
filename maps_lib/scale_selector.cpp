@@ -28,9 +28,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "d",      "delta index",      airTypeInt,     0, 1, &delta,   "10",       "index step size");
     hestOptAdd(&hopt, "o",      "output",           airTypeString,  1, 1, &output,  NULL,       "output base name");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Determine per-pixel best iteration scale in map FTLE image",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Determine per-pixel best iteration scale in map FTLE image");
 }
 
 int main(int argc, char* argv[])

@@ -107,9 +107,8 @@ void initialize(int argc, const char* argv[])
     hestOptAdd(&hopt, "dt",     "delta T",              airTypeInt,     1, 1, &dt,                  NULL,       "number of time steps for advection");
     hestOptAdd(&hopt, "r",      "support radius",       airTypeFloat,   1, 1, &radius,              "5",        "radius of weighting function support");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute per particle FTLE in granular flow",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute per particle FTLE in granular flow");
 }
 
 inline std::string zeros(int n)

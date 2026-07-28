@@ -123,9 +123,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "s",    "system",          airTypeString, 0, 1, &sys,   "earth",   "system name");
     hestOptAdd(&hopt, "t",    "tangent",         airTypeBool,   0, 1, &extract_tangent_curves, "0", "Extract tangent curves");
 
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Compute FTLE value of circular restricted 3-body problem",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Compute FTLE value of circular restricted 3-body problem");
 }
 
 inline int pos(const nvis::vec2& x)

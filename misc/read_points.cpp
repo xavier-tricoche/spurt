@@ -17,9 +17,8 @@ void initialize(int argc, char* argv[])
     hparm->elideSingleOtherType = AIR_TRUE;
     hestOptAdd(&hopt, "i",  "input",    airTypeString,  1, 1, &input,   NULL,   "input file name");
     
-    hestParseOrDie(hopt, argc - 1, (const char**)argv + 1, hparm,
-                   (const char*)me, "Read point coordinates from file",
-                   AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, (const char**)argv + 1, hparm,
+                   (const char*)me, "Read point coordinates from file");
 }
 
 int main(int argc, char* argv[])

@@ -83,9 +83,8 @@ void initialize(int argc, char* argv[])
     hestOptAdd(&hopt, "ps",     "point size",           airTypeFloat,   0,  1,  &pt_sz,     "2",            "point size for display");
     hestOptAdd(&hopt, "phys",   "phys space",           airTypeString,  0,  1,  &phys,      "none",         "HDF5 reference file for mapping");
     
-    __hestParseOrDie(hopt, argc - 1, argv + 1, hparm,
-                     me, "Safety factor probe",
-                     AIR_TRUE, AIR_TRUE, AIR_TRUE);
+    hestParseOrExit(hopt, argc - 1, argv + 1, hparm,
+                     me, "Safety factor probe");
 }
 // --------------------------------------------------------------------------------
 
